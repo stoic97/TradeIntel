@@ -1,0 +1,18 @@
+# NEVER commit trader data. Tradebooks live outside this repo.
+data/
+raw/
+private/
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.zip
+# Synthetic / anonymised fixtures are the only allowed data files
+!fixtures/**/*.csv
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+.ipynb_checkpoints/
+.DS_Store
