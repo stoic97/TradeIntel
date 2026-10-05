@@ -201,6 +201,7 @@ def _parse_row(row: dict[str, str], trader_id: str, raw_hash: str) -> Fill:
         quantity=quantity,
         price=price,
         quoted_price=quoted_price,
+        trade_value=trade_value,
         product=row["Order"].strip() or None,
         raw_hash=raw_hash,
     )

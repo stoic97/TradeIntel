@@ -13,6 +13,7 @@ Keep this list current. If data is ever stored somewhere not on this list, add i
 | Notebooks / scratch | Any analysis that loaded his file | Engineer |
 | Chat / email / Telegram / WhatsApp | The message with the attachment | Founder |
 | Inspection reports | e.g. `report.txt` from the first inspection | Founder |
+| **Derived findings** | Any file recording counts, rates or distributions from his history — these are his data too, and must never be in git | Founder |
 | Backups / cloud sync (iCloud, Drive, Time Machine) | Copies of any of the above | Founder |
 
 ## Procedure

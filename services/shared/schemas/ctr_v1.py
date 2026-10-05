@@ -154,7 +154,12 @@ class _Contract(BaseModel):
 class Fill(_Contract):
     """One buy or sell as the broker reported it.
 
-    ``price`` is the exact price the arithmetic uses. ``quoted_price`` is what the
+    ``trade_value`` is the broker's own exact total for this fill, where the export
+    supplies one. It is authoritative: ``price`` is derived from it and may be a
+    repeating decimal, so anything needing exactness apportions the **value**, never
+    the price (see ``reconstruct``). Optional, and outside the hash tuple.
+
+    ``price`` is the per-unit figure, used for display and weighted averages. ``quoted_price`` is what the
     broker displayed — often a rounded average of aggregated fills — kept so the
     trader sees the number he saw, and never used in a computation. It is outside
     the hash tuple, so adding it did not change any existing ``fill_id``.
@@ -168,6 +173,7 @@ class Fill(_Contract):
     quantity: int
     price: Decimal
     quoted_price: Decimal | None = None
+    trade_value: Decimal | None = None
     product: str | None = None
     raw_hash: str
 

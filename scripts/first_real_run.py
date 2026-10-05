@@ -15,7 +15,6 @@ from pathlib import Path
 
 from services.production.ctr.adapters.dhan_tradebook import parse
 from services.production.ctr.reconstruct import reconstruct
-from services.shared.schemas.ctr_v1 import RiskUnitSource, Segment
 
 
 def main(path: Path) -> None:

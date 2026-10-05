@@ -15,11 +15,17 @@ a trip as flat-to-flat; the conservation assertion below caught it on the first 
 When a closing fill is larger than the position, the position flips and the excess
 opens a new one in the other direction.
 
-**Gross is computed from the value sums, never from the average prices.** A weighted
-average is a Decimal division and therefore truncates; ``(exit_price - entry_price) *
-quantity`` would carry that truncation into a trader-facing number. So gross is
-``sum(sell values) - sum(buy values)``, exact, and the average prices ride along for
-display. Same principle as the adapter: the value is authoritative, the price derived.
+**Values are apportioned, never prices.** A broker reports an exact total per fill and
+a rounded average price. Deriving the price and multiplying it back loses the exactness
+the broker handed us: a 30-unit fill totalling 4595.50 has a per-unit price of
+153.18333..., and 153.18333... x 30 is not 4595.50. So each fill's exact value is drawn
+down across the parcels it is matched into, proportionally, with the residue given to
+the slice that exhausts it (:class:`_Apportion`). A fill consumed in one piece therefore
+contributes its value untouched, and the slices always sum to the broker's figure.
+
+Gross is then ``sum(sell values) - sum(buy values)``, and the weighted-average prices
+ride along for display only. Found by the golden fixture: ``risk_unit`` -- the premium
+paid, a figure a trader may see -- read 4595.4999... for a value known exactly.
 
 **Nothing is forced.** A position still open when the history ends is reported as an
 open position, not closed at an invented price (Research Spec s4.2). A trip the schema
@@ -103,11 +109,44 @@ class ReconstructionResult:
 
 
 @dataclass
+class _Apportion:
+    """Draws a fill's exact value down across the parcels it is matched into.
+
+    Allocates proportionally, and gives the residue to the slice that exhausts the
+    fill, so the slices always sum to ``total_value`` exactly. A fill consumed in one
+    piece yields its value untouched -- the common case, and the one where the
+    broker's figure is known exactly.
+    """
+
+    total_value: Decimal
+    total_quantity: int
+    taken_quantity: int = 0
+    taken_value: Decimal = _ZERO
+
+    def take(self, quantity: int) -> Decimal:
+        self.taken_quantity += quantity
+        if self.taken_quantity == self.total_quantity:
+            portion = self.total_value - self.taken_value  # exact residue
+        else:
+            portion = self.total_value * quantity / self.total_quantity
+        self.taken_value += portion
+        return portion
+
+    @property
+    def remaining_value(self) -> Decimal:
+        return self.total_value - self.taken_value
+
+    @property
+    def remaining_quantity(self) -> int:
+        return self.total_quantity - self.taken_quantity
+
+
+@dataclass
 class _Lot:
-    """One open parcel: quantity still live, at the price and time it was opened."""
+    """One open parcel: quantity still live, with its share of the fill's value."""
 
     quantity: int
-    price: Decimal
+    value: _Apportion
     ts: datetime
     fill_id: str
 
@@ -122,9 +161,9 @@ class _Leg:
     first_ts: datetime | None = None
     last_ts: datetime | None = None
 
-    def add(self, quantity: int, price: Decimal, ts: datetime, fill_id: str) -> None:
+    def add(self, quantity: int, value: Decimal, ts: datetime, fill_id: str) -> None:
         self.quantity += quantity
-        self.value += price * quantity
+        self.value += value
         if fill_id not in self.fill_ids:
             self.fill_ids.append(fill_id)
         self.first_ts = ts if self.first_ts is None else min(self.first_ts, ts)
@@ -211,12 +250,16 @@ def _reconstruct_contract(
     for f in fills:
         incoming = Direction.LONG if f.side is Side.BUY else Direction.SHORT
         remaining = f.quantity
+        # The broker's exact total where the export gives one; otherwise the only
+        # figure available. Hand-built fills in tests carry no trade_value.
+        fill_total = f.trade_value if f.trade_value is not None else f.price * f.quantity
+        share = _Apportion(fill_total, f.quantity)
 
         if not lots:
             position = incoming
 
         if incoming is position:
-            lots.append(_Lot(remaining, f.price, f.ts, f.fill_id))
+            lots.append(_Lot(remaining, share, f.ts, f.fill_id))
             continue
 
         # Opposite side: close lots oldest-first, then emit one trip for what matched.
@@ -224,8 +267,8 @@ def _reconstruct_contract(
         while remaining and lots:
             lot = lots[0]
             take = min(remaining, lot.quantity)
-            entry.add(take, lot.price, lot.ts, lot.fill_id)
-            exit_.add(take, f.price, f.ts, f.fill_id)
+            entry.add(take, lot.value.take(take), lot.ts, lot.fill_id)
+            exit_.add(take, share.take(take), f.ts, f.fill_id)
             lot.quantity -= take
             remaining -= take
             if lot.quantity == 0:
@@ -236,9 +279,17 @@ def _reconstruct_contract(
             emit(position, entry, exit_)
 
         if remaining:
-            # The closing fill was larger than the position: it flips.
+            # The closing fill was larger than the position: it flips. The new lot
+            # carries whatever value the fill has not yet given away.
             position = incoming
-            lots.append(_Lot(remaining, f.price, f.ts, f.fill_id))
+            lots.append(
+                _Lot(
+                    remaining,
+                    _Apportion(share.remaining_value, remaining),
+                    f.ts,
+                    f.fill_id,
+                )
+            )
 
     if lots:
         assert position is not None

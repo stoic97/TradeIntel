@@ -1,5 +1,10 @@
-# NEVER commit trader data. Tradebooks live outside this repo.
-data/
+# NEVER commit trader data, or anything derived from one trader's history.
+# Tradebooks and per-trader findings live outside this repo, under the deletion
+# runbook (docs/runbooks/data-deletion.md). Git history cannot be deleted on
+# request, so a trader fact committed here breaks the promise made to recruits.
+data/raw/
+data/partners/
+data/private/
 raw/
 private/
 *.csv
@@ -7,8 +12,12 @@ private/
 *.xls
 *.parquet
 *.zip
-# Synthetic / anonymised fixtures are the only allowed data files
-!data/fixtures/**/*.csv
+
+# Synthetic fixtures and their goldens are the only data files allowed.
+# They contain no real trader's trades.
+!data/fixtures/**
+!data/golden/**
+
 # Python
 __pycache__/
 *.pyc
