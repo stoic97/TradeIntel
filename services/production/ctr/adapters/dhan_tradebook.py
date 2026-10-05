@@ -34,9 +34,9 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from collections.abc import Iterable
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
