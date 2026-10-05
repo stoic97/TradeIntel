@@ -1,0 +1,253 @@
+# PlusEV–TradeDNA · Pre-registered research framework · v1
+#
+# Machine-readable form of Research Specification v1.0, Part I (§1–§8) and the
+# Part II items Part I depends on (§9 core library, §11.1 starter moves, §15 gate).
+# Source of truth for wording: docs/trade_dna_research_spec_v1_0.md
+#
+# STATUS: DRAFT — not yet locked.
+# Locked at the Phase 0 kickoff: all seats read it, agree, then
+#   shasum -a 256 services/research/prereg/framework_v1.yaml > services/research/prereg/framework_v1.yaml.sha256
+# is committed. After that, any change is a MAJOR version with a decision-log row.
+#
+# Provenance labels (spec §0): derived | literature | inherited | arbitrary
+# Every arbitrary value has exactly one revision window: on synthetic and fund
+# corpora, before the first partner's data is read.
+
+framework:
+  id: tradedna_framework
+  version: 1.0.0
+  spec: research_spec_v1.0
+  thesis: product_thesis_v1.4
+  status: draft            # draft -> locked at kickoff
+  locked_at: null
+  sha256: null             # written to framework_v1.yaml.sha256 beside this file, not here
+
+scope:
+  validation_instrument: MCX_CRUDE          # §1 — crude first, end to end
+  accepted_trade_types:
+    - futures
+    - long_options                          # R = premium paid
+  not_yet_accepted:
+    - short_options                         # R convention undecided — Annex H, due week 4
+    - multi_leg_spreads
+  transfer_rule: machinery transfers; calibration is re-established per instrument family
+
+# ---------------------------------------------------------------- §4 Data
+data:
+  ctr_correctness:                          # §4.2
+    round_trip_fidelity_min: 0.995
+    fee_tolerance_rel: 0.005
+    certification_set_per_broker_min: 200   # frozen, held by validator
+    development_fixtures_per_broker_min: 100
+    no_silent_drops: true                   # raw = mapped + quarantined + rejected
+    contract_identity_required: true        # symbol AND expiry; no stitched series
+    price_path_resolution: [tick, 1s]       # 1-min bars only for holds >= 45 min, bias recorded
+    resolution_change_is_major: true
+  point_in_time:                            # §4.3
+    rule: feature.available_at <= trade.entry_time
+    leakage_classes: {C0: known_at_entry, C1: trailing_market, C2: resolved_prior_trades,
+                      C3: own_outcome_never_a_condition, C4: future_info_refused}
+  leakage_tests:                            # §4.4
+    L1_reproducibility: bit_identical_on_50_histories
+    L2_positive_control: must_detect_every_injected_case
+    L3_sensitivity: reported_not_gated
+  missingness_types: [unavailable, unknown, not_applicable, reconstruction_failure, market_gap]
+  data_quality_score_min: 60                # below -> "Not enough evidence yet — data"
+  zones:                                    # §4.6 — trade order
+    isolation: clamp(round(0.25*N), 30, 200)
+    embargo: max(round(0.05*N), one_full_trading_day)
+    training: N - isolation - embargo
+    isolation_read: once, week 7, final framework version
+    theta_hold: max(theta_min, training_posterior_q20)   # derived
+    n_hold: smallest condition count reaching P_hold >= 0.80 at theta_hold
+
+# ---------------------------------------------------------------- §5 Evidence standard
+evidence:
+  claim_levels: [L1_association, L2_robust, L3_hypothesis, L4_validated_intervention]
+  tiers:                                    # §5.2 — values arbitrary, revisable once on corpora
+    established:
+      P_train_min: 0.95                     # P(theta beyond 0, pre-registered direction | training)
+      m_train_beyond_theta_min: true        # shrunk training median beyond theta_min
+      P_hold_min: 0.80                      # isolation only, prior only
+      rho_min: 0.80
+      q_max: 0.05
+      requires: [n_min, economic_significance, half_sign_agreement, n_hold_met]
+    likely:
+      P_train_min: 0.80
+      m_train_beyond_theta_min: true
+      P_hold_min: 0.65
+      rho_min: 0.60
+      q_max: 0.10
+      requires: [n_min, economic_significance]
+    exploratory:
+      P_train_min: 0.60
+      P_hold_min: 0.40
+      n_min_fraction: 0.5
+      never: [prescription, process_score]
+  kills:
+    - sign_flip_at_neighbouring_threshold
+    - P_hold_below_0.50_after_P_train_0.95
+    - failed_model_diagnostics
+  theta_min:                                # §5.2 — derived
+    conditional_R_tests: 0.25               # delta_pool / reference prevalence 0.20
+    reference_prevalence: 0.20
+    level_and_ratio_tests: per_test         # see library below
+  robustness:                               # §5.3
+    mandatory:
+      P1: temporal_halves_same_sign_P0.70_each
+      P4: threshold_sweep_pm25pct_no_flip
+      P5: winsorised_2.5_97.5_same_sign
+      P6: drop_3_largest_abs_R_same_sign
+      P7: stationary_block_bootstrap_500_meanblock5_sign_stability_0.80
+    conditional:
+      P2: {test: leave_one_instrument_out, applies: ">=2 instruments each >=15% of trades"}
+      P3: {test: leave_one_session_out, applies: ">=2 sessions each >=20 trades"}
+      P8: {test: leave_one_regime_out, applies: ">=2 regimes each >=20 trades"}
+    rho: (mandatory_passed + conditional_passed) / (5 + conditional_applicable)
+    established_requires: all_5_mandatory AND >=1_conditional_applicable_and_passed
+    suspiciously_stable: review_flag_never_kill
+  nulls:                                    # §5.4 — 2,000 draws each
+    N-B: {for: behaviour, permute: outcomes_within_day, holds: [day, day_total, context, sizes, times]}
+    N-S: {for: context, permute: outcomes_within_blocks_sharing_all_but_tested_context, min_block: 8}
+    N-E: {for: execution, replace: exit_with_uniform_feasible_exit_on_same_path}
+    N-C: {for: edge_map_cells, compare: same_size_random_cells_within_dimension}
+    validation_fp_band: [0.02, 0.08]        # on both noise classes; adversarial is the gate
+  null_reporting:                           # §5.4a
+    mde_power: 0.80
+    shuffle_inflation: 1.65                 # measured
+    no_problem_found_only_if: mde <= theta_min
+    else_report: "no leak larger than {mde} found; smaller ones cannot be ruled out"
+  multiplicity:                             # §5.5
+    method: benjamini_hochberg
+    families: [F-Strategy, F-Risk, F-Execution, F-Behaviour, F-Cells]
+    q: {established: 0.05, likely: 0.10}
+  frozen_after_first_real_look: [test_list, conditions, comparisons, thresholds, controls,
+    null_generators, robustness_set, tier_thresholds, family_definitions]
+  honest_gaps:                              # §5.6
+    data: {quality_below: 60, round_trips_below: 50, market_coverage_below: 0.50}
+    no_demonstrated_edge: {min_trips: 100, min_months: 3, P_E_pos_below: 0.60}
+
+# ---------------------------------------------------------------- §6 Statistics
+statistics:
+  models: [M1_conditional_expectancy, M2_rates, M3_durations, M4_sizes, M6_edge_map_cells]
+  day_level_random_intercepts: true
+  diagnostics: {rhat_max: 1.01, bulk_ess_min: 400, divergences: 0, ppc: [tails, sign_rate]}
+  interval_authority: block_bootstrap_if_wider       # §6.2
+  dependence_audit_ratio_min: 0.85
+  priors:                                   # §6.3
+    alpha: normal(0, 0.5)
+    theta: normal(0, 0.25)
+    sigma: halfnormal(2)
+    nu: gamma(2, 0.1)
+    beta: normal(0, 0.3)
+    fund_corpus_behavioural_priors: forbidden
+  validation: {SBC: 1000_replications, M-SIM_80pct_coverage: [0.72, 0.88]}
+  reporting:
+    winsorise: [0.025, 0.975]
+    currency: posterior_p05_as_at_least
+    R_interval: 0.80
+  minimums: {condition: 30, comparison: 60, cell: 20}          # arbitrary
+
+# ---------------------------------------------------------------- §7 Measuring change
+change:
+  trader_level_verdict: none                # §7.5 — counts and accounting only
+  avoided_cost: conservative_bound_labelled_accounting_not_proof
+  delta_pool_R: 0.05                        # §7.4 — decided 2 Oct
+  pooled_estimates: [as_offered, as_followed]   # delta_pool judged on as_offered
+  failed_to_certify: park_not_delete
+  quarterly_read_bar: none                  # interval reported
+  N_trader_cap: min(150 trades, 90 days at his frequency)
+  pooled_labels: [NOT_YET_MEASURABLE, PASS, NO_PRACTICAL_EFFECT, REFUTED, HARMFUL, INCONCLUSIVE]
+  guardrails_relative_worsening_max: 0.10
+  confound_flags: {instrument_mix_pp: 30, sizing_regime: 0.50, framework_major_change: true}
+  recurring_data:                           # §7.8 — corrected at freeze
+    subscription_data_path: read_only_broker_connection
+    manual_upload: doormat_and_fallback
+    manual_month_in_pooled_read: with_sensitivity_bound_missing_months_worst
+    connection_rate_bar: 0.70               # arbitrary
+  forward_figure: {estimate: shrunk_posterior, phrasing: stay_out_of_negative_never_trade_more}
+
+# ---------------------------------------------------------------- §8 Risk envelope
+risk:
+  blocked_if_replay_raises: [r_max_p95, q_max, n_day_p95, L_win]
+  uncertain_risk_never_surfaced: true
+  safety_pause: drawdown_beyond_baseline_max_or_L_win
+  adherence_auto_stop: removed
+  move_classes: [always_permitted, conditional, never]
+
+# ---------------------------------------------------------------- Language (§11.1a, R13)
+language:
+  describe_never_diagnose: true
+  forbidden: [revenge, tilt, lost control, undisciplined, emotional,
+              your plan, your system, your rule]
+  intent_enters_only_via: dispute_right_facts_wrong_reading
+
+# ---------------------------------------------------------------- §9 Core library
+library:
+  - {id: B1,  q: post_loss_latency,        model: M3,    null: N-B, theta_min: "ratio<=0.67", n_min: 30/30,  move: PL-1}
+  - {id: B2,  q: post_loss_expectancy,     model: M1,    null: N-B, theta_min: 0.25,  n_min: 30/60,  move: PL-1}
+  - {id: B5,  q: sequence_decay,           model: M6,    null: N-B, theta_min: 0.25,  n_min: 40_days, move: DL-1}
+  - {id: B12, q: day_after_bad_start,      model: M1,    null: N-S, theta_min: "0.5R/day", n_min: 20/40_days, move: DL-1}
+  - {id: R1,  q: size_dispersion_tail,     model: fact_bootstrap, theta_min: "CV>=0.6; share>=0.40", n_min: 50, move: RK-1}
+  - {id: R2,  q: post_loss_size_change,    model: M4,    null: N-B, theta_min: "log 1.25", n_min: 30/30, move: PL-1}
+  - {id: R7,  q: stop_discipline,          model: M2/M1, null: N-B, theta_min: "15pp; 0.25", n_min: 30, move: RK-1, class: conditional_on_stop_orders}
+  - {id: R8,  q: vol_leverage_coupling,    model: M4/M1, null: N-S, theta_min: "log 1.25; 0.25", n_min: 30/regime, move: RK-2}
+  - {id: R11, q: adding_to_losers,         model: M1,    null: N-B, theta_min: 0.25,  n_min: 30/60,  move: RK-3, class: conditional_on_fills}
+  - {id: E2,  q: exit_capture,             model: M1,    null: N-E, theta_min: c_ref, n_min: 40_winners, move: EX-1, needs: tick}
+  - {id: E4p, q: late_loss_accrual,        model: M1,    null: N-E, theta_min: 0.25,  n_min: 30_losers, move: EX-2, needs: tick}
+  - {id: E5,  q: holding_asymmetry,        model: M3,    null: N-E, theta_min: "ratio<=0.67", n_min: 40/40, move: EX-1/EX-2}
+  - {id: S1,  q: session_expectancy,       model: M6,    null: N-S, theta_min: 0.25,  n_min: 30/bucket, move: SS-1,
+     buckets: {morning: "09:00-12:00", afternoon: "12:00-17:00", us_overlap: "17:00-close"}}
+  - {id: S5,  q: regime_expectancy,        model: M6,    null: N-S, theta_min: 0.25,  n_min: 20/cell, move: RK-2, regime: fund_definition_unchanged}
+  - {id: S6,  q: overnight_carry,          model: M1,    null: N-S, theta_min: 0.25,  n_min: 30/60,  move: OV-1}
+  - {id: S10, q: scheduled_event_trading,  model: M1,    null: N-S, theta_min: 0.25,  n_min: 30/60,  move: EV-1, window: "-15/+30 min", events: [EIA, API, OPEC]}
+  - {id: S11, q: edge_persistence,         model: M1,    null: N-B_window_50trip_blocks, theta_min: 0.25, n_min: 200, move: PR-1}
+  - {id: S12, q: overall_edge,             model: M1,    theta_min: null, n_min: 100, move: PR-1}
+  - {id: C1,  q: edge_map_cells,           model: M6,    null: N-C, theta_min: 0.25,  n_min: 20/cell}
+
+# ---------------------------------------------------------------- §11.1 Starter moves
+moves:
+  PL-1: {rule: "after 2 losses wait 30 min, return at normal size", requires: "B1|B2 >= likely (merged with R2)"}
+  DL-1: {rule: "after day's first 2 losses, done for the day", requires: "B12 >= likely", replaces: PL-1}
+  RK-1: {rule: "risk cap per trade at own median", requires: "R1|R7 >= likely"}
+  SS-1: {rule: "skip validated-negative session bucket", requires: "S1 >= likely"}
+  EV-1: {rule: "no new positions T-15 to T+30 around scheduled release", requires: "S10 >= likely"}
+  OV-1: {rule: "no positions across session close", requires: "S6 >= likely"}
+  all_class: always_permitted
+  overlap_rule: merge_if_replays_share_more_than_10pct_of_trades
+  replay: {role: illustration_only, may_rank: false, phrasing: "would have been worth up to"}
+  ranking_impact: hold_out_validated_effect
+
+# ---------------------------------------------------------------- §15 Research Gate
+gate:
+  class_A_correctness: [ctr_fidelity_0.995, determinism, L1_L2, unit_and_golden_tests_exact]
+  class_B_statistical:
+    recall_at_2x_theta_min_on_powered_histories_min: 0.80
+    below_power_mde_at_or_above_planted_rate_min: 0.95
+    false_established_max: 0.05
+    false_likely_max: 0.15
+    interval_coverage_tolerance_pp: 5
+    avoidable_loss: {coverage_min: 0.95, median_recovery_min: 0.5}
+    read_on: adversarial_noise
+  class_C_recognition:
+    partners_confirming_fact_min: 0.60
+    confirmation_rate_on_preregistered_sample_min: 0.80
+    expert_agreement_top3_by_holdout_effect_min: 0.70
+    engine_fp_on_panel_noise_max: 0.05
+  class_D_fidelity: {numeric_resolution: 1.0, entailment_min: 0.98, refusal_correctness_min: 0.99}
+  feasibility: {unconditional_core_reach_n_min_on_partner_share_min: 0.50}   # arbitrary
+  llm_baseline:
+    prompt_author: founder
+    corpora: [adversarial_noise_600, planted_synthetic_2x_theta_min]
+    consequence: "FP within 5pp of engine -> thesis decision-log finding"
+
+governance:
+  runner_is_not_ruler: true
+  writer_is_not_validator: true
+  ai_may_not: [add_or_alter_confirmatory_test, change_threshold_prior_null_or_promotion,
+               touch_isolation, write_registry_outside_gates]
+  major_version_on: [test_added_or_removed, condition_threshold_null_changed,
+                     promotion_rule_changed, model_class_changed, avoidable_loss_method,
+                     delta_pool, price_path_resolution]
+  minor_only_if: compatibility_run_shows_zero_tier_changes
+  regenerability: {raw_inputs: immutable_hashed, major_rescores_full_history: true}

@@ -8,7 +8,7 @@ private/
 *.parquet
 *.zip
 # Synthetic / anonymised fixtures are the only allowed data files
-!fixtures/**/*.csv
+!data/fixtures/**/*.csv
 # Python
 __pycache__/
 *.pyc
