@@ -22,9 +22,12 @@ Rules enforced here, each traceable to the frozen documents:
   recorded stop reports ``risk_unit=None`` and ``r_multiple=None`` rather than guess
   (§4.5 — typed missingness, never imputed).
 
-Money is handled as integer paise internally and exposed as rupees, so that sums
-are exact. Prices stay ``Decimal``. No float arithmetic decides a trader-facing
-number (§6.5).
+All money is ``Decimal``; no float arithmetic decides a trader-facing number
+(§6.5). An earlier version of this schema also forced money through integer paise
+and refused sub-paise values. Real data showed that to be wrong on both counts:
+Decimal addition and subtraction are already exact, so the conversion bought
+nothing, and a fill apportioned across trips legitimately carries sub-paise
+precision. Rounding belongs at the presentation boundary.
 """
 
 from __future__ import annotations
@@ -40,7 +43,6 @@ from pydantic import BaseModel, ConfigDict, computed_field, field_validator, mod
 SCHEMA_VERSION = "ctr_v1"
 
 _ID_LENGTH = 16
-_PAISE = Decimal(100)
 
 
 class Segment(str, Enum):
@@ -87,18 +89,6 @@ class UnsupportedInV1(Exception):
     make "outside v1 scope" indistinguishable from "malformed record". Any other
     exception type propagates uncaught, so this one reaches the adapter as itself.
     """
-
-
-def _rupees_to_paise(value: Any, field: str) -> int:
-    """Exact rupees -> paise. Rejects sub-paise precision instead of rounding it away."""
-    if isinstance(value, int):
-        return value * 100
-    if isinstance(value, Decimal):
-        scaled = value * _PAISE
-        if scaled != scaled.to_integral_value():
-            raise ValueError(f"{field} has sub-paise precision: {value}")
-        return int(scaled)
-    raise TypeError(f"{field} must be int or Decimal rupees, not {type(value).__name__}")
 
 
 def _digest(*parts: Any) -> str:
@@ -323,11 +313,18 @@ class RoundTrip(_Contract):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def net_pnl(self) -> Decimal:
-        """Gross minus fees, exact to the paise."""
-        paise = _rupees_to_paise(self.gross_pnl, "gross_pnl") - _rupees_to_paise(
-            self.fees, "fees"
-        )
-        return Decimal(paise) / _PAISE
+        """Gross minus fees, exact.
+
+        Decimal subtraction is exact, so no rounding happens here. The value may
+        carry sub-paise precision when a fill was apportioned across trips -- an
+        aggregated fill of 30 units at a total of 4595.50 has a per-unit price of
+        153.18333..., and a trip matching 10 of those units legitimately owns
+        1531.8333... of it. Rounding each trip to the paise would break
+        sum(trip gross) == sum(fill values) by up to half a paisa per trip.
+        Trader-facing figures are rounded at the presentation boundary, never in
+        the record (s6.5: the conservative 5th percentile, shown as "at least").
+        """
+        return self.gross_pnl - self.fees
 
     @computed_field  # type: ignore[prop-decorator]
     @property

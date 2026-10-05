@@ -7,7 +7,9 @@ Each rule traces to Research Spec v1.0 §4.2 (contract identity, determinism),
 
 Money and prices are ``Decimal``, never float: the schema is strict (ADR 004) because
 float arithmetic must not decide a trader-facing number (§6.5). A float price is
-refused, and `test_float_price_is_refused` locks that.
+refused, and `test_float_price_is_refused` locks that. Sub-paise precision is
+allowed, because an apportioned fill produces it — see
+`test_sub_paise_net_pnl_is_allowed`.
 """
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -180,8 +182,13 @@ def test_extra_field_is_refused():
         make_fill(unexpected_column="x")
 
 
-def test_sub_paise_net_pnl_is_refused():
-    """Money is exact to the paise; sub-paise input is an error, not a rounding."""
+def test_sub_paise_net_pnl_is_allowed():
+    """A fill apportioned across trips carries sub-paise precision, legitimately.
+
+    An earlier version refused it. Rikk's real history broke that rule within
+    minutes: an aggregated fill of 30 units totalling 4595.50 has a per-unit price
+    of 153.18333..., so a trip matching part of it owns a fraction of a paisa.
+    Decimal arithmetic is exact; rounding happens at the presentation boundary.
+    """
     t = make_trip(gross_pnl=Decimal("-450.001"))
-    with pytest.raises(ValueError, match="sub-paise"):
-        _ = t.net_pnl
+    assert t.net_pnl == Decimal("-485.001")
