@@ -104,6 +104,12 @@ class EntryState:
     day: int
     history: tuple[Trip, ...]  # every resolved trip, oldest first
     today: tuple[Trip, ...]  # resolved trips of the current day, oldest first
+    minute: int = 0  # minutes since midnight IST of the entry bar
+    weekday: int = 0  # 0 = Monday
+    atr: float = 0.0  # mean high-low of the atr_bars bars before entry
+    vol_tercile: int = 1  # 0 low, 1 mid, 2 high: atr against the previous 5 days' bars
+    n_planned: int = 0  # length of the history being generated
+    regime: str | None = None  # market regime label at the entry bar, where supplied
 
 
 @dataclass(frozen=True)
@@ -140,6 +146,34 @@ def _day_bounds(bars: Bars) -> tuple[np.ndarray, np.ndarray]:
     return starts, ends
 
 
+VOL_LOOKBACK_DAYS = 5
+
+
+def _vol_cutoffs(rng_hl: np.ndarray, starts: np.ndarray, ends: np.ndarray, n: int) -> np.ndarray:
+    """Per day, the 33rd and 67th percentile of bar ATR over the previous 5 days.
+
+    Point-in-time: day d's cutoffs use only bars of days d-5 .. d-1. Day 0 has no
+    past, so its cutoffs are NaN and every entry on it is the middle tercile.
+    """
+    cs = np.concatenate([[0.0], np.cumsum(rng_hl)])
+    atr = np.full(len(rng_hl), np.nan)
+    atr[n:] = (cs[n:-1] - cs[: -n - 1]) / n
+    cut = np.full((len(starts), 2), np.nan)
+    for d in range(1, len(starts)):
+        lo = starts[max(0, d - VOL_LOOKBACK_DAYS)]
+        past = atr[lo : ends[d - 1]]
+        past = past[~np.isnan(past)]
+        if len(past):
+            cut[d] = np.percentile(past, [100 / 3, 200 / 3])
+    return cut
+
+
+def _tercile(atr: float, cut: np.ndarray) -> int:
+    if np.isnan(cut[0]):
+        return 1
+    return int(atr > cut[0]) + int(atr > cut[1])
+
+
 def _validate_behaviours(behaviours: tuple[Behaviour, ...]) -> None:
     for b in behaviours:
         if not 0.0 <= b.prevalence <= 1.0:
@@ -157,7 +191,15 @@ def simulate_trader(
     config: TraderConfig | None = None,
     start_day: int = 0,
     behaviours: tuple[Behaviour, ...] = (),
+    weekdays: np.ndarray | None = None,
+    regime: np.ndarray | None = None,
 ) -> list[Trip]:
+    """Generate ``n_trades`` trips.
+
+    ``weekdays`` (per trading day, 0 = Monday) comes from the calendar dates of a
+    real series; synthetic bars default to Monday..Friday in turn. ``regime`` (per
+    bar) is a market regime label, required only by behaviours that read it.
+    """
     cfg = config or TraderConfig()
     _validate(cfg, seed, n_trades)
     _validate_behaviours(behaviours)
@@ -167,6 +209,13 @@ def simulate_trader(
     )
     starts, ends = _day_bounds(bars)
     rng_hl = bars.high - bars.low
+    if weekdays is None:
+        weekdays = np.arange(len(starts)) % 5
+    if len(weekdays) != len(starts):
+        raise ValueError("weekdays must have one entry per trading day")
+    if regime is not None and len(regime) != len(bars.day):
+        raise ValueError("regime must have one label per bar")
+    cutoffs = _vol_cutoffs(rng_hl, starts, ends, cfg.atr_bars) if behaviours else np.empty((0, 2))
 
     trips: list[Trip] = []
     for d in range(start_day, len(starts)):
@@ -188,6 +237,17 @@ def simulate_trader(
             if i < flat_from or i < cfg.atr_bars:
                 continue
             state = EntryState(bar=i, day=d, history=tuple(trips), today=tuple(today))
+            if behaviours:
+                atr = float(rng_hl[i - cfg.atr_bars : i].mean())
+                state = replace(
+                    state,
+                    minute=int(bars.minute[i]),
+                    weekday=int(weekdays[d]),
+                    atr=atr,
+                    vol_tercile=_tercile(atr, cutoffs[d]),
+                    n_planned=n_trades,
+                    regime=None if regime is None else str(regime[i]),
+                )
             flags, applied = [], []
             for n, b in enumerate(behaviours):
                 if b.condition(state):
