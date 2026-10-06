@@ -5,9 +5,21 @@ plus one of the three mechanisms in ``trader``. Conditions read only resolved tr
 (``EntryState``), so a planted behaviour can never use information the engine is
 forbidden from using (§4.3). Definitions follow Annex A of the spec.
 
-Built so far: B2, R2, E5 (cycle 4, one per mechanism); B5, B12, S1, S5, S10, S11
-and both halves of R8 (cycle 5a, on the existing hooks). R1, R7, R11, E2, E4' (as
-E4p), B1 and S6 need new trade mechanics and come in cycle 5b.
+Built: B2, R2, E5 (cycle 4, one per mechanism); B5, B12, S1, S5, S10, S11 and
+both halves of R8 (cycle 5a, on the existing hooks); R1, R7, E4', E2, B1, R11 and
+S6 (cycle 5b, on the trade-shape mechanisms). That is all seventeen; S12 has no
+planted behaviour - its truth is the noise class (§12.2).
+
+R7 and E4' plant the same act - the stop is not honoured - and differ in what the
+export can show: R7 is the conditional-class test that needs the stop order on
+record, E4' asks the price path the same question without it (§9). Which trips
+carry a stop order in their export is decided when histories are written as CTR.
+
+A caution the twin run makes visible: on a price path with no drift, a rule that
+only reshapes *when* a trade exits (STOP_WIDEN, GIVEBACK, ADD, CARRY at strength
+0) moves the distribution of R - its tails, its MAE - but not its expectation.
+Their tests measure the shape they plant; any avoidable cost the engine claims for
+them on synthetic histories must be checked against the twin, not assumed.
 
 Two are approximations of the engine's own inputs and say so:
 
@@ -144,3 +156,46 @@ def r8_high_vol_size(multiplier: float, prevalence: float = 1.0) -> Behaviour:
 def r8_high_vol_drift(strength: float, prevalence: float = 1.0) -> Behaviour:
     """R8, R half: in the high-volatility tercile, entries chase."""
     return Behaviour("R8", Mechanism.DRIFT, _high_vol, strength, prevalence)
+
+
+# ---------------------------------------------------------------- cycle 5b
+
+
+def r1_size_dispersion(sigma: float, prevalence: float = 1.0) -> Behaviour:
+    """Size varies trade to trade: log-normal, mean 1, CV = sqrt(exp(sigma^2) - 1)."""
+    return Behaviour("R1", Mechanism.SIZE_SPREAD, _always, sigma, prevalence)
+
+
+def r7_stop_moved(extra_r: float, prevalence: float = 1.0) -> Behaviour:
+    """The stop order is moved ``extra_r`` R away when price reaches it."""
+    return Behaviour("R7", Mechanism.STOP_WIDEN, _always, extra_r, prevalence)
+
+
+def e4p_late_loss_accrual(extra_r: float, prevalence: float = 1.0) -> Behaviour:
+    """E4': at his usual loss he holds and hopes, up to ``extra_r`` R further."""
+    return Behaviour("E4'", Mechanism.STOP_WIDEN, _always, extra_r, prevalence)
+
+
+def e2_gives_back_winners(giveback: float, prevalence: float = 1.0) -> Behaviour:
+    """No target: a winner is held until it gives back ``giveback`` of its best excursion."""
+    return Behaviour("E2", Mechanism.GIVEBACK, _always, giveback, prevalence)
+
+
+def b1_post_loss_latency(minutes: float, prevalence: float = 1.0) -> Behaviour:
+    """After a loss he is back in ``minutes`` after the exit."""
+    return Behaviour("B1", Mechanism.LATENCY, _prior_trip_lost, minutes, prevalence)
+
+
+def r11_adds_to_losers(units: float, prevalence: float = 1.0) -> Behaviour:
+    """At 0.5R against him, he adds ``units`` x the position at that price."""
+    return Behaviour("R11", Mechanism.ADD, _always, units, prevalence)
+
+
+def _late_and_carriable(s: EntryState) -> bool:
+    lo, hi = SESSIONS["us_overlap"]
+    return lo <= s.minute < hi and s.can_carry
+
+
+def s6_overnight_carry(strength: float, prevalence: float = 1.0) -> Behaviour:
+    """Late entries are held overnight, on the wrong side of the gap with p = strength."""
+    return Behaviour("S6", Mechanism.CARRY, _late_and_carriable, strength, prevalence)
