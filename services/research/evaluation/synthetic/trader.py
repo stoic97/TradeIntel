@@ -88,10 +88,17 @@ class TraderConfig:
     skill_horizon: int = 30
     stop_atr: float = 3.0
     atr_bars: int = 30
+    min_atr: float = 1.0  # one MCX crude tick (Rs 1): flat, untraded stretches still have a 1R
     target_r: float = 2.0
     hold_median_min: float = 45.0
     hold_sigma: float = 0.8
     no_entry_last_min: int = 30
+    # Trade frequency that drifts over the history (adversarial nulls, §12.2):
+    # lambda_d = trades_per_day x exp(rate_wave x sin(2 pi (d - start) / period + phase)).
+    # rate_wave = 0 is a constant rate and leaves every draw unchanged.
+    rate_wave: float = 0.0
+    rate_period_days: float = 120.0
+    rate_phase: float = 0.0
 
 
 class Mechanism(str, Enum):
@@ -218,6 +225,12 @@ def _vol_cutoffs(rng_hl: np.ndarray, starts: np.ndarray, ends: np.ndarray, n: in
     return cut
 
 
+def volatility_cutoffs(bars: Bars, atr_bars: int = 30) -> np.ndarray:
+    """The per-day tercile cutoffs ``simulate_trader`` uses, for reuse across histories."""
+    starts, ends = _day_bounds(bars)
+    return _vol_cutoffs(bars.high - bars.low, starts, ends, atr_bars)
+
+
 def _tercile(atr: float, cut: np.ndarray) -> int:
     if np.isnan(cut[0]):
         return 1
@@ -273,6 +286,7 @@ def simulate_trader(
     weekdays: np.ndarray | None = None,
     regime: np.ndarray | None = None,
     carry_allowed: np.ndarray | None = None,
+    vol_cutoffs: np.ndarray | None = None,
 ) -> list[Trip]:
     """Generate ``n_trades`` trips.
 
@@ -281,6 +295,8 @@ def simulate_trader(
     bar) is a market regime label, required only by behaviours that read it.
     ``carry_allowed`` (per day) is ``MarketHistory.carry_allowed`` for the real
     series; synthetic bars allow carry on every day but the last.
+    ``vol_cutoffs`` is ``volatility_cutoffs(bars)``, passed in when many histories
+    share one series so it is computed once.
     """
     cfg = config or TraderConfig()
     _validate(cfg, seed, n_trades)
@@ -300,7 +316,12 @@ def simulate_trader(
         raise ValueError("weekdays and carry_allowed must have one entry per trading day")
     if regime is not None and len(regime) != len(bars.day):
         raise ValueError("regime must have one label per bar")
-    cutoffs = _vol_cutoffs(rng_hl, starts, ends, cfg.atr_bars) if behaviours else np.empty((0, 2))
+    if vol_cutoffs is not None:
+        cutoffs = vol_cutoffs
+    elif behaviours:
+        cutoffs = _vol_cutoffs(rng_hl, starts, ends, cfg.atr_bars)
+    else:
+        cutoffs = np.empty((0, 2))
     latency = [b for b in behaviours if b.mechanism is Mechanism.LATENCY]
     nb = len(behaviours)
 
@@ -311,7 +332,11 @@ def simulate_trader(
         last_entry = hi - cfg.no_entry_last_min
         if last_entry <= lo:
             continue
-        k = int(entries_rng.poisson(cfg.trades_per_day))
+        rate = cfg.trades_per_day
+        if cfg.rate_wave:
+            angle = 2 * np.pi * (d - start_day) / cfg.rate_period_days + cfg.rate_phase
+            rate *= float(np.exp(cfg.rate_wave * np.sin(angle)))
+        k = int(entries_rng.poisson(rate))
         attempts = [int(x) for x in np.sort(entries_rng.integers(lo, last_entry, size=k))]
         p = 0
         forced: int | None = None
@@ -410,7 +435,7 @@ def _one_trip(
     if m.against:
         direction = -with_move
 
-    atr = float(rng_hl[i - cfg.atr_bars : i].mean())
+    atr = max(float(rng_hl[i - cfg.atr_bars : i].mean()), cfg.min_atr)
     risk = cfg.stop_atr * atr
     stop = entry - direction * risk
     live_stop = stop if m.widen is None else entry - direction * risk * (1 + m.widen)
