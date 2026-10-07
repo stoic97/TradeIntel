@@ -5,6 +5,9 @@
 data/raw/
 data/partners/
 data/private/
+# Corpus A regenerates from code + seed + the logged price file; only its manifest
+# digest is recorded (scripts/build_corpus_a.py).
+data/corpus/
 raw/
 private/
 *.csv
