@@ -7,13 +7,18 @@ Layout follows `docs/methodology.md` §5. A folder is created when its first fil
 
 | Folder | What |
 |---|---|
-| `docs/` | Frozen documents (Thesis v1.4, Workbook v1.1, Research Spec v1.0, Phase 0 plan), `methodology.md`, `adr/`, `runbooks/` |
-| `services/shared/schemas/` | Contracts both sides use: `ctr_v1.py`, `evidence_object_v1.py` — versioned by file |
+| `docs/` | Frozen documents (Thesis v1.4, Workbook v1.1, Research Spec v1.0, Phase 0 plan), `methodology.md`, `adr/`, `runbooks/`, `architecture/`, `phase0/` (method findings, corpus A) |
+| `services/shared/schemas/` | Contracts both sides use: `ctr_v1.py` (and `evidence_object_v1.py`, when written) — versioned by file |
 | `services/production/ctr/` | Broker export → Canonical Trade Record. One adapter per broker |
-| `services/research/prereg/` | `framework_v1.yaml` + `.sha256` — Part I of the Research Spec, locked at kickoff |
+| `services/research/prereg/` | `framework_v1.yaml` (+ `.sha256` once locked at kickoff) — Part I of the Research Spec |
+| `services/research/evaluation/synthetic/` | Corpus A: the synthetic market layer, base trader, 17 planted behaviours, the grid and nulls, CTR export (`docs/phase0/corpus-a.md`) |
 | `services/research/library/` | The 18 pre-registered tests (created with the first test) |
 | `data/fixtures/` | Synthetic or anonymised samples only |
-| `tests/reproducibility/` | Every transformation run twice; hashes must match |
+| `data/golden/` | Golden outputs regenerated from fixtures, never hand-edited |
+| `data/market/` | Market data crossed from the fund (ADR 002): data files gitignored, `CROSSINGS.md` is the record |
+| `data/corpus/` | Built corpora — gitignored; they regenerate from code + seeds |
+| `scripts/` | One-off runners (`build_corpus_a.py`, `first_real_run.py`, `regenerate_golden.py`) |
+| `tests/reproducibility/` | Every transformation run twice; hashes must match; pinned digests |
 
 `make help` lists the commands.
 

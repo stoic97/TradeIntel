@@ -32,6 +32,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from itertools import pairwise
 
 import numpy as np
 
@@ -86,6 +87,9 @@ class SyntheticHistory:
     planting: Planting | None = None
     twin: tuple[Trip, ...] = ()  # the same seed without the behaviour
     truth: dict[str, float] = field(default_factory=dict)
+    # The market the trips index into, when it is not the shared series: a clean
+    # null trades its own random walk, so its bars, dates and prices are its own.
+    market: Market | None = field(default=None, compare=False, repr=False)
 
 
 def _drift(factory: Callable[..., Behaviour], theta: float, **kw: object) -> Planting:
@@ -179,6 +183,32 @@ def standin_regime(bars: Bars) -> np.ndarray:
     return label[np.searchsorted(bars.day[starts], bars.day)]
 
 
+EXPIRY_DAY = 19
+
+
+def contract_expiry(d: date) -> date:
+    """The MCX CRUDEOIL future a trip on date ``d`` is given (a convention, see export).
+
+    Expires on the 19th: of ``d``'s month when ``d`` is on or before the 19th,
+    otherwise of the next month.
+    """
+    if d.day <= EXPIRY_DAY:
+        return d.replace(day=EXPIRY_DAY)
+    first_next = (d.replace(day=1) + timedelta(days=32)).replace(day=1)
+    return first_next.replace(day=EXPIRY_DAY)
+
+
+def _carry_allowed(history: MarketHistory) -> np.ndarray:
+    """The series' own carry rule, plus: never carry a position across its contract's expiry.
+
+    A trip keeps its entry contract (export), so holding it into a day that belongs to
+    the next contract would exit after the contract had expired.
+    """
+    dates = history.dates
+    same = [contract_expiry(a) == contract_expiry(b) for a, b in pairwise(dates)]
+    return np.asarray(history.carry_allowed, dtype=bool) & np.append(np.array(same, bool), False)
+
+
 @dataclass(frozen=True)
 class Market:
     """One price series plus everything the generator precomputes from it once."""
@@ -187,6 +217,7 @@ class Market:
     weekdays: np.ndarray
     regime: np.ndarray
     cutoffs: np.ndarray
+    carry_allowed: np.ndarray
 
     @classmethod
     def of(cls, history: MarketHistory) -> Market:
@@ -195,6 +226,7 @@ class Market:
             weekdays=np.array([d.weekday() for d in history.dates]),
             regime=standin_regime(history.bars),
             cutoffs=volatility_cutoffs(history.bars),
+            carry_allowed=_carry_allowed(history),
         )
 
     @property
@@ -227,7 +259,7 @@ def _simulate(
         behaviours=behaviours,
         weekdays=market.weekdays,
         regime=market.regime,
-        carry_allowed=h.carry_allowed,
+        carry_allowed=market.carry_allowed,
         vol_cutoffs=market.cutoffs,
     )
     return tuple(trips)
@@ -298,4 +330,4 @@ def clean_null(i: int) -> SyntheticHistory:
     n = LENGTHS[i % len(LENGTHS)]
     market = synthetic_market(seed, n // 2 + 120)
     trips = _simulate(market, seed, n, TraderConfig(), 0, ())
-    return SyntheticHistory("clean_null", seed, n, trips)
+    return SyntheticHistory("clean_null", seed, n, trips, market=market)

@@ -6,6 +6,7 @@ time it is written.
 """
 import gzip
 import json
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -41,6 +42,34 @@ def test_each_trip_is_given_the_crude_future_expiring_on_the_19th(day, expiry):
     assert ex.contract_expiry(day) == expiry
 
 
+def test_a_clean_null_is_written_on_its_own_market_not_the_shared_one():
+    h = cp.clean_null(0)
+    own = h.market.history
+    fills = ex.to_fills(h, MARKET)
+    first = h.trips[0]
+    assert fills[0].ts.date() == own.dates[first.day]
+    assert float(fills[0].price) == pytest.approx(first.entry_price, abs=0.005)
+    ex.verify_round_trip(h, fills, MARKET)
+
+
+def test_no_trip_is_carried_across_its_contracts_expiry():
+    days = MARKET.history.dates
+    for d, allowed in enumerate(MARKET.carry_allowed[:-1]):
+        if allowed:
+            assert ex.contract_expiry(days[d]) == ex.contract_expiry(days[d + 1])
+    for t in S6.trips:
+        if t.carried:
+            entry, exit_ = days[t.day], days[int(MARKET.history.bars.day[t.exit_idx])]
+            assert exit_ <= ex.contract_expiry(entry)
+
+
+def test_a_fill_at_the_wrong_time_is_caught():
+    fills = ex.to_fills(R2, MARKET)
+    shifted = fills[-1].model_copy(update={"ts": fills[-1].ts.replace(second=58)})
+    with pytest.raises(AssertionError, match="mismatch"):
+        ex.verify_round_trip(R2, [*fills[:-1], shifted], MARKET)
+
+
 def test_sizes_round_to_lots_and_never_to_zero():
     assert ex.lots(1.0) == 4
     assert ex.lots(1.25) == 5
@@ -59,7 +88,7 @@ def test_fills_reconstruct_into_exactly_the_generators_trips(h):
         assert r.direction.value == ("LONG" if t.direction == LONG else "SHORT")
         assert r.quantity == ex.lots(t.size) + sum(ex.lots(u) for _, _, u in t.adds)
         assert r.risk_unit is None  # no stop orders in CTR v1: R lives in the truth table
-    ex.verify_round_trip(h, fills)
+    ex.verify_round_trip(h, fills, MARKET)
 
 
 def test_fills_carry_contract_identity_ist_times_and_their_order():
@@ -85,7 +114,7 @@ def test_a_carried_trip_stays_in_its_entry_contract():
 def test_a_broken_round_trip_is_caught_before_anything_is_written():
     fills = ex.to_fills(R2, MARKET)
     with pytest.raises(AssertionError, match="reconstruct"):
-        ex.verify_round_trip(R2, fills[:-1])  # drop the last exit: a position left open
+        ex.verify_round_trip(R2, fills[:-1], MARKET)  # drop the last exit: one left open
 
 
 def _read(path):
@@ -114,6 +143,28 @@ def test_the_same_corpus_is_the_same_bytes_and_the_truth_sits_beside_it(tmp_path
     assert row["cell"]["test_id"] == "R11" and row["planting"]["reached"] is True
     assert row["truth"]["avoidable_cost_r"] == R11.truth["avoidable_cost_r"]
     assert json.loads((tmp_path / "a" / "manifest.json").read_text()) == a
+
+
+def test_float_noise_moves_the_corpus_digest_but_not_the_decision_digest(tmp_path):
+    # Another numpy or CPU moves the 16th digit of R and risk; nothing else (§12.1).
+    t0 = R2.trips[0]
+    noisy_trip = replace(
+        t0, r_multiple=t0.r_multiple + 1e-15, risk_per_unit=t0.risk_per_unit * (1 + 1e-15)
+    )
+    noisy = replace(R2, trips=(noisy_trip, *R2.trips[1:]))
+    a = ex.write_corpus([R2], MARKET, tmp_path / "a", {})
+    b = ex.write_corpus([noisy], MARKET, tmp_path / "b", {})
+    assert a["corpus_sha256"] != b["corpus_sha256"]
+    assert a["decision_sha256"] == b["decision_sha256"]
+
+
+def test_a_changed_label_changes_the_decision_digest(tmp_path):
+    t0 = R2.trips[0]
+    other = "TIME" if t0.exit_reason != "TIME" else "STOP"
+    relabelled = replace(R2, trips=(replace(t0, exit_reason=other), *R2.trips[1:]))
+    a = ex.write_corpus([R2], MARKET, tmp_path / "a", {})
+    b = ex.write_corpus([relabelled], MARKET, tmp_path / "b", {})
+    assert a["decision_sha256"] != b["decision_sha256"]
 
 
 def test_a_changed_trip_changes_the_corpus_digest(tmp_path):
