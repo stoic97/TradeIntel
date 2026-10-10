@@ -10,7 +10,7 @@ Exactly as Research Specification v1.0 fixes it, per trader:
 Priors, section 6.3, PRE-COMMIT:
 
     alpha ~ Normal(0, 0.5)      theta ~ Normal(0, 0.25)
-    sigma ~ HalfNormal(2)       nu    ~ Gamma(2, 0.1)       beta ~ Normal(0, 0.3)
+    sigma ~ HalfNormal(2)       nu    = 2 + Gamma(2, 0.1)       beta ~ Normal(0, 0.3)
 
 **theta is the whole point.** It is what the two-part promotion criterion reads: is
 the effect real (P(theta beyond 0) >= 0.95) and is it big enough (shrunk training
@@ -29,7 +29,9 @@ with few trips each is the funnel geometry that makes a centred hierarchical mod
 diverge, and the framework permits zero divergences. This is a correctness choice,
 not a performance one.
 
-**One number here is not the framework's.** See ``TAU_DAY_PROVENANCE``.
+**Two numbers here are not the framework's as written.** ``TAU_DAY_PROVENANCE``
+covers the one the framework omits; ``NU_FLOOR_PROVENANCE`` covers the one it got
+wrong, found by the SBC run of 10 Oct 2026.
 """
 
 from __future__ import annotations
@@ -54,6 +56,19 @@ produced 236 divergent transitions. Two is the identification floor. Whether a
 particular history needs more is answered per fit by the framework's diagnostics gate
 - zero divergences, r_hat, bulk ess - so no further threshold is invented here."""
 
+NU_FLOOR_PROVENANCE = (
+    "amendment to a PRE-COMMIT value, proposed inside the revision window. Section 6.3 "
+    "gives nu ~ Gamma(2, 0.1), which puts mass below 1, where Student-t has no mean, "
+    "and below 2, where it has no variance. In the SBC run of 10 Oct 2026, 59 of 1,000 "
+    "replications drew from that region, produced data no trader could produce, and "
+    "diverged. Real returns have fat tails and finite variance, so a prior that admits "
+    "infinite variance is wrong about the world rather than merely wide. The prior is "
+    "now floor + Gamma(2, 0.1) with floor = 2: same shape, mean near 22, variance "
+    "always defined. Prediction recorded before the re-run: divergences near zero, "
+    "alpha and tau_day completion above 0.9. If the re-run does not bear that out, the "
+    "prior was not the cause and this amendment is withdrawn."
+)
+
 TAU_DAY_PROVENANCE = (
     "arbitrary. Section 6.2 mandates day-level random intercepts; section 6.3 gives "
     "starting values for alpha, theta, sigma, nu and beta and stops, so the scale of "
@@ -73,6 +88,7 @@ class M1Priors:
     sigma_scale: float = 2.0
     nu_shape: float = 2.0
     nu_rate: float = 0.1
+    nu_floor: float = 2.0  # amends the framework: see NU_FLOOR_PROVENANCE
     beta_sd: float = 0.3
     tau_day_scale: float = 0.5  # not in the framework: see TAU_DAY_PROVENANCE
 
@@ -88,6 +104,8 @@ class M1Priors:
         )
         if min(values) <= 0:
             raise ValueError("every prior scale must be positive")
+        if self.nu_floor < 0:
+            raise ValueError("nu_floor cannot be negative")
 
     def digest(self) -> str:
         payload = {"version": SPEC_VERSION, **asdict(self)}
@@ -167,7 +185,8 @@ def fit(
         alpha = pm.Normal("alpha", 0.0, priors.alpha_sd)
         theta = pm.Normal("theta", 0.0, priors.theta_sd)
         sigma = pm.HalfNormal("sigma", priors.sigma_scale)
-        nu = pm.Gamma("nu", alpha=priors.nu_shape, beta=priors.nu_rate)
+        nu_excess = pm.Gamma("nu_excess", alpha=priors.nu_shape, beta=priors.nu_rate)
+        nu = pm.Deterministic("nu", priors.nu_floor + nu_excess)
         tau_day = pm.HalfNormal("tau_day", priors.tau_day_scale)
 
         # Non-centred: the funnel is the known pathology and zero divergences is a
@@ -222,7 +241,7 @@ def prior_draw(rng: np.random.Generator, priors: M1Priors | None = None) -> dict
         "alpha": float(rng.normal(0.0, p.alpha_sd)),
         "theta": float(rng.normal(0.0, p.theta_sd)),
         "sigma": float(abs(rng.normal(0.0, p.sigma_scale))),  # HalfNormal
-        "nu": float(rng.gamma(p.nu_shape, 1.0 / p.nu_rate)),  # numpy takes a scale
+        "nu": float(p.nu_floor + rng.gamma(p.nu_shape, 1.0 / p.nu_rate)),  # numpy: scale
         "tau_day": float(abs(rng.normal(0.0, p.tau_day_scale))),
     }
 

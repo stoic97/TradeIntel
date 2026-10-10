@@ -102,6 +102,7 @@ def test_the_priors_are_the_frameworks_verbatim():
     assert p.sigma_scale == 2.0
     assert (p.nu_shape, p.nu_rate) == (2.0, 0.1)
     assert p.beta_sd == 0.3
+    # nu's floor is the one proposed amendment to these; see the nu_ tests below.
 
 
 def test_tau_day_is_declared_arbitrary_because_the_framework_omits_it():
@@ -256,3 +257,30 @@ def test_the_diagnostics_gate_is_the_frameworks_three_thresholds():
     with pytest.raises(BadDiagnostics, match="ess"):
         check_diagnostics(_stub(ess={"theta": 399.0}))
     check_diagnostics(_stub())
+
+
+# --- nu's prior, corrected after the SBC run of 10 Oct 2026 --------------------
+
+def test_nu_can_never_fall_below_two():
+    """Gamma(2, 0.1) as written put mass below nu = 1, where Student-t has no mean,
+    and below 2, where it has no variance. 59 of 1,000 SBC replications drew from
+    that region and diverged. Real returns have fat tails and finite variance, so a
+    prior that admits infinite variance is wrong about the world, not merely wide.
+    The prior is now 2 + Gamma(2, 0.1): same shape, same mean near 22, variance
+    always defined. Checked at both ends - what the prior draws, and what the
+    posterior can return."""
+    rng = np.random.default_rng(31)
+    draws = [m1.prior_draw(rng)["nu"] for _ in range(5000)]
+    assert min(draws) >= 2.0
+    assert 15.0 < float(np.mean(draws)) < 30.0  # the mean did not move far
+
+    got = m1.fit(_data(nu=3.0, seed=37), PRIORS, FIT, keep_samples=True)
+    check_diagnostics(got)
+    assert got.samples is not None
+    assert float(got.samples["nu"].min()) >= 2.0
+
+
+def test_the_nu_floor_is_part_of_the_spec_digest():
+    """Moving the floor must move the digest, or a fit could carry a hash for a
+    prior it did not use."""
+    assert replace(PRIORS, nu_floor=0.0).digest() != PRIORS.digest()
