@@ -1,0 +1,5733 @@
+{
+  "alpha": 0.01,
+  "bound": "SBC licenses that the machinery recovers parameters under our own assumed model. It does not license that the model is right - a wrong model can pass SBC beautifully (section 6.4). M-SIM is the other gate.",
+  "code_commit": "0bce1e2b5a3565ffcfba43e3e984234c3b50210b",
+  "code_dirty": false,
+  "completion": {
+    "alpha": 0.6333,
+    "nu": 0.71,
+    "sigma": 0.7133,
+    "tau_day": 0.3,
+    "theta": 0.7333
+  },
+  "diverged_replications": 70,
+  "environment": {
+    "arviz": "0.23.4",
+    "cpu_count": 8,
+    "jax": "0.10.2",
+    "machine": "arm64",
+    "numpy": "2.4.6",
+    "numpyro": "0.22.0",
+    "nutpie": "0.16.8",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "pymc": "5.28.5",
+    "python": "3.11.17"
+  },
+  "excluded_by_parameter": {
+    "alpha": 110,
+    "nu": 87,
+    "sigma": 86,
+    "tau_day": 210,
+    "theta": 80
+  },
+  "log": [
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 0,
+      "seconds": 5.63,
+      "truth": {
+        "alpha": 0.49427,
+        "nu": 11.82381,
+        "sigma": 0.59339,
+        "tau_day": 0.62857,
+        "theta": 0.18632
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 1,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": 0.39788,
+        "nu": 10.91349,
+        "sigma": 1.78596,
+        "tau_day": 0.01016,
+        "theta": 0.31985
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 2,
+      "seconds": 1.66,
+      "truth": {
+        "alpha": 0.25531,
+        "nu": 11.63087,
+        "sigma": 0.63757,
+        "tau_day": 0.64684,
+        "theta": -0.3602
+      }
+    },
+    {
+      "diverged": 6,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 3,
+      "seconds": 1.7,
+      "truth": {
+        "alpha": 0.03924,
+        "nu": 23.23292,
+        "sigma": 1.81801,
+        "tau_day": 0.36494,
+        "theta": -0.21021
+      }
+    },
+    {
+      "diverged": 2,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 4,
+      "seconds": 1.95,
+      "truth": {
+        "alpha": -0.15591,
+        "nu": 30.8159,
+        "sigma": 1.49896,
+        "tau_day": 0.0763,
+        "theta": 0.00021
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 5,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": 1.13355,
+        "nu": 17.28673,
+        "sigma": 4.85393,
+        "tau_day": 0.66019,
+        "theta": 0.42901
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 6,
+      "seconds": 1.7,
+      "truth": {
+        "alpha": 0.32171,
+        "nu": 40.18866,
+        "sigma": 1.12914,
+        "tau_day": 0.40271,
+        "theta": 0.29573
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 7,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": 0.43812,
+        "nu": 27.26878,
+        "sigma": 3.69884,
+        "tau_day": 0.41344,
+        "theta": 0.13386
+      }
+    },
+    {
+      "diverged": 496,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 8,
+      "seconds": 1.78,
+      "truth": {
+        "alpha": 0.18746,
+        "nu": 12.98015,
+        "sigma": 1.31794,
+        "tau_day": 0.10782,
+        "theta": 0.08132
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "tau_day"
+      ],
+      "i": 9,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": 0.0653,
+        "nu": 15.82378,
+        "sigma": 4.24755,
+        "tau_day": 0.29174,
+        "theta": 0.709
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "tau_day"
+      ],
+      "i": 10,
+      "seconds": 1.78,
+      "truth": {
+        "alpha": -0.32258,
+        "nu": 21.46499,
+        "sigma": 3.25885,
+        "tau_day": 0.17736,
+        "theta": 0.10849
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 11,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": -0.49311,
+        "nu": 25.13386,
+        "sigma": 1.20759,
+        "tau_day": 0.40766,
+        "theta": -0.11536
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 12,
+      "seconds": 1.85,
+      "truth": {
+        "alpha": -0.05473,
+        "nu": 32.28604,
+        "sigma": 0.45913,
+        "tau_day": 0.00614,
+        "theta": 0.05571
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 13,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": 0.39743,
+        "nu": 18.57496,
+        "sigma": 2.76869,
+        "tau_day": 0.63562,
+        "theta": -0.20258
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 14,
+      "seconds": 1.61,
+      "truth": {
+        "alpha": -0.20398,
+        "nu": 9.39983,
+        "sigma": 3.07514,
+        "tau_day": 0.88073,
+        "theta": -0.03509
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 15,
+      "seconds": 1.8,
+      "truth": {
+        "alpha": -0.26015,
+        "nu": 49.3973,
+        "sigma": 1.1186,
+        "tau_day": 0.50036,
+        "theta": 0.44035
+      }
+    },
+    {
+      "diverged": 471,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 16,
+      "seconds": 1.87,
+      "truth": {
+        "alpha": 0.27335,
+        "nu": 6.69271,
+        "sigma": 1.09884,
+        "tau_day": 0.19356,
+        "theta": 0.34765
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 17,
+      "seconds": 1.86,
+      "truth": {
+        "alpha": 0.78419,
+        "nu": 12.3791,
+        "sigma": 1.57385,
+        "tau_day": 0.13873,
+        "theta": -0.11864
+      }
+    },
+    {
+      "diverged": 4,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 18,
+      "seconds": 2.29,
+      "truth": {
+        "alpha": -0.71323,
+        "nu": 35.84298,
+        "sigma": 4.65207,
+        "tau_day": 0.42535,
+        "theta": -0.08612
+      }
+    },
+    {
+      "diverged": 2,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 19,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": 0.18282,
+        "nu": 8.68388,
+        "sigma": 1.51225,
+        "tau_day": 0.2301,
+        "theta": -0.5042
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 20,
+      "seconds": 1.62,
+      "truth": {
+        "alpha": 0.25066,
+        "nu": 25.35486,
+        "sigma": 1.11864,
+        "tau_day": 0.17341,
+        "theta": -0.00935
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 21,
+      "seconds": 1.84,
+      "truth": {
+        "alpha": 0.34228,
+        "nu": 20.89585,
+        "sigma": 0.37997,
+        "tau_day": 0.38646,
+        "theta": -0.02623
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 22,
+      "seconds": 1.96,
+      "truth": {
+        "alpha": -0.3325,
+        "nu": 5.89395,
+        "sigma": 2.15755,
+        "tau_day": 0.34312,
+        "theta": 0.15679
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 23,
+      "seconds": 1.93,
+      "truth": {
+        "alpha": 0.70655,
+        "nu": 11.22341,
+        "sigma": 1.76386,
+        "tau_day": 0.4131,
+        "theta": -0.19362
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 24,
+      "seconds": 1.67,
+      "truth": {
+        "alpha": 0.94311,
+        "nu": 6.74196,
+        "sigma": 0.24101,
+        "tau_day": 0.61978,
+        "theta": 0.05146
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "tau_day"
+      ],
+      "i": 25,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": 0.00475,
+        "nu": 2.68034,
+        "sigma": 0.68754,
+        "tau_day": 0.04081,
+        "theta": -0.12858
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 26,
+      "seconds": 1.91,
+      "truth": {
+        "alpha": 0.25538,
+        "nu": 12.7431,
+        "sigma": 1.37463,
+        "tau_day": 0.38496,
+        "theta": 0.01282
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 27,
+      "seconds": 1.93,
+      "truth": {
+        "alpha": 0.48063,
+        "nu": 62.20615,
+        "sigma": 2.40302,
+        "tau_day": 0.2951,
+        "theta": -0.54077
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 28,
+      "seconds": 1.62,
+      "truth": {
+        "alpha": 0.07891,
+        "nu": 10.47336,
+        "sigma": 2.09118,
+        "tau_day": 1.06644,
+        "theta": -0.33006
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 29,
+      "seconds": 1.93,
+      "truth": {
+        "alpha": 0.06539,
+        "nu": 23.91694,
+        "sigma": 2.49463,
+        "tau_day": 0.95129,
+        "theta": 0.27359
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 30,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": 0.13006,
+        "nu": 12.18225,
+        "sigma": 2.98349,
+        "tau_day": 0.04403,
+        "theta": -0.25222
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 31,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": 0.43357,
+        "nu": 18.75261,
+        "sigma": 0.44239,
+        "tau_day": 0.30161,
+        "theta": -0.53005
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 32,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": -0.47572,
+        "nu": 13.76467,
+        "sigma": 1.40047,
+        "tau_day": 0.61215,
+        "theta": 0.10608
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 33,
+      "seconds": 1.76,
+      "truth": {
+        "alpha": -0.49475,
+        "nu": 15.78777,
+        "sigma": 0.89006,
+        "tau_day": 0.00906,
+        "theta": -0.13342
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 34,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": -0.08893,
+        "nu": 12.53586,
+        "sigma": 2.48805,
+        "tau_day": 0.1436,
+        "theta": -0.33478
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 35,
+      "seconds": 1.72,
+      "truth": {
+        "alpha": 0.17269,
+        "nu": 37.17447,
+        "sigma": 2.63374,
+        "tau_day": 0.06382,
+        "theta": 0.09306
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 36,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": 0.93466,
+        "nu": 8.92612,
+        "sigma": 0.19793,
+        "tau_day": 0.24906,
+        "theta": -0.27978
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 37,
+      "seconds": 2.09,
+      "truth": {
+        "alpha": -0.52027,
+        "nu": 27.97499,
+        "sigma": 2.31742,
+        "tau_day": 0.61984,
+        "theta": -0.19331
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 38,
+      "seconds": 1.68,
+      "truth": {
+        "alpha": 0.96107,
+        "nu": 7.01201,
+        "sigma": 1.87002,
+        "tau_day": 0.01425,
+        "theta": -0.07524
+      }
+    },
+    {
+      "diverged": 118,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 39,
+      "seconds": 2.25,
+      "truth": {
+        "alpha": 0.41919,
+        "nu": 23.2157,
+        "sigma": 1.02178,
+        "tau_day": 0.09471,
+        "theta": 0.5801
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 40,
+      "seconds": 1.81,
+      "truth": {
+        "alpha": -0.53708,
+        "nu": 20.26797,
+        "sigma": 1.7038,
+        "tau_day": 0.09669,
+        "theta": 0.07901
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 41,
+      "seconds": 2.03,
+      "truth": {
+        "alpha": 0.7443,
+        "nu": 13.41164,
+        "sigma": 0.97831,
+        "tau_day": 0.80844,
+        "theta": 0.0697
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 42,
+      "seconds": 1.82,
+      "truth": {
+        "alpha": -0.12368,
+        "nu": 11.47256,
+        "sigma": 1.51431,
+        "tau_day": 0.11446,
+        "theta": 0.05011
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 43,
+      "seconds": 2.28,
+      "truth": {
+        "alpha": 0.05352,
+        "nu": 17.11231,
+        "sigma": 2.47091,
+        "tau_day": 0.71821,
+        "theta": 0.06908
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 44,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": 0.07336,
+        "nu": 21.36872,
+        "sigma": 0.71544,
+        "tau_day": 0.13714,
+        "theta": 0.00293
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "tau_day"
+      ],
+      "i": 45,
+      "seconds": 2.25,
+      "truth": {
+        "alpha": 0.44559,
+        "nu": 42.88489,
+        "sigma": 2.33058,
+        "tau_day": 0.78458,
+        "theta": 0.20545
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 46,
+      "seconds": 1.67,
+      "truth": {
+        "alpha": -0.28849,
+        "nu": 23.56014,
+        "sigma": 0.54731,
+        "tau_day": 0.41085,
+        "theta": -0.2949
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 47,
+      "seconds": 2.06,
+      "truth": {
+        "alpha": -0.12854,
+        "nu": 28.72905,
+        "sigma": 1.86788,
+        "tau_day": 0.91601,
+        "theta": -0.22323
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 48,
+      "seconds": 1.71,
+      "truth": {
+        "alpha": 0.28622,
+        "nu": 28.17357,
+        "sigma": 2.322,
+        "tau_day": 0.33145,
+        "theta": 0.00526
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 49,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": -0.50682,
+        "nu": 20.10592,
+        "sigma": 3.15724,
+        "tau_day": 0.24462,
+        "theta": 0.35561
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 50,
+      "seconds": 2.07,
+      "truth": {
+        "alpha": 0.14526,
+        "nu": 43.11516,
+        "sigma": 1.49112,
+        "tau_day": 1.23698,
+        "theta": 0.16321
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 51,
+      "seconds": 1.69,
+      "truth": {
+        "alpha": -0.01338,
+        "nu": 21.86688,
+        "sigma": 0.82064,
+        "tau_day": 0.28208,
+        "theta": -0.07676
+      }
+    },
+    {
+      "diverged": 2,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 52,
+      "seconds": 2.29,
+      "truth": {
+        "alpha": 0.02309,
+        "nu": 4.3297,
+        "sigma": 1.41507,
+        "tau_day": 0.50266,
+        "theta": -0.16721
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 53,
+      "seconds": 1.79,
+      "truth": {
+        "alpha": -0.34334,
+        "nu": 6.56024,
+        "sigma": 2.92527,
+        "tau_day": 0.62156,
+        "theta": -0.09248
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 54,
+      "seconds": 2.24,
+      "truth": {
+        "alpha": -0.1568,
+        "nu": 15.25206,
+        "sigma": 0.48474,
+        "tau_day": 0.33709,
+        "theta": 0.22692
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 55,
+      "seconds": 1.71,
+      "truth": {
+        "alpha": -0.16023,
+        "nu": 11.72521,
+        "sigma": 1.99974,
+        "tau_day": 0.0023,
+        "theta": -0.19376
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 56,
+      "seconds": 2.19,
+      "truth": {
+        "alpha": 0.33516,
+        "nu": 74.67485,
+        "sigma": 0.22598,
+        "tau_day": 0.41595,
+        "theta": -0.04403
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 57,
+      "seconds": 1.67,
+      "truth": {
+        "alpha": 0.51262,
+        "nu": 30.59003,
+        "sigma": 0.94809,
+        "tau_day": 0.67763,
+        "theta": 0.17057
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 58,
+      "seconds": 1.85,
+      "truth": {
+        "alpha": -0.37238,
+        "nu": 21.32344,
+        "sigma": 2.31988,
+        "tau_day": 0.55973,
+        "theta": -0.16695
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 59,
+      "seconds": 2.39,
+      "truth": {
+        "alpha": 0.19889,
+        "nu": 21.55827,
+        "sigma": 1.74157,
+        "tau_day": 0.6139,
+        "theta": -0.23012
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 60,
+      "seconds": 3.01,
+      "truth": {
+        "alpha": 1.07955,
+        "nu": 10.14761,
+        "sigma": 2.0673,
+        "tau_day": 0.35823,
+        "theta": 0.01083
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 61,
+      "seconds": 2.57,
+      "truth": {
+        "alpha": -0.26907,
+        "nu": 17.76843,
+        "sigma": 0.63591,
+        "tau_day": 0.05474,
+        "theta": -0.07825
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 62,
+      "seconds": 1.75,
+      "truth": {
+        "alpha": 0.1962,
+        "nu": 14.01303,
+        "sigma": 0.45779,
+        "tau_day": 0.18781,
+        "theta": 0.00014
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 63,
+      "seconds": 1.73,
+      "truth": {
+        "alpha": -0.06229,
+        "nu": 11.2547,
+        "sigma": 2.4586,
+        "tau_day": 0.48998,
+        "theta": 0.10662
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 64,
+      "seconds": 2.25,
+      "truth": {
+        "alpha": 0.24963,
+        "nu": 11.89952,
+        "sigma": 0.06392,
+        "tau_day": 0.36393,
+        "theta": -0.12761
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 65,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": -0.05323,
+        "nu": 32.67738,
+        "sigma": 0.41108,
+        "tau_day": 0.07194,
+        "theta": -0.24949
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 66,
+      "seconds": 1.76,
+      "truth": {
+        "alpha": 0.08599,
+        "nu": 12.17253,
+        "sigma": 1.35528,
+        "tau_day": 0.06592,
+        "theta": -0.22434
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 67,
+      "seconds": 2.43,
+      "truth": {
+        "alpha": -0.37327,
+        "nu": 11.01876,
+        "sigma": 2.79915,
+        "tau_day": 0.23727,
+        "theta": -0.08309
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 68,
+      "seconds": 1.78,
+      "truth": {
+        "alpha": 0.51939,
+        "nu": 8.50168,
+        "sigma": 2.53487,
+        "tau_day": 0.2433,
+        "theta": 0.08222
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 69,
+      "seconds": 2.55,
+      "truth": {
+        "alpha": 0.78648,
+        "nu": 11.89813,
+        "sigma": 1.69936,
+        "tau_day": 0.05487,
+        "theta": -0.40812
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 70,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": -0.02107,
+        "nu": 8.04564,
+        "sigma": 2.92246,
+        "tau_day": 0.54538,
+        "theta": -0.67258
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 71,
+      "seconds": 1.7,
+      "truth": {
+        "alpha": 0.50219,
+        "nu": 9.76654,
+        "sigma": 0.2972,
+        "tau_day": 0.47396,
+        "theta": 0.03418
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 72,
+      "seconds": 2.66,
+      "truth": {
+        "alpha": 1.13044,
+        "nu": 28.46691,
+        "sigma": 0.64822,
+        "tau_day": 0.01558,
+        "theta": -0.01023
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 73,
+      "seconds": 1.81,
+      "truth": {
+        "alpha": -0.48145,
+        "nu": 14.70561,
+        "sigma": 1.70219,
+        "tau_day": 0.71284,
+        "theta": 0.21885
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 74,
+      "seconds": 1.75,
+      "truth": {
+        "alpha": 0.63898,
+        "nu": 6.56893,
+        "sigma": 2.61487,
+        "tau_day": 0.01547,
+        "theta": 0.11538
+      }
+    },
+    {
+      "diverged": 2,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 75,
+      "seconds": 2.57,
+      "truth": {
+        "alpha": -0.48135,
+        "nu": 13.38574,
+        "sigma": 1.07558,
+        "tau_day": 0.1983,
+        "theta": 0.19252
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 76,
+      "seconds": 1.83,
+      "truth": {
+        "alpha": -0.47237,
+        "nu": 62.2657,
+        "sigma": 0.34548,
+        "tau_day": 0.95488,
+        "theta": 0.15292
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 77,
+      "seconds": 2.05,
+      "truth": {
+        "alpha": -0.44655,
+        "nu": 33.4012,
+        "sigma": 2.9496,
+        "tau_day": 0.21448,
+        "theta": 0.05412
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 78,
+      "seconds": 2.63,
+      "truth": {
+        "alpha": 0.716,
+        "nu": 23.32128,
+        "sigma": 1.06441,
+        "tau_day": 0.48806,
+        "theta": 0.06754
+      }
+    },
+    {
+      "diverged": 718,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 79,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": 0.564,
+        "nu": 25.81346,
+        "sigma": 4.36361,
+        "tau_day": 0.54791,
+        "theta": -0.30959
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 80,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": -0.04059,
+        "nu": 15.02074,
+        "sigma": 0.49077,
+        "tau_day": 0.41539,
+        "theta": 0.14483
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 81,
+      "seconds": 2.73,
+      "truth": {
+        "alpha": -1.22077,
+        "nu": 10.43873,
+        "sigma": 2.12686,
+        "tau_day": 0.42985,
+        "theta": 0.22035
+      }
+    },
+    {
+      "diverged": 78,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 82,
+      "seconds": 2.81,
+      "truth": {
+        "alpha": -0.12655,
+        "nu": 46.55093,
+        "sigma": 2.49323,
+        "tau_day": 1.01627,
+        "theta": -0.0025
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 83,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": -0.20241,
+        "nu": 21.50533,
+        "sigma": 0.51304,
+        "tau_day": 1.11984,
+        "theta": -0.01085
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 84,
+      "seconds": 1.81,
+      "truth": {
+        "alpha": -0.27917,
+        "nu": 29.93258,
+        "sigma": 3.14011,
+        "tau_day": 0.2869,
+        "theta": -0.12859
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 85,
+      "seconds": 2.5,
+      "truth": {
+        "alpha": -0.303,
+        "nu": 12.51033,
+        "sigma": 0.64523,
+        "tau_day": 0.76457,
+        "theta": 0.15036
+      }
+    },
+    {
+      "diverged": 1074,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 86,
+      "seconds": 2.0,
+      "truth": {
+        "alpha": 0.33468,
+        "nu": 15.54127,
+        "sigma": 3.61377,
+        "tau_day": 0.66018,
+        "theta": -0.40702
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 87,
+      "seconds": 1.73,
+      "truth": {
+        "alpha": -0.14991,
+        "nu": 19.59139,
+        "sigma": 0.56252,
+        "tau_day": 0.37926,
+        "theta": -0.07772
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 88,
+      "seconds": 2.48,
+      "truth": {
+        "alpha": 0.56574,
+        "nu": 5.79133,
+        "sigma": 3.06904,
+        "tau_day": 0.86352,
+        "theta": 0.15035
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 89,
+      "seconds": 1.75,
+      "truth": {
+        "alpha": 0.02659,
+        "nu": 8.37449,
+        "sigma": 2.19294,
+        "tau_day": 0.63124,
+        "theta": -0.45446
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 90,
+      "seconds": 1.8,
+      "truth": {
+        "alpha": -0.50691,
+        "nu": 20.36096,
+        "sigma": 2.34066,
+        "tau_day": 0.71158,
+        "theta": 0.10816
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 91,
+      "seconds": 2.56,
+      "truth": {
+        "alpha": -0.79362,
+        "nu": 11.36026,
+        "sigma": 4.95703,
+        "tau_day": 0.67784,
+        "theta": -0.35548
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 92,
+      "seconds": 1.78,
+      "truth": {
+        "alpha": 0.513,
+        "nu": 8.27128,
+        "sigma": 1.02626,
+        "tau_day": 0.47975,
+        "theta": -0.12913
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 93,
+      "seconds": 1.79,
+      "truth": {
+        "alpha": -0.21237,
+        "nu": 13.35401,
+        "sigma": 0.92209,
+        "tau_day": 0.58508,
+        "theta": 0.04369
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "tau_day"
+      ],
+      "i": 94,
+      "seconds": 1.87,
+      "truth": {
+        "alpha": 0.19607,
+        "nu": 27.24681,
+        "sigma": 1.24843,
+        "tau_day": 0.2821,
+        "theta": -0.13369
+      }
+    },
+    {
+      "diverged": 118,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 95,
+      "seconds": 2.8,
+      "truth": {
+        "alpha": 0.11042,
+        "nu": 2.80194,
+        "sigma": 0.91824,
+        "tau_day": 0.34948,
+        "theta": -0.26192
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 96,
+      "seconds": 1.76,
+      "truth": {
+        "alpha": 0.42344,
+        "nu": 26.05016,
+        "sigma": 0.19446,
+        "tau_day": 0.05413,
+        "theta": 0.25775
+      }
+    },
+    {
+      "diverged": 2011,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 97,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": 0.1631,
+        "nu": 31.49987,
+        "sigma": 1.63046,
+        "tau_day": 0.46061,
+        "theta": 0.16724
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 98,
+      "seconds": 2.85,
+      "truth": {
+        "alpha": 0.29661,
+        "nu": 33.17586,
+        "sigma": 1.47749,
+        "tau_day": 0.09603,
+        "theta": -0.13078
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 99,
+      "seconds": 2.44,
+      "truth": {
+        "alpha": 0.02278,
+        "nu": 13.69169,
+        "sigma": 4.47805,
+        "tau_day": 0.30829,
+        "theta": -0.20147
+      }
+    },
+    {
+      "diverged": 12,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 100,
+      "seconds": 2.39,
+      "truth": {
+        "alpha": 0.23301,
+        "nu": 7.47553,
+        "sigma": 2.49718,
+        "tau_day": 0.19472,
+        "theta": 0.04176
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 101,
+      "seconds": 1.83,
+      "truth": {
+        "alpha": -0.027,
+        "nu": 8.05293,
+        "sigma": 3.17088,
+        "tau_day": 0.15859,
+        "theta": 0.03896
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 102,
+      "seconds": 2.87,
+      "truth": {
+        "alpha": 0.05046,
+        "nu": 7.21767,
+        "sigma": 0.61595,
+        "tau_day": 0.05297,
+        "theta": -0.1682
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 103,
+      "seconds": 1.79,
+      "truth": {
+        "alpha": -0.80598,
+        "nu": 17.42752,
+        "sigma": 0.79447,
+        "tau_day": 0.34391,
+        "theta": 0.30291
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 104,
+      "seconds": 1.82,
+      "truth": {
+        "alpha": 0.50705,
+        "nu": 9.95131,
+        "sigma": 0.11744,
+        "tau_day": 0.89753,
+        "theta": -0.01797
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 105,
+      "seconds": 1.88,
+      "truth": {
+        "alpha": -0.12463,
+        "nu": 81.23033,
+        "sigma": 2.16117,
+        "tau_day": 0.33929,
+        "theta": 0.2837
+      }
+    },
+    {
+      "diverged": 997,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 106,
+      "seconds": 2.91,
+      "truth": {
+        "alpha": 0.43032,
+        "nu": 11.42862,
+        "sigma": 1.13547,
+        "tau_day": 0.06059,
+        "theta": -0.24887
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 107,
+      "seconds": 1.85,
+      "truth": {
+        "alpha": -0.0908,
+        "nu": 28.19168,
+        "sigma": 1.70179,
+        "tau_day": 0.62597,
+        "theta": -0.17903
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 108,
+      "seconds": 1.88,
+      "truth": {
+        "alpha": 0.2033,
+        "nu": 10.68452,
+        "sigma": 0.47724,
+        "tau_day": 0.23255,
+        "theta": 0.09542
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 109,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": -0.01372,
+        "nu": 51.74265,
+        "sigma": 1.8571,
+        "tau_day": 0.09963,
+        "theta": 0.05639
+      }
+    },
+    {
+      "diverged": 83,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 110,
+      "seconds": 3.15,
+      "truth": {
+        "alpha": 0.976,
+        "nu": 9.64863,
+        "sigma": 1.251,
+        "tau_day": 0.39398,
+        "theta": -0.33606
+      }
+    },
+    {
+      "diverged": 15,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 111,
+      "seconds": 2.04,
+      "truth": {
+        "alpha": -0.94207,
+        "nu": 19.73992,
+        "sigma": 3.04749,
+        "tau_day": 0.13313,
+        "theta": 0.10146
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 112,
+      "seconds": 1.98,
+      "truth": {
+        "alpha": 0.05511,
+        "nu": 66.96332,
+        "sigma": 3.64111,
+        "tau_day": 0.04183,
+        "theta": -0.34255
+      }
+    },
+    {
+      "diverged": 9,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 113,
+      "seconds": 1.98,
+      "truth": {
+        "alpha": -0.65384,
+        "nu": 26.24999,
+        "sigma": 4.02337,
+        "tau_day": 0.97363,
+        "theta": 0.04655
+      }
+    },
+    {
+      "diverged": 204,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 114,
+      "seconds": 3.04,
+      "truth": {
+        "alpha": 0.42864,
+        "nu": 16.57815,
+        "sigma": 0.38498,
+        "tau_day": 0.10852,
+        "theta": 0.22843
+      }
+    },
+    {
+      "diverged": 4,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 115,
+      "seconds": 2.1,
+      "truth": {
+        "alpha": -0.37318,
+        "nu": 21.14538,
+        "sigma": 2.77156,
+        "tau_day": 0.40419,
+        "theta": 0.1197
+      }
+    },
+    {
+      "diverged": 10,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 116,
+      "seconds": 2.06,
+      "truth": {
+        "alpha": 0.55148,
+        "nu": 23.46745,
+        "sigma": 3.09779,
+        "tau_day": 0.39358,
+        "theta": -0.37062
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 117,
+      "seconds": 1.86,
+      "truth": {
+        "alpha": 0.15273,
+        "nu": 11.28721,
+        "sigma": 1.02154,
+        "tau_day": 0.74139,
+        "theta": 0.10452
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 118,
+      "seconds": 1.83,
+      "truth": {
+        "alpha": -0.19698,
+        "nu": 35.29085,
+        "sigma": 1.62561,
+        "tau_day": 0.39252,
+        "theta": 0.18926
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 119,
+      "seconds": 3.16,
+      "truth": {
+        "alpha": -0.48607,
+        "nu": 27.91327,
+        "sigma": 3.3577,
+        "tau_day": 0.00778,
+        "theta": -0.16067
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 120,
+      "seconds": 1.77,
+      "truth": {
+        "alpha": 0.05123,
+        "nu": 26.80663,
+        "sigma": 0.70705,
+        "tau_day": 0.57736,
+        "theta": -0.18337
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 121,
+      "seconds": 1.86,
+      "truth": {
+        "alpha": -0.51412,
+        "nu": 12.6672,
+        "sigma": 0.71342,
+        "tau_day": 0.25168,
+        "theta": -0.16697
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 122,
+      "seconds": 1.81,
+      "truth": {
+        "alpha": -0.30358,
+        "nu": 9.09112,
+        "sigma": 1.84593,
+        "tau_day": 0.68199,
+        "theta": -0.11916
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 123,
+      "seconds": 3.1,
+      "truth": {
+        "alpha": -0.46757,
+        "nu": 35.50867,
+        "sigma": 0.58595,
+        "tau_day": 0.01852,
+        "theta": -0.88403
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 124,
+      "seconds": 1.81,
+      "truth": {
+        "alpha": 0.04905,
+        "nu": 11.24557,
+        "sigma": 0.55838,
+        "tau_day": 0.41487,
+        "theta": 0.00849
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 125,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": 0.19594,
+        "nu": 4.56601,
+        "sigma": 0.93603,
+        "tau_day": 0.61243,
+        "theta": 0.45468
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 126,
+      "seconds": 1.96,
+      "truth": {
+        "alpha": 0.11634,
+        "nu": 28.21091,
+        "sigma": 0.25557,
+        "tau_day": 1.11064,
+        "theta": -0.23327
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 127,
+      "seconds": 3.13,
+      "truth": {
+        "alpha": 0.23878,
+        "nu": 8.74157,
+        "sigma": 0.94493,
+        "tau_day": 0.14327,
+        "theta": -0.28644
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 128,
+      "seconds": 2.1,
+      "truth": {
+        "alpha": -1.0245,
+        "nu": 11.67754,
+        "sigma": 0.93231,
+        "tau_day": 0.02523,
+        "theta": 0.14087
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 129,
+      "seconds": 1.92,
+      "truth": {
+        "alpha": 0.13502,
+        "nu": 16.11541,
+        "sigma": 1.50991,
+        "tau_day": 0.95845,
+        "theta": 0.04149
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 130,
+      "seconds": 2.01,
+      "truth": {
+        "alpha": 0.62191,
+        "nu": 17.50592,
+        "sigma": 2.80397,
+        "tau_day": 0.43337,
+        "theta": 0.02258
+      }
+    },
+    {
+      "diverged": 8,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 131,
+      "seconds": 2.02,
+      "truth": {
+        "alpha": 0.10698,
+        "nu": 5.12136,
+        "sigma": 3.19392,
+        "tau_day": 0.68345,
+        "theta": 0.79026
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 132,
+      "seconds": 5.44,
+      "truth": {
+        "alpha": -1.1613,
+        "nu": 21.7851,
+        "sigma": 2.84406,
+        "tau_day": 0.36281,
+        "theta": -0.10136
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 133,
+      "seconds": 1.95,
+      "truth": {
+        "alpha": -0.16731,
+        "nu": 47.90737,
+        "sigma": 4.25564,
+        "tau_day": 0.6709,
+        "theta": 0.19803
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 134,
+      "seconds": 1.88,
+      "truth": {
+        "alpha": 0.21858,
+        "nu": 10.03697,
+        "sigma": 0.75063,
+        "tau_day": 1.03575,
+        "theta": -0.31923
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 135,
+      "seconds": 1.93,
+      "truth": {
+        "alpha": -0.00019,
+        "nu": 17.72134,
+        "sigma": 2.36964,
+        "tau_day": 0.37771,
+        "theta": 0.00742
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 136,
+      "seconds": 2.0,
+      "truth": {
+        "alpha": 0.38013,
+        "nu": 7.88483,
+        "sigma": 0.24531,
+        "tau_day": 0.79692,
+        "theta": -0.34722
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 137,
+      "seconds": 3.42,
+      "truth": {
+        "alpha": -0.08587,
+        "nu": 34.38521,
+        "sigma": 0.22566,
+        "tau_day": 0.39024,
+        "theta": -0.6903
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 138,
+      "seconds": 2.02,
+      "truth": {
+        "alpha": 0.4753,
+        "nu": 21.71578,
+        "sigma": 0.11976,
+        "tau_day": 0.0953,
+        "theta": -0.17054
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 139,
+      "seconds": 2.25,
+      "truth": {
+        "alpha": 0.05199,
+        "nu": 24.92304,
+        "sigma": 3.21072,
+        "tau_day": 0.22199,
+        "theta": -0.16451
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 140,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": -0.82232,
+        "nu": 38.35235,
+        "sigma": 0.74606,
+        "tau_day": 0.41206,
+        "theta": -0.11565
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 141,
+      "seconds": 1.94,
+      "truth": {
+        "alpha": -0.23991,
+        "nu": 17.694,
+        "sigma": 0.7891,
+        "tau_day": 0.71827,
+        "theta": -0.09053
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 142,
+      "seconds": 3.39,
+      "truth": {
+        "alpha": 0.88345,
+        "nu": 15.41228,
+        "sigma": 1.77561,
+        "tau_day": 0.12443,
+        "theta": 0.11597
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 143,
+      "seconds": 2.85,
+      "truth": {
+        "alpha": 0.37395,
+        "nu": 55.39391,
+        "sigma": 2.47314,
+        "tau_day": 0.40562,
+        "theta": -0.12443
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 144,
+      "seconds": 2.2,
+      "truth": {
+        "alpha": -0.18586,
+        "nu": 12.11829,
+        "sigma": 0.19399,
+        "tau_day": 0.42922,
+        "theta": -0.10714
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 145,
+      "seconds": 2.02,
+      "truth": {
+        "alpha": 0.26489,
+        "nu": 19.72347,
+        "sigma": 0.48432,
+        "tau_day": 0.30304,
+        "theta": -0.24865
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 146,
+      "seconds": 1.89,
+      "truth": {
+        "alpha": 0.36302,
+        "nu": 16.27562,
+        "sigma": 1.47816,
+        "tau_day": 0.53201,
+        "theta": 0.10107
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 147,
+      "seconds": 3.5,
+      "truth": {
+        "alpha": -0.54757,
+        "nu": 50.49196,
+        "sigma": 0.74273,
+        "tau_day": 0.45197,
+        "theta": 0.21558
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 148,
+      "seconds": 2.07,
+      "truth": {
+        "alpha": 0.24055,
+        "nu": 9.22804,
+        "sigma": 1.54823,
+        "tau_day": 0.34006,
+        "theta": 0.34088
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 149,
+      "seconds": 2.02,
+      "truth": {
+        "alpha": 0.73674,
+        "nu": 36.66883,
+        "sigma": 3.89154,
+        "tau_day": 0.2189,
+        "theta": 0.07105
+      }
+    },
+    {
+      "diverged": 143,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 150,
+      "seconds": 2.16,
+      "truth": {
+        "alpha": 0.34019,
+        "nu": 1.19311,
+        "sigma": 2.65068,
+        "tau_day": 0.22056,
+        "theta": 0.11142
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 151,
+      "seconds": 2.03,
+      "truth": {
+        "alpha": 0.40959,
+        "nu": 3.96411,
+        "sigma": 1.35725,
+        "tau_day": 0.20875,
+        "theta": 0.00068
+      }
+    },
+    {
+      "diverged": 2,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 152,
+      "seconds": 3.58,
+      "truth": {
+        "alpha": -0.39252,
+        "nu": 11.56796,
+        "sigma": 2.52696,
+        "tau_day": 0.56645,
+        "theta": 0.27224
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 153,
+      "seconds": 2.11,
+      "truth": {
+        "alpha": -0.65154,
+        "nu": 17.52036,
+        "sigma": 0.40026,
+        "tau_day": 0.56914,
+        "theta": 0.16801
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 154,
+      "seconds": 2.06,
+      "truth": {
+        "alpha": 0.52825,
+        "nu": 42.8743,
+        "sigma": 3.60109,
+        "tau_day": 0.29461,
+        "theta": -0.27478
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 155,
+      "seconds": 1.97,
+      "truth": {
+        "alpha": 0.10757,
+        "nu": 20.2004,
+        "sigma": 3.94041,
+        "tau_day": 1.28989,
+        "theta": 0.13636
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "sigma",
+        "tau_day"
+      ],
+      "i": 156,
+      "seconds": 2.46,
+      "truth": {
+        "alpha": 0.20121,
+        "nu": 27.2903,
+        "sigma": 0.8585,
+        "tau_day": 0.01235,
+        "theta": 0.06042
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 157,
+      "seconds": 3.74,
+      "truth": {
+        "alpha": 0.26297,
+        "nu": 18.50363,
+        "sigma": 3.30425,
+        "tau_day": 0.24043,
+        "theta": -0.00269
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 158,
+      "seconds": 1.99,
+      "truth": {
+        "alpha": -0.49444,
+        "nu": 28.58315,
+        "sigma": 1.05391,
+        "tau_day": 1.0087,
+        "theta": 0.31921
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 159,
+      "seconds": 2.05,
+      "truth": {
+        "alpha": 0.07296,
+        "nu": 34.06399,
+        "sigma": 2.27948,
+        "tau_day": 0.47954,
+        "theta": 0.2088
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 160,
+      "seconds": 2.3,
+      "truth": {
+        "alpha": -0.06793,
+        "nu": 1.64627,
+        "sigma": 0.84474,
+        "tau_day": 0.12153,
+        "theta": -0.29244
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 161,
+      "seconds": 2.11,
+      "truth": {
+        "alpha": -0.37163,
+        "nu": 7.93594,
+        "sigma": 1.45524,
+        "tau_day": 0.1721,
+        "theta": 0.01823
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 162,
+      "seconds": 1.99,
+      "truth": {
+        "alpha": 0.13618,
+        "nu": 8.05053,
+        "sigma": 1.53894,
+        "tau_day": 1.19135,
+        "theta": 0.10654
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "sigma",
+        "tau_day"
+      ],
+      "i": 163,
+      "seconds": 3.59,
+      "truth": {
+        "alpha": -0.22887,
+        "nu": 14.29675,
+        "sigma": 1.3714,
+        "tau_day": 0.3733,
+        "theta": -0.38803
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 164,
+      "seconds": 1.92,
+      "truth": {
+        "alpha": 0.3232,
+        "nu": 14.92621,
+        "sigma": 0.89094,
+        "tau_day": 0.64528,
+        "theta": -0.46794
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 165,
+      "seconds": 1.99,
+      "truth": {
+        "alpha": 0.50291,
+        "nu": 14.81913,
+        "sigma": 3.78549,
+        "tau_day": 1.02395,
+        "theta": 0.12593
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 166,
+      "seconds": 2.06,
+      "truth": {
+        "alpha": 0.97892,
+        "nu": 16.74877,
+        "sigma": 1.50299,
+        "tau_day": 0.56087,
+        "theta": -0.09862
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 167,
+      "seconds": 1.88,
+      "truth": {
+        "alpha": -0.82268,
+        "nu": 12.25977,
+        "sigma": 0.22274,
+        "tau_day": 0.49153,
+        "theta": -0.26808
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 168,
+      "seconds": 1.95,
+      "truth": {
+        "alpha": 0.4951,
+        "nu": 11.408,
+        "sigma": 1.15307,
+        "tau_day": 0.68782,
+        "theta": 0.32548
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 169,
+      "seconds": 3.88,
+      "truth": {
+        "alpha": -0.496,
+        "nu": 18.7498,
+        "sigma": 2.47695,
+        "tau_day": 0.19994,
+        "theta": -0.37725
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 170,
+      "seconds": 2.08,
+      "truth": {
+        "alpha": -0.06701,
+        "nu": 40.09603,
+        "sigma": 2.06705,
+        "tau_day": 0.14022,
+        "theta": -0.19414
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 171,
+      "seconds": 2.06,
+      "truth": {
+        "alpha": -0.92757,
+        "nu": 11.24606,
+        "sigma": 1.00295,
+        "tau_day": 0.22576,
+        "theta": -0.14493
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "tau_day"
+      ],
+      "i": 172,
+      "seconds": 2.04,
+      "truth": {
+        "alpha": -0.47621,
+        "nu": 19.75839,
+        "sigma": 2.33079,
+        "tau_day": 0.10516,
+        "theta": 0.19133
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 173,
+      "seconds": 1.96,
+      "truth": {
+        "alpha": -0.13905,
+        "nu": 29.20044,
+        "sigma": 0.661,
+        "tau_day": 0.31831,
+        "theta": 0.13802
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "tau_day",
+        "theta"
+      ],
+      "i": 174,
+      "seconds": 2.15,
+      "truth": {
+        "alpha": 0.14809,
+        "nu": 5.76592,
+        "sigma": 2.52313,
+        "tau_day": 0.09125,
+        "theta": 0.04976
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 175,
+      "seconds": 3.96,
+      "truth": {
+        "alpha": -0.08324,
+        "nu": 9.2625,
+        "sigma": 0.1464,
+        "tau_day": 0.42481,
+        "theta": -0.05496
+      }
+    },
+    {
+      "diverged": 87,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 176,
+      "seconds": 2.07,
+      "truth": {
+        "alpha": -0.04025,
+        "nu": 9.89972,
+        "sigma": 2.89387,
+        "tau_day": 0.05887,
+        "theta": 0.02132
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 177,
+      "seconds": 2.12,
+      "truth": {
+        "alpha": 0.67855,
+        "nu": 27.93639,
+        "sigma": 3.19208,
+        "tau_day": 0.25765,
+        "theta": -0.2987
+      }
+    },
+    {
+      "diverged": 3,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 178,
+      "seconds": 2.09,
+      "truth": {
+        "alpha": -0.27331,
+        "nu": 25.36336,
+        "sigma": 2.17491,
+        "tau_day": 0.21633,
+        "theta": -0.16909
+      }
+    },
+    {
+      "diverged": 9,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 179,
+      "seconds": 2.58,
+      "truth": {
+        "alpha": -0.26712,
+        "nu": 16.98936,
+        "sigma": 2.29612,
+        "tau_day": 0.40781,
+        "theta": 0.43868
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 180,
+      "seconds": 1.92,
+      "truth": {
+        "alpha": 0.31381,
+        "nu": 52.42781,
+        "sigma": 2.03859,
+        "tau_day": 0.96326,
+        "theta": 0.3141
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 181,
+      "seconds": 3.94,
+      "truth": {
+        "alpha": 0.02238,
+        "nu": 30.73902,
+        "sigma": 0.28734,
+        "tau_day": 0.40171,
+        "theta": -0.12907
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 182,
+      "seconds": 2.39,
+      "truth": {
+        "alpha": 0.22857,
+        "nu": 21.41281,
+        "sigma": 1.4506,
+        "tau_day": 0.02536,
+        "theta": -0.44637
+      }
+    },
+    {
+      "diverged": 51,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 183,
+      "seconds": 2.17,
+      "truth": {
+        "alpha": 0.30015,
+        "nu": 22.81324,
+        "sigma": 0.76614,
+        "tau_day": 0.15303,
+        "theta": 0.06495
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 184,
+      "seconds": 2.14,
+      "truth": {
+        "alpha": 0.26307,
+        "nu": 13.77149,
+        "sigma": 3.02414,
+        "tau_day": 0.58881,
+        "theta": 0.44336
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 185,
+      "seconds": 2.09,
+      "truth": {
+        "alpha": 0.06169,
+        "nu": 37.3594,
+        "sigma": 0.55686,
+        "tau_day": 0.77387,
+        "theta": -0.37916
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 186,
+      "seconds": 2.07,
+      "truth": {
+        "alpha": -0.46836,
+        "nu": 7.95539,
+        "sigma": 2.88759,
+        "tau_day": 0.26139,
+        "theta": 0.06315
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 187,
+      "seconds": 4.06,
+      "truth": {
+        "alpha": -0.15417,
+        "nu": 19.59995,
+        "sigma": 0.6746,
+        "tau_day": 0.02543,
+        "theta": -0.05703
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 188,
+      "seconds": 2.04,
+      "truth": {
+        "alpha": -0.60724,
+        "nu": 9.04504,
+        "sigma": 1.38152,
+        "tau_day": 0.18498,
+        "theta": 0.04471
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 189,
+      "seconds": 2.17,
+      "truth": {
+        "alpha": -0.2662,
+        "nu": 24.38209,
+        "sigma": 3.8303,
+        "tau_day": 0.5292,
+        "theta": -0.12496
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 190,
+      "seconds": 2.12,
+      "truth": {
+        "alpha": 0.26784,
+        "nu": 27.22067,
+        "sigma": 2.02272,
+        "tau_day": 0.80529,
+        "theta": -0.10659
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 191,
+      "seconds": 2.12,
+      "truth": {
+        "alpha": -0.53463,
+        "nu": 29.12316,
+        "sigma": 2.85376,
+        "tau_day": 0.08424,
+        "theta": 0.16729
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 192,
+      "seconds": 2.08,
+      "truth": {
+        "alpha": -0.22838,
+        "nu": 9.53343,
+        "sigma": 2.58857,
+        "tau_day": 0.23294,
+        "theta": -0.34969
+      }
+    },
+    {
+      "diverged": 992,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 193,
+      "seconds": 2.27,
+      "truth": {
+        "alpha": 0.64959,
+        "nu": 6.6631,
+        "sigma": 2.2472,
+        "tau_day": 0.54001,
+        "theta": -0.13344
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 194,
+      "seconds": 4.47,
+      "truth": {
+        "alpha": -0.05293,
+        "nu": 7.3205,
+        "sigma": 1.32362,
+        "tau_day": 0.42417,
+        "theta": 0.17437
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 195,
+      "seconds": 2.14,
+      "truth": {
+        "alpha": -0.13744,
+        "nu": 21.59053,
+        "sigma": 0.99948,
+        "tau_day": 1.08484,
+        "theta": -0.27542
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 196,
+      "seconds": 2.2,
+      "truth": {
+        "alpha": 0.27669,
+        "nu": 15.36017,
+        "sigma": 4.55569,
+        "tau_day": 0.11186,
+        "theta": -0.17451
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 197,
+      "seconds": 2.24,
+      "truth": {
+        "alpha": 0.42297,
+        "nu": 43.52137,
+        "sigma": 1.71358,
+        "tau_day": 0.29,
+        "theta": 0.11023
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 198,
+      "seconds": 2.13,
+      "truth": {
+        "alpha": -0.06677,
+        "nu": 16.46397,
+        "sigma": 1.2646,
+        "tau_day": 0.21002,
+        "theta": -0.00824
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 199,
+      "seconds": 2.17,
+      "truth": {
+        "alpha": -0.07146,
+        "nu": 12.60879,
+        "sigma": 2.76966,
+        "tau_day": 1.05683,
+        "theta": 0.03478
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 200,
+      "seconds": 2.37,
+      "truth": {
+        "alpha": -0.27138,
+        "nu": 14.01327,
+        "sigma": 0.44032,
+        "tau_day": 0.61494,
+        "theta": -0.0835
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 201,
+      "seconds": 6.09,
+      "truth": {
+        "alpha": 0.22416,
+        "nu": 21.45059,
+        "sigma": 4.85197,
+        "tau_day": 0.15995,
+        "theta": -0.47678
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 202,
+      "seconds": 2.16,
+      "truth": {
+        "alpha": 1.0494,
+        "nu": 17.90616,
+        "sigma": 0.8059,
+        "tau_day": 0.36957,
+        "theta": 0.25042
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 203,
+      "seconds": 2.47,
+      "truth": {
+        "alpha": 0.42704,
+        "nu": 7.60963,
+        "sigma": 0.16251,
+        "tau_day": 0.00446,
+        "theta": 0.17883
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 204,
+      "seconds": 2.45,
+      "truth": {
+        "alpha": -0.40759,
+        "nu": 8.21118,
+        "sigma": 0.26415,
+        "tau_day": 0.98554,
+        "theta": -0.09982
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 205,
+      "seconds": 2.65,
+      "truth": {
+        "alpha": 0.62416,
+        "nu": 3.35513,
+        "sigma": 2.26521,
+        "tau_day": 0.38886,
+        "theta": -0.06931
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 206,
+      "seconds": 2.12,
+      "truth": {
+        "alpha": -0.71879,
+        "nu": 6.95679,
+        "sigma": 0.23756,
+        "tau_day": 0.30313,
+        "theta": -0.13943
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 207,
+      "seconds": 6.23,
+      "truth": {
+        "alpha": -0.20372,
+        "nu": 9.64285,
+        "sigma": 0.89522,
+        "tau_day": 0.69171,
+        "theta": -0.03388
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 208,
+      "seconds": 2.13,
+      "truth": {
+        "alpha": -0.24778,
+        "nu": 25.68361,
+        "sigma": 0.20176,
+        "tau_day": 0.34544,
+        "theta": 0.01488
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 209,
+      "seconds": 2.26,
+      "truth": {
+        "alpha": -0.95714,
+        "nu": 102.09948,
+        "sigma": 0.57433,
+        "tau_day": 0.60503,
+        "theta": -0.18243
+      }
+    },
+    {
+      "diverged": 37,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 210,
+      "seconds": 2.47,
+      "truth": {
+        "alpha": 0.78944,
+        "nu": 22.24105,
+        "sigma": 2.35438,
+        "tau_day": 0.07267,
+        "theta": 0.0138
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 211,
+      "seconds": 2.29,
+      "truth": {
+        "alpha": -0.41225,
+        "nu": 41.73296,
+        "sigma": 1.0814,
+        "tau_day": 0.81315,
+        "theta": 0.00987
+      }
+    },
+    {
+      "diverged": 30,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 212,
+      "seconds": 2.28,
+      "truth": {
+        "alpha": -0.95347,
+        "nu": 43.10712,
+        "sigma": 1.6728,
+        "tau_day": 0.28313,
+        "theta": 0.22982
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 213,
+      "seconds": 2.35,
+      "truth": {
+        "alpha": -0.96509,
+        "nu": 21.94449,
+        "sigma": 1.46865,
+        "tau_day": 0.90772,
+        "theta": -0.11552
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 214,
+      "seconds": 2.13,
+      "truth": {
+        "alpha": 0.70614,
+        "nu": 25.51512,
+        "sigma": 0.10188,
+        "tau_day": 0.13746,
+        "theta": 0.62511
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 215,
+      "seconds": 5.25,
+      "truth": {
+        "alpha": 0.45758,
+        "nu": 17.97454,
+        "sigma": 2.64125,
+        "tau_day": 0.20889,
+        "theta": -0.57435
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "sigma",
+        "tau_day"
+      ],
+      "i": 216,
+      "seconds": 2.28,
+      "truth": {
+        "alpha": 0.05086,
+        "nu": 27.10607,
+        "sigma": 2.91408,
+        "tau_day": 0.50474,
+        "theta": 0.0357
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 217,
+      "seconds": 2.25,
+      "truth": {
+        "alpha": -0.39198,
+        "nu": 23.68337,
+        "sigma": 1.80178,
+        "tau_day": 0.00555,
+        "theta": -0.05595
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 218,
+      "seconds": 2.18,
+      "truth": {
+        "alpha": 0.00786,
+        "nu": 12.32253,
+        "sigma": 0.54017,
+        "tau_day": 0.27702,
+        "theta": -0.25029
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 219,
+      "seconds": 2.21,
+      "truth": {
+        "alpha": -0.44222,
+        "nu": 16.013,
+        "sigma": 2.61607,
+        "tau_day": 0.15725,
+        "theta": -0.07847
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 220,
+      "seconds": 2.34,
+      "truth": {
+        "alpha": -0.45157,
+        "nu": 22.41571,
+        "sigma": 2.09125,
+        "tau_day": 0.7995,
+        "theta": -0.11056
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 221,
+      "seconds": 2.2,
+      "truth": {
+        "alpha": -0.26784,
+        "nu": 19.05077,
+        "sigma": 1.2769,
+        "tau_day": 0.71189,
+        "theta": -0.33029
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 222,
+      "seconds": 4.55,
+      "truth": {
+        "alpha": -0.11659,
+        "nu": 10.49978,
+        "sigma": 0.59626,
+        "tau_day": 0.86705,
+        "theta": 0.69797
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 223,
+      "seconds": 2.46,
+      "truth": {
+        "alpha": 1.10199,
+        "nu": 29.98176,
+        "sigma": 0.59732,
+        "tau_day": 0.19714,
+        "theta": -0.42156
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 224,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": -0.3118,
+        "nu": 12.5826,
+        "sigma": 1.35799,
+        "tau_day": 1.13407,
+        "theta": -0.1301
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 225,
+      "seconds": 2.24,
+      "truth": {
+        "alpha": 0.04842,
+        "nu": 37.11892,
+        "sigma": 0.79423,
+        "tau_day": 0.05976,
+        "theta": 0.32713
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 226,
+      "seconds": 2.44,
+      "truth": {
+        "alpha": 0.24119,
+        "nu": 15.49174,
+        "sigma": 0.2664,
+        "tau_day": 0.71265,
+        "theta": -0.2497
+      }
+    },
+    {
+      "diverged": 123,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 227,
+      "seconds": 2.2,
+      "truth": {
+        "alpha": -0.23523,
+        "nu": 5.23065,
+        "sigma": 1.65524,
+        "tau_day": 0.81475,
+        "theta": 0.03289
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 228,
+      "seconds": 2.28,
+      "truth": {
+        "alpha": -0.61728,
+        "nu": 23.35878,
+        "sigma": 2.15583,
+        "tau_day": 0.36514,
+        "theta": -0.44029
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 229,
+      "seconds": 5.57,
+      "truth": {
+        "alpha": 0.25089,
+        "nu": 11.09773,
+        "sigma": 4.53289,
+        "tau_day": 0.45071,
+        "theta": 0.36528
+      }
+    },
+    {
+      "diverged": 5,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 230,
+      "seconds": 2.64,
+      "truth": {
+        "alpha": 0.08916,
+        "nu": 14.85022,
+        "sigma": 1.08334,
+        "tau_day": 0.20106,
+        "theta": 0.38063
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 231,
+      "seconds": 2.38,
+      "truth": {
+        "alpha": 0.27341,
+        "nu": 23.96624,
+        "sigma": 2.12476,
+        "tau_day": 0.67946,
+        "theta": -0.18962
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 232,
+      "seconds": 2.3,
+      "truth": {
+        "alpha": 0.86296,
+        "nu": 22.81508,
+        "sigma": 1.60742,
+        "tau_day": 0.50986,
+        "theta": -0.42469
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 233,
+      "seconds": 2.41,
+      "truth": {
+        "alpha": 0.60636,
+        "nu": 22.66167,
+        "sigma": 3.28526,
+        "tau_day": 0.07818,
+        "theta": 0.54039
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 234,
+      "seconds": 2.19,
+      "truth": {
+        "alpha": -0.24465,
+        "nu": 13.34568,
+        "sigma": 1.48062,
+        "tau_day": 0.88636,
+        "theta": 0.36022
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 235,
+      "seconds": 2.27,
+      "truth": {
+        "alpha": -0.47627,
+        "nu": 2.10952,
+        "sigma": 2.64989,
+        "tau_day": 0.11298,
+        "theta": 0.22378
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 236,
+      "seconds": 2.17,
+      "truth": {
+        "alpha": -0.13356,
+        "nu": 33.15871,
+        "sigma": 0.86225,
+        "tau_day": 0.41435,
+        "theta": 0.1358
+      }
+    },
+    {
+      "diverged": 169,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 237,
+      "seconds": 4.91,
+      "truth": {
+        "alpha": -0.05137,
+        "nu": 6.67671,
+        "sigma": 2.9627,
+        "tau_day": 0.26549,
+        "theta": -0.24271
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 238,
+      "seconds": 2.15,
+      "truth": {
+        "alpha": 0.06796,
+        "nu": 15.42983,
+        "sigma": 0.9894,
+        "tau_day": 0.12337,
+        "theta": 0.04701
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 239,
+      "seconds": 2.12,
+      "truth": {
+        "alpha": 0.11034,
+        "nu": 3.58603,
+        "sigma": 0.38522,
+        "tau_day": 0.21415,
+        "theta": -0.43302
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 240,
+      "seconds": 2.67,
+      "truth": {
+        "alpha": -0.30435,
+        "nu": 29.21864,
+        "sigma": 0.18515,
+        "tau_day": 0.76819,
+        "theta": -0.03347
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 241,
+      "seconds": 2.5,
+      "truth": {
+        "alpha": -0.52411,
+        "nu": 15.65795,
+        "sigma": 3.14118,
+        "tau_day": 0.67077,
+        "theta": 0.22152
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 242,
+      "seconds": 2.4,
+      "truth": {
+        "alpha": -0.84704,
+        "nu": 27.64474,
+        "sigma": 2.08621,
+        "tau_day": 0.43596,
+        "theta": -0.17106
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 243,
+      "seconds": 2.13,
+      "truth": {
+        "alpha": 0.30093,
+        "nu": 38.77391,
+        "sigma": 1.10253,
+        "tau_day": 0.51787,
+        "theta": -0.01487
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 244,
+      "seconds": 2.22,
+      "truth": {
+        "alpha": 0.5564,
+        "nu": 23.7643,
+        "sigma": 1.0365,
+        "tau_day": 0.06923,
+        "theta": 0.19292
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 245,
+      "seconds": 4.92,
+      "truth": {
+        "alpha": -0.13709,
+        "nu": 15.56633,
+        "sigma": 0.86571,
+        "tau_day": 0.24941,
+        "theta": -0.60497
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 246,
+      "seconds": 2.34,
+      "truth": {
+        "alpha": 1.40876,
+        "nu": 17.95635,
+        "sigma": 0.94538,
+        "tau_day": 0.48176,
+        "theta": 0.08327
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 247,
+      "seconds": 2.36,
+      "truth": {
+        "alpha": -0.43298,
+        "nu": 24.45796,
+        "sigma": 0.15139,
+        "tau_day": 0.57922,
+        "theta": -0.17502
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 248,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": -0.15394,
+        "nu": 21.2811,
+        "sigma": 0.50712,
+        "tau_day": 0.34973,
+        "theta": -0.41092
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 249,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": 1.18174,
+        "nu": 32.69576,
+        "sigma": 2.92404,
+        "tau_day": 0.63919,
+        "theta": 0.16017
+      }
+    },
+    {
+      "diverged": 34,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 250,
+      "seconds": 2.35,
+      "truth": {
+        "alpha": -0.20952,
+        "nu": 12.87996,
+        "sigma": 1.03983,
+        "tau_day": 0.1878,
+        "theta": -0.13054
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "tau_day",
+        "theta"
+      ],
+      "i": 251,
+      "seconds": 2.14,
+      "truth": {
+        "alpha": -0.07153,
+        "nu": 13.01435,
+        "sigma": 0.87252,
+        "tau_day": 0.04209,
+        "theta": 0.17511
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 252,
+      "seconds": 2.62,
+      "truth": {
+        "alpha": -0.98995,
+        "nu": 31.89684,
+        "sigma": 0.82997,
+        "tau_day": 0.30595,
+        "theta": -0.30585
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 253,
+      "seconds": 2.36,
+      "truth": {
+        "alpha": 0.29395,
+        "nu": 11.79176,
+        "sigma": 1.59141,
+        "tau_day": 0.5395,
+        "theta": 0.14171
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 254,
+      "seconds": 6.26,
+      "truth": {
+        "alpha": 0.64571,
+        "nu": 12.78006,
+        "sigma": 0.88901,
+        "tau_day": 0.76569,
+        "theta": 0.12184
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 255,
+      "seconds": 2.45,
+      "truth": {
+        "alpha": 0.86104,
+        "nu": 11.38762,
+        "sigma": 1.82366,
+        "tau_day": 0.58879,
+        "theta": -0.21172
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "sigma",
+        "tau_day"
+      ],
+      "i": 256,
+      "seconds": 2.4,
+      "truth": {
+        "alpha": 0.44624,
+        "nu": 10.91328,
+        "sigma": 1.57113,
+        "tau_day": 0.29795,
+        "theta": 0.08474
+      }
+    },
+    {
+      "diverged": 60,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 257,
+      "seconds": 2.5,
+      "truth": {
+        "alpha": -0.41568,
+        "nu": 21.08462,
+        "sigma": 1.66236,
+        "tau_day": 0.06356,
+        "theta": -0.22844
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 258,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": 0.25948,
+        "nu": 3.66882,
+        "sigma": 1.35452,
+        "tau_day": 0.30091,
+        "theta": 0.2528
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 259,
+      "seconds": 2.46,
+      "truth": {
+        "alpha": -0.10069,
+        "nu": 47.38033,
+        "sigma": 1.11237,
+        "tau_day": 0.38452,
+        "theta": 0.22404
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 260,
+      "seconds": 2.75,
+      "truth": {
+        "alpha": -0.08498,
+        "nu": 4.05,
+        "sigma": 1.77649,
+        "tau_day": 0.13194,
+        "theta": -0.07209
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 261,
+      "seconds": 2.82,
+      "truth": {
+        "alpha": 0.06711,
+        "nu": 41.87808,
+        "sigma": 0.94167,
+        "tau_day": 0.3275,
+        "theta": -0.16937
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 262,
+      "seconds": 7.43,
+      "truth": {
+        "alpha": -0.91087,
+        "nu": 3.84617,
+        "sigma": 1.78239,
+        "tau_day": 0.34757,
+        "theta": -0.173
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 263,
+      "seconds": 2.59,
+      "truth": {
+        "alpha": 0.45692,
+        "nu": 25.59304,
+        "sigma": 2.53225,
+        "tau_day": 0.04934,
+        "theta": -0.37059
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 264,
+      "seconds": 2.44,
+      "truth": {
+        "alpha": -0.35336,
+        "nu": 19.86296,
+        "sigma": 4.00505,
+        "tau_day": 0.176,
+        "theta": 0.05645
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 265,
+      "seconds": 2.45,
+      "truth": {
+        "alpha": -0.25393,
+        "nu": 5.27974,
+        "sigma": 2.81923,
+        "tau_day": 0.61857,
+        "theta": -0.23474
+      }
+    },
+    {
+      "diverged": 170,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 266,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": -0.03865,
+        "nu": 9.57504,
+        "sigma": 2.11583,
+        "tau_day": 0.18847,
+        "theta": 0.49246
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "nu",
+        "tau_day",
+        "theta"
+      ],
+      "i": 267,
+      "seconds": 2.66,
+      "truth": {
+        "alpha": -0.82752,
+        "nu": 44.44939,
+        "sigma": 2.07945,
+        "tau_day": 0.05006,
+        "theta": -0.00147
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 268,
+      "seconds": 2.6,
+      "truth": {
+        "alpha": 0.23241,
+        "nu": 24.97727,
+        "sigma": 2.13722,
+        "tau_day": 0.17996,
+        "theta": 0.07922
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 269,
+      "seconds": 2.32,
+      "truth": {
+        "alpha": -0.02455,
+        "nu": 21.55115,
+        "sigma": 3.1047,
+        "tau_day": 0.11963,
+        "theta": 0.11071
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 270,
+      "seconds": 2.55,
+      "truth": {
+        "alpha": -0.24411,
+        "nu": 28.66803,
+        "sigma": 0.46509,
+        "tau_day": 0.38704,
+        "theta": 0.04245
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 271,
+      "seconds": 7.24,
+      "truth": {
+        "alpha": -0.25766,
+        "nu": 4.61355,
+        "sigma": 3.35825,
+        "tau_day": 0.24939,
+        "theta": 0.10721
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 272,
+      "seconds": 2.44,
+      "truth": {
+        "alpha": -0.22311,
+        "nu": 20.55081,
+        "sigma": 0.42488,
+        "tau_day": 0.4963,
+        "theta": -0.34119
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 273,
+      "seconds": 2.43,
+      "truth": {
+        "alpha": 0.50505,
+        "nu": 27.47514,
+        "sigma": 1.31723,
+        "tau_day": 0.08893,
+        "theta": 0.38417
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 274,
+      "seconds": 2.65,
+      "truth": {
+        "alpha": -0.32479,
+        "nu": 16.48693,
+        "sigma": 3.38135,
+        "tau_day": 0.30196,
+        "theta": 0.16818
+      }
+    },
+    {
+      "diverged": 841,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 275,
+      "seconds": 2.57,
+      "truth": {
+        "alpha": 0.67615,
+        "nu": 39.02453,
+        "sigma": 0.36346,
+        "tau_day": 0.01843,
+        "theta": 0.05309
+      }
+    },
+    {
+      "diverged": 68,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 276,
+      "seconds": 2.4,
+      "truth": {
+        "alpha": 0.15662,
+        "nu": 41.51509,
+        "sigma": 0.78566,
+        "tau_day": 0.06709,
+        "theta": 0.08761
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 277,
+      "seconds": 2.62,
+      "truth": {
+        "alpha": 0.414,
+        "nu": 10.12389,
+        "sigma": 2.86192,
+        "tau_day": 0.06621,
+        "theta": -0.01904
+      }
+    },
+    {
+      "diverged": 38,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 278,
+      "seconds": 2.45,
+      "truth": {
+        "alpha": -0.20251,
+        "nu": 6.3767,
+        "sigma": 2.37822,
+        "tau_day": 0.4259,
+        "theta": -0.22156
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 279,
+      "seconds": 2.39,
+      "truth": {
+        "alpha": 0.23551,
+        "nu": 5.32492,
+        "sigma": 0.52519,
+        "tau_day": 0.8448,
+        "theta": 0.07183
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 280,
+      "seconds": 7.47,
+      "truth": {
+        "alpha": 0.70157,
+        "nu": 9.03099,
+        "sigma": 0.55788,
+        "tau_day": 0.70644,
+        "theta": 0.24831
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 281,
+      "seconds": 2.49,
+      "truth": {
+        "alpha": -0.53536,
+        "nu": 24.46469,
+        "sigma": 0.75413,
+        "tau_day": 1.45298,
+        "theta": -0.12102
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 282,
+      "seconds": 2.49,
+      "truth": {
+        "alpha": -0.54632,
+        "nu": 14.57275,
+        "sigma": 2.10036,
+        "tau_day": 0.71641,
+        "theta": 0.30213
+      }
+    },
+    {
+      "diverged": 29,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 283,
+      "seconds": 2.62,
+      "truth": {
+        "alpha": 0.35835,
+        "nu": 25.97835,
+        "sigma": 2.68841,
+        "tau_day": 0.54179,
+        "theta": -0.00336
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 284,
+      "seconds": 2.47,
+      "truth": {
+        "alpha": 0.30222,
+        "nu": 28.25678,
+        "sigma": 1.85963,
+        "tau_day": 1.0584,
+        "theta": 0.03525
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 285,
+      "seconds": 2.74,
+      "truth": {
+        "alpha": 0.19436,
+        "nu": 6.447,
+        "sigma": 3.8657,
+        "tau_day": 1.09707,
+        "theta": -0.35544
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 286,
+      "seconds": 2.45,
+      "truth": {
+        "alpha": -0.66448,
+        "nu": 19.39747,
+        "sigma": 1.14594,
+        "tau_day": 0.22783,
+        "theta": -0.11416
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 287,
+      "seconds": 2.94,
+      "truth": {
+        "alpha": 0.47062,
+        "nu": 27.93277,
+        "sigma": 1.6549,
+        "tau_day": 0.23526,
+        "theta": -0.20452
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [],
+      "i": 288,
+      "seconds": 2.35,
+      "truth": {
+        "alpha": -0.23029,
+        "nu": 13.97132,
+        "sigma": 1.40474,
+        "tau_day": 0.88484,
+        "theta": -0.47816
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 289,
+      "seconds": 2.35,
+      "truth": {
+        "alpha": -0.15277,
+        "nu": 18.96772,
+        "sigma": 1.07052,
+        "tau_day": 0.22676,
+        "theta": 0.31784
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 290,
+      "seconds": 7.54,
+      "truth": {
+        "alpha": 0.39417,
+        "nu": 26.18015,
+        "sigma": 2.45011,
+        "tau_day": 0.1561,
+        "theta": -0.1111
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 291,
+      "seconds": 2.61,
+      "truth": {
+        "alpha": 0.1877,
+        "nu": 12.23103,
+        "sigma": 1.28534,
+        "tau_day": 0.01505,
+        "theta": 0.1136
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 292,
+      "seconds": 2.56,
+      "truth": {
+        "alpha": 0.34783,
+        "nu": 76.05161,
+        "sigma": 3.28581,
+        "tau_day": 0.07066,
+        "theta": -0.16238
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "alpha"
+      ],
+      "i": 293,
+      "seconds": 2.57,
+      "truth": {
+        "alpha": -0.89774,
+        "nu": 14.11755,
+        "sigma": 0.44191,
+        "tau_day": 0.67678,
+        "theta": 0.13106
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 294,
+      "seconds": 2.63,
+      "truth": {
+        "alpha": 0.76236,
+        "nu": 23.92445,
+        "sigma": 2.12514,
+        "tau_day": 0.01857,
+        "theta": -0.10858
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 295,
+      "seconds": 2.57,
+      "truth": {
+        "alpha": -0.63898,
+        "nu": 33.18893,
+        "sigma": 3.4042,
+        "tau_day": 0.61352,
+        "theta": 0.00536
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 296,
+      "seconds": 2.5,
+      "truth": {
+        "alpha": 1.13087,
+        "nu": 8.09712,
+        "sigma": 1.08642,
+        "tau_day": 0.04808,
+        "theta": 0.06306
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 297,
+      "seconds": 2.48,
+      "truth": {
+        "alpha": -0.68314,
+        "nu": 13.86953,
+        "sigma": 0.78047,
+        "tau_day": 0.28301,
+        "theta": 0.16949
+      }
+    },
+    {
+      "diverged": 1,
+      "failed": [
+        "alpha",
+        "nu",
+        "sigma",
+        "tau_day",
+        "theta"
+      ],
+      "i": 298,
+      "seconds": 2.72,
+      "truth": {
+        "alpha": -0.77112,
+        "nu": 10.08523,
+        "sigma": 2.14869,
+        "tau_day": 0.03813,
+        "theta": 0.0287
+      }
+    },
+    {
+      "diverged": 0,
+      "failed": [
+        "tau_day"
+      ],
+      "i": 299,
+      "seconds": 2.59,
+      "truth": {
+        "alpha": 0.03759,
+        "nu": 14.93695,
+        "sigma": 2.11064,
+        "tau_day": 0.41815,
+        "theta": 0.06821
+      }
+    }
+  ],
+  "min_completion": 0.9,
+  "model": "m1",
+  "n_bins": 20,
+  "n_replications": 300,
+  "n_thin": 99,
+  "passed": false,
+  "ranks": {
+    "alpha": [
+      59,
+      73,
+      42,
+      53,
+      67,
+      30,
+      22,
+      83,
+      23,
+      79,
+      31,
+      91,
+      14,
+      81,
+      22,
+      98,
+      63,
+      60,
+      48,
+      15,
+      86,
+      55,
+      81,
+      97,
+      23,
+      49,
+      67,
+      99,
+      85,
+      64,
+      53,
+      12,
+      86,
+      23,
+      87,
+      46,
+      17,
+      88,
+      37,
+      13,
+      42,
+      79,
+      2,
+      3,
+      98,
+      86,
+      82,
+      65,
+      8,
+      38,
+      98,
+      49,
+      10,
+      96,
+      30,
+      37,
+      65,
+      6,
+      35,
+      14,
+      75,
+      84,
+      18,
+      89,
+      21,
+      52,
+      2,
+      88,
+      40,
+      4,
+      53,
+      13,
+      7,
+      73,
+      66,
+      80,
+      67,
+      49,
+      16,
+      77,
+      64,
+      76,
+      17,
+      8,
+      26,
+      74,
+      56,
+      44,
+      75,
+      59,
+      86,
+      23,
+      30,
+      54,
+      39,
+      59,
+      65,
+      42,
+      88,
+      72,
+      54,
+      76,
+      10,
+      12,
+      30,
+      87,
+      63,
+      85,
+      54,
+      95,
+      63,
+      88,
+      78,
+      13,
+      87,
+      55,
+      13,
+      29,
+      18,
+      65,
+      45,
+      38,
+      35,
+      79,
+      25,
+      28,
+      76,
+      77,
+      71,
+      21,
+      9,
+      41,
+      75,
+      75,
+      8,
+      77,
+      39,
+      58,
+      12,
+      37,
+      23,
+      71,
+      47,
+      57,
+      49,
+      38,
+      87,
+      51,
+      87,
+      45,
+      72,
+      94,
+      78,
+      23,
+      8,
+      64,
+      61,
+      19,
+      91,
+      34,
+      84,
+      94,
+      32,
+      81,
+      64,
+      1,
+      94,
+      71,
+      40,
+      31,
+      80,
+      70,
+      25,
+      3,
+      47,
+      36,
+      25,
+      83,
+      9,
+      94,
+      21,
+      53,
+      80,
+      46,
+      9,
+      90,
+      40,
+      72,
+      95,
+      34
+    ],
+    "nu": [
+      14,
+      39,
+      47,
+      53,
+      89,
+      72,
+      73,
+      74,
+      17,
+      95,
+      14,
+      55,
+      41,
+      61,
+      7,
+      52,
+      13,
+      98,
+      10,
+      52,
+      27,
+      32,
+      45,
+      16,
+      20,
+      21,
+      25,
+      21,
+      59,
+      80,
+      74,
+      57,
+      56,
+      59,
+      93,
+      68,
+      6,
+      17,
+      5,
+      99,
+      85,
+      54,
+      63,
+      14,
+      41,
+      35,
+      45,
+      36,
+      46,
+      27,
+      65,
+      92,
+      11,
+      7,
+      95,
+      79,
+      63,
+      24,
+      19,
+      91,
+      12,
+      49,
+      11,
+      28,
+      57,
+      16,
+      18,
+      40,
+      59,
+      60,
+      10,
+      40,
+      7,
+      98,
+      79,
+      10,
+      95,
+      97,
+      3,
+      78,
+      62,
+      17,
+      44,
+      64,
+      17,
+      86,
+      79,
+      24,
+      57,
+      54,
+      85,
+      27,
+      60,
+      22,
+      62,
+      61,
+      83,
+      86,
+      26,
+      32,
+      10,
+      74,
+      95,
+      85,
+      1,
+      85,
+      48,
+      64,
+      89,
+      93,
+      53,
+      51,
+      88,
+      41,
+      46,
+      27,
+      59,
+      19,
+      18,
+      25,
+      39,
+      8,
+      36,
+      78,
+      16,
+      73,
+      64,
+      29,
+      72,
+      89,
+      82,
+      71,
+      42,
+      89,
+      11,
+      5,
+      79,
+      54,
+      5,
+      18,
+      47,
+      49,
+      95,
+      31,
+      44,
+      25,
+      46,
+      34,
+      21,
+      22,
+      38,
+      1,
+      31,
+      57,
+      99,
+      95,
+      49,
+      66,
+      43,
+      50,
+      20,
+      52,
+      64,
+      34,
+      79,
+      23,
+      76,
+      30,
+      48,
+      66,
+      72,
+      73,
+      25,
+      17,
+      82,
+      43,
+      69,
+      79,
+      45,
+      82,
+      67,
+      26,
+      46,
+      63,
+      39,
+      90,
+      62,
+      18,
+      42,
+      11,
+      11,
+      88,
+      19,
+      69,
+      66,
+      69,
+      12,
+      78,
+      37,
+      45,
+      55,
+      68,
+      54,
+      60,
+      2,
+      60,
+      44,
+      87,
+      7,
+      19,
+      58,
+      13,
+      63
+    ],
+    "sigma": [
+      82,
+      92,
+      24,
+      78,
+      38,
+      77,
+      77,
+      44,
+      6,
+      62,
+      3,
+      74,
+      28,
+      43,
+      8,
+      38,
+      26,
+      98,
+      11,
+      19,
+      43,
+      33,
+      88,
+      96,
+      66,
+      52,
+      35,
+      42,
+      50,
+      38,
+      80,
+      51,
+      11,
+      88,
+      84,
+      31,
+      74,
+      12,
+      63,
+      82,
+      87,
+      79,
+      35,
+      57,
+      24,
+      8,
+      49,
+      74,
+      52,
+      64,
+      89,
+      61,
+      74,
+      89,
+      64,
+      72,
+      55,
+      22,
+      97,
+      67,
+      9,
+      59,
+      30,
+      62,
+      84,
+      61,
+      7,
+      51,
+      38,
+      59,
+      9,
+      47,
+      24,
+      60,
+      69,
+      77,
+      3,
+      99,
+      98,
+      63,
+      67,
+      51,
+      46,
+      49,
+      43,
+      25,
+      73,
+      48,
+      45,
+      87,
+      97,
+      66,
+      61,
+      52,
+      67,
+      56,
+      89,
+      36,
+      68,
+      43,
+      20,
+      23,
+      44,
+      62,
+      72,
+      9,
+      92,
+      52,
+      86,
+      59,
+      58,
+      59,
+      45,
+      42,
+      41,
+      40,
+      20,
+      2,
+      45,
+      68,
+      38,
+      11,
+      70,
+      83,
+      90,
+      84,
+      4,
+      78,
+      15,
+      70,
+      79,
+      62,
+      47,
+      22,
+      90,
+      19,
+      42,
+      63,
+      54,
+      20,
+      54,
+      15,
+      62,
+      99,
+      69,
+      51,
+      11,
+      93,
+      50,
+      34,
+      41,
+      18,
+      3,
+      33,
+      52,
+      96,
+      55,
+      12,
+      62,
+      47,
+      22,
+      34,
+      79,
+      54,
+      89,
+      34,
+      91,
+      38,
+      8,
+      63,
+      71,
+      48,
+      74,
+      33,
+      97,
+      38,
+      97,
+      97,
+      68,
+      46,
+      43,
+      47,
+      76,
+      16,
+      7,
+      60,
+      5,
+      46,
+      24,
+      62,
+      16,
+      57,
+      14,
+      0,
+      55,
+      79,
+      33,
+      20,
+      67,
+      70,
+      85,
+      63,
+      59,
+      43,
+      86,
+      24,
+      98,
+      51,
+      44,
+      97,
+      81,
+      21,
+      49,
+      64
+    ],
+    "tau_day": [
+      2,
+      61,
+      7,
+      59,
+      55,
+      98,
+      62,
+      26,
+      28,
+      49,
+      76,
+      98,
+      62,
+      30,
+      96,
+      30,
+      45,
+      27,
+      54,
+      60,
+      38,
+      85,
+      88,
+      93,
+      74,
+      21,
+      75,
+      42,
+      31,
+      80,
+      25,
+      25,
+      53,
+      13,
+      21,
+      24,
+      51,
+      16,
+      48,
+      4,
+      5,
+      98,
+      35,
+      48,
+      66,
+      10,
+      43,
+      5,
+      37,
+      4,
+      89,
+      35,
+      7,
+      7,
+      90,
+      44,
+      78,
+      24,
+      88,
+      34,
+      45,
+      93,
+      43,
+      91,
+      90,
+      16,
+      11,
+      57,
+      63,
+      35,
+      86,
+      97,
+      41,
+      0,
+      14,
+      45,
+      27,
+      92,
+      10,
+      88,
+      78,
+      3,
+      44,
+      73,
+      54,
+      95,
+      54,
+      83,
+      7,
+      99
+    ],
+    "theta": [
+      55,
+      92,
+      38,
+      91,
+      84,
+      64,
+      99,
+      58,
+      14,
+      31,
+      71,
+      13,
+      86,
+      39,
+      31,
+      65,
+      13,
+      81,
+      3,
+      10,
+      81,
+      2,
+      80,
+      64,
+      67,
+      24,
+      47,
+      18,
+      71,
+      12,
+      3,
+      83,
+      4,
+      36,
+      28,
+      86,
+      96,
+      73,
+      42,
+      59,
+      39,
+      75,
+      70,
+      13,
+      23,
+      84,
+      32,
+      95,
+      25,
+      15,
+      0,
+      10,
+      3,
+      74,
+      34,
+      62,
+      59,
+      81,
+      94,
+      45,
+      60,
+      97,
+      77,
+      55,
+      0,
+      72,
+      1,
+      40,
+      16,
+      61,
+      55,
+      36,
+      90,
+      31,
+      72,
+      56,
+      79,
+      44,
+      65,
+      16,
+      59,
+      29,
+      3,
+      61,
+      72,
+      14,
+      12,
+      23,
+      14,
+      82,
+      86,
+      31,
+      49,
+      65,
+      62,
+      56,
+      73,
+      14,
+      79,
+      54,
+      42,
+      85,
+      24,
+      17,
+      40,
+      69,
+      9,
+      36,
+      68,
+      16,
+      98,
+      71,
+      8,
+      58,
+      14,
+      56,
+      36,
+      71,
+      86,
+      85,
+      45,
+      35,
+      20,
+      39,
+      48,
+      37,
+      47,
+      39,
+      48,
+      3,
+      23,
+      84,
+      82,
+      99,
+      59,
+      20,
+      80,
+      86,
+      34,
+      74,
+      38,
+      52,
+      90,
+      64,
+      86,
+      13,
+      71,
+      57,
+      29,
+      50,
+      15,
+      22,
+      3,
+      10,
+      26,
+      1,
+      15,
+      20,
+      0,
+      8,
+      59,
+      16,
+      38,
+      30,
+      15,
+      36,
+      29,
+      24,
+      25,
+      35,
+      99,
+      37,
+      26,
+      1,
+      29,
+      16,
+      89,
+      25,
+      0,
+      85,
+      85,
+      56,
+      22,
+      32,
+      49,
+      81,
+      74,
+      69,
+      4,
+      32,
+      13,
+      16,
+      63,
+      38,
+      77,
+      39,
+      52,
+      94,
+      63,
+      14,
+      73,
+      61,
+      33,
+      66,
+      16,
+      94,
+      28,
+      52,
+      50,
+      6,
+      19,
+      11,
+      70,
+      88,
+      33,
+      5,
+      76,
+      21,
+      23,
+      65
+    ]
+  },
+  "refused_replications": 0,
+  "sampler": {
+    "centred": true,
+    "chains": 4,
+    "draws": 1000,
+    "warmup": 1000
+  },
+  "seconds": 723.14,
+  "spec_digest": "dab40c74f0091d1c",
+  "uniformity": {
+    "alpha": {
+      "chi_square": 13.789,
+      "n_ranks": 190,
+      "p_value": 0.7958226060384614,
+      "uniform": true
+    },
+    "nu": {
+      "chi_square": 24.465,
+      "n_ranks": 213,
+      "p_value": 0.17892338807811622,
+      "uniform": true
+    },
+    "sigma": {
+      "chi_square": 28.43,
+      "n_ranks": 214,
+      "p_value": 0.07549726593752128,
+      "uniform": true
+    },
+    "tau_day": {
+      "chi_square": 12.222,
+      "n_ranks": 90,
+      "p_value": 0.8759080752334275,
+      "uniform": true
+    },
+    "theta": {
+      "chi_square": 30.364,
+      "n_ranks": 220,
+      "p_value": 0.04734908959216861,
+      "uniform": true
+    }
+  }
+}

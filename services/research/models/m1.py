@@ -32,6 +32,14 @@ non-centred form, the known result of Papaspiliopoulos, Roberts and Skold (2007)
 Both forms give the same posterior and carry the same spec digest; they differ only
 in how well the sampler moves. ``fit(..., centred=True)`` selects the second.
 
+**Measured, 10 Oct 2026: non-centred is the default for this prior.** Over 300 SBC
+replications the centred form diverged on 23 per cent and completed tau_day on 30,
+against 4-6 and 85-87 for non-centred, because under tau_day ~ HalfNormal(0.5) and
+sigma ~ HalfNormal(2) most prior mass sits where day effects are drowned in noise.
+Centred wins only where tau_day is large relative to sigma. theta calibrates under
+the non-centred form on every run. The centred option stays for that corner, and a
+per-day hybrid is parked as TD-022.
+
 **Two numbers here are not the framework's as written.** ``TAU_DAY_PROVENANCE``
 covers the one the framework omits; ``NU_FLOOR_PROVENANCE`` covers the one it got
 wrong, found by the SBC run of 10 Oct 2026.
