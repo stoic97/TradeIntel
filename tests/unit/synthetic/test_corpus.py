@@ -149,3 +149,15 @@ def test_a_series_too_short_for_the_history_is_refused():
     tiny = cp.synthetic_market(seed=2, n_days=100)
     with pytest.raises(ValueError, match="too short"):
         cp.planted_history(tiny, _cell("B2", 1, 1000), 0)
+
+
+def test_each_clean_null_trades_its_own_market_path():
+    """400 clean nulls must be 400 independent nulls, not one null sampled 400 times.
+
+    The false-alarm rate is read on independent histories. If ``synthetic_market``
+    ever ignored its seed, every clean null would share one price path and their
+    findings would correlate — and nothing else in this suite would notice.
+    """
+    nulls = [cp.clean_null(i) for i in range(12)]
+    paths = {h.market.history.bars.content_hash() for h in nulls}
+    assert len(paths) == len(nulls)

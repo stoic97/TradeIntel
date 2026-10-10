@@ -35,6 +35,8 @@ The manifest carries two digests (Research Spec §12.1 splits determinism this w
 | 10 | Holding times in minutes | Holds, latencies and cut-offs count **bars**; real days have missing minutes | Small on liquid sessions; larger on thin days |
 | 11 | Avoidable cost from the twin | Twin = same seed and length without the behaviour; when a behaviour changes entries or holds, the two histories span different calendar stretches | The twin cost is exact per trading decision, approximate per calendar period |
 
+| 12 | Nulls are independent histories | The 600 adversarial nulls share one 1,816-day crude series: mean pairwise window overlap 6.3% (100-trip), 12.5% (300-trip), 37.8% (1,000-trip); the median day is traded by 117 of the 600; only 3 disjoint 560-day windows fit | Null events are positively correlated. The Class B rate must carry a **window-clustered** interval, not a binomial one; market-episode false positives count once, not N times; the gate is read on the 100- and 300-trip classes |
+
 ## A finding the corpus already produced
 
 On a driftless path, behaviours that only reshape *when* a trade exits (stop widen, giveback, add, carry at zero strength) move the distribution of R — tails, MAE — but not its mean. Any avoidable cost the engine claims for them on synthetic histories must be checked against the twin, not assumed.
