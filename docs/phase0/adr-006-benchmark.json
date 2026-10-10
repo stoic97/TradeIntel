@@ -1,0 +1,915 @@
+{
+  "code_commit": "35cc417dcf7f90287e65b3a19a18e656de6ead31",
+  "code_dirty": false,
+  "config": {
+    "chains": 4,
+    "draws": 1000,
+    "prevalence": 0.25,
+    "repeats": 3,
+    "sigma": 0.9,
+    "sizes": [
+      100,
+      300,
+      1000,
+      3000
+    ],
+    "warmup": 1000
+  },
+  "environment": {
+    "arviz": "0.23.4",
+    "cpu_count": 8,
+    "jax": "0.10.2",
+    "machine": "arm64",
+    "numpy": "2.4.6",
+    "numpyro": "0.22.0",
+    "nutpie": "0.16.8",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "pymc": "5.28.5",
+    "python": "3.11.17"
+  },
+  "findings": {
+    "compilation": "A one-off process cost, not per-fit and not per-shape: both backends pay about 1.2 s extra on the first fit in a process and about 0.1 s extra at each new data size, then repeats are flat. Hoisting compilation out of the fit loop would buy nothing. An earlier version of this script claimed nutpie recompiled on every call; these timings contradict it.",
+    "limits": "One model, one condition, sigma known, one machine. Says nothing about the hierarchical model of step C, where the posterior geometry is harder, nor about vectorising many traders in one call, which jax can do and PyMC cannot - unmeasured, and the reason this benchmark does not settle ADR-006 on its own.",
+    "scaling": "Per-fit time is flat in n. A 30x increase in trades (100 to 3000) costs 3-6% more time for both backends, so cost is dominated by sampler overhead - warmup and tree building - rather than by likelihood evaluation. Longer histories are nearly free."
+  },
+  "projection": {
+    "backends": {
+      "numpyro": {
+        "hours_per_pass_1_core": 10.35585439941432,
+        "seconds_per_fit": 0.931281870450928
+      },
+      "pymc_nutpie": {
+        "hours_per_pass_1_core": 7.4196880499170055,
+        "seconds_per_fit": 0.6672381339853423
+      }
+    },
+    "basis": "mean per-fit seconds over the corpus's 100/300/1000-trip mix",
+    "fits_per_pass": 40032
+  },
+  "rows": [
+    {
+      "backend": "numpyro",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 1976.2886537467612,
+      "ess": {
+        "delta": 1706.1,
+        "mu": 1700.4
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.222433,
+        "mu": -0.140062
+      },
+      "posterior_sd": {
+        "delta": 0.179353,
+        "mu": 0.108866
+      },
+      "r_hat": {
+        "delta": 1.0033,
+        "mu": 1.0007
+      },
+      "seconds": 2.024,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "15f2e75a20d6df1a"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4341.1653048360895,
+      "ess": {
+        "delta": 1706.1,
+        "mu": 1700.4
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.222433,
+        "mu": -0.140062
+      },
+      "posterior_sd": {
+        "delta": 0.179353,
+        "mu": 0.108866
+      },
+      "r_hat": {
+        "delta": 1.0033,
+        "mu": 1.0007
+      },
+      "seconds": 0.921,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "15f2e75a20d6df1a"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4547.060655011144,
+      "ess": {
+        "delta": 1706.1,
+        "mu": 1700.4
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.222433,
+        "mu": -0.140062
+      },
+      "posterior_sd": {
+        "delta": 0.179353,
+        "mu": 0.108866
+      },
+      "r_hat": {
+        "delta": 1.0033,
+        "mu": 1.0007
+      },
+      "seconds": 0.88,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "15f2e75a20d6df1a"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4453.712288062829,
+      "ess": {
+        "delta": 1706.1,
+        "mu": 1700.4
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.222433,
+        "mu": -0.140062
+      },
+      "posterior_sd": {
+        "delta": 0.179353,
+        "mu": 0.108866
+      },
+      "r_hat": {
+        "delta": 1.0033,
+        "mu": 1.0007
+      },
+      "seconds": 0.898,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "15f2e75a20d6df1a"
+    },
+    {
+      "backend": "numpyro",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 3915.4156017469904,
+      "ess": {
+        "delta": 1783.9,
+        "mu": 1837.4
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.406599,
+        "mu": -0.074863
+      },
+      "posterior_sd": {
+        "delta": 0.113195,
+        "mu": 0.061281
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0005
+      },
+      "seconds": 1.022,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "f7d5c71020d4022d"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4414.118021298355,
+      "ess": {
+        "delta": 1783.9,
+        "mu": 1837.4
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.406599,
+        "mu": -0.074863
+      },
+      "posterior_sd": {
+        "delta": 0.113195,
+        "mu": 0.061281
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0005
+      },
+      "seconds": 0.906,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "f7d5c71020d4022d"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4399.38678027437,
+      "ess": {
+        "delta": 1783.9,
+        "mu": 1837.4
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.406599,
+        "mu": -0.074863
+      },
+      "posterior_sd": {
+        "delta": 0.113195,
+        "mu": 0.061281
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0005
+      },
+      "seconds": 0.909,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "f7d5c71020d4022d"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4504.960880242368,
+      "ess": {
+        "delta": 1783.9,
+        "mu": 1837.4
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.406599,
+        "mu": -0.074863
+      },
+      "posterior_sd": {
+        "delta": 0.113195,
+        "mu": 0.061281
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0005
+      },
+      "seconds": 0.888,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "f7d5c71020d4022d"
+    },
+    {
+      "backend": "numpyro",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 2897.1477240537133,
+      "ess": {
+        "delta": 2049.9,
+        "mu": 1957.4
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.493801,
+        "mu": -0.066442
+      },
+      "posterior_sd": {
+        "delta": 0.064198,
+        "mu": 0.032968
+      },
+      "r_hat": {
+        "delta": 1.0004,
+        "mu": 1.0012
+      },
+      "seconds": 1.381,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "c5651be100d3062c"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 3589.4159812063594,
+      "ess": {
+        "delta": 2049.9,
+        "mu": 1957.4
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.493801,
+        "mu": -0.066442
+      },
+      "posterior_sd": {
+        "delta": 0.064198,
+        "mu": 0.032968
+      },
+      "r_hat": {
+        "delta": 1.0004,
+        "mu": 1.0012
+      },
+      "seconds": 1.114,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "c5651be100d3062c"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 3999.780512352047,
+      "ess": {
+        "delta": 2049.9,
+        "mu": 1957.4
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.493801,
+        "mu": -0.066442
+      },
+      "posterior_sd": {
+        "delta": 0.064198,
+        "mu": 0.032968
+      },
+      "r_hat": {
+        "delta": 1.0004,
+        "mu": 1.0012
+      },
+      "seconds": 1.0,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "c5651be100d3062c"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4626.654075039262,
+      "ess": {
+        "delta": 2049.9,
+        "mu": 1957.4
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.493801,
+        "mu": -0.066442
+      },
+      "posterior_sd": {
+        "delta": 0.064198,
+        "mu": 0.032968
+      },
+      "r_hat": {
+        "delta": 1.0004,
+        "mu": 1.0012
+      },
+      "seconds": 0.865,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "c5651be100d3062c"
+    },
+    {
+      "backend": "numpyro",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 3689.927264731812,
+      "ess": {
+        "delta": 2029.4,
+        "mu": 1851.0
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.482627,
+        "mu": -0.035697
+      },
+      "posterior_sd": {
+        "delta": 0.037889,
+        "mu": 0.019364
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0004
+      },
+      "seconds": 1.084,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "2ed9f3a30c6e9355"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4694.784484114629,
+      "ess": {
+        "delta": 2029.4,
+        "mu": 1851.0
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.482627,
+        "mu": -0.035697
+      },
+      "posterior_sd": {
+        "delta": 0.037889,
+        "mu": 0.019364
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0004
+      },
+      "seconds": 0.852,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "2ed9f3a30c6e9355"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4160.2745780431715,
+      "ess": {
+        "delta": 2029.4,
+        "mu": 1851.0
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.482627,
+        "mu": -0.035697
+      },
+      "posterior_sd": {
+        "delta": 0.037889,
+        "mu": 0.019364
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0004
+      },
+      "seconds": 0.961,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "2ed9f3a30c6e9355"
+    },
+    {
+      "backend": "numpyro",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 3922.1628813459283,
+      "ess": {
+        "delta": 2029.4,
+        "mu": 1851.0
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.482627,
+        "mu": -0.035697
+      },
+      "posterior_sd": {
+        "delta": 0.037889,
+        "mu": 0.019364
+      },
+      "r_hat": {
+        "delta": 1.0009,
+        "mu": 1.0004
+      },
+      "seconds": 1.02,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "2ed9f3a30c6e9355"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 1960.615243294454,
+      "ess": {
+        "delta": 2165.3,
+        "mu": 2229.0
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.21644,
+        "mu": -0.143321
+      },
+      "posterior_sd": {
+        "delta": 0.179756,
+        "mu": 0.107478
+      },
+      "r_hat": {
+        "delta": 1.0016,
+        "mu": 1.0027
+      },
+      "seconds": 2.04,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "593a05d2025d181f"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6482.592113792234,
+      "ess": {
+        "delta": 2165.3,
+        "mu": 2229.0
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.21644,
+        "mu": -0.143321
+      },
+      "posterior_sd": {
+        "delta": 0.179756,
+        "mu": 0.107478
+      },
+      "r_hat": {
+        "delta": 1.0016,
+        "mu": 1.0027
+      },
+      "seconds": 0.617,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "593a05d2025d181f"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 4714.016344164329,
+      "ess": {
+        "delta": 2165.3,
+        "mu": 2229.0
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.21644,
+        "mu": -0.143321
+      },
+      "posterior_sd": {
+        "delta": 0.179756,
+        "mu": 0.107478
+      },
+      "r_hat": {
+        "delta": 1.0016,
+        "mu": 1.0027
+      },
+      "seconds": 0.849,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "593a05d2025d181f"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6700.085207032457,
+      "ess": {
+        "delta": 2165.3,
+        "mu": 2229.0
+      },
+      "n": 100,
+      "posterior_mean": {
+        "delta": -0.21644,
+        "mu": -0.143321
+      },
+      "posterior_sd": {
+        "delta": 0.179756,
+        "mu": 0.107478
+      },
+      "r_hat": {
+        "delta": 1.0016,
+        "mu": 1.0027
+      },
+      "seconds": 0.597,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "593a05d2025d181f"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6686.832100498926,
+      "ess": {
+        "delta": 2463.4,
+        "mu": 2411.2
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.399236,
+        "mu": -0.077007
+      },
+      "posterior_sd": {
+        "delta": 0.112339,
+        "mu": 0.060236
+      },
+      "r_hat": {
+        "delta": 1.001,
+        "mu": 1.0007
+      },
+      "seconds": 0.598,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "708fd8a5c1402ac6"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6690.446095372273,
+      "ess": {
+        "delta": 2463.4,
+        "mu": 2411.2
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.399236,
+        "mu": -0.077007
+      },
+      "posterior_sd": {
+        "delta": 0.112339,
+        "mu": 0.060236
+      },
+      "r_hat": {
+        "delta": 1.001,
+        "mu": 1.0007
+      },
+      "seconds": 0.598,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "708fd8a5c1402ac6"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 5220.414888941318,
+      "ess": {
+        "delta": 2463.4,
+        "mu": 2411.2
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.399236,
+        "mu": -0.077007
+      },
+      "posterior_sd": {
+        "delta": 0.112339,
+        "mu": 0.060236
+      },
+      "r_hat": {
+        "delta": 1.001,
+        "mu": 1.0007
+      },
+      "seconds": 0.766,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "708fd8a5c1402ac6"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6685.783371441723,
+      "ess": {
+        "delta": 2463.4,
+        "mu": 2411.2
+      },
+      "n": 300,
+      "posterior_mean": {
+        "delta": -0.399236,
+        "mu": -0.077007
+      },
+      "posterior_sd": {
+        "delta": 0.112339,
+        "mu": 0.060236
+      },
+      "r_hat": {
+        "delta": 1.001,
+        "mu": 1.0007
+      },
+      "seconds": 0.598,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "708fd8a5c1402ac6"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6585.1606732122345,
+      "ess": {
+        "delta": 2426.3,
+        "mu": 2446.3
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.49416,
+        "mu": -0.066984
+      },
+      "posterior_sd": {
+        "delta": 0.062465,
+        "mu": 0.032421
+      },
+      "r_hat": {
+        "delta": 1.0002,
+        "mu": 1.0015
+      },
+      "seconds": 0.607,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "dc69b117fa7f0a08"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 5202.972571598636,
+      "ess": {
+        "delta": 2426.3,
+        "mu": 2446.3
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.49416,
+        "mu": -0.066984
+      },
+      "posterior_sd": {
+        "delta": 0.062465,
+        "mu": 0.032421
+      },
+      "r_hat": {
+        "delta": 1.0002,
+        "mu": 1.0015
+      },
+      "seconds": 0.769,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "dc69b117fa7f0a08"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6593.483580852973,
+      "ess": {
+        "delta": 2426.3,
+        "mu": 2446.3
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.49416,
+        "mu": -0.066984
+      },
+      "posterior_sd": {
+        "delta": 0.062465,
+        "mu": 0.032421
+      },
+      "r_hat": {
+        "delta": 1.0002,
+        "mu": 1.0015
+      },
+      "seconds": 0.607,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "dc69b117fa7f0a08"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6614.412346051273,
+      "ess": {
+        "delta": 2426.3,
+        "mu": 2446.3
+      },
+      "n": 1000,
+      "posterior_mean": {
+        "delta": -0.49416,
+        "mu": -0.066984
+      },
+      "posterior_sd": {
+        "delta": 0.062465,
+        "mu": 0.032421
+      },
+      "r_hat": {
+        "delta": 1.0002,
+        "mu": 1.0015
+      },
+      "seconds": 0.605,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "dc69b117fa7f0a08"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "first",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6386.91024675195,
+      "ess": {
+        "delta": 2578.6,
+        "mu": 2548.1
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.480616,
+        "mu": -0.036683
+      },
+      "posterior_sd": {
+        "delta": 0.037166,
+        "mu": 0.019282
+      },
+      "r_hat": {
+        "delta": 1.0025,
+        "mu": 1.0014
+      },
+      "seconds": 0.626,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "8bf297515f588655"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 5017.731150070674,
+      "ess": {
+        "delta": 2578.6,
+        "mu": 2548.1
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.480616,
+        "mu": -0.036683
+      },
+      "posterior_sd": {
+        "delta": 0.037166,
+        "mu": 0.019282
+      },
+      "r_hat": {
+        "delta": 1.0025,
+        "mu": 1.0014
+      },
+      "seconds": 0.797,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "8bf297515f588655"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6329.716518547053,
+      "ess": {
+        "delta": 2578.6,
+        "mu": 2548.1
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.480616,
+        "mu": -0.036683
+      },
+      "posterior_sd": {
+        "delta": 0.037166,
+        "mu": 0.019282
+      },
+      "r_hat": {
+        "delta": 1.0025,
+        "mu": 1.0014
+      },
+      "seconds": 0.632,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "8bf297515f588655"
+    },
+    {
+      "backend": "pymc_nutpie",
+      "call": "repeat",
+      "divergences": 0,
+      "draws": 4000,
+      "draws_per_second": 6427.082440598908,
+      "ess": {
+        "delta": 2578.6,
+        "mu": 2548.1
+      },
+      "n": 3000,
+      "posterior_mean": {
+        "delta": -0.480616,
+        "mu": -0.036683
+      },
+      "posterior_sd": {
+        "delta": 0.037166,
+        "mu": 0.019282
+      },
+      "r_hat": {
+        "delta": 1.0025,
+        "mu": 1.0014
+      },
+      "seconds": 0.622,
+      "spec_digest": "e9891eeaa98e34b7",
+      "summary_digest": "8bf297515f588655"
+    }
+  ]
+}
