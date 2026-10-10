@@ -284,4 +284,4 @@ def test_a_nu_floor_holds_at_both_ends_when_set():
 def test_the_nu_floor_is_part_of_the_spec_digest():
     """Moving the floor must move the digest, or a fit could carry a hash for a
     prior it did not use."""
-    assert replace(PRIORS, nu_floor=0.0).digest() != PRIORS.digest()
+    assert replace(PRIORS, nu_floor=2.0).digest() != PRIORS.digest()

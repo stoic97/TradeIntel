@@ -66,3 +66,11 @@ Pre-commitment only means something if the statistics it fixes have been exercis
 Spec 13.1 gates external data ingestion behind the hash, not code, so the model, SBC, one
 test end to end and the null rate all come before the lock. An error found after the lock is
 an amendment that should have been a free fix. Manual section 8.3.
+
+### SR-010 — a gate piped into `tail` is not a gate
+
+*10 Oct 2026.* `pytest ... | tail -2 && git commit` committed a red test: the pipeline's
+exit status is `tail`'s, so the `&&` chain saw success. Same class as SR-003, in the
+form that matters most. **Any command whose exit status gates a commit runs with
+`set -o pipefail`, or is not piped at all.** Where a gate's output is long, trim it
+after the gate has been judged, not in the same pipeline.
