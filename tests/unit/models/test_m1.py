@@ -285,3 +285,30 @@ def test_the_nu_floor_is_part_of_the_spec_digest():
     """Moving the floor must move the digest, or a fit could carry a hash for a
     prior it did not use."""
     assert replace(PRIORS, nu_floor=2.0).digest() != PRIORS.digest()
+
+
+# --- parameterisation: the same model, two geometries --------------------------
+
+def test_centred_and_non_centred_are_the_same_model():
+    """The non-centred form was chosen for the funnel - weak per-day data. The SBC
+    log of 10 Oct 2026 showed alpha failing at low sigma, where per-day data is
+    strong and the centred form is the right one (Papaspiliopoulos, Roberts and
+    Skold 2007). Before either is preferred, they must be shown to be the same model:
+    identical posteriors for the reported parameter and the intercept, within five
+    standard errors. They may differ only in how well the sampler moves."""
+    data = _data(n_days=40, per_day=8, day_sd=0.4, sigma=1.0, seed=41)
+    # Twice the usual budget on purpose: this dataset sits near the regime boundary
+    # where per-day standard error is about tau_day, and the centred form failed
+    # tau_day's r_hat there at 4,000 draws (1.0155). The claim under test is a shared
+    # posterior target, which is what more draws let a poorer geometry reach.
+    long = FitConfig(draws=2000, warmup=2000, chains=4, seed=3)
+    a = m1.fit(data, PRIORS, long)
+    b = m1.fit(data, PRIORS, long, centred=True)
+    check_diagnostics(a)
+    check_diagnostics(b)
+    assert a.spec_digest == b.spec_digest  # same model, same hash
+    for p in ("theta", "alpha"):
+        mcse = max(a.posterior_sd[p], b.posterior_sd[p]) / np.sqrt(min(a.ess[p], b.ess[p]))
+        assert a.posterior_mean[p] == pytest.approx(
+            b.posterior_mean[p], abs=5 * np.sqrt(2) * mcse
+        ), p

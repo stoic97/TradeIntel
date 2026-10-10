@@ -68,6 +68,11 @@ def main() -> None:
     ap.add_argument("--quick", action="store_true", help=f"{QUICK_REPLICATIONS} replications")
     ap.add_argument("--replications", type=int, default=None)
     ap.add_argument("--allow-dirty", action="store_true")
+    ap.add_argument(
+        "--centred",
+        action="store_true",
+        help="centred day intercepts instead of non-centred; same model, other geometry",
+    )
     args = ap.parse_args()
 
     dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
@@ -75,16 +80,22 @@ def main() -> None:
         sys.exit("refusing: tracked files have uncommitted changes (commit, or --allow-dirty)")
 
     n = args.replications or (QUICK_REPLICATIONS if args.quick else REPLICATIONS)
+    out = OUT.with_name("sbc-m1-centred.json") if args.centred else OUT
     print(
         f"M1 SBC: {n} replications, {CHAINS} chains x {DRAWS} draws, "
-        f"thinned to {sbc.N_THIN}, seed {SEED}"
+        f"thinned to {sbc.N_THIN}, seed {SEED}, "
+        f"{'CENTRED' if args.centred else 'non-centred'} day intercepts"
     )
 
     result = sbc.run(
         n_replications=n,
         n_thin=sbc.N_THIN,
         fit=lambda data, seed: m1.fit(
-            data, m1.M1Priors(), FitConfig(DRAWS, DRAWS, CHAINS, seed), keep_samples=True
+            data,
+            m1.M1Priors(),
+            FitConfig(DRAWS, DRAWS, CHAINS, seed),
+            keep_samples=True,
+            centred=args.centred,
         ),
         prior_draw=m1.prior_draw,
         simulate=m1.simulate,
@@ -97,9 +108,14 @@ def main() -> None:
     record = result.record()
     record["code_commit"] = _git("rev-parse", "HEAD")
     record["code_dirty"] = dirty
-    record["sampler"] = {"chains": CHAINS, "draws": DRAWS, "warmup": DRAWS}
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+    record["sampler"] = {
+        "chains": CHAINS,
+        "draws": DRAWS,
+        "warmup": DRAWS,
+        "centred": args.centred,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
 
     print(f"\n{result.seconds:.0f} s   diverged {result.diverged_replications}"
           f"   refused {result.refused_replications}\n")
@@ -141,7 +157,7 @@ def main() -> None:
         )
 
     print(f"\npassed: {record['passed']}")
-    print(f"written {OUT.relative_to(ROOT)}")
+    print(f"written {out.relative_to(ROOT)}")
     print(f"\nbound: {record['bound']}")
 
 

@@ -23,11 +23,14 @@ trading day — section 6.2, added because Draft 1 assumed serial dependence awa
 its intervals were therefore too narrow. Trades within a day share a market state,
 and the model says so.
 
-**The intercepts are non-centred.** ``a_d = tau_day * z_d`` with
-``z_d ~ Normal(0, 1)``, rather than ``a_d ~ Normal(0, tau_day)`` directly. Many days
-with few trips each is the funnel geometry that makes a centred hierarchical model
-diverge, and the framework permits zero divergences. This is a correctness choice,
-not a performance one.
+**Two parameterisations of one model.** Non-centred, ``a_d = tau_day * z_d`` with
+``z_d ~ Normal(0, 1)``, is right when per-day data is weak - the funnel that makes a
+centred model diverge, and the framework permits zero divergences. Centred,
+``a_d ~ Normal(0, tau_day)`` directly, is right when per-day data is strong: the SBC
+log of 10 Oct 2026 showed alpha failing its diagnostics at low sigma under the
+non-centred form, the known result of Papaspiliopoulos, Roberts and Skold (2007).
+Both forms give the same posterior and carry the same spec digest; they differ only
+in how well the sampler moves. ``fit(..., centred=True)`` selects the second.
 
 **Two numbers here are not the framework's as written.** ``TAU_DAY_PROVENANCE``
 covers the one the framework omits; ``NU_FLOOR_PROVENANCE`` covers the one it got
@@ -165,6 +168,7 @@ def fit(
     priors: M1Priors | None = None,
     config: FitConfig | None = None,
     keep_samples: bool = False,
+    centred: bool = False,
 ) -> FitResult:
     """Fit M1 with the sampler ADR-006 chose. Timing includes compilation (ADR-006)."""
     import nutpie
@@ -189,10 +193,15 @@ def fit(
         nu = pm.Deterministic("nu", priors.nu_floor + nu_excess)
         tau_day = pm.HalfNormal("tau_day", priors.tau_day_scale)
 
-        # Non-centred: the funnel is the known pathology and zero divergences is a
-        # pre-committed threshold, not an aspiration.
-        z_day = pm.Normal("z_day", 0.0, 1.0, dims="day")
-        a_day = pm.Deterministic("a_day", tau_day * z_day, dims="day")
+        if centred:
+            # Right when per-day data is strong (low sigma): the non-centred form
+            # mixes poorly in alpha and tau_day there (SBC log, 10 Oct 2026).
+            a_day = pm.Normal("a_day", 0.0, tau_day, dims="day")
+        else:
+            # Right when per-day data is weak - the funnel - and zero divergences is a
+            # pre-committed threshold, not an aspiration.
+            z_day = pm.Normal("z_day", 0.0, 1.0, dims="day")
+            a_day = pm.Deterministic("a_day", tau_day * z_day, dims="day")
 
         eta = alpha + a_day[day_idx] + theta * np.asarray(data.condition, dtype=float)
         if data.n_controls:
