@@ -130,6 +130,10 @@ class SBCResult:
     n_thin: int
     ranks: dict[str, list[int]] = field(default_factory=dict)
     excluded: dict[str, int] = field(default_factory=dict)
+    # One row per replication: the truth drawn, whether the fit diverged, which
+    # parameters failed their own diagnostics, and how long it took. This is what
+    # turns "a third failed" into "failures sit here in prior space".
+    log: list[dict[str, Any]] = field(default_factory=list)
     diverged_replications: int = 0
     refused_replications: int = 0
     seconds: float = 0.0
@@ -170,6 +174,7 @@ class SBCResult:
                 for p, v in verdicts.items()
             },
             "ranks": {p: [int(r) for r in rs] for p, rs in self.ranks.items()},
+            "log": self.log,
             "environment": environment(),
             "bound": (
                 "SBC licenses that the machinery recovers parameters under our own "
@@ -204,15 +209,20 @@ def run(
     spec_digest = ""
     started = time.perf_counter()
 
+    log: list[dict[str, Any]] = []
     for i in range(n_replications):
         truth = prior_draw(rng)
         data = simulate(truth, rng)
+        row: dict[str, Any] = {"i": i, "truth": {k: round(v, 5) for k, v in truth.items()}}
+        t0 = time.perf_counter()
         try:
             result = fit(data, seed + i)
-        except Exception:  # noqa: BLE001 - a refused replication is data, not a crash
+        except Exception as exc:  # noqa: BLE001 - a refused replication is data, not a crash
             refused += 1
             for p in params:
                 excluded[p] += 1
+            row.update(refused=type(exc).__name__, seconds=round(time.perf_counter() - t0, 2))
+            log.append(row)
             continue
         if result.samples is None:
             raise ValueError("SBC needs the posterior draws: fit with keep_samples=True")
@@ -220,6 +230,12 @@ def run(
         failing = failing_parameters(result)
         if result.divergences > 0:
             diverged += 1
+        row.update(
+            diverged=int(result.divergences),
+            failed=sorted(failing),
+            seconds=round(time.perf_counter() - t0, 2),
+        )
+        log.append(row)
         for p in params:
             if p in failing:
                 excluded[p] += 1
@@ -240,6 +256,7 @@ def run(
         n_thin=n_thin,
         ranks=ranks,
         excluded=excluded,
+        log=log,
         diverged_replications=diverged,
         refused_replications=refused,
         seconds=time.perf_counter() - started,

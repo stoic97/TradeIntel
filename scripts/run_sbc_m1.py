@@ -118,6 +118,28 @@ def main() -> None:
         )
         _histogram(result.ranks[p], sbc.N_THIN)
 
+    # Where do the failures sit in prior space? Median truth among the replications
+    # that diverged or failed a parameter, against those that were clean.
+    import statistics
+
+    def _median(rows, key):
+        vals = [row["truth"][key] for row in rows]
+        return statistics.median(vals) if vals else float("nan")
+
+    clean = [row for row in result.log if not row.get("failed") and not row.get("diverged")]
+    print(f"\nwhere failures sit in prior space (median true value; {len(clean)} clean)")
+    print(f"{'group':<22} {'n':>4}  {'alpha':>7} {'theta':>7} {'sigma':>7} {'nu':>7} {'tau_day':>8}")
+    groups = [("clean", clean), ("diverged", [r for r in result.log if r.get("diverged")])]
+    groups += [(f"{p} failed", [r for r in result.log if p in r.get("failed", [])]) for p in m1.PARAMS]
+    for name, rows in groups:
+        if not rows:
+            continue
+        print(
+            f"{name:<22} {len(rows):>4}  "
+            + " ".join(f"{_median(rows, k):>7.3f}" for k in ("alpha", "theta", "sigma", "nu"))
+            + f" {_median(rows, 'tau_day'):>8.3f}"
+        )
+
     print(f"\npassed: {record['passed']}")
     print(f"written {OUT.relative_to(ROOT)}")
     print(f"\nbound: {record['bound']}")

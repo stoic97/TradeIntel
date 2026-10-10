@@ -261,23 +261,24 @@ def test_the_diagnostics_gate_is_the_frameworks_three_thresholds():
 
 # --- nu's prior, corrected after the SBC run of 10 Oct 2026 --------------------
 
-def test_nu_can_never_fall_below_two():
-    """Gamma(2, 0.1) as written put mass below nu = 1, where Student-t has no mean,
-    and below 2, where it has no variance. 59 of 1,000 SBC replications drew from
-    that region and diverged. Real returns have fat tails and finite variance, so a
-    prior that admits infinite variance is wrong about the world, not merely wide.
-    The prior is now 2 + Gamma(2, 0.1): same shape, same mean near 22, variance
-    always defined. Checked at both ends - what the prior draws, and what the
-    posterior can return."""
+def test_a_nu_floor_holds_at_both_ends_when_set():
+    """The floor mechanism is kept, defaulted off. It was proposed as the fix for 59
+    diverged SBC replications and its pre-registered prediction failed - 4.3 per cent
+    diverged against 5.9 - so it is withdrawn as a fix. Whether to floor nu on
+    correctness grounds is a separate kickoff question (TD-021). Here: when a floor is
+    set, neither the prior nor the posterior can fall below it; by default, the prior
+    is the framework's and can."""
+    floored = replace(PRIORS, nu_floor=2.0)
     rng = np.random.default_rng(31)
-    draws = [m1.prior_draw(rng)["nu"] for _ in range(5000)]
-    assert min(draws) >= 2.0
-    assert 15.0 < float(np.mean(draws)) < 30.0  # the mean did not move far
-
-    got = m1.fit(_data(nu=3.0, seed=37), PRIORS, FIT, keep_samples=True)
+    assert min(m1.prior_draw(rng, floored)["nu"] for _ in range(5000)) >= 2.0
+    got = m1.fit(_data(nu=3.0, seed=37), floored, FIT, keep_samples=True)
     check_diagnostics(got)
     assert got.samples is not None
     assert float(got.samples["nu"].min()) >= 2.0
+
+    assert PRIORS.nu_floor == 0.0
+    rng = np.random.default_rng(31)
+    assert min(m1.prior_draw(rng)["nu"] for _ in range(5000)) < 2.0
 
 
 def test_the_nu_floor_is_part_of_the_spec_digest():

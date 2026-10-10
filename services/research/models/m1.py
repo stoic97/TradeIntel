@@ -10,7 +10,7 @@ Exactly as Research Specification v1.0 fixes it, per trader:
 Priors, section 6.3, PRE-COMMIT:
 
     alpha ~ Normal(0, 0.5)      theta ~ Normal(0, 0.25)
-    sigma ~ HalfNormal(2)       nu    = 2 + Gamma(2, 0.1)       beta ~ Normal(0, 0.3)
+    sigma ~ HalfNormal(2)       nu    ~ Gamma(2, 0.1)       beta ~ Normal(0, 0.3)
 
 **theta is the whole point.** It is what the two-part promotion criterion reads: is
 the effect real (P(theta beyond 0) >= 0.95) and is it big enough (shrunk training
@@ -57,16 +57,16 @@ particular history needs more is answered per fit by the framework's diagnostics
 - zero divergences, r_hat, bulk ess - so no further threshold is invented here."""
 
 NU_FLOOR_PROVENANCE = (
-    "amendment to a PRE-COMMIT value, proposed inside the revision window. Section 6.3 "
-    "gives nu ~ Gamma(2, 0.1), which puts mass below 1, where Student-t has no mean, "
-    "and below 2, where it has no variance. In the SBC run of 10 Oct 2026, 59 of 1,000 "
-    "replications drew from that region, produced data no trader could produce, and "
-    "diverged. Real returns have fat tails and finite variance, so a prior that admits "
-    "infinite variance is wrong about the world rather than merely wide. The prior is "
-    "now floor + Gamma(2, 0.1) with floor = 2: same shape, mean near 22, variance "
-    "always defined. Prediction recorded before the re-run: divergences near zero, "
-    "alpha and tau_day completion above 0.9. If the re-run does not bear that out, the "
-    "prior was not the cause and this amendment is withdrawn."
+    "a floor on nu, parked. Proposed 10 Oct 2026 after 59 of 1,000 SBC replications "
+    "diverged, on the theory that Gamma(2, 0.1)'s mass below nu = 2 - where Student-t "
+    "has no variance - was the cause. The prediction recorded before the re-run was "
+    "divergences near zero and alpha and tau_day completion above 0.9. The re-run at "
+    "floor = 2 gave 4.3 per cent diverged against 5.9, and 87 per cent completion "
+    "against 84 and 85: the prediction failed, so the floor is withdrawn as a fix and "
+    "the default is the framework's value. Cost per replication halved, so the tail "
+    "made fits slow rather than failed. Whether nu should be floored on correctness "
+    "grounds alone - real returns have finite variance - is a separate question for "
+    "the kickoff (TD-021), and it must not ride in under a fix that fixed nothing."
 )
 
 TAU_DAY_PROVENANCE = (
@@ -88,7 +88,7 @@ class M1Priors:
     sigma_scale: float = 2.0
     nu_shape: float = 2.0
     nu_rate: float = 0.1
-    nu_floor: float = 2.0  # amends the framework: see NU_FLOOR_PROVENANCE
+    nu_floor: float = 0.0  # framework as written; the floor is parked, see NU_FLOOR_PROVENANCE
     beta_sd: float = 0.3
     tau_day_scale: float = 0.5  # not in the framework: see TAU_DAY_PROVENANCE
 
