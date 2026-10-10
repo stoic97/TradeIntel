@@ -71,8 +71,8 @@ def test_thinning_takes_a_fixed_count_spread_across_the_chain():
 
 def test_uniform_ranks_pass_the_uniformity_test():
     rng = np.random.default_rng(1)
-    ranks = rng.integers(0, 101, size=1000)
-    verdict = sbc.uniformity(ranks, n_draws=100)
+    ranks = rng.integers(0, 100, size=1000)
+    verdict = sbc.uniformity(ranks, n_draws=sbc.N_THIN)
     assert verdict.uniform, verdict.detail
 
 
@@ -82,22 +82,22 @@ def test_a_posterior_that_is_too_narrow_is_rejected():
     intervals lie."""
     rng = np.random.default_rng(2)
     middle = rng.integers(40, 61, size=200)
-    edges = rng.choice([0, 1, 99, 100], size=800)
-    verdict = sbc.uniformity(np.concatenate([middle, edges]), n_draws=100)
+    edges = rng.choice([0, 1, 98, 99], size=800)
+    verdict = sbc.uniformity(np.concatenate([middle, edges]), n_draws=sbc.N_THIN)
     assert not verdict.uniform
 
 
 def test_a_biased_posterior_is_rejected():
     """A posterior centred off the truth skews the ranks one way."""
     rng = np.random.default_rng(3)
-    ranks = np.clip(rng.binomial(100, 0.75, size=1000), 0, 100)
-    verdict = sbc.uniformity(ranks, n_draws=100)
+    ranks = np.clip(rng.binomial(100, 0.75, size=1000), 0, 99)
+    verdict = sbc.uniformity(ranks, n_draws=sbc.N_THIN)
     assert not verdict.uniform
 
 
 def test_the_uniformity_test_refuses_a_rank_outside_its_range():
     with pytest.raises(ValueError, match="rank"):
-        sbc.uniformity(np.array([0, 50, 101]), n_draws=100)
+        sbc.uniformity(np.array([0, 50, 100]), n_draws=sbc.N_THIN)
 
 
 # --- SBC on M1, end to end at a small replication count ----------------------
@@ -118,7 +118,7 @@ def test_sbc_accounts_for_every_replication_per_parameter():
     """
     result = sbc.run(
         n_replications=12,
-        n_thin=50,
+        n_thin=sbc.N_THIN,
         fit=lambda data, seed: m1.fit(
             data, m1.M1Priors(), FitConfig(1000, 1000, 4, seed), keep_samples=True
         ),
@@ -132,7 +132,7 @@ def test_sbc_accounts_for_every_replication_per_parameter():
     for name, ranks in result.ranks.items():
         accounted = len(ranks) + result.excluded[name]
         assert accounted == 12, f"{name}: {accounted} of 12 accounted for"
-        assert all(0 <= r <= 50 for r in ranks), name
+        assert all(0 <= r <= sbc.N_THIN for r in ranks), name
     assert len(result.ranks["theta"]) >= 11, (
         f"theta completed only {len(result.ranks['theta'])} of 12; it mixed cleanly at "
         "every budget measured, so a shortfall here is the gating logic, not the sampler"
@@ -147,7 +147,7 @@ def test_the_sbc_record_names_what_it_measured_and_what_it_lost():
         model="m1",
         spec_digest="abc123",
         n_replications=12,
-        n_thin=50,
+        n_thin=sbc.N_THIN,
         ranks={"theta": [1, 2, 3]},
         excluded={"theta": 9},
         diverged_replications=0,
@@ -158,7 +158,7 @@ def test_the_sbc_record_names_what_it_measured_and_what_it_lost():
     assert record["model"] == "m1"
     assert record["spec_digest"] == "abc123"
     assert record["n_replications"] == 12
-    assert record["n_thin"] == 50
+    assert record["n_thin"] == sbc.N_THIN
     assert "theta" in record["uniformity"]
     assert record["completion"]["theta"] == 0.25
     assert record["excluded_by_parameter"]["theta"] == 9
@@ -168,3 +168,12 @@ def test_the_sbc_record_names_what_it_measured_and_what_it_lost():
     assert record["passed"] is False
     for key in ("python", "numpy", "pymc", "nutpie", "platform"):
         assert record["environment"][key], key
+
+
+def test_a_bin_count_that_does_not_divide_the_ranks_is_refused():
+    """The binning bug this constant exists to prevent: 51 rank values over 20 bins
+    cover alternately two or three integers, so the chi-square reads its own binning
+    as non-uniformity. Harmless at a dozen replications, capable of rejecting a
+    calibrated model at a thousand."""
+    with pytest.raises(ValueError, match="do not divide"):
+        sbc.uniformity(np.array([0, 25, 50]), n_draws=50, n_bins=20)

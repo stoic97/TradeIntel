@@ -50,6 +50,13 @@ from services.research.models.benchmark import environment
 N_BINS = 20
 ALPHA = 0.01  # pre-registered: the chi-square level the rank histogram must clear
 MIN_COMPLETION = 0.9  # arbitrary; see the module docstring
+N_THIN = 99
+"""Derived. Ranks take ``n_thin + 1`` values and the chi-square compares against
+equal expected counts, so the rank values must divide evenly into the bins. 99
+gives 100 values over 20 bins of exactly 5. A count like 50 gives 51 values over
+20 bins - 2.55 apiece - so bins cover alternately 2 or 3 integers and the test
+registers non-uniformity that is an artifact of its own binning. Invisible at a
+dozen replications; capable of rejecting a calibrated model at a thousand."""
 
 
 @dataclass(frozen=True)
@@ -90,6 +97,12 @@ def uniformity(
     if values.min() < 0 or values.max() > n_draws:
         raise ValueError(
             f"a rank must lie in [0, {n_draws}]; got [{values.min()}, {values.max()}]"
+        )
+    if (n_draws + 1) % n_bins:
+        raise ValueError(
+            f"{n_draws + 1} rank values do not divide into {n_bins} bins; the bins "
+            "would cover unequal numbers of ranks and the chi-square would read its "
+            f"own binning as non-uniformity (see N_THIN = {N_THIN})"
         )
     counts, _ = np.histogram(values, bins=np.linspace(0, n_draws + 1, n_bins + 1))
     expected = values.size / n_bins
