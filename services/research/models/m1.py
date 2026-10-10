@@ -146,6 +146,7 @@ def fit(
     data: M1Data,
     priors: M1Priors | None = None,
     config: FitConfig | None = None,
+    keep_samples: bool = False,
 ) -> FitResult:
     """Fit M1 with the sampler ADR-006 chose. Timing includes compilation (ADR-006)."""
     import nutpie
@@ -198,4 +199,57 @@ def fit(
         divergences=int(np.asarray(trace.sample_stats["diverging"].values).sum()),
         seconds=seconds,
         params=PARAMS,
+        keep_samples=keep_samples,
     )
+
+
+# ---------------------------------------------------------------- SBC support
+
+SIM_N_DAYS = 40
+SIM_PER_DAY = 6
+SIM_PREVALENCE = 0.25
+
+
+def prior_draw(rng: np.random.Generator, priors: M1Priors | None = None) -> dict[str, float]:
+    """One draw from M1's prior, which is where SBC gets its truth.
+
+    This must be the same prior the model declares. If the two drift apart, SBC
+    validates nothing — it would be checking the machinery against a prior the
+    machinery does not use, and it would still produce a clean rank histogram.
+    """
+    p = priors or M1Priors()
+    return {
+        "alpha": float(rng.normal(0.0, p.alpha_sd)),
+        "theta": float(rng.normal(0.0, p.theta_sd)),
+        "sigma": float(abs(rng.normal(0.0, p.sigma_scale))),  # HalfNormal
+        "nu": float(rng.gamma(p.nu_shape, 1.0 / p.nu_rate)),  # numpy takes a scale
+        "tau_day": float(abs(rng.normal(0.0, p.tau_day_scale))),
+    }
+
+
+def simulate(
+    params: dict[str, float],
+    rng: np.random.Generator,
+    n_days: int = SIM_N_DAYS,
+    per_day: int = SIM_PER_DAY,
+    prevalence: float = SIM_PREVALENCE,
+) -> M1Data:
+    """Data from M1's own generative process, for the parameters given.
+
+    The shape — 40 days of 6 trips at 25% prevalence, so 240 trips with about 60 in
+    the condition — is fixed here rather than chosen per run, so SBC measures the
+    machinery and not a shape picked to flatter it. It sits just inside the framework's
+    minimums of 30 condition and 60 comparison.
+
+    No clamping. ``nu ~ Gamma(2, 0.1)`` puts roughly half a per cent of draws below 1,
+    where Student-t has no mean and this returns enormous values. That is what the
+    pre-committed prior says, so SBC runs on it; the runner counts the replications it
+    costs instead of hiding them.
+    """
+    n = n_days * per_day
+    day = np.repeat(np.arange(n_days), per_day)
+    a_day = rng.normal(0.0, params["tau_day"], size=n_days)
+    x = (rng.random(n) < prevalence).astype(float)
+    mu = params["alpha"] + np.repeat(a_day, per_day) + params["theta"] * x
+    r = mu + params["sigma"] * rng.standard_t(params["nu"], size=n)
+    return M1Data(r=r, condition=x, day=day)

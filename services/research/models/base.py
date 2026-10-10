@@ -45,6 +45,11 @@ class FitResult:
     divergences: int
     draws: int
     seconds: float
+    # Kept only when asked for. A rank, an 80% interval and P(theta < 0) all need the
+    # sample rather than the summary, and carrying 4,000 floats per parameter through
+    # every fit is waste. Excluded from summary_digest: the same fit is the same fit
+    # whether or not its draws were retained.
+    samples: dict[str, np.ndarray] | None = None
 
     def summary_digest(self) -> str:
         """Identity of what the fit concluded, to six decimals. Timing is excluded on
@@ -85,6 +90,7 @@ def summarise(
     divergences: int,
     seconds: float,
     params: Sequence[str],
+    keep_samples: bool = False,
 ) -> FitResult:
     """``samples``: parameter -> array shaped (chains, draws).
 
@@ -110,4 +116,30 @@ def summarise(
         divergences=int(divergences),
         draws=total,
         seconds=seconds,
+        samples={p: posterior[p].ravel() for p in params} if keep_samples else None,
     )
+
+
+def failing_parameters(result: FitResult) -> dict[str, str]:
+    """Which parameters miss the framework's thresholds, and why. Empty means all pass.
+
+    ``check_diagnostics`` asks whether a *fit* is usable, which is the right question
+    before a fit is reported to anyone. This asks the per-parameter question, which is
+    the right one during validation: excluding a whole replication because a nuisance
+    scale failed to mix conditions the surviving sample on an unrelated parameter and
+    biases it (measured 10 Oct 2026: a third of SBC replications refused on tau_day
+    while theta mixed cleanly in all of them).
+
+    **Divergences are a property of the fit, not of a parameter.** When a fit diverged
+    the sampler did not explore the posterior at all, so every parameter fails.
+    """
+    if result.divergences > MAX_DIVERGENCES:
+        reason = f"{result.divergences} divergent transitions in the fit"
+        return dict.fromkeys(result.r_hat, reason)
+    failing: dict[str, str] = {}
+    for name, value in result.r_hat.items():
+        if value > MAX_R_HAT:
+            failing[name] = f"r_hat {value:.4f} above {MAX_R_HAT}"
+        elif result.ess.get(name, 0.0) < MIN_BULK_ESS:
+            failing[name] = f"bulk ess {result.ess[name]:.0f} below {MIN_BULK_ESS:.0f}"
+    return failing
