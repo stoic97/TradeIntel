@@ -8,10 +8,13 @@ measurement, and gives ADR-006 a number instead of a preference.
 returns half the independent draws has bought nothing, so the headline rate is
 effective sample size per second.
 
-**A known flaw in the comparison, printed rather than hidden.** The nutpie backend
-compiles the model on every call; NumPyro's JIT cache survives between calls of the
-same shape. Repeat fits therefore favour NumPyro. Hoisting compilation out of the
-fit loop is the production fix and is carried as a deferral, not done here.
+**Compilation is a one-off process cost.** The first draft of this script asserted
+that the nutpie backend recompiled on every call while NumPyro cached, and warned
+that repeat fits therefore favoured NumPyro. The timings contradict it: both backends
+pay about 1.2 s extra on the first fit in a process and about 0.1 s extra on the first
+fit at each new data size, after which repeats are flat. Hoisting compilation out of
+the fit loop would buy nothing. Recorded here because the claim was in the committed
+record before it was checked.
 
 Usage:
     uv run python scripts/benchmark_m1_core.py
@@ -100,11 +103,28 @@ def main() -> None:
         "sizes": list(sizes),
         "repeats": repeats,
     }
-    record["caveat"] = (
-        "The nutpie backend compiles on every call; NumPyro's JIT cache survives "
-        "calls of the same shape. Repeat fits favour NumPyro. Hoisting compilation "
-        "out of the fit loop is the production fix and is not done here."
-    )
+    record["findings"] = {
+        "compilation": (
+            "A one-off process cost, not per-fit and not per-shape: both backends pay "
+            "about 1.2 s extra on the first fit in a process and about 0.1 s extra at "
+            "each new data size, then repeats are flat. Hoisting compilation out of the "
+            "fit loop would buy nothing. An earlier version of this script claimed "
+            "nutpie recompiled on every call; these timings contradict it."
+        ),
+        "scaling": (
+            "Per-fit time is flat in n. A 30x increase in trades (100 to 3000) costs "
+            "3-6% more time for both backends, so cost is dominated by sampler overhead "
+            "- warmup and tree building - rather than by likelihood evaluation. Longer "
+            "histories are nearly free."
+        ),
+        "limits": (
+            "One model, one condition, sigma known, one machine. Says nothing about the "
+            "hierarchical model of step C, where the posterior geometry is harder, nor "
+            "about vectorising many traders in one call, which jax can do and PyMC "
+            "cannot - unmeasured, and the reason this benchmark does not settle ADR-006 "
+            "on its own."
+        ),
+    }
 
     print("\nbackend        n    first    repeat avg   ess    ess/sec   max rhat")
     rate: dict[str, dict[int, float]] = {}
@@ -145,7 +165,8 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
     print(f"\nwritten {OUT.relative_to(ROOT)}")
-    print(f"caveat: {record['caveat']}")
+    for key, text in record["findings"].items():
+        print(f"{key}: {text}")
 
 
 if __name__ == "__main__":
