@@ -69,6 +69,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CRUDE = ROOT / "data" / "market" / "crude_1m.csv"
 OUT = ROOT / "docs" / "phase0" / "null-rate-b2.json"
 QUICK_OUT = ROOT / "docs" / "phase0" / "null-rate-b2-quick.json"
+PLANTED_OUT = ROOT / "docs" / "phase0" / "recall-b2.json"
 CHECKPOINTS = ROOT / "data" / "null_rate"
 
 SEED = 20261010
@@ -92,8 +93,19 @@ def _market() -> cp.Market:
     return _MARKET
 
 
-def history_id(kind: str, i: int) -> str:
+def planted_tasks() -> list[tuple[str, int, int]]:
+    """Every B2 cell x every seed: the recall sweep."""
+    return [("planted", c.index, r) for c in b2_cells() for r in range(cp.SEEDS_PER_CELL)]
+
+
+def b2_cells() -> list[cp.Cell]:
+    return [c for c in cp.grid() if c.test_id == b2.TEST_ID]
+
+
+def history_id(kind: str, i: int, rep: int = 0) -> str:
     """Known without generating the history, so a resume can skip it cheaply."""
+    if kind == "planted":
+        return f"planted-{cp.planted_seed(cp.grid()[i], rep)}"
     return f"{kind}-{cp.null_seed(kind, i)}"
 
 
@@ -116,17 +128,35 @@ class Row:
     p_hold: float
     mde: float
     seconds: float
+    # Planted sweeps only; defaulted so null rows written earlier still load.
+    cell_index: int = -1
+    multiple: int = 0
+    nominal: float = float("nan")
+    reached: bool = True
 
 
-def one(task: tuple[str, int]) -> Row:
-    kind, i = task
+def one(task: tuple[str, int, int]) -> Row:
+    kind, i, rep = task
     t0 = time.time()
-    h = cp.clean_null(i) if kind == "clean_null" else cp.adversarial_null(_market(), i)
-    hid = f"{kind}-{h.seed}"
+    extra: dict[str, object] = {}
+    if kind == "planted":
+        cell = cp.grid()[i]
+        h = cp.planted_history(_market(), cell, rep)
+        extra = {
+            "cell_index": cell.index,
+            "multiple": cell.multiple,
+            "nominal": float(h.planting.nominal) if h.planting else float("nan"),
+            "reached": bool(h.planting.reached) if h.planting else True,
+        }
+    elif kind == "clean_null":
+        h = cp.clean_null(i)
+    else:
+        h = cp.adversarial_null(_market(), i)
+    hid = f"{h.kind}-{h.seed}"
     median_day = int(np.median([t.day for t in h.trips])) if h.trips else 0
     blank = {
         "history_id": hid,
-        "kind": kind,
+        "kind": h.kind,
         "n_trips": len(h.trips),
         "median_day": median_day,
         "n_condition": 0,
@@ -144,7 +174,7 @@ def one(task: tuple[str, int]) -> Row:
     except (ValueError, BadDiagnostics) as e:
         # Too short to split, or too few days to fit. Anything else must crash the
         # sweep rather than be absorbed into the denominator as "not evaluable".
-        return Row(**blank, evaluable=False, fired=False,
+        return Row(**blank, **extra, evaluable=False, fired=False,
                    reason=f"{type(e).__name__}: {e}", seconds=time.time() - t0)
 
     n_min_c, n_min_comp = b2.N_MIN
@@ -157,13 +187,13 @@ def one(task: tuple[str, int]) -> Row:
         )
     fired = bool(r.core.real and r.core.big_enough and not r.core.killed)
     return Row(
-        history_id=hid, kind=kind, n_trips=len(h.trips), median_day=median_day,
+        history_id=hid, kind=h.kind, n_trips=len(h.trips), median_day=median_day,
         n_condition=r.n_condition, n_comparison=r.n_comparison,
         n_condition_isolation=r.n_condition_isolation,
         evaluable=evaluable, fired=fired and evaluable, reason=reason,
         tier=r.finding.tier, failed_gate=r.finding.failed_gate,
         p_train=r.core.p_train, m_train=r.core.m_train, p_hold=r.core.p_hold,
-        mde=r.finding.mde, seconds=time.time() - t0,
+        mde=r.finding.mde, seconds=time.time() - t0, **extra,
     )
 
 
@@ -300,8 +330,100 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
           f"complete={len(rows) == total})", flush=True)
 
 
+def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, total: int,
+                        seconds: float, recomputed_by: str | None = None) -> None:
+    """Recall: of the histories where B2 was planted and could be tested, how many fired?
+
+    Reported per effect size and history length, never pooled across effect
+    sizes — pooling would let a strong cell carry a weak one and hide the shape,
+    and the shape across k is the evidence. Intervals are Wilson over 8 seeds
+    per cell, which is few; they are wide on purpose. These histories also share
+    the one crude series, so the seeds within a cell are not fully independent
+    and the true intervals are wider still.
+    """
+    source: dict[str, object] = {
+        "code_commit": meta["code_commit"], "code_dirty": meta["code_dirty"],
+        "python": meta.get("python"), "numpy": meta.get("numpy"),
+    }
+    if recomputed_by:
+        source["recomputed_by"] = recomputed_by
+    planted = [r for r in rows if r.kind == "planted"]
+    wrong_direction = [r.history_id for r in planted if r.fired and r.m_train > 0]
+
+    cells: dict[tuple[int, int], dict[str, object]] = {}
+    for r in planted:
+        c = cells.setdefault((r.multiple, r.n_trips), {
+            "multiple": r.multiple, "n_trades": r.n_trips, "nominal": r.nominal,
+            "reached": r.reached, "n": 0, "evaluable": 0, "fired": 0,
+        })
+        c["n"] = int(c["n"]) + 1
+        c["evaluable"] = int(c["evaluable"]) + int(r.evaluable)
+        c["fired"] = int(c["fired"]) + int(r.fired)
+    for c in cells.values():
+        ev, fired = int(c["evaluable"]), int(c["fired"])
+        c["recall"] = fired / ev if ev else None
+        c["interval"] = list(nr.wilson_interval(fired, ev)) if ev else None
+
+    by_k: dict[int, dict[str, object]] = {}
+    for (k, _), c in cells.items():
+        a = by_k.setdefault(k, {"nominal": c["nominal"], "reached": c["reached"],
+                                "n": 0, "evaluable": 0, "fired": 0})
+        for key in ("n", "evaluable", "fired"):
+            a[key] = int(a[key]) + int(c[key])
+    for a in by_k.values():
+        ev, fired = int(a["evaluable"]), int(a["fired"])
+        a["recall"] = fired / ev if ev else None
+        a["interval"] = list(nr.wilson_interval(fired, ev)) if ev else None
+
+    report: dict[str, object] = {
+        "test_id": b2.TEST_ID,
+        "grid_version": cp.GRID_VERSION,
+        "measure": "recall on planted histories",
+        "fired_definition": "core.real and core.big_enough and not core.killed",
+        "clustering": "8 seeds per cell share the one crude series; intervals are "
+                      "Wilson over seeds and so are narrower than the truth",
+        "config": {"draws": CONFIG.draws, "warmup": CONFIG.warmup, "chains": CONFIG.chains,
+                   "seed": SEED, "n_min": list(b2.N_MIN), "theta_min": b2.THETA_MIN,
+                   "direction": b2.DIRECTION},
+        "source": source,
+        "n_rows": len(rows), "n_expected": total, "complete": len(rows) == total,
+        "seconds": round(seconds, 1),
+        "wrong_direction_fires": wrong_direction,
+        "by_effect_size": {str(k): by_k[k] for k in sorted(by_k)},
+        "by_cell": [cells[key] for key in sorted(cells)],
+        "histories": [vars(r) for r in rows],
+    }
+
+    print(f"\n{'k':>2} {'planted':>9} {'trades':>7} {'evaluable':>10} {'fired':>6} "
+          f"{'recall':>8}  95% interval")
+    for key in sorted(cells):
+        c = cells[key]
+        ev = int(c["evaluable"])
+        rec = f"{c['recall']:.0%}" if c["recall"] is not None else "   -"
+        iv = (f"[{c['interval'][0]:.0%}, {c['interval'][1]:.0%}]"
+              if c["interval"] else "not testable")
+        star = "" if c["reached"] else "  (saturated)"
+        print(f"{c['multiple']:>2} {float(c['nominal']):>8.2f}R {c['n_trades']:>7} "
+              f"{ev:>7}/{c['n']:<2} {int(c['fired']):>6} {rec:>8}  {iv}{star}")
+    print("\nby effect size, lengths pooled:")
+    for k in sorted(by_k):
+        a = by_k[k]
+        rec = f"{a['recall']:.0%}" if a["recall"] is not None else "-"
+        iv = f"[{a['interval'][0]:.0%}, {a['interval'][1]:.0%}]" if a["interval"] else ""
+        print(f"  k={k}  {float(a['nominal']):.2f}R  {int(a['fired'])}/{int(a['evaluable'])} "
+              f"= {rec}  {iv}{'' if a['reached'] else '  (saturated)'}")
+    print(f"\nfires in the wrong direction: {len(wrong_direction)}")
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, sort_keys=True, default=float) + "\n")
+    print(f"wrote {out.relative_to(ROOT)}  ({len(rows)}/{total}, "
+          f"complete={len(rows) == total})", flush=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--planted", action="store_true",
+                    help="sweep B2's planted cells and report recall instead of the null rate")
     ap.add_argument("--quick", action="store_true", help="40 adversarial + 20 clean")
     ap.add_argument("--n-adversarial", type=int, default=None)
     ap.add_argument("--n-clean", type=int, default=None)
@@ -318,15 +440,21 @@ def main() -> int:
     n_adv = args.n_adversarial if args.n_adversarial is not None else (
         40 if args.quick else cp.N_ADVERSARIAL)
     n_clean = args.n_clean if args.n_clean is not None else (20 if args.quick else cp.N_CLEAN)
-    out = args.out or (QUICK_OUT if args.quick else OUT)
-    total = n_adv + n_clean
+    planted = planted_tasks() if args.planted else []
+    if args.planted:
+        out = args.out or PLANTED_OUT
+        total = len(planted)
+    else:
+        out = args.out or (QUICK_OUT if args.quick else OUT)
+        total = n_adv + n_clean
+    writer = write_recall_report if args.planted else write_report
 
     if args.rebuild_from:
         previous = json.loads(args.rebuild_from.read_text())
         rows = [Row(**h) for h in previous["histories"]]
         print(f"rebuilding from {len(rows)} saved rows, no fits run", flush=True)
-        write_report(rows, previous["source"], out, len(rows), 0.0,
-                     recomputed_by=_git("rev-parse", "HEAD"))
+        writer(rows, previous["source"], out, len(rows), 0.0,
+               recomputed_by=_git("rev-parse", "HEAD"))
         return 0
 
     if args.report_only:
@@ -336,19 +464,24 @@ def main() -> int:
             return 1
         rows = load_rows(rows_path)
         print(f"assembling from {len(rows)} checkpointed rows, no fits run", flush=True)
-        write_report(rows, json.loads(meta_path.read_text()), out, total, 0.0)
+        writer(rows, json.loads(meta_path.read_text()), out, total, 0.0)
         return 0
 
     dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
     if dirty and not args.allow_dirty:
         print("refusing: tracked files have uncommitted changes (commit, or --allow-dirty)")
         return 1
-    meta = run_meta(_git("rev-parse", "HEAD"), dirty, n_adv, n_clean)
+    meta = run_meta(_git("rev-parse", "HEAD"), dirty,
+                    0 if args.planted else n_adv, 0 if args.planted else n_clean)
+    meta["planted"] = bool(args.planted)
     rows_path, rows = open_checkpoint(out, meta, args.restart)
     done_ids = {r.history_id for r in rows}
 
-    tasks = [("adversarial_null", i) for i in range(n_adv)]
-    tasks += [("clean_null", i) for i in range(n_clean)]
+    if args.planted:
+        tasks = list(planted)
+    else:
+        tasks = [("adversarial_null", i, 0) for i in range(n_adv)]
+        tasks += [("clean_null", i, 0) for i in range(n_clean)]
     tasks = [t for t in tasks if history_id(*t) not in done_ids]
 
     # One BLAS thread per worker: nutpie already runs 4 chains, and oversubscribing
@@ -358,8 +491,9 @@ def main() -> int:
 
     if rows:
         print(f"resuming: {len(rows)} of {total} already done", flush=True)
-    print(f"{len(tasks)} to run on {args.workers} workers "
-          f"({n_adv} adversarial first, then {n_clean} clean); checkpoint "
+    what = (f"{len(b2_cells())} planted cells x {cp.SEEDS_PER_CELL} seeds" if args.planted
+            else f"{n_adv} adversarial first, then {n_clean} clean")
+    print(f"{len(tasks)} to run on {args.workers} workers ({what}); checkpoint "
           f"{rows_path.relative_to(ROOT)}", flush=True)
 
     start = time.time()
@@ -379,7 +513,7 @@ def main() -> int:
                           f"{el / 60:5.1f} min elapsed, ~{eta / 60:4.1f} min left", flush=True)
             print("  all fits done; shutting the pool down (this can take minutes)", flush=True)
 
-    write_report(rows, meta, out, total, time.time() - start)
+    writer(rows, meta, out, total, time.time() - start)
     return 0
 
 
