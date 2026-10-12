@@ -1,7 +1,7 @@
 """Step E: how often does B2 fire on a trader with nothing planted? (R-Spec §6.2)
 
 Runs B2 end to end over corpus A's null histories and reports the false-positive
-rate with the interval its clustering allows. The nulls are regenerated in
+rate with every interval its clustering allows. The nulls are regenerated in
 process from ``null_seed`` and the same crude market, which reproduces the
 corpus's null histories exactly — the seeds fix them — without reading the
 export back. That is a deliberate scope call: step E measures the statistics,
@@ -12,20 +12,37 @@ Two classes, measured apart because they differ in kind:
 
 * **adversarial_null** — all 600 index into the one crude series, so histories
   covering the same months saw the same noise. Clustered by 90-day calendar
-  window. This is the Class B gate.
+  window. This is the Class B gate, and it runs first so the gate can be read
+  before the control finishes.
 * **clean_null** — each has its own random walk, so they are independent by
-  construction and each is its own cluster. This is the control: if the clean
-  rate and the adversarial rate differ sharply, the adversarial noise is doing
-  something and we should know what.
+  construction and each is its own cluster. The control, with a caveat: its
+  trips-per-day density differs from the real series, and B2's population
+  depends on that density, so the two classes are not yet like for like.
+
+**Survivability.** A 90-minute sweep on a laptop will be interrupted, and the
+first full run proved it: all 1,000 fits finished, the pool then took so long
+shutting down that the run looked dead, and every result sat in process memory
+with nothing on disk. So:
+
+* Every row appends to ``data/null_rate/<name>.rows.jsonl`` as it completes.
+* ``--report-only`` assembles the report from that file without running a fit.
+* ``--rebuild-from <report.json>`` recomputes a finished report's intervals
+  from its own saved rows, for when the statistics improve but the fits have
+  not changed. It keeps the original ``code_commit`` and adds ``recomputed_by``,
+  so the record never claims the new code produced the old numbers.
+* The stamp comes from metadata written at run start, not from HEAD at report
+  time, so a commit made mid-run cannot mislabel the result (Methodology §7).
+* Resume refuses when the commit or configuration has changed since those rows
+  were written. ``--restart`` discards the checkpoint deliberately.
 
 Usage:
-    uv run python scripts/run_null_rate_b2.py                 # 600 + 400, ~30 min
-    uv run python scripts/run_null_rate_b2.py --quick         # 40 + 20, a smoke run
-    uv run python scripts/run_null_rate_b2.py --workers 6
+    uv run python scripts/run_null_rate_b2.py                 # 600 + 400
+    uv run python scripts/run_null_rate_b2.py --quick         # 40 + 20
+    uv run python scripts/run_null_rate_b2.py --report-only
+    uv run python scripts/run_null_rate_b2.py --rebuild-from docs/phase0/null-rate-b2.json
 
-Writes ``docs/phase0/null-rate-b2.json``. The manifest stamps the code commit,
-so the script refuses a dirty tree: a rate stamped with a commit that did not
-produce it would be a false record (Methodology §7).
+``--quick`` writes to its own path. A smoke result must never sit where the
+gate result belongs.
 """
 from __future__ import annotations
 
@@ -51,10 +68,13 @@ from services.research.models.base import BadDiagnostics, FitConfig
 ROOT = Path(__file__).resolve().parents[1]
 CRUDE = ROOT / "data" / "market" / "crude_1m.csv"
 OUT = ROOT / "docs" / "phase0" / "null-rate-b2.json"
+QUICK_OUT = ROOT / "docs" / "phase0" / "null-rate-b2-quick.json"
+CHECKPOINTS = ROOT / "data" / "null_rate"
 
 SEED = 20261010
 WINDOW_DAYS = 90
 CONFIG = FitConfig(1000, 1000, 4, SEED)
+CHECKPOINT_VERSION = 2
 
 _MARKET: cp.Market | None = None
 
@@ -70,6 +90,11 @@ def _market() -> cp.Market:
     if _MARKET is None:
         _MARKET = cp.Market.of(load_crude_1m(CRUDE))
     return _MARKET
+
+
+def history_id(kind: str, i: int) -> str:
+    """Known without generating the history, so a resume can skip it cheaply."""
+    return f"{kind}-{cp.null_seed(kind, i)}"
 
 
 @dataclass(frozen=True)
@@ -142,6 +167,52 @@ def one(task: tuple[str, int]) -> Row:
     )
 
 
+def run_meta(commit: str, dirty: bool, n_adv: int, n_clean: int) -> dict[str, object]:
+    """What must match for a resume to be legitimate, and what stamps the report."""
+    return {
+        "version": CHECKPOINT_VERSION,
+        "code_commit": commit,
+        "code_dirty": dirty,
+        "n_adversarial": n_adv,
+        "n_clean": n_clean,
+        "seed": SEED,
+        "window_days": WINDOW_DAYS,
+        "draws": CONFIG.draws,
+        "warmup": CONFIG.warmup,
+        "chains": CONFIG.chains,
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+    }
+
+
+def checkpoint_paths(out: Path) -> tuple[Path, Path]:
+    CHECKPOINTS.mkdir(parents=True, exist_ok=True)
+    return CHECKPOINTS / f"{out.stem}.rows.jsonl", CHECKPOINTS / f"{out.stem}.meta.json"
+
+
+def load_rows(rows_path: Path) -> list[Row]:
+    text = rows_path.read_text() if rows_path.exists() else ""
+    return [Row(**json.loads(ln)) for ln in text.splitlines() if ln.strip()]
+
+
+def open_checkpoint(out: Path, meta: dict[str, object], restart: bool) -> tuple[Path, list[Row]]:
+    rows_path, meta_path = checkpoint_paths(out)
+    if restart:
+        rows_path.unlink(missing_ok=True)
+        meta_path.unlink(missing_ok=True)
+    if not (rows_path.exists() and meta_path.exists()):
+        meta_path.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
+        rows_path.write_text("")
+        return rows_path, []
+    if json.loads(meta_path.read_text()) != meta:
+        raise SystemExit(
+            f"refusing to resume: {rows_path.relative_to(ROOT)} was written by a different "
+            "code commit or configuration, and a rate assembled from two versions would be "
+            "a false record. Re-run with --restart to discard it."
+        )
+    return rows_path, load_rows(rows_path)
+
+
 def outcomes_for(rows: list[Row], kind: str) -> list[nr.NullOutcome]:
     mine = [r for r in rows if r.kind == kind]
     if kind == "adversarial_null":
@@ -164,44 +235,20 @@ UNIT = {
 }
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--quick", action="store_true", help="40 adversarial + 20 clean")
-    ap.add_argument("--n-adversarial", type=int, default=None)
-    ap.add_argument("--n-clean", type=int, default=None)
-    ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 4) // 2))
-    ap.add_argument("--allow-dirty", action="store_true")
-    ap.add_argument("--out", type=Path, default=None)
-    args = ap.parse_args()
-
-    dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
-    if dirty and not args.allow_dirty:
-        return print("refusing: tracked files have uncommitted changes (commit, or --allow-dirty)") or 1
-
-    n_adv = args.n_adversarial if args.n_adversarial is not None else (40 if args.quick else cp.N_ADVERSARIAL)
-    n_clean = args.n_clean if args.n_clean is not None else (20 if args.quick else cp.N_CLEAN)
-    tasks = [("adversarial_null", i) for i in range(n_adv)] + [("clean_null", i) for i in range(n_clean)]
-
-    # One BLAS thread per worker: nutpie already runs 4 chains, and oversubscribing
-    # a laptop's cores makes every fit slower.
-    for var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
-        os.environ.setdefault(var, "1")
-
-    print(f"{len(tasks)} null histories on {args.workers} workers "
-          f"({n_adv} adversarial, {n_clean} clean)", flush=True)
-    rows: list[Row] = []
-    start = time.time()
-    with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        for row in pool.map(one, tasks, chunksize=1):
-            rows.append(row)
-            if len(rows) % 25 == 0 or len(rows) == len(tasks):
-                done, el = len(rows), time.time() - start
-                fired = sum(1 for r in rows if r.fired)
-                ev = sum(1 for r in rows if r.evaluable)
-                eta = el / done * (len(tasks) - done)
-                print(f"  {done:5d}/{len(tasks)}  evaluable {ev:5d}  fired {fired:4d}  "
-                      f"{el / 60:5.1f} min elapsed, ~{eta / 60:4.1f} min left", flush=True)
-
+def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int,
+                 seconds: float, recomputed_by: str | None = None) -> None:
+    source: dict[str, object] = {
+        "code_commit": meta["code_commit"],
+        "code_dirty": meta["code_dirty"],
+        "python": meta.get("python"),
+        "numpy": meta.get("numpy"),
+    }
+    if recomputed_by:
+        source["recomputed_by"] = recomputed_by
+        source["note"] = (
+            "rows were produced by code_commit; intervals recomputed by recomputed_by "
+            "without re-running a single fit"
+        )
     report: dict[str, object] = {
         "test_id": b2.TEST_ID,
         "grid_version": cp.GRID_VERSION,
@@ -210,9 +257,11 @@ def main() -> int:
                    "theta_min": b2.THETA_MIN, "direction": b2.DIRECTION},
         "fired_definition": "core.real and core.big_enough and not core.killed",
         "scope": "nulls regenerated in process from null_seed; the export is not read back",
-        "source": {"code_commit": _git("rev-parse", "HEAD"), "code_dirty": dirty,
-                   "python": platform.python_version(), "numpy": np.__version__},
-        "seconds": round(time.time() - start, 1),
+        "source": source,
+        "n_rows": len(rows),
+        "n_expected": total,
+        "complete": len(rows) == total,
+        "seconds": round(seconds, 1),
     }
     for kind in ("adversarial_null", "clean_null"):
         o = outcomes_for(rows, kind)
@@ -225,15 +274,17 @@ def main() -> int:
         print(f"\n{kind}")
         print(f"  {rate.n_fired} fired / {rate.n_evaluable} evaluable "
               f"({rate.n_starved} starved) = {rate.rate:.2%}")
-        print(f"  interval [{rate.lo:.2%}, {rate.hi:.2%}] by {rate.interval_source}, "
-              f"{rate.n_clusters} clusters")
-        print(f"  point_inside={rate.point_inside}  interval_inside={rate.interval_inside}")
+        print(f"  authority [{rate.lo:.2%}, {rate.hi:.2%}] by {rate.interval_source}"
+              f"{'  (bootstrap degenerate)' if rate.bootstrap_degenerate else ''}")
+        print(f"  envelope  [{rate.envelope_lo:.2%}, {rate.envelope_hi:.2%}]  over "
+              f"{rate.n_clusters} windows, {rate.n_clusters_fired} with a fire")
+        print(f"  point_inside={rate.point_inside}  interval_inside={rate.interval_inside}  "
+              f"envelope_inside={rate.envelope_inside}")
         print(f"  {rate.verdict}")
 
-    trips = {}
+    trips: dict[str, dict[str, int]] = {}
     for r in rows:
-        key = f"{r.kind}/{r.n_trips}"
-        t = trips.setdefault(key, {"n": 0, "evaluable": 0, "fired": 0})
+        t = trips.setdefault(f"{r.kind}/{r.n_trips}", {"n": 0, "evaluable": 0, "fired": 0})
         t["n"] += 1
         t["evaluable"] += int(r.evaluable)
         t["fired"] += int(r.fired)
@@ -243,10 +294,92 @@ def main() -> int:
         print(f"  {key:28s} {t['evaluable']:4d}/{t['n']:4d} evaluable, {t['fired']} fired")
 
     report["histories"] = [vars(r) for r in rows]
-    out = args.out or OUT
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True, default=float) + "\n")
-    print(f"\nwrote {out.relative_to(ROOT)}", flush=True)
+    print(f"\nwrote {out.relative_to(ROOT)}  ({len(rows)}/{total} histories, "
+          f"complete={len(rows) == total})", flush=True)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--quick", action="store_true", help="40 adversarial + 20 clean")
+    ap.add_argument("--n-adversarial", type=int, default=None)
+    ap.add_argument("--n-clean", type=int, default=None)
+    ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 4) // 2))
+    ap.add_argument("--report-only", action="store_true",
+                    help="assemble the report from the checkpoint without running fits")
+    ap.add_argument("--rebuild-from", type=Path, default=None,
+                    help="recompute a finished report's intervals from its own saved rows")
+    ap.add_argument("--restart", action="store_true", help="discard any checkpoint")
+    ap.add_argument("--allow-dirty", action="store_true")
+    ap.add_argument("--out", type=Path, default=None)
+    args = ap.parse_args()
+
+    n_adv = args.n_adversarial if args.n_adversarial is not None else (
+        40 if args.quick else cp.N_ADVERSARIAL)
+    n_clean = args.n_clean if args.n_clean is not None else (20 if args.quick else cp.N_CLEAN)
+    out = args.out or (QUICK_OUT if args.quick else OUT)
+    total = n_adv + n_clean
+
+    if args.rebuild_from:
+        previous = json.loads(args.rebuild_from.read_text())
+        rows = [Row(**h) for h in previous["histories"]]
+        print(f"rebuilding from {len(rows)} saved rows, no fits run", flush=True)
+        write_report(rows, previous["source"], out, len(rows), 0.0,
+                     recomputed_by=_git("rev-parse", "HEAD"))
+        return 0
+
+    if args.report_only:
+        rows_path, meta_path = checkpoint_paths(out)
+        if not (rows_path.exists() and meta_path.exists()):
+            print(f"no checkpoint at {rows_path.relative_to(ROOT)}")
+            return 1
+        rows = load_rows(rows_path)
+        print(f"assembling from {len(rows)} checkpointed rows, no fits run", flush=True)
+        write_report(rows, json.loads(meta_path.read_text()), out, total, 0.0)
+        return 0
+
+    dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
+    if dirty and not args.allow_dirty:
+        print("refusing: tracked files have uncommitted changes (commit, or --allow-dirty)")
+        return 1
+    meta = run_meta(_git("rev-parse", "HEAD"), dirty, n_adv, n_clean)
+    rows_path, rows = open_checkpoint(out, meta, args.restart)
+    done_ids = {r.history_id for r in rows}
+
+    tasks = [("adversarial_null", i) for i in range(n_adv)]
+    tasks += [("clean_null", i) for i in range(n_clean)]
+    tasks = [t for t in tasks if history_id(*t) not in done_ids]
+
+    # One BLAS thread per worker: nutpie already runs 4 chains, and oversubscribing
+    # a laptop's cores makes every fit slower.
+    for var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ.setdefault(var, "1")
+
+    if rows:
+        print(f"resuming: {len(rows)} of {total} already done", flush=True)
+    print(f"{len(tasks)} to run on {args.workers} workers "
+          f"({n_adv} adversarial first, then {n_clean} clean); checkpoint "
+          f"{rows_path.relative_to(ROOT)}", flush=True)
+
+    start = time.time()
+    if tasks:
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            for row in pool.map(one, tasks, chunksize=1):
+                rows.append(row)
+                with rows_path.open("a") as fh:
+                    fh.write(json.dumps(vars(row), sort_keys=True) + "\n")
+                n_new = len(rows) - len(done_ids)
+                if n_new % 25 == 0 or len(rows) == total:
+                    el = time.time() - start
+                    fired = sum(1 for r in rows if r.fired)
+                    ev = sum(1 for r in rows if r.evaluable)
+                    eta = el / max(n_new, 1) * (len(tasks) - n_new)
+                    print(f"  {len(rows):5d}/{total}  evaluable {ev:5d}  fired {fired:4d}  "
+                          f"{el / 60:5.1f} min elapsed, ~{eta / 60:4.1f} min left", flush=True)
+            print("  all fits done; shutting the pool down (this can take minutes)", flush=True)
+
+    write_report(rows, meta, out, total, time.time() - start)
     return 0
 
 

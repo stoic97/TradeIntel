@@ -19,6 +19,8 @@ ourselves:
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from services.research.evaluation import null_rate as nr
@@ -117,3 +119,64 @@ def test_a_rate_must_name_its_clustering_unit():
 def test_refuses_when_nothing_is_evaluable():
     with pytest.raises(ValueError, match="evaluable"):
         nr.assess(outcomes({}, per_cluster=0, starved=20), clustering_unit="c", seed=1)
+
+
+# --- the zero-event cluster bound -------------------------------------------
+#
+# The first real sweep found the hole: at zero fires the block bootstrap
+# returns [0%, 0%], because every resample of every cluster gives zero. The
+# "wider wins" rule then hands authority to the binomial, which assumes the
+# histories are independent — and they are not. A bound that assumes 278
+# independent observations when there are 18 calendar windows claims precision
+# the corpus does not contain.
+#
+# So the clustered reading is computed too: each cluster is one Bernoulli
+# observation of "did anything in this window fire?". That is the maximally
+# correlated reading, the conservative end of the envelope. Neither end is
+# chosen here — the truth lies between them, and which binds is TD-012.
+
+
+def test_cluster_level_bound_is_much_wider_when_clusters_are_few():
+    o = outcomes({c: 0 for c in range(18)}, per_cluster=15)  # 270 histories, 18 windows
+    r = nr.assess(o, clustering_unit="90-day window", seed=1)
+    assert r.n_clusters == 18
+    assert r.binomial_hi < 0.02, r.binomial_hi
+    assert r.cluster_hi > 0.15, r.cluster_hi
+    assert r.envelope_hi == pytest.approx(r.cluster_hi)
+
+
+def test_bootstrap_degeneracy_is_flagged_at_zero_fires():
+    r = nr.assess(outcomes({c: 0 for c in range(10)}, per_cluster=10),
+                  clustering_unit="c", seed=1)
+    assert r.bootstrap_degenerate is True
+    assert r.bootstrap_lo == r.bootstrap_hi == 0.0
+
+
+def test_bootstrap_is_not_degenerate_once_a_cluster_fires():
+    o = outcomes({0: 2, **{c: 0 for c in range(1, 10)}}, per_cluster=10)
+    assert nr.assess(o, clustering_unit="c", seed=1).bootstrap_degenerate is False
+
+
+def test_cluster_bound_counts_windows_that_contain_a_fire_not_fires():
+    o = outcomes({0: 3, 1: 1, **{c: 0 for c in range(2, 10)}}, per_cluster=10)
+    r = nr.assess(o, clustering_unit="c", seed=1)
+    lo, hi = nr.wilson_interval(2, 10)  # 2 of 10 windows contain a fire
+    assert r.cluster_lo == pytest.approx(lo)
+    assert r.cluster_hi == pytest.approx(hi)
+
+
+def test_the_envelope_can_bust_the_ceiling_while_the_point_estimate_sits_inside():
+    """4% of histories fire, but they sit in 4 of 20 windows: far less certain."""
+    o = outcomes({c: (3 if c < 4 else 0) for c in range(20)}, per_cluster=15)
+    r = nr.assess(o, clustering_unit="90-day window", seed=3)
+    assert r.point_inside is True
+    assert r.cluster_hi > nr.GATE_HIGH
+    assert r.envelope_inside is False
+
+
+def test_the_envelope_is_reported_in_the_record_with_both_ends_named():
+    o = outcomes({c: 0 for c in range(18)}, per_cluster=15)
+    rec = nr.assess(o, clustering_unit="90-day window", seed=1).record()
+    env = rec["interval"]["envelope"]
+    assert env["independent_hi"] < env["clustered_hi"]
+    assert "degenerate" in json.dumps(rec)

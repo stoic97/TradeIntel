@@ -7,7 +7,7 @@
       "source": "R-Spec \u00a76.2"
     },
     "interval": {
-      "authority": "the wider of the two (TD-017)",
+      "authority": "the wider of binomial and block bootstrap (TD-017)",
       "binomial": [
         0.0,
         0.013629857142976395
@@ -16,18 +16,32 @@
         0.0,
         0.0
       ],
+      "bootstrap_degenerate": true,
+      "cluster_level": [
+        1.3877787807814457e-17,
+        0.17587922364665765
+      ],
+      "envelope": {
+        "clustered_hi": 0.17587922364665765,
+        "hi": 0.17587922364665765,
+        "independent_hi": 0.013629857142976395,
+        "lo": 0.0,
+        "meaning": "independent_hi assumes every history is its own observation; clustered_hi assumes a whole window is one. The truth lies between, and at zero events the bootstrap is degenerate so only this envelope expresses the real uncertainty."
+      },
       "hi": 0.013629857142976395,
       "level": 0.95,
       "lo": 0.0,
       "source": "binomial"
     },
     "n_clusters": 18,
+    "n_clusters_fired": 0,
     "n_evaluable": 278,
     "n_fired": 0,
     "n_histories": 600,
     "n_starved": 322,
     "rate": 0.0,
     "readings": {
+      "envelope_inside": false,
       "interval_inside": false,
       "note": "TD-012 open: which reading binds is the kickoff ruling",
       "point_inside": false
@@ -315,7 +329,7 @@
       "starved: 9 condition trades (n_min 30) and 28 comparison (n_min 60) in the training zone",
       "starved: 9 condition trades (n_min 30) and 30 comparison (n_min 60) in the training zone"
     ],
-    "verdict": "below the band: fires on 0.0% of nulls, under the 2% floor. Not a pass \u2014 read it beside recall on planted histories, because a test that fires on nothing clears this gate for the wrong reason"
+    "verdict": "below the band: fires on 0.0% of nulls, under the 2% floor. Not a pass \u2014 read it beside recall on planted histories, because a test that fires on nothing clears this gate for the wrong reason. The interval assumes 278 independent histories, but they sit in 18 calendar windows and at zero events the bootstrap cannot say so; treating a window as one observation puts the bound at 17.6%, so the true bound lies between the two."
   },
   "by_trip_count": {
     "adversarial_null/100": {
@@ -357,7 +371,7 @@
       "source": "R-Spec \u00a76.2"
     },
     "interval": {
-      "authority": "the wider of the two (TD-017)",
+      "authority": "the wider of binomial and block bootstrap (TD-017)",
       "binomial": [
         0.0,
         0.02807233168807166
@@ -366,18 +380,32 @@
         0.0,
         0.0
       ],
+      "bootstrap_degenerate": true,
+      "cluster_level": [
+        0.0,
+        0.02807233168807166
+      ],
+      "envelope": {
+        "clustered_hi": 0.02807233168807166,
+        "hi": 0.02807233168807166,
+        "independent_hi": 0.02807233168807166,
+        "lo": 0.0,
+        "meaning": "independent_hi assumes every history is its own observation; clustered_hi assumes a whole window is one. The truth lies between, and at zero events the bootstrap is degenerate so only this envelope expresses the real uncertainty."
+      },
       "hi": 0.02807233168807166,
       "level": 0.95,
       "lo": 0.0,
       "source": "binomial"
     },
     "n_clusters": 133,
+    "n_clusters_fired": 0,
     "n_evaluable": 133,
     "n_fired": 0,
     "n_histories": 400,
     "n_starved": 267,
     "rate": 0.0,
     "readings": {
+      "envelope_inside": false,
       "interval_inside": false,
       "note": "TD-012 open: which reading binds is the kickoff ruling",
       "point_inside": false
@@ -585,8 +613,9 @@
       "starved: 9 condition trades (n_min 30) and 21 comparison (n_min 60) in the training zone",
       "starved: 9 condition trades (n_min 30) and 9 comparison (n_min 60) in the training zone"
     ],
-    "verdict": "below the band: fires on 0.0% of nulls, under the 2% floor. Not a pass \u2014 read it beside recall on planted histories, because a test that fires on nothing clears this gate for the wrong reason"
+    "verdict": "below the band: fires on 0.0% of nulls, under the 2% floor. Not a pass \u2014 read it beside recall on planted histories, because a test that fires on nothing clears this gate for the wrong reason."
   },
+  "complete": true,
   "config": {
     "chains": 4,
     "direction": "<",
@@ -19604,13 +19633,17 @@
       "tier": "Not enough evidence yet"
     }
   ],
+  "n_expected": 1000,
+  "n_rows": 1000,
   "scope": "nulls regenerated in process from null_seed; the export is not read back",
-  "seconds": 23403.8,
+  "seconds": 0.0,
   "source": {
     "code_commit": "aa10a0b5083b1bf4df3995884d5727eb40308be4",
     "code_dirty": false,
+    "note": "rows were produced by code_commit; intervals recomputed by recomputed_by without re-running a single fit",
     "numpy": "2.4.6",
-    "python": "3.11.17"
+    "python": "3.11.17",
+    "recomputed_by": "235326a031f4ff7b37e6a890fb8ba26af28ec2e7"
   },
   "test_id": "B2"
 }
