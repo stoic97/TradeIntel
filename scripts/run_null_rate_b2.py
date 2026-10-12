@@ -185,7 +185,16 @@ def one(task: tuple[str, int, int]) -> Row:
             f"starved: {r.n_condition} condition trades (n_min {n_min_c}) and "
             f"{r.n_comparison} comparison (n_min {n_min_comp}) in the training zone"
         )
-    fired = bool(r.core.real and r.core.big_enough and not r.core.killed)
+    # "Fired" must mean the product would SHOW this, not that the statistics
+    # merely looked significant. A Finding killed on diagnostics is never shown,
+    # so counting it as recall flatters the engine -- which is precisely what
+    # happened on 12 Oct: 5 of 8 counted at k=2 where the truth was zero.
+    fired = bool(
+        not r.finding.failed_gate
+        and r.core.real
+        and r.core.big_enough
+        and not r.core.killed
+    )
     return Row(
         history_id=hid, kind=h.kind, n_trips=len(h.trips), median_day=median_day,
         n_condition=r.n_condition, n_comparison=r.n_comparison,
@@ -285,7 +294,8 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
         "config": {"draws": CONFIG.draws, "warmup": CONFIG.warmup, "chains": CONFIG.chains,
                    "seed": SEED, "window_days": WINDOW_DAYS, "n_min": list(b2.N_MIN),
                    "theta_min": b2.THETA_MIN, "direction": b2.DIRECTION},
-        "fired_definition": "core.real and core.big_enough and not core.killed",
+        "fired_definition": "evaluable, no failed gate, and core.real and "
+                            "core.big_enough and not core.killed",
         "scope": "nulls regenerated in process from null_seed; the export is not read back",
         "source": source,
         "n_rows": len(rows),
