@@ -1,0 +1,15 @@
+# CME E-mini S&P 500. Written as the SHAPE of a non-IST, non-INR profile, because
+# PRD section 2 names a US futures history as the first archetype test. The actual
+# symbol and facts are corrected when that file is opened after the hash lock -- it
+# is sealed today, and guessing its contents would be worse than this placeholder.
+exchange: CME
+symbol: ES
+version: "0-placeholder"
+contract_multiplier: "50"
+tick_size: "0.25"
+currency_per_point: "50"
+currency: USD
+timezone: America/Chicago
+session_start: "08:30"
+session_end: "15:15"
+expiry_rule: from_instrument_name

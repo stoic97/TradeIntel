@@ -1,0 +1,12 @@
+# NSE NIFTY index derivatives. Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+exchange: NSE
+symbol: NIFTY
+version: "1"
+contract_multiplier: "75"       # units per lot
+tick_size: "0.05"
+currency_per_point: "75"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: from_instrument_name
