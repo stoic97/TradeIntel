@@ -15,10 +15,16 @@ dependencies = [
   "pyarrow>=15,<25",
   "duckdb>=1.0,<2",
   "pyyaml>=6,<7",
-  "numpyro>=0.22.0",
-  "pymc>=5.28.5",
-  "nutpie>=0.16.8",
-  "arviz>=0.23.4",
+  # Scope v1 runtime (ADR 007). One line each on why; the server installs only this list.
+  "fastapi>=0.115,<1",          # the web app and its routes
+  "uvicorn>=0.30,<1",           # ASGI server behind Caddy
+  "jinja2>=3.1,<4",             # server-rendered templates; the Journal's prose templates
+  "python-multipart>=0.0.9,<1", # file upload parsing for FastAPI
+  "sqlalchemy>=2.0,<3",         # the product schema, written portable (SQLite now, Postgres at Phase 1)
+  "alembic>=1.13,<2",           # schema migrations
+  "argon2-cffi>=23,<26",        # password hashing (argon2id)
+  "itsdangerous>=2.2,<3",       # signed session cookies and CSRF tokens
+  "cryptography>=43,<50",       # raw-file encryption at rest
 ]
 
 [dependency-groups]
@@ -28,6 +34,18 @@ dev = [
   "mypy>=1.8,<2",
   "hypothesis>=6,<7",
 ]
+# The Bayesian stack: used by services/research only. Production may not import research
+# (methodology Rule 5), so the server installs with --no-group research. Bounds unchanged
+# from before the move; tightening them is the research seat's charged change (ADR 004).
+research = [
+  "numpyro>=0.22.0",
+  "pymc>=5.28.5",
+  "nutpie>=0.16.8",
+  "arviz>=0.23.4",
+]
+
+[tool.uv]
+default-groups = ["dev", "research"]
 
 [tool.setuptools.packages.find]
 include = ["services*"]
