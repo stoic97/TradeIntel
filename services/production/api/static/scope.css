@@ -49,3 +49,8 @@ button.link {
   margin: 0; padding: 0; background: none; color: var(--accent);
   font-weight: 500; text-decoration: underline; cursor: pointer;
 }
+
+.choice { margin: 1.4rem 0; padding-left: 0.1rem; }
+.choice p { margin: 0.3rem 0 0; }
+label.checkbox { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 400; margin: 0; }
+label.checkbox input { margin-top: 0.3rem; flex: none; }
