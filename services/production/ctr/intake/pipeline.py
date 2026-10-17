@@ -71,6 +71,7 @@ class ImportPlan:
     rows_excluded: int = 0
     fees_available: bool = False
     missing_fields: tuple[str, ...] = ()
+    instruments_without_profile: tuple[str, ...] = ()
     trips: tuple[RoundTrip, ...] = ()
     open_positions: int = 0
     skipped: tuple[str, ...] = ()
@@ -97,6 +98,7 @@ class ImportPlan:
             str(self.fees_available),
             ",".join(sorted(self.missing_fields)),
             self.density_default_unit or "",
+            ",".join(self.instruments_without_profile),
         ]
         parts.extend(
             f"{r.row_no}|{r.status}|{r.flag.value if r.flag else ''}|{r.dup_group or ''}"
@@ -195,6 +197,17 @@ def plan_import(
         for t in result.round_trips
         if (t.exchange, t.symbol) in profile_map
     }
+    # An instrument with no profile has no multiplier, tick size or timezone of its
+    # own (PRD 9: never hard-coded, never defaulted). The trips are still read -- a
+    # missing profile is our gap, not the trader's error -- but it is recorded and
+    # shown, never silent, and no figure that needs a multiplier may be derived.
+    unprofiled = sorted(
+        {
+            f"{t.exchange}:{t.symbol}"
+            for t in result.round_trips
+            if (t.exchange, t.symbol) not in profile_map
+        }
+    )
     days = [_trading_day(t, profile_map) for t in result.round_trips]
     day_diffs = dv.diff_against_existing(
         incoming=[
@@ -204,6 +217,8 @@ def plan_import(
     )
 
     missing_fields: list[str] = [] if parsed.fees_available else ["fees"]
+    if unprofiled:
+        missing_fields.append("instrument profile")
     excluded_count = sum(1 for r in rows if r.status == "EXCLUDED")
     outcome = oc.decide_outcome(
         excluded_count=excluded_count,
@@ -224,6 +239,7 @@ def plan_import(
         rows_excluded=excluded_count,
         fees_available=parsed.fees_available,
         missing_fields=tuple(missing_fields),
+        instruments_without_profile=tuple(unprofiled),
         trips=tuple(result.round_trips),
         open_positions=len(result.open_positions),
         skipped=tuple(sk.reason for sk in result.skipped),
