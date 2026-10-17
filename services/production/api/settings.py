@@ -17,6 +17,7 @@ class Settings:
     database_url: str
     file_store: Path
     secret_key: str
+    file_key: str
     production: bool
 
     @classmethod
@@ -28,9 +29,20 @@ class Settings:
                 "default: a default would mean every deployment shares a key that is "
                 "in the repository."
             )
+        file_key = os.environ.get("SCOPE_FILE_KEY")
+        if not file_key:
+            raise RuntimeError(
+                "SCOPE_FILE_KEY is not set. It encrypts raw tradebooks at rest, so "
+                "there is no default: a defaulted key looks like protection and is "
+                "not. Generate one with "
+                "`python -c 'from services.production.accounts.file_store import "
+                "generate_key; print(generate_key())'`, keep it in /etc/scope/ and "
+                "in a password manager, and exclude it from backups."
+            )
         return cls(
             database_url=os.environ.get("SCOPE_DB", "sqlite:///scope.db"),
             file_store=Path(os.environ.get("SCOPE_FILES", "./_files")),
             secret_key=secret,
+            file_key=file_key,
             production=os.environ.get("SCOPE_PRODUCTION", "").lower() in ("1", "true", "yes"),
         )
