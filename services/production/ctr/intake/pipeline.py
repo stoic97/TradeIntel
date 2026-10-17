@@ -76,6 +76,8 @@ class ImportPlan:
     skipped: tuple[str, ...] = ()
     day_diffs: tuple[dv.DayDiffResult, ...] = ()
     density_default_unit: str | None = None
+    export_date: str | None = None
+    export_date_source: str | None = None
 
     def digest(self) -> str:
         """A content hash over what this plan decided.
@@ -157,6 +159,8 @@ def plan_import(
             outcome=s.ImportOutcome.REJECTED,
             rejection_text=oc.rejection_for(decision, adapter),
             code_version=context.code_version,
+            export_date=context.export_date,
+            export_date_source=context.export_date_source,
         )
 
     file_map = adapter.file_map()
@@ -225,4 +229,6 @@ def plan_import(
         skipped=tuple(sk.reason for sk in result.skipped),
         day_diffs=tuple(day_diffs),
         density_default_unit=_density_default(result.round_trips, days),
+        export_date=context.export_date,
+        export_date_source=context.export_date_source,
     )
