@@ -11,7 +11,12 @@
 <body>
   <header class="bar">
     <span class="mark">PlusEV Scope</span>
-    {% block nav %}{% endblock %}
+    {% if signed_in %}
+    <form method="post" action="/logout" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="link">Sign out</button>
+    </form>
+    {% endif %}
   </header>
   <main>
     {% block content %}{% endblock %}

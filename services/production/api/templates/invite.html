@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Create your account</h1>
+  <p>You were invited to Scope. Choose a login id and a password.</p>
+  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+  <form method="post" action="/invite/{{ code }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="display_name">Your name</label>
+    <input type="text" id="display_name" name="display_name" required autocomplete="name">
+    <label for="login_id">Login id</label>
+    <input type="text" id="login_id" name="login_id" required autocomplete="username">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required
+           autocomplete="new-password" minlength="12">
+    <p class="quiet">At least 12 characters. There is no email on your account, so
+      keep this somewhere safe — a reset has to go through us.</p>
+    <button type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

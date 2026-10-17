@@ -17,7 +17,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from services.production.api import routes_identity
 from services.production.api.settings import Settings
+from services.production.db.session import make_engine, run_migrations
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -39,7 +41,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Scope", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = config
     app.state.code_version = code_version()
+    app.state.templates = TEMPLATES
+    app.state.engine = make_engine(config.database_url)
+    run_migrations(app.state.engine)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+
+    app.include_router(routes_identity.router)
 
     @app.get("/health")
     def health() -> JSONResponse:
@@ -47,9 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse(
-            request=request, name="home.html", context={"title": "Scope"}
-        )
+        return routes_identity.page(request, "home.html", title="Scope")
 
     @app.exception_handler(404)
     def not_found(request: Request, _exc: Exception) -> HTMLResponse:
