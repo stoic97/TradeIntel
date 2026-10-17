@@ -1,0 +1,45 @@
+/* Phone-first. One column, generous line height, no decoration that carries meaning.
+   Colours: ink on paper, one accent for what the trader must notice, one muted tone
+   for what the product does not know. */
+:root {
+  --ink: #16191d;
+  --paper: #fbfaf8;
+  --rule: #d9d5ce;
+  --quiet: #6b6b6b;
+  --accent: #1f5f4f;
+  --warn: #8a5a00;
+  --measure: 34rem;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--rule);
+}
+.mark { font-weight: 650; letter-spacing: 0.01em; }
+main { max-width: var(--measure); margin: 0 auto; padding: 1.4rem 1.1rem 4rem; }
+.panel { margin-bottom: 2rem; }
+h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 0.6rem; }
+h2 { font-size: 1.15rem; margin: 2rem 0 0.5rem; }
+p { margin: 0 0 0.9rem; }
+.quiet { color: var(--quiet); }
+.warn { color: var(--warn); }
+a { color: var(--accent); }
+label { display: block; margin: 1rem 0 0.3rem; font-weight: 600; }
+input[type=text], input[type=password], input[type=date], input[type=number], select {
+  width: 100%; padding: 0.65rem 0.7rem; font: inherit;
+  border: 1px solid var(--rule); border-radius: 6px; background: #fff;
+}
+button {
+  margin-top: 1.2rem; padding: 0.7rem 1.1rem; font: inherit; font-weight: 600;
+  color: #fff; background: var(--accent); border: 0; border-radius: 6px; cursor: pointer;
+}
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--rule); }
+th { font-size: 0.85rem; color: var(--quiet); font-weight: 600; }
