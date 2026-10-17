@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>What you agreed to</h1>
+  <p class="quiet">Every change is kept, so this reads as a history rather than a
+     current state.</p>
+
+  {% for purpose in text.purposes %}
+  <div class="choice">
+    <strong>{{ purpose.title }}</strong>
+    {% if state.get(purpose.enum) %}
+      <p class="quiet">Currently granted.
+      {% if not purpose.required %}
+        <form method="post" action="/settings/consent/withdraw" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="purpose" value="{{ purpose.key }}">
+          <button type="submit" class="link">Withdraw this</button>
+        </form>
+      {% else %}
+        <form method="post" action="/settings/consent/withdraw" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="purpose" value="{{ purpose.key }}">
+          <button type="submit" class="link">Withdraw this and stop using Scope</button>
+        </form>
+      {% endif %}
+      </p>
+    {% else %}
+      <p class="quiet">Not granted.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <h2>Your ledger</h2>
+  <table>
+    <tr><th>When</th><th>Purpose</th><th>Decision</th><th>Version</th></tr>
+    {% for event in events %}
+    <tr>
+      <td>{{ event.at.strftime('%d %b %Y') }}</td>
+      <td>{{ event.purpose.value.replace('_', ' ') }}</td>
+      <td>{{ "granted" if event.granted else "withdrawn" }}</td>
+      <td class="quiet">{{ event.terms_version }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

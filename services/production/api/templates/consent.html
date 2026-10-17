@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Before you upload</h1>
+  <p>A tradebook is among the most sensitive files you own. Here is exactly what
+     happens to it.</p>
+  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+
+  <h2>What we store</h2>
+  <p>{{ text.what_we_store }}</p>
+  <h2>For how long</h2>
+  <p>{{ text.how_long }}</p>
+  <h2>Who can access it</h2>
+  <p>{{ text.who_can_access }}</p>
+  <h2>What deletion covers</h2>
+  <p>{{ text.what_deletion_covers }}</p>
+  <h2>What deletion cannot undo</h2>
+  <p>{{ text.what_deletion_cannot_undo }}</p>
+
+  <h2>What you are agreeing to</h2>
+  <form method="post" action="/consent">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for purpose in text.purposes %}
+    <div class="choice">
+      <label class="checkbox">
+        <input type="checkbox" name="{{ purpose.key }}" value="yes"
+               {% if purpose.required %}checked{% endif %}>
+        <strong>{{ purpose.title }}</strong>
+      </label>
+      <p class="quiet">{{ purpose.body }}</p>
+    </div>
+    {% endfor %}
+    <button type="submit">Agree and continue</button>
+  </form>
+  <p class="quiet">You can withdraw any of these at any time, from your settings.</p>
+  {% if not text.reviewed %}
+  <p class="warn">Draft text, version {{ text.version }} — not yet reviewed. Shown
+    because this is a development account.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -17,7 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from services.production.api import routes_identity
+from services.production.api import routes_consent, routes_identity
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
 
@@ -47,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
     app.include_router(routes_identity.router)
+    app.include_router(routes_consent.router)
 
     @app.get("/health")
     def health() -> JSONResponse:
