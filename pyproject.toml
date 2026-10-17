@@ -33,6 +33,7 @@ dev = [
   "ruff>=0.5,<1",
   "mypy>=1.8,<2",
   "hypothesis>=6,<7",
+  "httpx>=0.27,<1",  # FastAPI's TestClient transport; tests only, never the server
 ]
 # The Bayesian stack: used by services/research only. Production may not import research
 # (methodology Rule 5), so the server installs with --no-group research. Bounds unchanged
