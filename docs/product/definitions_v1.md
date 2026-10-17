@@ -17,7 +17,8 @@ Verbatim from `services/research/library/b2.py`, which is the pre-registered def
 
 - **Population:** round trips with **≥ 2 same-day prior round trips resolved before entry**. *Resolved* means exited before this entry (`exit_at < entry_at`); an overlapping trip does not count, however it later ends. Losses do not carry across the day boundary.
 - **Condition:** the **two most recent resolved trips before entry** (by exit time) were both losses.
-- A trip with net = 0 among the two most recent breaks the run. Two losses, then a win, then a trade: not in the condition. A scratch trade between two losses: not in the condition. "Any two losses that day": not the condition. (Appendix A.)
+- A trip with net = 0 among the two most recent breaks the run. Two losses, then a win, then a trade: not in the condition. "Any two losses that day": not the condition. (Appendix A.)
+- **A scratch between two losses suppresses the condition for the two trades that follow it** — verified against the function on 16 Oct 2026. With loss, scratch, loss, trade: the third trip's two most recent resolved priors are the scratch and the first loss, and the fourth's are the second loss and the scratch, so neither is in the condition. Both are in the population. (`tests/unit/shared/test_b2_condition.py::test_a_scratch_trade_between_two_losses_breaks_the_run`.)
 
 **The function** is `population_and_condition(obs)`, today in `services/research/library/b2.py`, moved byte-for-byte in phase 1 to `services/shared/conditions/b2_condition.py` and imported from there by the research module. The Mirror (§6.3), the Journal (§7.4) and the research B2 test all call it and nothing else. The research test passes R in the `r` slot; the Mirror and Journal pass **net result in rupees** — the function reads only the sign, so the population and condition are identical by construction, and a unit test asserts it on the fixture.
 

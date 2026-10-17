@@ -1,0 +1,33 @@
+# Dhan's exports. DRAFT: written from the one export we hold (3,828 rows, header
+# "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade
+# Value,Status") and from what a broker of this kind typically offers. The names and
+# locations below have NOT been checked against Dhan's interface, which PRD 5.2
+# requires before a partner sees a rejection built from them.
+#
+# To verify: open Dhan, list every export offered and where it sits, correct the
+# entries below, set verified: true with the date, bump version, and update
+# tests/unit/shared/test_file_maps.py::test_the_dhan_map_is_marked_unverified_today.
+broker: Dhan
+adapter_id: dhan_tradebook_v1
+version: "0-draft"
+verified: false
+verified_on: null
+exports:
+  - broker_name: Tradebook
+    where_it_lives: Reports
+    is_the_one_we_need: true
+    note: >
+      Every executed trade with date, time, price, quantity and trade value. This is
+      the file the engine reads. Name and location unverified.
+  - broker_name: Profit & Loss statement
+    where_it_lives: Reports
+    is_the_one_we_need: false
+    note: Realised profit per position. No times, no individual fills. Not usable.
+  - broker_name: Ledger
+    where_it_lives: Reports
+    is_the_one_we_need: false
+    note: Funds in and out. Not trades at all.
+  - broker_name: Tax / capital gains statement
+    where_it_lives: Reports
+    is_the_one_we_need: false
+    note: Prepared for filing; aggregated, no time of day. Not usable.

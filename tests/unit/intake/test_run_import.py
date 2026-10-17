@@ -1,0 +1,128 @@
+"""The import pipeline, as a pure decision (PRD 5.2-5.4, 9).
+
+``plan_import`` takes the file and what already exists, and returns everything that
+should happen: the outcome, every row with its status and flag, the day diffs, the
+reconstruction, and the versions that produced it. It touches no database and no
+disk, so the pipeline's behaviour is testable without either -- and the
+reproducibility test compares one digest instead of crawling nineteen tables.
+
+Persistence is step two; this is the decision.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from services.production.ctr.adapters import filemap
+from services.production.ctr.intake import pipeline as pl
+from services.shared.schemas import scope_v1 as s
+
+DUPES = Path("data/fixtures/duplicates")
+PNL_LIKE = "Symbol,Realised P&L,Unrealised P&L\nWIDGETOIL,1500.00,0.00\n"
+
+CONTEXT = pl.ImportContext(
+    trader_id="fixture",
+    source_account="A",
+    code_version="testsha",
+    existing_days={},
+    export_date="2026-10-17",
+    export_date_source="trader",
+)
+
+
+def plan(name: str, **overrides: object) -> pl.ImportPlan:
+    text = (DUPES / name).read_text()
+    context = CONTEXT if not overrides else pl.ImportContext(**{**CONTEXT.__dict__, **overrides})
+    return pl.plan_import(text, context=context)
+
+
+def test_a_wrong_file_is_rejected_and_nothing_else_is_computed():
+    result = pl.plan_import(PNL_LIKE, context=CONTEXT)
+    assert result.outcome is s.ImportOutcome.REJECTED
+    assert result.rejection_text
+    assert result.rows == ()
+    assert result.trips == ()
+    assert result.day_diffs == ()
+
+
+def test_a_clean_file_reconstructs_and_accounts_for_every_row():
+    """A clean Dhan file is ACCEPTED_PARTIAL_FIELDS, not exclusions.
+
+    The Dhan export has no charges column, so `fees` is a missing field on every
+    Dhan import (TD-002). Nothing is excluded, so the precedence rule in
+    definitions_v1.md section 4 gives partial fields. Until fees are resolved, no
+    Dhan import can be anything else -- which is the honest state, not a defect.
+    """
+    result = plan("clean.csv")
+    assert result.outcome is s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS
+    assert result.rows_excluded == 0
+    assert result.rows_in == 4
+    assert result.rows_parsed + result.rows_excluded == result.rows_in
+    assert result.trips, "two buys and two sells make round trips"
+
+
+def test_fees_absent_is_recorded_and_never_imputed():
+    result = plan("clean.csv")
+    assert result.fees_available is False
+    assert "fees" in result.missing_fields
+    assert all(t.fees == 0 for t in result.trips)
+
+
+def test_identical_rows_are_flagged_not_dropped():
+    result = plan("repeated_legitimate_fills.csv")
+    flagged = [r for r in result.rows if r.flag is s.RowFlag.SUSPECTED_DUPLICATE]
+    assert len(flagged) == 4
+    assert result.rows_excluded == 0, "a flag is not an exclusion"
+
+
+def test_the_plan_records_every_version_that_produced_it():
+    result = plan("clean.csv")
+    assert result.code_version == "testsha"
+    assert result.adapter_id == "dhan_tradebook_v1"
+    assert result.adapter_version
+    assert result.filemap_version
+    assert isinstance(result.profile_versions, dict)
+
+
+def test_day_diffs_are_computed_against_what_exists():
+    first = plan("clean.csv")
+    days = {d.trading_day: d.rows_after for d in first.day_diffs}
+    assert days, "the file covers at least one trading day"
+    again = plan("clean.csv", existing_days=days)
+    assert all(d.diff is s.DayDiff.IDENTICAL for d in again.day_diffs)
+
+
+def test_the_same_file_plans_identically_twice():
+    """Methodology Rule 4: same input, same code, same bytes out."""
+    a = plan("duplicated_block.csv")
+    b = plan("duplicated_block.csv")
+    assert a.digest() == b.digest()
+
+
+def test_a_different_file_plans_differently():
+    assert plan("clean.csv").digest() != plan("duplicated_block.csv").digest()
+
+
+def test_the_digest_ignores_wall_clock_time():
+    """A digest that moved with the clock would make reproducibility untestable."""
+    a = plan("clean.csv")
+    b = plan("clean.csv", code_version="testsha")
+    assert a.digest() == b.digest()
+
+
+def test_an_unverified_file_map_is_refused_in_production_mode():
+    """TD-024: Dhan's map is a draft, so a real file cannot be planned in production.
+
+    The file must be one the adapter recognises -- a file matching no adapter has no
+    map to verify, and its broker-neutral rejection names no export.
+    """
+    text = (DUPES / "clean.csv").read_text()
+    with pytest.raises(filemap.UnverifiedFileMap):
+        pl.plan_import(text, context=CONTEXT, production=True)
+
+
+def test_a_file_matching_no_adapter_is_rejected_even_in_production():
+    result = pl.plan_import(PNL_LIKE, context=CONTEXT, production=True)
+    assert result.outcome is s.ImportOutcome.REJECTED

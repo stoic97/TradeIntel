@@ -1,0 +1,12 @@
+# MCX Crude Oil futures. Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+exchange: MCX
+symbol: CRUDEOIL
+version: "1"
+contract_multiplier: "100"      # barrels per lot
+tick_size: "1"                  # rupees per barrel
+currency_per_point: "100"       # one point move = multiplier x 1 rupee
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:00"
+session_end: "23:30"
+expiry_rule: from_instrument_name
