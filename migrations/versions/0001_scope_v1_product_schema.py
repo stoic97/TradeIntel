@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-10-16 16:35:46.503920
+Create Date: 2026-10-17 13:51:01.168179
 """
 from __future__ import annotations
 
@@ -236,10 +236,11 @@ def upgrade() -> None:
     sa.Column('risk_unit_value', dbtypes.DecimalText(), nullable=True),
     sa.Column('risk_unit_source', sa.String(length=32), nullable=False),
     sa.Column('risk_budget_ref', sa.Integer(), nullable=True),
+    sa.Column('occurrence', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['import_id'], ['import.id'], ),
     sa.ForeignKeyConstraint(['risk_budget_ref'], ['risk_budget_declaration.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('import_id', 'trip_id')
+    sa.UniqueConstraint('import_id', 'trip_id', 'occurrence')
     )
     op.create_table('journal_field_entry',
     sa.Column('id', sa.Integer(), nullable=False),

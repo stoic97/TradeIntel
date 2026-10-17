@@ -126,11 +126,15 @@ def write_plan(
             )
         )
 
+    seen_trip_ids: dict[str, int] = {}
     for trip in plan.trips:
+        occurrence = seen_trip_ids.get(trip.trip_id, 0) + 1
+        seen_trip_ids[trip.trip_id] = occurrence
         sess.add(
             m.Trip(
                 import_id=imp.id,
                 trip_id=trip.trip_id,
+                occurrence=occurrence,
                 # The stored timestamp's own date. Correct while every profile is
                 # IST (MCX, NSE); for a non-IST instrument the trading day must come
                 # from the profile's timezone, as the plan already computes it for

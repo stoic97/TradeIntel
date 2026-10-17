@@ -35,7 +35,7 @@ has no tracker, so this file is the register. **A deferral not listed here does 
 | id | Deferred | Why | Unblocked by | Due |
 |---|---|---|---|---|
 | TD-005 | Golden certification set, 200 or more round trips per broker | No partner exports yet. Development fixtures and a pinned synthetic digest serve the same purpose today | Partner tradebooks | Before the first framework-version gate |
-| TD-006 | tests/integration and tests/e2e | There is no pipeline to integrate and no journey to walk | The first end-to-end path, upload to finding to report | With that path |
+| TD-006 | ~~tests/integration~~ and tests/e2e | There is no pipeline to integrate and no journey to walk | The first end-to-end path, upload to finding to report | **tests/integration CLOSED 17 Oct 2026** - the import path exists (format check, adapter, duplicate tiers, reconstruction, day versioning, persistence) and `tests/integration/test_import_end_to_end.py` walks it. tests/e2e stays deferred until there is a journey: a trader logging in, uploading and reading a Mirror, which arrives in phase 2 |
 | TD-007 | DOF ledger, append-only | No charged run has happened | — | **Before the first isolation read, Phase 0 week 7** |
 | TD-008 | .importlinter and the import-boundary job | Stage 1 in methodology.md. The boundary is honoured by layout today | A second engineer, or the agent service | Stage 1 |
 | TD-009 | Faithfulness suite | No agent service exists, and nothing needs narrating until a Finding does | The narration layer | With that layer, before any composed prose ships |

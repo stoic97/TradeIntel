@@ -202,7 +202,17 @@ class Trip(Base, _InsertOnly):
     risk_budget_ref: Mapped[int | None] = mapped_column(
         ForeignKey("risk_budget_declaration.id")
     )
-    __table_args__ = (UniqueConstraint("import_id", "trip_id"),)
+    occurrence: Mapped[int] = mapped_column(Integer, default=1)
+    """Which occurrence of an identical trip this is, within one import.
+
+    trip_id is a content hash (ctr_v1), so two genuinely identical trades -- the same
+    contract, direction, times, quantity and prices -- share one. That happens when a
+    trader repeats a trade and when a file repeats a block, and PRD 5.4 forbids
+    dropping either. The constraint stays, widened by this column: identical trips
+    are distinguishable rows, while writing the same occurrence twice still collides.
+    """
+
+    __table_args__ = (UniqueConstraint("import_id", "trip_id", "occurrence"),)
 
 
 class OpenPosition(Base, _InsertOnly):
