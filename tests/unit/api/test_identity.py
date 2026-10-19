@@ -167,12 +167,16 @@ def test_a_protected_page_redirects_when_signed_out(client):
 
 
 def test_logout_ends_the_session(client, app_env):
+    """follow_redirects=False throughout: sign-in now lands a trader where he has
+    something to do, and for a new account that chain reaches the consent screen,
+    which refuses the draft text to a non-development account. This test is about
+    the session, not about consent, so it does not walk there."""
     _, engine = app_env
     redeem(client, engine)
     csrf = token(client, "/login")
     client.post("/login", data={"login_id": "rikk",
                                 "password": "a-long-enough-password",
-                                "csrf_token": csrf})
+                                "csrf_token": csrf}, follow_redirects=False)
     assert client.get("/account").status_code == 200
     csrf_out = token(client, "/account")
     client.post("/logout", data={"csrf_token": csrf_out})

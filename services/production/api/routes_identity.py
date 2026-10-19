@@ -74,6 +74,22 @@ def _set_session_cookie(response, request: Request, session: auth.Session) -> No
     )
 
 
+def landing_for(sess, trader: m.Trader) -> str:
+    """Where a trader belongs when he arrives.
+
+    Not /account: a page telling him nothing has been uploaded is not a destination.
+    With nothing yet, the upload page; with an upload, his most recent import. In
+    phase 3 that second destination becomes his Mirror, which is the real answer --
+    the import review is what stands in for it until it exists.
+    """
+    latest = sess.scalars(
+        select(m.Import)
+        .where(m.Import.trader_id == trader.id)
+        .order_by(m.Import.id.desc())
+    ).first()
+    return f"/imports/{latest.id}" if latest is not None else "/upload"
+
+
 @router.get("/invite/{code}", response_class=HTMLResponse)
 def invite_form(request: Request, code: str) -> HTMLResponse:
     with make_session(request.app.state.engine) as sess:
@@ -166,7 +182,7 @@ def login(
                         error=SIGN_IN_FAILED)
 
         session = auth.new_session(trader.id)
-        response = RedirectResponse("/account", status_code=303)
+        response = RedirectResponse(landing_for(sess, trader), status_code=303)
         _set_session_cookie(response, request, session)
         return response
 
@@ -186,5 +202,11 @@ def account(request: Request):
         trader = current_trader(request, sess)
         if trader is None:
             return RedirectResponse("/login", status_code=303)
+        imports = sess.scalars(
+            select(m.Import)
+            .where(m.Import.trader_id == trader.id)
+            .order_by(m.Import.id.desc())
+        ).all()
         return page(request, "account.html", title="Your account",
-                    display_name=trader.display_name, login_id=trader.login_id)
+                    display_name=trader.display_name, login_id=trader.login_id,
+                    imports=imports)

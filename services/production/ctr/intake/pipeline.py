@@ -17,7 +17,7 @@ Persistence writes the plan; it decides nothing.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from services.production.ctr import reconstruct as rc
 from services.production.ctr.adapters import dhan_tradebook, filemap
@@ -80,6 +80,19 @@ class ImportPlan:
     export_date: str | None = None
     export_date_source: str | None = None
 
+    def with_rows(self, rows: tuple[PlannedRow, ...]) -> ImportPlan:
+        """A copy carrying different row statuses, with the counts kept consistent.
+
+        Used when a trader confirms a duplicate group: the file is re-read and the
+        confirmed rows become exclusions. Rebuilding through dataclasses.replace
+        rather than __dict__ means a field added later cannot be silently dropped.
+        """
+        return replace(
+            self,
+            rows=rows,
+            rows_excluded=sum(1 for r in rows if r.status == "EXCLUDED"),
+        )
+
     def digest(self) -> str:
         """A content hash over what this plan decided.
 
@@ -127,6 +140,16 @@ def _trading_day(
     if profile is not None:
         return trip.entry_ts.astimezone(profile.timezone()).date().isoformat()
     return trip.entry_ts.date().isoformat()
+
+
+def _fill_trading_day(
+    fill: Fill, profile_map: dict[tuple[str, str], profiles.InstrumentProfile]
+) -> str:
+    """A fill's trading day, by the same rule as a trip's (definitions_v1.md s1)."""
+    profile = profile_map.get((fill.exchange, fill.symbol))
+    if profile is not None:
+        return fill.ts.astimezone(profile.timezone()).date().isoformat()
+    return fill.ts.date().isoformat()
 
 
 def _density_default(trips: list[RoundTrip], days: list[str]) -> str:
@@ -209,9 +232,16 @@ def plan_import(
         }
     )
     days = [_trading_day(t, profile_map) for t in result.round_trips]
+
+    # A day's size is its ROWS, not its trips. The trader can reconcile a row count
+    # against his own file, and -- the reason this matters more -- a day whose rows
+    # fell can reconstruct to the same number of trips, so a trip-based diff would
+    # report IDENTICAL and hide the loss that day versioning exists to catch.
+    fill_days = [_fill_trading_day(f, profile_map) for f in fills]
     day_diffs = dv.diff_against_existing(
         incoming=[
-            dv.DayRows(trading_day=day, row_count=days.count(day)) for day in sorted(set(days))
+            dv.DayRows(trading_day=day, row_count=fill_days.count(day))
+            for day in sorted(set(fill_days))
         ],
         existing=context.existing_days,
     )
