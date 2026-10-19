@@ -54,7 +54,10 @@ CURRENT = ConsentText(
     what_we_store=(
         "The file you upload, exactly as your broker produced it. The reconstruction "
         "we build from it — your trades matched into round trips. And the Journals "
-        "written from those trades. Nothing else about you."
+        "written from those trades. We also record which lines you open and how long "
+        "you read them, so that a later version can put the lines that matter to you "
+        "first; that is a record of what you read, never of anything you type. "
+        "Nothing else about you."
     ),
     how_long=(
         "Until you delete it. If you do not sign in for 24 months we delete it "

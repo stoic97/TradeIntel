@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
     routes_consent,
+    routes_events,
     routes_identity,
     routes_mirror,
     routes_upload,
@@ -55,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_consent.router)
     app.include_router(routes_upload.router)
     app.include_router(routes_mirror.router)
+    app.include_router(routes_events.router)
 
     @app.get("/health")
     def health() -> JSONResponse:

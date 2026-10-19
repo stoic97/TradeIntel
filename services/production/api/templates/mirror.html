@@ -20,7 +20,7 @@
   {% endif %}
 </section>
 
-<section class="panel">
+<section class="panel" data-dwell-line="worst-days">
   <h2>Your worst trading days</h2>
   <table>
     <tr><th>Day</th><th>Net (gross)</th><th>Trades</th><th>vs your normal day</th></tr>
@@ -49,7 +49,7 @@
   {{ drawer_link("worst-days", "Show me those trades") }}
 </section>
 
-<section class="panel">
+<section class="panel" data-dwell-line="best-worst-trades">
   <h2>Where the money came from</h2>
   <table>
     <tr><th>Best five</th><th></th><th>Worst five</th><th></th></tr>
@@ -67,7 +67,7 @@
   {{ drawer_link("best-worst-trades", "Show me these ten trades") }}
 </section>
 
-<section class="panel">
+<section class="panel" data-dwell-line="two-straight-losses">
   <h2>Trading on while already down</h2>
   <p>On {{ two_losses.population }} occasions you opened a trade after two earlier
     trades that day had already closed at a loss. On
@@ -107,7 +107,7 @@
   {{ drawer_link("two-straight-losses", "Show me those trades") }}
 </section>
 
-<section class="panel">
+<section class="panel" data-dwell-line="holding-time">
   <h2>How long you hold</h2>
   <p>Your winners were open a median of
     <strong>{{ (holding.winners_median_seconds / 60)|int }} minutes</strong>, your
@@ -122,7 +122,7 @@
   {{ drawer_link("holding-time", "Show me the times") }}
 </section>
 
-<section class="panel">
+<section class="panel" data-dwell-line="by-hour">
   <h2>The clock</h2>
   <table>
     <tr><th>Hour you opened</th><th>Net (gross)</th><th>Trades</th></tr>
@@ -193,3 +193,5 @@
     these versions.</p>
 </section>
 {% endblock %}
+
+{% block scripts %}<script src="/static/dwell.js" defer></script>{% endblock %}
