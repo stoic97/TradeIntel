@@ -38,6 +38,7 @@ def build(
     history: list[Trip],
     fees_available: bool,
     planned_sl_said_before: bool = False,
+    trips_with_a_stop: set[str] | None = None,
 ) -> dict[str, Any]:
     """The counted facts for one period, against the trader's whole history."""
     trips = list(period.trips)
@@ -90,7 +91,13 @@ def build(
             "your_trading_days": len(day_counts.counts),
         },
         "planned_sl": {
-            "losing_trades_without_one": losses,
+            # Only losses with NO stop recorded. Counting every loss would tell a
+            # trader who diligently recorded each one that he recorded none -- and
+            # the line is meant to show him a gap, not invent one.
+            "losing_trades_without_one": sum(
+                1 for t in trips
+                if t.is_loss and t.trip_id not in (trips_with_a_stop or set())
+            ),
             "said_before": planned_sl_said_before,
         },
     }

@@ -121,7 +121,15 @@ def test_gross_is_recorded_when_fees_are_absent():
 
 
 def test_a_blank_planned_sl_on_a_losing_day_is_noted_once():
-    """PRD 7.4: said once, without comment."""
+    """PRD 7.4: said once, without comment. Counts only losses with no stop."""
     facts = facts_for("2026-09-02")
-    assert facts["planned_sl"]["losing_trades_without_one"] == 5
+    assert facts["planned_sl"]["losing_trades_without_one"] == 5, "none recorded yet"
     assert facts["planned_sl"]["said_before"] is False
+
+
+def test_a_recorded_stop_is_not_counted_as_missing():
+    trips = load()
+    period = day(trips, "2026-09-02")
+    facts = sec.build(period, history=trips, fees_available=False,
+                      trips_with_a_stop={"t04", "t05"})
+    assert facts["planned_sl"]["losing_trades_without_one"] == 3

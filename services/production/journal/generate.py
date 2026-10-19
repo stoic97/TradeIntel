@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from services.production.db import models as m
 from services.production.journal import constants as k
+from services.production.journal import fields as fl
 from services.production.journal import periods as pd
 from services.production.journal import sections as sec
 from services.production.mirror.metrics import Trip
@@ -90,7 +91,15 @@ def generate(
         if not period.complete:
             continue
 
-        facts = sec.build(period, history=trips, fees_available=imp.fees_available)
+        # Stops recorded against the previous version of this period carry forward:
+        # a trader who answered the prompt last week has not un-answered it.
+        previous_for_stops = _existing(sess, trader, period)
+        with_a_stop = (
+            fl.trips_with_a_planned_stop(sess, journal=previous_for_stops)
+            if previous_for_stops is not None else set()
+        )
+        facts = sec.build(period, history=trips, fees_available=imp.fees_available,
+                          trips_with_a_stop=with_a_stop)
         serialised = json.dumps(facts, sort_keys=True)
 
         previous = _existing(sess, trader, period)
