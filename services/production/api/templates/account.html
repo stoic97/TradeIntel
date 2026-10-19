@@ -3,6 +3,32 @@
 <section class="panel">
   <h1>{{ display_name }}</h1>
   <p class="quiet">Signed in as {{ login_id }}.</p>
-  <p>Nothing has been uploaded yet.</p>
+
+  <h2>Your uploads</h2>
+  {% if imports %}
+  <table>
+    <tr><th>When</th><th>What we read</th><th></th></tr>
+    {% for imp in imports %}
+    <tr>
+      <td>{{ imp.created_at.strftime('%d %b %Y') }}</td>
+      <td>
+        {% if imp.outcome.value == "rejected" %}
+          <span class="warn">not a tradebook</span>
+        {% else %}
+          {{ imp.rows_in }} rows, {{ imp.trips_reconstructed }} trades
+        {% endif %}
+      </td>
+      <td><a href="/imports/{{ imp.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Nothing yet.</p>
+  {% endif %}
+
+  <p><a href="/upload">Upload a tradebook</a></p>
+
+  <h2>Your settings</h2>
+  <p><a href="/settings/consent">What you agreed to</a></p>
 </section>
 {% endblock %}

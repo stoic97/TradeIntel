@@ -2,6 +2,15 @@
 {% block content %}
 <section class="panel">
   <h1>Upload your tradebook</h1>
-  <p class="quiet">This screen is built in the next step.</p>
+  <p>The trade-level export from your broker — every executed trade, with the time of
+     day, the price and the quantity. Not the profit-and-loss statement.</p>
+  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+  <form method="post" action="/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="file">Your export file</label>
+    <input type="file" id="file" name="file" accept=".csv,.txt" required>
+    <button type="submit">Upload</button>
+  </form>
+  <p class="quiet">Nothing is shown to anyone else. You can delete it at any time.</p>
 </section>
 {% endblock %}

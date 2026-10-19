@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>What we read</h1>
+
+  {% if imp.outcome.value == "rejected" %}
+    <p class="warn">{{ imp.rejection_text }}</p>
+    <p><a href="/upload">Upload a different file</a></p>
+  {% else %}
+
+  <table>
+    <tr><th>Rows in the file</th><td>{{ imp.rows_in }}</td></tr>
+    <tr><th>Rows we could read</th><td>{{ imp.rows_parsed }}</td></tr>
+    <tr><th>Rows set aside</th><td>{{ imp.rows_excluded }}</td></tr>
+    <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
+  </table>
+
+  {% if not imp.fees_available %}
+  <p class="warn">This export has no charges column, so every rupee figure from it is
+     gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
+  {% endif %}
+
+  {% if rejected %}
+  <h2>Rows we could not read ({{ rejected|length }})</h2>
+  <p class="quiet">Kept, not discarded. Each one says why.</p>
+  <table>
+    <tr><th>Row</th><th>Why</th></tr>
+    {% for row in rejected[:20] %}
+    <tr><td>{{ row.row_no }}</td><td>{{ row.reason }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if groups %}
+  <h2>Possible duplicates ({{ groups|length }} groups)</h2>
+  <p>Identical rows can be two real fills a second apart, or the same trade recorded
+     twice. We cannot tell from the file, so we kept all of them. You can tell.</p>
+  {% for group, rows in groups.items() %}
+  <div class="choice">
+    <p><strong>{{ rows|length }} identical rows</strong></p>
+    <p class="quiet mono">{{ rows[0].raw_text }}</p>
+    <form method="post" action="/imports/{{ imp.id }}/confirm-duplicates" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="dup_group" value="{{ group }}">
+      <button type="submit" class="link">This is one trade recorded twice</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if days %}
+  <h2>Days in this upload</h2>
+  <table>
+    <tr><th>Day</th><th>Rows before</th><th>Rows now</th><th></th></tr>
+    {% for day in days %}
+    <tr>
+      <td>{{ day.trading_day }}</td>
+      <td>{{ day.rows_before }}</td>
+      <td>{{ day.rows_after }}</td>
+      <td>{% if day.day_shrank %}<span class="warn">fewer than before</span>
+          {% else %}{{ day.diff.value }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <p class="quiet">Journal unit for this upload: {{ imp.density_default_unit }}.</p>
+  <p class="quiet">Read by Scope version {{ imp.code_version }} using
+     {{ imp.adapter_id }}. Every figure above can be reproduced from your file and
+     these versions.</p>
+  {% endif %}
+</section>
+{% endblock %}

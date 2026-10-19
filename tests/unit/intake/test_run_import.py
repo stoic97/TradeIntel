@@ -126,3 +126,43 @@ def test_an_unverified_file_map_is_refused_in_production_mode():
 def test_a_file_matching_no_adapter_is_rejected_even_in_production():
     result = pl.plan_import(PNL_LIKE, context=CONTEXT, production=True)
     assert result.outcome is s.ImportOutcome.REJECTED
+
+
+def test_the_day_diff_counts_rows_not_trips():
+    """A day's size is its rows, because that is what the trader sent.
+
+    Found 17 Oct 2026 on the review page: the duplicated-block fixture has six rows
+    on one day that reconstruct to two round trips, and the day table reported
+    'after 2'. Two harms, the second worse than the first. He cannot reconcile the
+    number against his own file. And the diff that detects a shrinking day is then
+    computed on trips, so a day whose rows fell from six to four could reconstruct
+    to two trips either way and be reported IDENTICAL -- a silent loss, which is the
+    one thing day versioning exists to prevent.
+    """
+    result = plan("duplicated_block.csv")
+    assert result.rows_in == 6
+    assert len(result.trips) == 2, "the fixture must have more rows than trips"
+
+    by_day = {d.trading_day: d for d in result.day_diffs}
+    assert len(by_day) == 1
+    only_day = next(iter(by_day.values()))
+    assert only_day.rows_after == 6, "rows, not trips"
+
+
+def test_a_day_that_loses_rows_shrinks_even_when_the_trips_match():
+    """The case the trip count would hide."""
+    six_rows = plan("duplicated_block.csv")
+    day = six_rows.day_diffs[0].trading_day
+
+    text = (DUPES / "duplicated_block.csv").read_text().splitlines()
+    fewer = "\n".join([text[0], *text[1:5]]) + "\n"
+    shrunk = pl.plan_import(
+        fewer,
+        context=pl.ImportContext(
+            trader_id="fx", source_account="A", code_version="testsha",
+            existing_days={day: 6},
+        ),
+    )
+    assert shrunk.day_diffs[0].rows_after == 4
+    assert shrunk.day_diffs[0].diff is s.DayDiff.SHRUNK
+    assert shrunk.day_diffs[0].day_shrank is True
