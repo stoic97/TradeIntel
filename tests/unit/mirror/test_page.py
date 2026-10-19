@@ -33,10 +33,28 @@ SECTION_ORDER = [
     "the clock",
 ]
 
+# Words the product never uses, from PRD 7.5 and the Workbook's never-use list.
+# These are claims by their nature: there is no sentence in which the product may
+# call a trader's behaviour tilt or name his edge.
 NEVER_USED = [
-    "because", "caused", "due to", "you should", "we recommend", "try to",
-    "edge", "alpha", "expectancy", "your R", "tilt", "revenge",
+    "tilt", "revenge", "emotional", "psychology", "disease", "cure",
+    "edge", "alpha", "expectancy", "discipline", "mistake", "should have",
 ]
+
+# Patterns that ASSERT a cause, a grade or a recommendation. Banned as claims --
+# which is why the test exempts section 6.7, whose whole job is to say the product
+# does none of these. A rule against making claims is not a rule against denying
+# them, and the first version of this guard did not know the difference: it banned
+# "caused" and "we recommend" while 6.7 printed "cause" and "recommends", so both
+# tests passed by luck. "The cause of this was" would have sailed through.
+CLAIM_PATTERNS = [
+    r"\bbecause\b", r"\bcaused by\b", r"\bthe cause of\b", r"\bdue to\b",
+    r"\bled to\b", r"\bresulted from\b",
+    r"\byou should\b", r"\bwe recommend\b", r"\btry to\b", r"\bconsider \w+ing\b",
+    r"\byour score\b", r"\bwe estimate\b", r"\bcost you\b",
+]
+
+SECTION_6_7 = "what we have not told you"
 
 
 @pytest.fixture()
@@ -185,11 +203,33 @@ def test_a_trader_with_no_history_is_told_so_not_shown_zeroes(engine):
     assert "upload" in body.lower()
 
 
-def test_no_template_makes_a_claim_it_has_not_earned(client):
-    """PRD 7.3's never-use list, enforced on what actually renders."""
+def test_no_template_uses_a_never_use_word(client):
+    """PRD 7.5's never-use list, on what actually renders."""
     body = client.get("/mirror").text.lower()
     for word in NEVER_USED:
         assert word not in body, f"the Mirror says {word!r}"
+
+
+def test_no_template_asserts_a_cause_a_grade_or_a_recommendation(client):
+    """The claim patterns, everywhere except section 6.7's disclaimer.
+
+    6.7 exists to say the product names no cause and recommends nothing, which it
+    cannot say without using those words. Everything above it must not.
+    """
+    body = client.get("/mirror").text.lower()
+    above_6_7 = body.split(SECTION_6_7)[0]
+    assert len(body.split(SECTION_6_7)) == 2, "section 6.7 is missing or duplicated"
+    for pattern in CLAIM_PATTERNS:
+        found = re.search(pattern, above_6_7)
+        assert found is None, f"the Mirror claims: {found.group(0)!r}"
+
+
+def test_section_6_7_is_the_only_place_those_words_appear(client):
+    """A disclaimer that drifts upward into the body would be a claim."""
+    body = client.get("/mirror").text.lower()
+    disclaimer = body.split(SECTION_6_7)[1]
+    for word in ("cause", "score", "recommend"):
+        assert word in disclaimer, f"6.7 must disclaim {word!r}"
 
 
 def test_the_unqualified_symbol_R_never_appears(client):
@@ -224,3 +264,51 @@ def test_the_worst_hour_is_the_hour_the_fixture_says(client, ):
     body = client.get("/mirror").text
     assert "13,250" in body
     assert "6,850" in body, "hour 09"
+
+
+def test_section_6_6_says_what_could_not_be_read(client):
+    """PRD 6.6: rows in, parsed, excluded with reasons; duplicates with the option to
+    confirm; trips reconstructed and refused; risk figures by source; fees."""
+    body = client.get("/mirror").text.lower()
+    assert "what we could not read" in body
+    assert "40" in body, "rows in"
+    assert "risk figure" in body
+    assert "no charges column" in body or "fees" in body
+
+
+def test_section_6_6_counts_risk_figures_by_source(client):
+    body = client.get("/mirror").text
+    assert "your declared budget" in body.lower()
+    assert "your stop" in body.lower()
+    assert "18" in body, "declared_budget count"
+    assert "10" in body, "defined_stop count"
+
+
+def test_premium_paid_is_counted_but_never_a_denominator(client):
+    """PRD 5.5: premium_paid and inferred_atr are recorded, never divided by."""
+    body = client.get("/mirror").text.lower()
+    assert "premium" in body, "it is counted"
+    assert "× premium" not in body and "x premium" not in body
+
+
+def test_section_6_7_says_what_we_have_not_told_you(client):
+    """PRD 6.7: the plain statement, in the trader's sight, not a footnote."""
+    body = client.get("/mirror").text.lower()
+    assert "what we have not told you" in body
+    for disclaimed in ("cause", "score", "cost", "recommend"):
+        assert disclaimed in body, f"6.7 must disclaim {disclaimed}"
+
+
+def test_the_clock_shows_the_worst_three_hours(client):
+    """PRD 6.5: result by entry hour, worst three -- not every hour."""
+    body = client.get("/mirror").text
+    assert "13,250" in body, "the worst hour"
+    assert "6,850" in body, "the second worst"
+    assert "4,650" in body or "3,900" in body, "the third worst"
+
+
+def test_section_6_3_compares_strike_rate_and_lots(client):
+    """PRD 6.3: for those trades versus the rest -- strike rate, average lots."""
+    body = client.get("/mirror").text.lower()
+    assert "strike rate" in body
+    assert "lots" in body

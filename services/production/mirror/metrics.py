@@ -322,6 +322,18 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
+def subset(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:
+    """The named trips, in their original order. For comparing a group to the rest."""
+    wanted = set(trip_ids)
+    return [t for t in trips if t.trip_id in wanted]
+
+
+def complement(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:
+    """Everything but the named trips."""
+    wanted = set(trip_ids)
+    return [t for t in trips if t.trip_id not in wanted]
+
+
 def strike_rate(trips: list[Trip]) -> StrikeRate:
     """Wins over wins plus losses. Scratches are in neither, and in the totals."""
     wins = sum(1 for t in trips if t.is_win)

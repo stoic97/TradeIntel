@@ -88,8 +88,22 @@
       <td>{{ two_losses.comparison_mean }}</td>
     </tr>
   </table>
-  <p class="quiet">A trade still open when the next one started does not count as
-    closed. A scratch trade ends the run.</p>
+  <table>
+    <tr><th></th><th>Strike rate</th><th>Average lots</th></tr>
+    <tr>
+      <td>After two straight losses</td>
+      <td>{{ after_strike.rate_percent }}%</td>
+      <td>{{ after_lots.mean }}</td>
+    </tr>
+    <tr>
+      <td>Every other trade</td>
+      <td>{{ rest_strike.rate_percent }}%</td>
+      <td>{{ rest_lots.mean }}</td>
+    </tr>
+  </table>
+  <p class="quiet">This happened on {{ days_with_the_condition }} of your
+    {{ days.counts|length }} trading days. A trade still open when the next one
+    started does not count as closed. A scratch trade ends the run.</p>
   {{ drawer_link("two-straight-losses", "Show me those trades") }}
 </section>
 
@@ -122,6 +136,54 @@
     {% endfor %}
   </table>
   {{ drawer_link("by-hour", "Show me the trades by hour") }}
+</section>
+
+<section class="panel">
+  <h2>What we could not read</h2>
+  <table>
+    <tr><th>Rows in your file</th><td>{{ imp.rows_in }}</td></tr>
+    <tr><th>Rows we read</th><td>{{ imp.rows_parsed }}</td></tr>
+    <tr><th>Rows set aside</th><td>{{ imp.rows_excluded }}</td></tr>
+    <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
+    <tr><th>Trades refused</th><td>{{ imp.trips_refused }}</td></tr>
+    <tr><th>Charges in the file</th>
+        <td>{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</td></tr>
+  </table>
+
+  <h3>Trades with a risk figure</h3>
+  <table>
+    <tr><th>Measured against</th><th>Trades</th><th>Shown as a denominator</th></tr>
+    <tr>
+      <td>Your declared budget</td>
+      <td>{{ risk.counts[sources.DECLARED_BUDGET] }}</td>
+      <td>yes — “× your declared budget”</td>
+    </tr>
+    <tr>
+      <td>Your stop</td>
+      <td>{{ risk.counts[sources.DEFINED_STOP] }}</td>
+      <td>yes — “× your stop”</td>
+    </tr>
+    <tr>
+      <td>Premium paid</td>
+      <td>{{ risk.counts[sources.PREMIUM_PAID] }}</td>
+      <td>no — recorded, never divided by</td>
+    </tr>
+    <tr>
+      <td>Nothing we could use</td>
+      <td>{{ risk.counts[sources.UNAVAILABLE] + risk.counts[sources.INFERRED_ATR] }}</td>
+      <td>no</td>
+    </tr>
+  </table>
+  <p class="quiet">Premium paid is the most you could have lost on an option, not what
+    you had at risk, so it is counted here and used nowhere else.</p>
+</section>
+
+<section class="panel">
+  <h2>What we have not told you</h2>
+  <p>Nothing above names a cause. Nothing scores you, against yourself or anyone
+    else. Nothing estimates what a habit cost you. Nothing recommends a change.</p>
+  <p>These are counts from your own file, and that is all they are. The checks that
+    could say more need work we have not finished and evidence we have not earned.</p>
 </section>
 
 <section class="panel">

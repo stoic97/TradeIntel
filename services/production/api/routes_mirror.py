@@ -19,6 +19,7 @@ from services.production.api.routes_identity import current_trader, page
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
+from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
 
@@ -50,6 +51,19 @@ def _mirror_context(trips: list[mx.Trip]) -> dict:
     }
 
 
+def _comparison_context(trips: list[mx.Trip], two_losses) -> dict:
+    """PRD 6.3: those trades against the rest, on strike rate and average lots."""
+    after_losses = mx.subset(trips, two_losses.condition_trip_ids)
+    the_rest = mx.complement(trips, two_losses.condition_trip_ids)
+    return {
+        "after_strike": mx.strike_rate(after_losses),
+        "after_lots": mx.average_lots(after_losses),
+        "rest_strike": mx.strike_rate(the_rest),
+        "rest_lots": mx.average_lots(the_rest),
+        "days_with_the_condition": len({t.trading_day for t in after_losses}),
+    }
+
+
 @router.get("/mirror", response_class=HTMLResponse)
 def mirror(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -62,8 +76,12 @@ def mirror(request: Request):
         trips, imp = loader.load_for(sess, trader)
         if not trips:
             return page(request, "mirror_empty.html", title="Your record")
+        context = _mirror_context(trips)
+        context.update(_comparison_context(trips, context["two_losses"]))
         return page(request, "mirror.html", title="Your record",
-                    imp=imp, drawers=DRAWERS, **_mirror_context(trips))
+                    imp=imp, drawers=DRAWERS,
+                    sources=s_enums.RiskUnitSourceV1,
+                    showable=s_enums.SHOWABLE_DENOMINATORS, **context)
 
 
 @router.get("/mirror/{line}/drawer", response_class=HTMLResponse)
