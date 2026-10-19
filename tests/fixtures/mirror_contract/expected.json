@@ -104,16 +104,21 @@
   ],
   "two_straight_losses": {
     "population": 24,
-    "condition": 14,
-    "comparison": 10,
-    "condition_net_sum": "-11500",
-    "condition_mean": "-821.43",
-    "comparison_net_sum": "-8500",
-    "comparison_mean": "-850",
+    "condition": 17,
+    "comparison": 7,
+    "condition_net_sum": "-15500",
+    "condition_mean": "-911.76",
+    "comparison_net_sum": "-4500",
+    "comparison_mean": "-642.86",
+    "outside_population_count": 16,
+    "outside_population_net": "-5000",
     "condition_trip_ids": [
       "t06",
       "t07",
+      "t08",
       "t16",
+      "t17",
+      "t18",
       "t21",
       "t22",
       "t23",
@@ -126,15 +131,15 @@
       "t39",
       "t40"
     ],
+    "_corrected": "First written as condition 14. Wrong, and instructively so: the count was worked out before winners were given a 30-minute hold, and three trips change status once a winner is still OPEN when the next trade is entered. An overlapping trip is not resolved, so it is not among the two most recent -- t17 and t18 on 04 Sep look past the open t16 to two earlier losses, and t08 on 02 Sep looks past t07, which exits at 11:00 exactly as t08 enters and so is not strictly earlier. Recounted by hand against the exit times, then checked against the shared condition.",
     "_cases": {
       "two_losses_then_a_win": "t16 is in the condition and is itself a win (+1000). The condition is about what preceded the trade, not how it ended.",
       "scratch_breaks_the_run": "t12 and t13 on 03 Sep are not in the condition: a net = 0 trip is among their two most recent.",
-      "win_between_losses": "t17 and t18 on 04 Sep are not in the condition: t16, a win, is among their two most recent.",
-      "overlap": "No overlapping trips in this fixture; that case is covered in the shared B2 condition tests."
+      "win_resolved_before_entry_breaks_the_run": "t36 on 09 Sep is not in the condition: t35, a win, had exited before it entered.",
+      "open_trip_is_not_resolved": "t17 and t18 on 04 Sep ARE in the condition because t16, the win between them, was still open at their entries.",
+      "exit_equal_to_entry_is_not_resolved": "t08 on 02 Sep is in the condition because t07 exits at 11:00 and t08 enters at 11:00; resolved means strictly earlier."
     },
-    "outside_population_count": 16,
-    "outside_population_net": "-5000",
-    "_population_note": "condition + comparison = 24 trips netting -20000, not the whole -25000. The other 16 trips are outside the population: they are the first two of each day, which have fewer than two trips resolved before them. 24 + 16 = 40 and -20000 + -5000 = -25000."
+    "_population_note": "condition + comparison = 24 trips netting -20000. The other 16 trips are outside the population: fewer than two trips resolved before them. 24 + 16 = 40 and -15500 + -4500 + -5000 = -25000."
   },
   "strike_rate": {
     "wins": 6,
