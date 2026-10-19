@@ -27,8 +27,28 @@ from services.production.db.models import install_insert_only_guard
 ALEMBIC_INI = Path(__file__).resolve().parents[3] / "alembic.ini"
 
 
+_ENGINES: list[Engine] = []
+"""Every engine this process has built.
+
+Only for teardown in tests: each engine holds a connection pool, and a suite that
+builds one per test runs out of file descriptors. The app builds exactly one engine
+for the life of the process, so nothing here affects it.
+"""
+
+
+def dispose_all_engines() -> int:
+    """Close every pooled connection. Returns how many engines were disposed."""
+    count = 0
+    while _ENGINES:
+        engine = _ENGINES.pop()
+        engine.dispose()
+        count += 1
+    return count
+
+
 def make_engine(url: str) -> Engine:
     engine = create_engine(url, future=True)
+    _ENGINES.append(engine)
 
     @event.listens_for(engine, "connect")
     def _sqlite_pragmas(dbapi_connection: Any, _record: Any) -> None:
