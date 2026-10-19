@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -31,6 +32,8 @@ from sqlalchemy.orm import Session
 from services.production.ctr.intake.pipeline import ImportPlan
 from services.production.db import models as m
 from services.shared.schemas import scope_v1 as s
+from services.shared.schemas.ctr_v1 import RiskUnitSource as CtrRiskSource
+from services.shared.schemas.ctr_v1 import RoundTrip
 
 
 def existing_days(sess: Session, *, trader: m.Trader, source_account: str) -> dict[str, int]:
@@ -43,6 +46,47 @@ def existing_days(sess: Session, *, trader: m.Trader, source_account: str) -> di
         )
     ).all()
     return {r.trading_day: r.rows_after for r in rows}
+
+
+def _declaration_in_force(
+    declarations: list[m.RiskBudgetDeclaration], trading_day: str
+) -> m.RiskBudgetDeclaration | None:
+    """The declaration covering this trading day, or none.
+
+    The latest one whose effective_from is on or before the day. A number declared
+    in November is not what he was risking in September, and treating it as such
+    would make every figure measured against it quietly wrong -- the kind of wrong
+    that looks like a real result.
+    """
+    covering = [d for d in declarations if d.effective_from <= trading_day]
+    if not covering:
+        return None
+    return max(covering, key=lambda d: (d.effective_from, d.id))
+
+
+def _risk_unit_for(
+    trip: RoundTrip,
+    trading_day: str,
+    declarations: list[m.RiskBudgetDeclaration],
+) -> tuple[s.RiskUnitSourceV1, Decimal | None, int | None]:
+    """PRD 5.5's hierarchy: declared budget, then a recorded stop, then the premium.
+
+    Only the first two may ever be a denominator on a v1 screen. The premium is the
+    most an option could have lost rather than what was at risk, so it is recorded
+    and never divided by; the Mirror says so in section 6.6.
+    """
+    declaration = _declaration_in_force(declarations, trading_day)
+    if declaration is not None and declaration.unit == "INR":
+        return s.RiskUnitSourceV1.DECLARED_BUDGET, declaration.value, declaration.id
+    if declaration is not None and declaration.capital_amount:
+        rupees = declaration.capital_amount * declaration.value / Decimal(100)
+        return s.RiskUnitSourceV1.DECLARED_BUDGET, rupees, declaration.id
+
+    if trip.risk_unit_source is CtrRiskSource.RECORDED_STOP and trip.risk_unit:
+        return s.RiskUnitSourceV1.DEFINED_STOP, trip.risk_unit, None
+    if trip.risk_unit is not None:
+        return s.RiskUnitSourceV1.PREMIUM_PAID, trip.risk_unit, None
+    return s.RiskUnitSourceV1.UNAVAILABLE, None, None
 
 
 def _next_version(sess: Session, trader: m.Trader) -> tuple[int, int | None]:
@@ -126,6 +170,12 @@ def write_plan(
             )
         )
 
+    declarations = list(sess.scalars(
+        select(m.RiskBudgetDeclaration)
+        .where(m.RiskBudgetDeclaration.trader_id == trader.id)
+        .order_by(m.RiskBudgetDeclaration.effective_from)
+    ).all())
+
     seen_trip_ids: dict[str, int] = {}
     for trip in plan.trips:
         occurrence = seen_trip_ids.get(trip.trip_id, 0) + 1
@@ -155,12 +205,12 @@ def write_plan(
                 net=trip.net_pnl,
                 fees_available=plan.fees_available,
                 ctr_risk_source=trip.risk_unit_source.value,
-                risk_unit_value=trip.risk_unit,
-                risk_unit_source=(
-                    s.RiskUnitSourceV1.PREMIUM_PAID
-                    if trip.risk_unit is not None
-                    else s.RiskUnitSourceV1.UNAVAILABLE
-                ),
+                **dict(zip(
+                    ("risk_unit_source", "risk_unit_value", "risk_budget_ref"),
+                    _risk_unit_for(trip, trip.entry_ts.date().isoformat(),
+                                   declarations),
+                    strict=True,
+                )),
             )
         )
 
