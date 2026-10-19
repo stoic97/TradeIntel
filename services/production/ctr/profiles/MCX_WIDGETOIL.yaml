@@ -1,0 +1,16 @@
+# A synthetic instrument, used only by the Mirror contract fixture and the duplicate
+# fixtures. It ships as a profile rather than being special-cased in the loader,
+# because a test that exercises a code path real instruments do not use is a test of
+# the wrong thing. Facts chosen to match MCX crude so the fixture behaves like the
+# instrument the product is calibrated on.
+exchange: MCX
+symbol: WIDGETOIL
+version: "1-fixture"
+contract_multiplier: "100"
+tick_size: "1"
+currency_per_point: "100"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:00"
+session_end: "23:30"
+expiry_rule: from_instrument_name

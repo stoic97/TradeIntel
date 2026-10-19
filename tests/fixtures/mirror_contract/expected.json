@@ -1,0 +1,229 @@
+{
+  "_note": "Hand-calculated from PRD Appendix A against the trip table in generate.py. Never copied from program output: a fixture whose expectations came from the code under test proves only that the code agrees with itself. The arithmetic for each figure is in the commit message and in the chat record of 19 Oct 2026.",
+  "totals": {
+    "trips": 40,
+    "net": "-25000",
+    "eligible_days": 8,
+    "fees_available": false
+  },
+  "five_worst_days": {
+    "days": [
+      {
+        "trading_day": "2026-09-07",
+        "net": "-12000"
+      },
+      {
+        "trading_day": "2026-09-02",
+        "net": "-8000"
+      },
+      {
+        "trading_day": "2026-09-04",
+        "net": "-2000"
+      },
+      {
+        "trading_day": "2026-09-09",
+        "net": "-1000"
+      },
+      {
+        "trading_day": "2026-09-10",
+        "net": "-1000"
+      }
+    ],
+    "sum": "-24000",
+    "_tie_note": "09 Sep and 10 Sep are both -1000; the earlier date is listed first."
+  },
+  "share_of_total": {
+    "share_percent": "96",
+    "shown_as_percentage": true,
+    "other_days_count": 3,
+    "other_days_net": "-1000",
+    "_regime": "0 < share <= 100, so a percentage is shown. Every day is negative, which is the only arrangement in which the five worst days are less than the whole."
+  },
+  "normal_day": {
+    "trip_counts_by_day": [
+      3,
+      6,
+      4,
+      5,
+      8,
+      4,
+      6,
+      4
+    ],
+    "normal_day_trips": "4.5",
+    "busiest_day": "2026-09-07",
+    "busiest_day_trips": 8,
+    "busiest_day_vs_normal": "1.78"
+  },
+  "best_five_trades": [
+    {
+      "trip_id": "t27",
+      "net": "1500"
+    },
+    {
+      "trip_id": "t16",
+      "net": "1000"
+    },
+    {
+      "trip_id": "t31",
+      "net": "1000"
+    },
+    {
+      "trip_id": "t01",
+      "net": "500"
+    },
+    {
+      "trip_id": "t07",
+      "net": "500"
+    }
+  ],
+  "worst_five_trades": [
+    {
+      "trip_id": "t06",
+      "net": "-2000"
+    },
+    {
+      "trip_id": "t08",
+      "net": "-2000"
+    },
+    {
+      "trip_id": "t09",
+      "net": "-2000"
+    },
+    {
+      "trip_id": "t21",
+      "net": "-2000"
+    },
+    {
+      "trip_id": "t22",
+      "net": "-2000"
+    },
+    {
+      "_tie_note": "Seven trips are at -2000; the five with the earliest entry are listed. t23 and t24 are the sixth and seventh."
+    }
+  ],
+  "two_straight_losses": {
+    "population": 24,
+    "condition": 17,
+    "comparison": 7,
+    "condition_net_sum": "-15500",
+    "condition_mean": "-911.76",
+    "comparison_net_sum": "-4500",
+    "comparison_mean": "-642.86",
+    "outside_population_count": 16,
+    "outside_population_net": "-5000",
+    "condition_trip_ids": [
+      "t06",
+      "t07",
+      "t08",
+      "t16",
+      "t17",
+      "t18",
+      "t21",
+      "t22",
+      "t23",
+      "t24",
+      "t25",
+      "t26",
+      "t30",
+      "t34",
+      "t35",
+      "t39",
+      "t40"
+    ],
+    "_corrected": "First written as condition 14. Wrong, and instructively so: the count was worked out before winners were given a 30-minute hold, and three trips change status once a winner is still OPEN when the next trade is entered. An overlapping trip is not resolved, so it is not among the two most recent -- t17 and t18 on 04 Sep look past the open t16 to two earlier losses, and t08 on 02 Sep looks past t07, which exits at 11:00 exactly as t08 enters and so is not strictly earlier. Recounted by hand against the exit times, then checked against the shared condition.",
+    "_cases": {
+      "two_losses_then_a_win": "t16 is in the condition and is itself a win (+1000). The condition is about what preceded the trade, not how it ended.",
+      "scratch_breaks_the_run": "t12 and t13 on 03 Sep are not in the condition: a net = 0 trip is among their two most recent.",
+      "win_resolved_before_entry_breaks_the_run": "t36 on 09 Sep is not in the condition: t35, a win, had exited before it entered.",
+      "open_trip_is_not_resolved": "t17 and t18 on 04 Sep ARE in the condition because t16, the win between them, was still open at their entries.",
+      "exit_equal_to_entry_is_not_resolved": "t08 on 02 Sep is in the condition because t07 exits at 11:00 and t08 enters at 11:00; resolved means strictly earlier."
+    },
+    "_population_note": "condition + comparison = 24 trips netting -20000. The other 16 trips are outside the population: fewer than two trips resolved before them. 24 + 16 = 40 and -15500 + -4500 + -5000 = -25000."
+  },
+  "strike_rate": {
+    "wins": 6,
+    "losses": 32,
+    "scratches_excluded": 2,
+    "rate_percent": "15.8",
+    "_note": "6 / (6 + 32). The two net = 0 trips are in neither numerator nor denominator, and are counted in the totals."
+  },
+  "average_lots": {
+    "total_lots": 43,
+    "mean": "1.075",
+    "_note": "t04, t05 and t06 are 2 lots; the other 37 trips are 1."
+  },
+  "holding_time": {
+    "winners_median_seconds": 1800,
+    "losers_median_seconds": 600,
+    "ratio": "3.0",
+    "_note": "Winners: 20,20,30,30,30,30 minutes, median 30. Losers: thirty-two values, the 16th and 17th both 10 minutes. Scratches excluded."
+  },
+  "result_by_hour": [
+    {
+      "hour": 9,
+      "net": "-6850",
+      "trips": 14,
+      "small_sample": false
+    },
+    {
+      "hour": 10,
+      "net": "-13250",
+      "trips": 21,
+      "small_sample": false
+    },
+    {
+      "hour": 11,
+      "net": "-3900",
+      "trips": 4,
+      "small_sample": true
+    },
+    {
+      "hour": 12,
+      "net": "-1000",
+      "trips": 1,
+      "small_sample": true
+    }
+  ],
+  "longest_losing_run": {
+    "length": 10,
+    "trip_ids": [
+      "t17",
+      "t18",
+      "t19",
+      "t20",
+      "t21",
+      "t22",
+      "t23",
+      "t24",
+      "t25",
+      "t26"
+    ],
+    "crosses_days": true,
+    "days": [
+      "2026-09-04",
+      "2026-09-07"
+    ],
+    "_note": "Ends at t27, a win. The run is stated as across days in the drawer."
+  },
+  "trades_with_a_risk_figure": {
+    "declared_budget": 18,
+    "defined_stop": 10,
+    "premium_paid": 8,
+    "unavailable": 2,
+    "inferred_atr": 2,
+    "showable_as_denominator": 28,
+    "_note": "Only declared_budget and defined_stop may be denominators on screen. inferred_atr appears here so the fixture exercises a source the product must count but must never divide by."
+  },
+  "suspected_duplicates": {
+    "duplicate_fill_id": 0,
+    "suspected_duplicate": 0,
+    "trader_confirmed_duplicate": 0,
+    "_note": "This fixture has none; the three duplicate fixtures in data/fixtures/duplicates cover those tiers."
+  },
+  "journal_unit_default": {
+    "median_trips_per_eligible_day": "4.5",
+    "unit": "day",
+    "_note": "4.5 >= 2, so the trading day. The trader's own setting overrides."
+  }
+}

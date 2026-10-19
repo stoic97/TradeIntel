@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% macro drawer_link(line, label) %}
+<p class="drawer-link">
+  <button class="link" hx-get="/mirror/{{ line }}/drawer"
+          hx-target="#drawer-{{ line }}" hx-swap="innerHTML"
+          data-line="{{ line }}">{{ label }}</button>
+</p>
+<div id="drawer-{{ line }}" class="drawer"></div>
+{% endmacro %}
+{% block content %}
+<section class="panel">
+  <h1>Your record</h1>
+  <p class="quiet">{{ trips|length }} trades, {{ days.counts|length }} trading days.
+    Every figure here is counted from your file. Open any line to see the trades
+    behind it.</p>
+  {% if not imp.fees_available %}
+  <p class="warn">Your export has no charges column, so every rupee figure below is
+    <strong>gross</strong> — before brokerage and taxes. We do not estimate what is
+    not in your file.</p>
+  {% endif %}
+</section>
+
+<section class="panel" data-dwell-line="worst-days">
+  <h2>Your worst trading days</h2>
+  <table>
+    <tr><th>Day</th><th>Net (gross)</th><th>Trades</th><th>vs your normal day</th></tr>
+    {% for day in worst_days.days %}
+    <tr>
+      <td>{{ day.trading_day }}</td>
+      <td>{{ "{:,}".format(day.net|int) }}</td>
+      <td>{{ day.trips }}</td>
+      <td>{{ "%.1f"|format(day.trips / days.normal_day|float) }}×</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p>Those five days came to <strong>{{ "{:,}".format(worst_days.sum|int) }}</strong>.
+    {% if share.shown_as_percentage %}
+      That is <strong>{{ share.share_percent }}%</strong> of your result for the
+      whole period, which was {{ "{:,}".format(share.total|int) }}.
+    {% else %}
+      Your result for the whole period was {{ "{:,}".format(share.total|int) }}.
+      The other {{ share.other_days_count }} days were net
+      {{ "{:,}".format(share.other_days_net|int) }}.
+    {% endif %}
+  </p>
+  <p class="quiet">Your normal day is {{ days.normal_day }} trades. Your busiest was
+    {{ days.busiest_day }}, at {{ days.busiest_trips }} — {{ days.busiest_vs_normal }}×
+    that.</p>
+  {{ drawer_link("worst-days", "Show me those trades") }}
+</section>
+
+<section class="panel" data-dwell-line="best-worst-trades">
+  <h2>Where the money came from</h2>
+  <table>
+    <tr><th>Best five</th><th></th><th>Worst five</th><th></th></tr>
+    {% for i in range(5) %}
+    <tr>
+      <td>{{ best[i].trading_day if i < best|length }}</td>
+      <td>{{ "{:,}".format(best[i].net|int) if i < best|length }}</td>
+      <td>{{ worst[i].trading_day if i < worst|length }}</td>
+      <td>{{ "{:,}".format(worst[i].net|int) if i < worst|length }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="quiet">Ties are listed with the earlier trade first. Nothing is trimmed
+    or capped.</p>
+  {{ drawer_link("best-worst-trades", "Show me these ten trades") }}
+</section>
+
+<section class="panel" data-dwell-line="two-straight-losses">
+  <h2>Trading on while already down</h2>
+  <p>On {{ two_losses.population }} occasions you opened a trade after two earlier
+    trades that day had already closed at a loss. On
+    <strong>{{ two_losses.condition }}</strong> of those, the two most recent had
+    both lost.</p>
+  <table>
+    <tr><th></th><th>Trades</th><th>Net (gross)</th><th>Average</th></tr>
+    <tr>
+      <td>After two straight losses</td>
+      <td>{{ two_losses.condition }}</td>
+      <td>{{ "{:,}".format(two_losses.condition_net|int) }}</td>
+      <td>{{ two_losses.condition_mean }}</td>
+    </tr>
+    <tr>
+      <td>Your other trades that qualified</td>
+      <td>{{ two_losses.comparison }}</td>
+      <td>{{ "{:,}".format(two_losses.comparison_net|int) }}</td>
+      <td>{{ two_losses.comparison_mean }}</td>
+    </tr>
+  </table>
+  <table>
+    <tr><th></th><th>Strike rate</th><th>Average lots</th></tr>
+    <tr>
+      <td>After two straight losses</td>
+      <td>{{ after_strike.rate_percent }}%</td>
+      <td>{{ after_lots.mean }}</td>
+    </tr>
+    <tr>
+      <td>Every other trade</td>
+      <td>{{ rest_strike.rate_percent }}%</td>
+      <td>{{ rest_lots.mean }}</td>
+    </tr>
+  </table>
+  <p class="quiet">This happened on {{ days_with_the_condition }} of your
+    {{ days.counts|length }} trading days. A trade still open when the next one
+    started does not count as closed. A scratch trade ends the run.</p>
+  {{ drawer_link("two-straight-losses", "Show me those trades") }}
+</section>
+
+<section class="panel" data-dwell-line="holding-time">
+  <h2>How long you hold</h2>
+  <p>Your winners were open a median of
+    <strong>{{ (holding.winners_median_seconds / 60)|int }} minutes</strong>, your
+    losers <strong>{{ (holding.losers_median_seconds / 60)|int }} minutes</strong>.
+    {% if holding.ratio %}That is a ratio of {{ holding.ratio }}.{% endif %}</p>
+  <p class="quiet">Your strike rate was {{ strike.rate_percent }}% —
+    {{ strike.wins }} winners against {{ strike.losses }} losers.
+    {% if strike.scratches %}{{ strike.scratches }} trades finished level and are in
+    neither count.{% endif %}
+    Your longest run of consecutive losers was {{ run.length }} trades{% if run.crosses_days %},
+    running across {{ run.days|length }} days{% endif %}.</p>
+  {{ drawer_link("holding-time", "Show me the times") }}
+</section>
+
+<section class="panel" data-dwell-line="by-hour">
+  <h2>The clock</h2>
+  <table>
+    <tr><th>Hour you opened</th><th>Net (gross)</th><th>Trades</th></tr>
+    {% for hour in hours %}
+    <tr>
+      <td>{{ "%02d"|format(hour.hour) }}:00</td>
+      <td>{{ "{:,}".format(hour.net|int) }}</td>
+      <td>{{ hour.trips }}{% if hour.small_sample %}
+        <span class="quiet">— few trades</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {{ drawer_link("by-hour", "Show me the trades by hour") }}
+</section>
+
+<section class="panel">
+  <h2>What we could not read</h2>
+  <table>
+    <tr><th>Rows in your file</th><td>{{ imp.rows_in }}</td></tr>
+    <tr><th>Rows we read</th><td>{{ imp.rows_parsed }}</td></tr>
+    <tr><th>Rows set aside</th><td>{{ imp.rows_excluded }}</td></tr>
+    <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
+    <tr><th>Trades refused</th><td>{{ imp.trips_refused }}</td></tr>
+    <tr><th>Charges in the file</th>
+        <td>{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</td></tr>
+  </table>
+
+  <h3>Trades with a risk figure</h3>
+  <table>
+    <tr><th>Measured against</th><th>Trades</th><th>Shown as a denominator</th></tr>
+    <tr>
+      <td>Your declared budget</td>
+      <td>{{ risk.counts[sources.DECLARED_BUDGET] }}</td>
+      <td>yes — “× your declared budget”</td>
+    </tr>
+    <tr>
+      <td>Your stop</td>
+      <td>{{ risk.counts[sources.DEFINED_STOP] }}</td>
+      <td>yes — “× your stop”</td>
+    </tr>
+    <tr>
+      <td>Premium paid</td>
+      <td>{{ risk.counts[sources.PREMIUM_PAID] }}</td>
+      <td>no — recorded, never divided by</td>
+    </tr>
+    <tr>
+      <td>Nothing we could use</td>
+      <td>{{ risk.counts[sources.UNAVAILABLE] + risk.counts[sources.INFERRED_ATR] }}</td>
+      <td>no</td>
+    </tr>
+  </table>
+  <p class="quiet">Premium paid is the most you could have lost on an option, not what
+    you had at risk, so it is counted here and used nowhere else.</p>
+</section>
+
+<section class="panel">
+  <h2>What we have not told you</h2>
+  <p>Nothing above names a cause. Nothing scores you, against yourself or anyone
+    else. Nothing estimates what a habit cost you. Nothing recommends a change.</p>
+  <p>These are counts from your own file, and that is all they are. The checks that
+    could say more need work we have not finished and evidence we have not earned.</p>
+</section>
+
+<section class="panel">
+  <p class="quiet">Computed from import {{ imp.id }} by Scope version
+    {{ imp.code_version }}, reading {{ imp.rows_in }} rows with
+    {{ imp.adapter_id }}. Every figure above can be reproduced from your file and
+    these versions.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="/static/dwell.js" defer></script>{% endblock %}
