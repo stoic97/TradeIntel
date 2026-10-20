@@ -44,13 +44,39 @@ def has_diagnosis_consent(sess, trader: m.Trader) -> bool:
     return consent_state(sess, trader).get(s.ConsentPurpose.DIAGNOSIS, False)
 
 
+def _reviewed_text_or_closed(request: Request, trader: m.Trader):
+    """The consent text, or the page to show when it may not be published yet.
+
+    The gate is PRD section 10's release gate and does not move: an unreviewed
+    promise is one nobody has checked we can keep, so a real account is refused.
+    What changed here is the shape of the refusal. ``require_reviewed`` raises,
+    nothing caught it, and the trader got "Internal Server Error" -- a product whose
+    whole claim is telling people what it cannot do, telling them nothing at all.
+    An earlier test asserted that 500 and called it "refused, loudly", which it was.
+    Loud is not the same as legible.
+
+    503 rather than 403: the account is allowed to upload, the service is not ready
+    to accept it. That distinction is for whoever reads the logs; the page says it
+    in words for whoever reads the screen.
+    """
+    try:
+        return cs.require_reviewed(
+            cs.CURRENT, development_data=trader.development_data
+        ), None
+    except cs.UnreviewedConsentText:
+        return None, page(request, "not_open.html", status_code=503,
+                          title="Not open yet")
+
+
 @router.get("/consent", response_class=HTMLResponse)
 def consent_form(request: Request):
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
             return RedirectResponse("/login", status_code=303)
-        text = cs.require_reviewed(cs.CURRENT, development_data=trader.development_data)
+        text, closed = _reviewed_text_or_closed(request, trader)
+        if closed is not None:
+            return closed
         return page(request, "consent.html", title="Before you upload",
                     text=text, state=consent_state(sess, trader))
 
@@ -69,7 +95,9 @@ def consent_submit(
         trader = current_trader(request, sess)
         if trader is None:
             return RedirectResponse("/login", status_code=303)
-        text = cs.require_reviewed(cs.CURRENT, development_data=trader.development_data)
+        text, closed = _reviewed_text_or_closed(request, trader)
+        if closed is not None:
+            return closed
 
         if diagnosis is None:
             return page(

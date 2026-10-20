@@ -184,7 +184,16 @@ def _build_trip(
     assert entry.quantity == exit_.quantity, "legs must match before a trip is built"
     assert entry.first_ts is not None and exit_.last_ts is not None
 
-    # Exact: value in minus value out, by direction. Not derived from average prices.
+    # Exact: value in minus value out, by direction. Not derived from average
+    # prices, and NOT multiplied by the instrument's contract multiplier.
+    #
+    # The broker reports Trade Value in rupees and it is authoritative (the Dhan
+    # adapter established that against 3,828 real rows), so whatever lot
+    # convention the file uses, the value already carries it. Applying the
+    # profile's multiplier here would multiply every figure a trader reads by the
+    # lot size. The multiplier belongs where money is derived from POINTS -- the
+    # inferred risk unit from a stop distance or an ATR (TD-013) -- and nowhere
+    # else. tests/unit/intake/test_quantity_unit.py pins this.
     if direction is Direction.LONG:
         gross = exit_.value - entry.value
     else:

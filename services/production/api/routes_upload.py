@@ -33,6 +33,7 @@ from services.production.ctr.intake import pipeline as pl
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import constants as k
+from services.production.journal import generate as gen
 from services.shared.schemas import scope_v1 as s
 
 router = APIRouter()
@@ -109,6 +110,8 @@ async def upload_file(
             original_name=file.filename or "tradebook.csv",
             stored_path=str(stored.path), size=stored.size,
         )
+        sess.commit()
+        gen.for_import(sess, trader=trader)
         sess.commit()
         return RedirectResponse(f"/imports/{imp.id}", status_code=303)
 
@@ -203,5 +206,7 @@ def confirm_duplicates(request: Request, import_id: int,
             original_name=raw.original_name, stored_path=raw.stored_path,
             size=raw.size,
         )
+        sess.commit()
+        gen.for_import(sess, trader=trader)
         sess.commit()
         return RedirectResponse(f"/imports/{new_import.id}", status_code=303)

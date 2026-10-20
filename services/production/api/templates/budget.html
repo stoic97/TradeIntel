@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>What you risk</h1>
+  <p>How much are you willing to lose on a single trade?</p>
+  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+
+  <form method="post" action="/budget">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <label for="value">Your number</label>
+    <input type="text" id="value" name="value" inputmode="decimal" required>
+
+    <label for="unit">In</label>
+    <select id="unit" name="unit">
+      <option value="INR">rupees</option>
+      <option value="PCT">per cent of my trading capital</option>
+    </select>
+
+    <label for="capital_amount">Your trading capital, in rupees</label>
+    <input type="text" id="capital_amount" name="capital_amount" inputmode="decimal">
+    <p class="quiet">Only needed if you answered in per cent.</p>
+
+    <label for="effective_from">Has that been your number for the whole history you
+      uploaded? If it changed, from when?</label>
+    <input type="date" id="effective_from" name="effective_from"
+           max="{{ today }}" value="{{ today }}" required>
+    <p class="quiet">Trades before this date keep whatever number was in force then.
+      Set an earlier date if this has been your number all along.</p>
+
+    <button type="submit">Record it</button>
+  </form>
+</section>
+
+{% if declarations %}
+<section class="panel">
+  <h2>What you have told us</h2>
+  <table>
+    <tr><th>From</th><th>Number</th><th>Recorded</th></tr>
+    {% for d in declarations %}
+    <tr>
+      <td>{{ d.effective_from }}</td>
+      <td>
+        {% if d.unit == "INR" %}₹{{ "{:,}".format(d.value|int) }}
+        {% else %}{{ d.value }}% of ₹{{ "{:,}".format(d.capital_amount|int) }}
+        {% endif %}
+      </td>
+      <td class="quiet">
+        {{ d.declared_at.strftime('%d %b %Y') }}{% if d.retrospective %} — about a
+        period that had already passed{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="quiet">Nothing here is overwritten. A new number is a new line, and your
+    earlier trades keep the number that was in force when you took them.</p>
+</section>
+{% endif %}
+{% endblock %}

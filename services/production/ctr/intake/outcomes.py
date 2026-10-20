@@ -69,6 +69,18 @@ def _header_of(text: str) -> tuple[str, ...]:
     return tuple(h.strip().lstrip("\ufeff") for h in first.split(","))
 
 
+def adapter_for(adapter_id: str) -> Adapter | None:
+    """The adapter an import recorded, by id.
+
+    ``select_adapter`` matches a file being read; this answers for a file already
+    read, which is what anything downstream of an import needs.
+    """
+    for adapter in ADAPTERS:
+        if adapter.adapter_id == adapter_id:
+            return adapter
+    return None
+
+
 def select_adapter(text: str) -> Adapter | None:
     """The adapter whose header matches exactly, or none."""
     header = _header_of(text)

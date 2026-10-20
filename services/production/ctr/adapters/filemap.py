@@ -21,6 +21,8 @@ from typing import Any
 
 import yaml
 
+QUANTITY_UNITS = frozenset({"lots", "units"})
+
 
 class InvalidFileMap(Exception):
     """A map file the loader refuses."""
@@ -47,6 +49,15 @@ class FileMap:
     version: str
     verified: bool
     verified_on: str | None
+    quantity_unit: str
+    """Whether the export's quantity column counts lots or single units.
+
+    A fact about the broker's file, so it belongs here and is gated by the same
+    verification. It decides the size figure the Mirror prints: with "units" the
+    count is divided by the instrument's contract multiplier to reach lots.
+    Money never consults it -- gross comes from the broker's own rupee totals.
+    """
+
     exports: tuple[Export, ...]
 
     @property
@@ -58,7 +69,8 @@ def load(path: Path) -> FileMap:
     raw: Any = yaml.safe_load(Path(path).read_text())
     if not isinstance(raw, dict):
         raise InvalidFileMap(f"{path.name}: expected a mapping")
-    for field in ("broker", "adapter_id", "version", "verified", "exports"):
+    for field in ("broker", "adapter_id", "version", "verified",
+                  "quantity_unit", "exports"):
         if field not in raw:
             raise InvalidFileMap(f"{path.name}: missing {field}")
 
@@ -76,12 +88,20 @@ def load(path: Path) -> FileMap:
         raise InvalidFileMap(
             f"{path.name}: exactly one export must be the trade-level one, found {len(wanted)}"
         )
+    quantity_unit = str(raw["quantity_unit"])
+    if quantity_unit not in QUANTITY_UNITS:
+        raise InvalidFileMap(
+            f"{path.name}: quantity_unit must be one of {sorted(QUANTITY_UNITS)}, "
+            f"not {quantity_unit!r} -- it decides whether a trader's size reads "
+            "as lots or as hundreds of them"
+        )
     return FileMap(
         broker=str(raw["broker"]),
         adapter_id=str(raw["adapter_id"]),
         version=str(raw["version"]),
         verified=bool(raw["verified"]),
         verified_on=raw.get("verified_on"),
+        quantity_unit=quantity_unit,
         exports=exports,
     )
 

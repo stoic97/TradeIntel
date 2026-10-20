@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<nav class="crumbs"><a href="/journals">Your Journals</a></nav>
+
+<article class="journal">
+  <h1>{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
+  {% if journal.version_no > 1 %}
+  <p class="tag">Version {{ journal.version_no }}. A later upload changed this period.
+    The earlier version is kept.</p>
+  {% endif %}
+  {% for para in paragraphs %}
+  <p>{{ para }}</p>
+  {% endfor %}
+</article>
+
+<section class="prompt">
+  <h2>Your own note</h2>
+  <p>Nothing on this page is required.</p>
+  <form method="post" action="/journals/{{ journal.id }}/field">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="field" value="note">
+    <input type="hidden" name="trip_id" value="">
+    <label for="note">Anything you want to add about this period?</label>
+    <textarea id="note" name="value" rows="3">{% if note %}{{ note.value }}{% endif %}</textarea>
+    <button type="submit">Save</button>
+  </form>
+</section>
+
+{% if rows %}
+<section class="trade-prompts">
+  <h2>The trades, one at a time</h2>
+  <p>In the order you opened them. Result is {% if fees_available %}net{% else %}gross — your export carries no charges{% endif %}.</p>
+  {% for row in rows %}
+  <div class="trade">
+    <h3>{{ row.label }} — {{ row.net }}</h3>
+    <form method="post" action="/journals/{{ journal.id }}/field" class="trade-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="trip_id" value="{{ row.trip_id }}">
+      {% for name, question in prompts %}
+      <div class="field">
+        <label for="{{ name }}-{{ row.trip_id }}">{{ question }}</label>
+        <input id="{{ name }}-{{ row.trip_id }}" name="{{ name }}"
+               value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}">
+      </div>
+      {% endfor %}
+      <button type="submit">Save</button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if ask_wtp %}
+<section class="wtp">
+  <h2>One question, and it changes nothing about your account</h2>
+  <p>{{ wtp_question }}</p>
+  <form method="post" action="/journals/{{ journal.id }}/wtp">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label><input type="radio" name="answer" value="yes" required> Yes</label>
+    <label><input type="radio" name="answer" value="no"> No</label>
+    <label><input type="radio" name="answer" value="maybe"> Maybe</label>
+    <label for="wtp_text">If not, what would change that?</label>
+    <input id="wtp_text" name="free_text">
+    <button type="submit">Send</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
