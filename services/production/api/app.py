@@ -22,6 +22,7 @@ from services.production.api import (
     routes_consent,
     routes_events,
     routes_identity,
+    routes_journal,
     routes_mirror,
     routes_upload,
 )
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_mirror.router)
     app.include_router(routes_events.router)
     app.include_router(routes_budget.router)
+    app.include_router(routes_journal.router)
 
     @app.get("/health")
     def health() -> JSONResponse:

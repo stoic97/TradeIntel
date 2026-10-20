@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Your Journals</h1>
+
+{% if latest %}
+<p>One for every complete trading day in what you have uploaded — {{ total }} so far.
+  Each one is written from your trades and needs nothing from you.</p>
+
+<ul class="journals">
+  {% for j in latest %}
+  <li>
+    <a href="/journals/{{ j.id }}">{{ j.period_start }}{% if j.period_end != j.period_start %} – {{ j.period_end }}{% endif %}</a>
+    {% if j.version_no > 1 %}<span class="tag">version {{ j.version_no }}</span>{% endif %}
+    {% if not j.opened_at %}<span class="tag">unread</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+{% if catch_up_count %}
+<p class="catch-up">You have {{ catch_up_count }} earlier Journals.
+  <a href="/journals/catch-up">Read them one at a time</a>, or
+  <a href="/mirror">go to your record</a>.</p>
+{% endif %}
+
+{% else %}
+<p>Your Journals start with your first upload. <a href="/upload">Send us a tradebook</a>
+  and one is written for every complete trading day in it.</p>
+{% endif %}
+{% endblock %}

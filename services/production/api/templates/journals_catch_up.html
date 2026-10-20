@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Earlier Journals</h1>
+<p>Everything behind the five most recent, newest first.
+  <a href="/journals">Back to the latest</a>.</p>
+
+<ul class="journals">
+  {% for j in journals %}
+  <li>
+    <a href="/journals/{{ j.id }}">{{ j.period_start }}{% if j.period_end != j.period_start %} – {{ j.period_end }}{% endif %}</a>
+    {% if j.version_no > 1 %}<span class="tag">version {{ j.version_no }}</span>{% endif %}
+    {% if not j.opened_at %}<span class="tag">unread</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

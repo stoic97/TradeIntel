@@ -26,11 +26,13 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.journal import constants as k
 from services.production.journal import fields as fl
 from services.production.journal import periods as pd
 from services.production.journal import sections as sec
+from services.production.mirror import loader
 from services.production.mirror.metrics import Trip
 from services.shared.schemas import scope_v1 as s
 
@@ -163,3 +165,26 @@ def mark_opened(sess: Session, journal: m.Journal) -> None:
     # makes the next read go to the database. Without this, a route that marks a
     # Journal opened and then renders it shows it as never opened.
     sess.expire(journal, ["opened_at"])
+
+
+def for_import(sess: Session, *, trader: m.Trader) -> list[m.Journal]:
+    """Write the Journals for this trader's current import.
+
+    Every path that writes an import calls this: the upload route, the re-run after
+    a trader confirms a duplicate, and the admin CLI. It is one function because it
+    was missing from all three. The generation modules were built and tested on
+    their own, so the suite was green while a real trader reached an empty Journal
+    list after a successful import -- the failure mode a unit test cannot see.
+
+    A missing instrument profile is not an error here. A Journal's period is a
+    trading day in the instrument's timezone, so without the profile there is no day
+    to write. The import review already tells the trader which profiles are missing
+    (PRD 5.3, partial fields), so this writes nothing rather than failing his upload.
+    """
+    try:
+        trips, imp = loader.load_for(sess, trader)
+    except profiles.UnknownInstrument:
+        return []
+    if imp is None or not trips:
+        return []
+    return generate(sess, trader=trader, imp=imp, trips=trips)

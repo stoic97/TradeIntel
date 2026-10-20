@@ -195,3 +195,52 @@ def test_signing_in_lands_on_the_latest_import_when_there_is_one(client, engine)
                                            "csrf_token": csrf},
                            follow_redirects=False)
     assert f"/imports/{import_id}" in response.headers["location"]
+
+def _two_days() -> bytes:
+    """The clean fixture, plus a second trading day of two round trips.
+
+    Two things have to be true before an upload writes a day Journal, and the first
+    draft of this fixture had only one of them.
+
+    A day is complete only when the file contains a later one -- nothing in a
+    single-day export says the trading is over -- so one day can never produce a
+    Journal. That much was the reason for a second day.
+
+    The second is the density rule (PRD 2): the unit is the trading day only when
+    the median eligible day has at least two trips, and otherwise it is per 10
+    trips. A second day carrying one round trip made the median 1.5, so the unit
+    fell back to per-10 and three trips produced nothing -- the rule working
+    correctly on a fixture too thin to show it. Hence two round trips a day.
+    """
+    base = (DUPES / "clean.csv").read_text().rstrip("\n").splitlines()
+    later = [
+        ("2026-10-15,09:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
+         "Commodity,1,5300.00,5300.00,Traded"),
+        ("2026-10-15,10:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
+         "Commodity,1,5310.00,5310.00,Traded"),
+        ("2026-10-15,11:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
+         "Commodity,1,5320.00,5320.00,Traded"),
+        ("2026-10-15,12:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
+         "Commodity,1,5330.00,5330.00,Traded"),
+    ]
+    return ("\n".join(base + later) + "\n").encode()
+
+
+def test_an_upload_writes_a_journal_for_every_complete_day(client, engine):
+    """PRD 7.2: cadence is upload cadence.
+
+    The modules that generate Journals were built and tested on their own, and
+    nothing called them from the upload: a trader would have reached an empty
+    Journal list after a successful import, with every unit test passing.
+    """
+    upload(client, content=_two_days())
+    with make_session(engine) as sess:
+        written = list(sess.scalars(select(m.Journal)).all())
+    assert [j.period_start for j in written] == ["2026-10-14"], (
+        "the complete day gets a Journal; the day with nothing after it does not"
+    )
+
+
+def test_the_journal_list_shows_what_the_upload_generated(client):
+    upload(client, content=_two_days())
+    assert "2026-10-14" in client.get("/journals").text

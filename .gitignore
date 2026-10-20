@@ -33,3 +33,10 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# local development: keys, database and encrypted file store
+.dev-env
+scope.db
+scope.db-wal
+scope.db-shm
+_files/

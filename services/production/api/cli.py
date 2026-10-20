@@ -13,6 +13,7 @@ Usage:
 
     python -m services.production.api.cli init-db
     python -m services.production.api.cli create-trader --login-id rikk --name "Rikk"
+    python -m services.production.api.cli invite --code DEV-1
     python -m services.production.api.cli import --login-id rikk --file path/to/export.csv
     python -m services.production.api.cli review --import-id 1
 """
@@ -33,6 +34,7 @@ from services.production.ctr.intake import persist
 from services.production.ctr.intake import pipeline as pl
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
+from services.production.journal import generate as gen
 
 DEFAULT_DB = os.environ.get("SCOPE_DB", "sqlite:///scope.db")
 STORE = Path(os.environ.get("SCOPE_FILES", "./_files"))
@@ -91,6 +93,29 @@ def cmd_create_trader(args: argparse.Namespace) -> None:
         print(f"trader {trader.id}: {args.login_id}{flag}")
 
 
+def cmd_invite(args: argparse.Namespace) -> None:
+    """Mint an invite code and print the URL it opens.
+
+    Access is invite-only (PRD 5.1) and ``create-trader`` cannot produce a trader who
+    can sign in -- it writes a placeholder password hash, because a trader sets his
+    own password through the invite. So without this command the only way to sign up
+    locally was to write the row by hand, which is why every walkthrough so far began
+    by reconstructing one.
+    """
+    engine = make_engine(args.db)
+    run_migrations(engine)
+    with make_session(engine) as sess:
+        taken = sess.scalars(
+            select(m.InviteCode).where(m.InviteCode.code == args.code)
+        ).first()
+        if taken is not None:
+            raise SystemExit(f"invite code {args.code!r} already exists")
+        sess.add(m.InviteCode(code=args.code, created_at=datetime.now(UTC)))
+        _log(sess, os.environ.get("USER", "admin"), "create_invite", args.code)
+        sess.commit()
+    print(f"invite {args.code}: http://127.0.0.1:8000/invite/{args.code}")
+
+
 def cmd_import(args: argparse.Namespace) -> None:
     path = Path(args.file)
     text = path.read_text()
@@ -125,6 +150,8 @@ def cmd_import(args: argparse.Namespace) -> None:
             original_name=path.name, stored_path=str(stored), size=path.stat().st_size,
             source_account=args.source_account,
         )
+        sess.commit()
+        gen.for_import(sess, trader=trader)
         sess.commit()
         print(f"import {imp.id}: {imp.outcome.value}")
         _print_review(sess, imp)
@@ -198,6 +225,10 @@ def main(argv: list[str] | None = None) -> None:
     imp.add_argument("--production", action="store_true",
                      help="refuse an unverified broker file map (TD-024)")
     imp.set_defaults(func=cmd_import)
+
+    invite = sub.add_parser("invite")
+    invite.add_argument("--code", required=True)
+    invite.set_defaults(func=cmd_invite)
 
     review = sub.add_parser("review")
     review.add_argument("--import-id", type=int, required=True)
