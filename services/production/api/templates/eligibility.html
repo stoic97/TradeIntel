@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>What we can check</h1>
+
+<p>Your {{ trips }} trades across {{ days }} trading days, against the
+  {{ result.total }} checks in our research library.
+  {% if result.enough %}{{ result.enough | length }} have enough to work with.
+  {% else %}None of them has enough to work with yet.
+  {% endif %}{{ result.short | length }} need more history than you have given us
+  so far, {{ result.waiting | length }} are waiting on something that is not your
+  trades at all{% if result.undetermined %}, and {{ result.undetermined | length }}
+  we cannot judge from this page{% endif %}.</p>
+
+{% if draft %}
+<p class="note">The minimums below come from our pre-registered framework, version
+  {{ framework.version }}, which is still a draft — the thresholds are written down
+  but not yet fixed. When they are fixed, this page says so and the numbers stop
+  moving.</p>
+{% else %}
+<p class="note">The minimums below come from our pre-registered framework, version
+  {{ framework.version }}, fixed before we looked at anyone's trades.</p>
+{% endif %}
+
+<h2>Enough to work with</h2>
+{% if result.enough %}
+<table>
+  <tr><th>Check</th><th>What it needs</th><th>What you have</th></tr>
+  {% for verdict in result.enough %}
+  <tr>
+    <td>{{ verdict.test.id }}</td>
+    <td>{{ verdict.need }} {{ verdict.unit.value.replace('_', ' ') }}</td>
+    <td>{{ verdict.reason }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>None of them, on this history.</p>
+{% endif %}
+
+<h2>Not enough history yet</h2>
+<table>
+  <tr><th>Check</th><th>Why not</th></tr>
+  {% for verdict in result.blocked if verdict.state.value == 'insufficient_sample' %}
+  <tr><td>{{ verdict.test.id }}</td><td>{{ verdict.reason }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Waiting on something that is not your trades</h2>
+<table>
+  <tr><th>Check</th><th>What is missing</th></tr>
+  {% for verdict in result.blocked if verdict.state.value == 'required_data_missing' %}
+  <tr><td>{{ verdict.test.id }}</td><td>{{ verdict.reason }}</td></tr>
+  {% endfor %}
+</table>
+
+{% if result.undetermined %}
+<h2>We cannot tell from here</h2>
+<table>
+  <tr><th>Check</th><th>Why we cannot say</th></tr>
+  {% for verdict in result.undetermined %}
+  <tr><td>{{ verdict.test.id }}</td><td>{{ verdict.reason }}</td></tr>
+  {% endfor %}
+</table>
+<p>These need the trades sorted into groups this page does not build — by session,
+  or by the cells of a map. Not knowing is not the same as not having enough, and
+  it is not the same as having it.</p>
+{% endif %}
+
+<section class="panel">
+  <h2>What this page is not</h2>
+  <p>A check with enough to work with has not been run, and a check without enough
+    has found nothing — there is nothing yet to find either way. None of this says
+    anything about how you trade. It says what your file can and cannot support.</p>
+  <p>The checks are named by their identifiers here. They belong to the research
+    library, and naming them in our own words before they have been run would be
+    telling you what they would say.</p>
+</section>
+
+<p><a href="/mirror">Go to your record</a> — counted from your own trades, and
+  separate from all of this.</p>
+{% endblock %}
