@@ -14,6 +14,7 @@ Usage:
     python -m services.production.api.cli init-db
     python -m services.production.api.cli create-trader --login-id rikk --name "Rikk"
     python -m services.production.api.cli invite --code DEV-1
+    python -m services.production.api.cli classify --login-id rikk --development-data
     python -m services.production.api.cli import --login-id rikk --file path/to/export.csv
     python -m services.production.api.cli review --import-id 1
 """
@@ -91,6 +92,41 @@ def cmd_create_trader(args: argparse.Namespace) -> None:
         sess.commit()
         flag = " (development data)" if args.development_data else ""
         print(f"trader {trader.id}: {args.login_id}{flag}")
+
+
+def cmd_classify(args: argparse.Namespace) -> None:
+    """Classify an existing account's history as development data, or as real.
+
+    ``create-trader`` could set this at creation and nothing could change it
+    afterwards, which is the wrong way round: an account is created through an
+    invite, where nobody is asked this, and the classification is a decision made
+    about a partner's history after talking to him.
+
+    It is not a cosmetic flag. A development-data account may be shown the
+    unreviewed consent text, and PRD decision 21 says that partner receives an
+    addendum telling him his history was used to build the product. Printing the
+    reminder is the closest this command can come to making that happen.
+    """
+    engine = make_engine(args.db)
+    run_migrations(engine)
+    with make_session(engine) as sess:
+        trader = _trader(sess, args.login_id)
+        before = trader.development_data
+        trader.development_data = args.development_data
+        action = "classify_development_data" if args.development_data else "classify_real"
+        _log(sess, os.environ.get("USER", "admin"), action, args.login_id)
+        sess.commit()
+
+    if before == args.development_data:
+        print(f"{args.login_id}: unchanged")
+        return
+    if args.development_data:
+        print(f"{args.login_id}: development data")
+        print("  send the addendum: his history was used to build the product "
+              "(PRD decision 21)")
+    else:
+        print(f"{args.login_id}: a real account")
+        print("  he can no longer be shown unreviewed consent text")
 
 
 def cmd_invite(args: argparse.Namespace) -> None:
@@ -225,6 +261,14 @@ def main(argv: list[str] | None = None) -> None:
     imp.add_argument("--production", action="store_true",
                      help="refuse an unverified broker file map (TD-024)")
     imp.set_defaults(func=cmd_import)
+
+    classify = sub.add_parser("classify")
+    classify.add_argument("--login-id", required=True)
+    how = classify.add_mutually_exclusive_group(required=True)
+    how.add_argument("--development-data", dest="development_data",
+                     action="store_true")
+    how.add_argument("--real", dest="development_data", action="store_false")
+    classify.set_defaults(func=cmd_classify)
 
     invite = sub.add_parser("invite")
     invite.add_argument("--code", required=True)

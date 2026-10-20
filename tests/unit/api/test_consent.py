@@ -171,6 +171,15 @@ def test_a_real_account_cannot_see_the_draft_text(app_env):
     verified and the deletion runbook has been run, and counsel's sign-off gates
     accepting tradebooks at all. An unreviewed promise is one nobody has checked we
     can keep, so the page refuses rather than showing it.
+
+    This test used to assert a 500 and call it "refused, loudly". It was loud: the
+    exception reached the browser as "Internal Server Error", with a traceback in
+    the log and nothing at all for the person reading the screen. It was found by
+    walking the app, not by any test, because this test was the thing asserting it.
+    The gate has not moved. What it returns is now a page that says why.
+
+    Every account created through an invite is development_data=False, so this is
+    the path a real partner takes, not an edge case.
     """
     from datetime import UTC, datetime
     engine = app_env
@@ -186,4 +195,20 @@ def test_a_real_account_cannot_see_the_draft_text(app_env):
     client.post("/login", data={"login_id": "real",
                                 "password": "a-long-enough-password",
                                 "csrf_token": csrf}, follow_redirects=False)
-    assert client.get("/consent").status_code == 500, "refused, loudly, not rendered"
+
+    response = client.get("/consent")
+    assert response.status_code == 503, "refused, and refused legibly"
+    body = response.text.lower()
+    assert "not open yet" in body
+    assert "internal server error" not in body
+    assert "traceback" not in body
+    assert "cannot upload" in body, "it has to say what the person cannot do"
+
+    # The draft wording must not leak through the refusal.
+    assert "what deletion cannot undo" not in body
+
+    # And the POST is closed the same way, so a form replayed from a cached page
+    # cannot record consent to text the account was never allowed to read.
+    assert client.post("/consent", data={"diagnosis": "yes"}).status_code in (403, 503)
+    with make_session(engine) as sess:
+        assert sess.scalars(select(m.ConsentEvent)).all() == []

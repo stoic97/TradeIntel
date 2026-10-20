@@ -115,3 +115,90 @@ def test_the_ctr_source_is_kept_alongside_the_product_one(session):
     for trip in trips(session):
         assert trip.ctr_risk_source == "PREMIUM_PAID", "what the CTR knew"
         assert trip.risk_unit_source is s.RiskUnitSourceV1.DECLARED_BUDGET
+
+
+def test_a_budget_declared_after_the_import_still_reaches_the_mirror(session):
+    """The order the PRD's flow actually puts these in (section 4).
+
+    Upload, review, *then* the budget question. The trip rows are written during
+    the import, before the trader has answered, and they are insert-only. So a
+    denominator fixed at import time can never become the declared budget for the
+    history that was just loaded: the trader answers the question and the Mirror
+    goes on saying no trade has one.
+
+    That is what the first walkthrough showed -- forty trades measured against
+    premium paid, zero against the budget, with a declaration covering every one of
+    them. Success criterion 4 and decision 15's "x your declared budget" label were
+    both unreachable in the normal flow.
+    """
+    from services.production.mirror import loader
+
+    trader = a_trader(session)
+    an_import(session, trader)
+    session.commit()
+
+    stored = {t.risk_unit_source for t in trips(session)}
+    assert stored == {s.RiskUnitSourceV1.PREMIUM_PAID}, (
+        "at import time the premium is all the file supports"
+    )
+
+    declare(session, trader, "3000", "2026-01-01")
+    session.commit()
+
+    loaded, _ = loader.load_for(session, trader)
+    assert loaded, "the fixture should produce trips"
+    assert {t.risk_unit_source for t in loaded} == {
+        s.RiskUnitSourceV1.DECLARED_BUDGET
+    }, "the declaration is in force for these days, so it is the denominator"
+
+    # Nothing was rewritten: the row still records what the file alone supported.
+    assert {t.risk_unit_source for t in trips(session)} == {
+        s.RiskUnitSourceV1.PREMIUM_PAID
+    }
+
+
+def test_a_later_declaration_leaves_earlier_trades_on_what_was_in_force(session):
+    """The case that makes resolving-at-read-time correct rather than convenient."""
+    from services.production.mirror import loader
+
+    trader = a_trader(session)
+    an_import(session, trader)
+    declare(session, trader, "5000", "2030-01-01")
+    session.commit()
+
+    loaded, _ = loader.load_for(session, trader)
+    assert {t.risk_unit_source for t in loaded} == {
+        s.RiskUnitSourceV1.PREMIUM_PAID
+    }, "a number that starts in 2030 was not what he risked in 2026"
+
+
+def test_a_percentage_with_no_capital_is_not_a_denominator(session):
+    """A percentage of nothing has no rupee value.
+
+    The budget screen refuses this combination at the door. If one ever reaches the
+    database, the figure must read as missing rather than as measured.
+    """
+    from services.production.accounts import risk_budget as rb
+
+    trader = a_trader(session)
+    session.add(m.RiskBudgetDeclaration(
+        trader_id=trader.id, value=Decimal(2), unit="PCT",
+        capital_amount=None, effective_from="2026-01-01",
+        declared_at=datetime.now(UTC), retrospective=True))
+    session.flush()
+
+    declarations = rb.for_trader(session, trader)
+    assert rb.in_force(declarations, "2026-10-14") is not None
+    assert rb.rupees(rb.in_force(declarations, "2026-10-14")) is None
+
+
+def test_a_correction_on_the_same_date_wins(session):
+    from services.production.accounts import risk_budget as rb
+
+    trader = a_trader(session)
+    declare(session, trader, "3000", "2026-09-01")
+    declare(session, trader, "4000", "2026-09-01")
+    session.flush()
+
+    declarations = rb.for_trader(session, trader)
+    assert rb.rupees(rb.in_force(declarations, "2026-09-05")) == Decimal(4000)

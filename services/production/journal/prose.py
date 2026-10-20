@@ -87,14 +87,23 @@ def _what_happened(facts: dict[str, Any]) -> str:
 
     outcome = ""
     if trades["wins"] or trades["losses"]:
-        parts = []
-        if trades["wins"]:
-            parts.append(f"{_count(trades['wins'], capital=False)} closed up")
-        if trades["losses"]:
-            parts.append(f"{_count(trades['losses'], capital=False)} closed down")
-        if trades["scratches"]:
-            parts.append(f"{_count(trades['scratches'], capital=False)} finished level")
-        outcome = " " + ", ".join(parts).capitalize() + "."
+        groups = [
+            ("closed up", trades["wins"]),
+            ("closed down", trades["losses"]),
+            ("finished level", trades["scratches"]),
+        ]
+        present = [(phrase, n) for phrase, n in groups if n]
+        if len(present) == 1:
+            # One outcome covering the whole period would otherwise print the same
+            # number in two consecutive sentences -- "Eight trades, all before noon.
+            # Net -12,000. Eight closed down." Saying "All eight" makes the second
+            # sentence a fact about the first rather than a repetition of it.
+            phrase, n = present[0]
+            outcome = (f" It {phrase}." if n == 1
+                       else f" All {_count(n, capital=False)} {phrase}.")
+        else:
+            parts = [f"{_count(n, capital=False)} {phrase}" for phrase, n in present]
+            outcome = " " + ", ".join(parts).capitalize() + "."
 
     word = "trade" if count == 1 else "trades"
     return f"{_count(count)} {word}{when}. Net {net}.{outcome}"

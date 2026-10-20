@@ -252,3 +252,85 @@ def test_the_journals_need_signing_in(engine):
         _seed(sess, "fx")
     anonymous = TestClient(create_app())
     assert anonymous.get("/journals", follow_redirects=False).status_code in (302, 303)
+
+
+def test_one_save_records_every_answer_for_that_trade(engine, client):
+    """Three questions, one form, one button.
+
+    The first version of this page gave each question its own form: three buttons
+    a trade, twenty-four on a day with eight trades. That is data entry, not a
+    journal, and it was only visible by looking at the page.
+    """
+    journal = _journals(engine)[0]
+    with make_session(engine) as sess:
+        trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
+    page = client.get(f"/journals/{journal.id}").text
+    client.post(f"/journals/{journal.id}/field",
+                data={"trip_id": trip_id, "planned_sl": "250",
+                      "rationale": "range break", "stop_existed_at_entry": "yes",
+                      "csrf_token": CSRF.search(page).group(1)})
+    with make_session(engine) as sess:
+        stored = {e.field: e.value for e in sess.scalars(
+            select(m.JournalFieldEntry)).all()}
+    assert stored == {"planned_sl": "250", "rationale": "range break",
+                      "stop_existed_at_entry": "yes"}
+
+
+def test_resaving_the_same_answers_adds_no_versions(engine, client):
+    """Edits are append-only, so an unchanged field must not be written.
+
+    One Save posts all three questions whether or not he touched them. Recording
+    those would fill his own history with rows saying he did not change his mind,
+    and the history is the thing PRD 7.4 exists to keep readable.
+    """
+    journal = _journals(engine)[0]
+    with make_session(engine) as sess:
+        trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
+    answers = {"trip_id": trip_id, "planned_sl": "250", "rationale": "range break",
+               "stop_existed_at_entry": "yes"}
+    for _ in range(3):
+        page = client.get(f"/journals/{journal.id}").text
+        client.post(f"/journals/{journal.id}/field",
+                    data={**answers, "csrf_token": CSRF.search(page).group(1)})
+    with make_session(engine) as sess:
+        rows = list(sess.scalars(select(m.JournalFieldEntry)).all())
+    assert len(rows) == 3, [(r.field, r.value) for r in rows]
+
+    # Changing one of them is still a version, and only that one.
+    page = client.get(f"/journals/{journal.id}").text
+    client.post(f"/journals/{journal.id}/field",
+                data={**answers, "planned_sl": "300",
+                      "csrf_token": CSRF.search(page).group(1)})
+    with make_session(engine) as sess:
+        rows = list(sess.scalars(
+            select(m.JournalFieldEntry).order_by(m.JournalFieldEntry.id)).all())
+    assert len(rows) == 4
+    assert rows[-1].field == "planned_sl" and rows[-1].value == "300"
+
+
+def test_an_empty_answer_left_alone_is_not_recorded(engine, client):
+    """Opening a Journal and saving without typing anything records nothing."""
+    journal = _journals(engine)[0]
+    with make_session(engine) as sess:
+        trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
+    page = client.get(f"/journals/{journal.id}").text
+    client.post(f"/journals/{journal.id}/field",
+                data={"trip_id": trip_id, "planned_sl": "", "rationale": "",
+                      "stop_existed_at_entry": "",
+                      "csrf_token": CSRF.search(page).group(1)})
+    with make_session(engine) as sess:
+        assert sess.scalars(select(m.JournalFieldEntry)).all() == []
+
+
+def test_the_page_has_one_form_for_each_trade(engine, client):
+    journal = _journals(engine)[0]
+    with make_session(engine) as sess:
+        trades = len(json.loads(sess.get(m.Journal, journal.id).trip_ids))
+    body = client.get(f"/journals/{journal.id}").text
+    assert body.count('class="trade-form"') == trades
+
+    # One a trade, plus one for the note, whose trip_id is empty because a note is
+    # about the period and not about any single trade. Before this change there
+    # were three forms a trade.
+    assert body.count('name="trip_id"') == trades + 1
+    assert body.count(">Save</button>") == trades + 1

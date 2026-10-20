@@ -29,6 +29,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.production.accounts import risk_budget as rb
 from services.production.ctr.intake.pipeline import ImportPlan
 from services.production.db import models as m
 from services.shared.schemas import scope_v1 as s
@@ -48,22 +49,6 @@ def existing_days(sess: Session, *, trader: m.Trader, source_account: str) -> di
     return {r.trading_day: r.rows_after for r in rows}
 
 
-def _declaration_in_force(
-    declarations: list[m.RiskBudgetDeclaration], trading_day: str
-) -> m.RiskBudgetDeclaration | None:
-    """The declaration covering this trading day, or none.
-
-    The latest one whose effective_from is on or before the day. A number declared
-    in November is not what he was risking in September, and treating it as such
-    would make every figure measured against it quietly wrong -- the kind of wrong
-    that looks like a real result.
-    """
-    covering = [d for d in declarations if d.effective_from <= trading_day]
-    if not covering:
-        return None
-    return max(covering, key=lambda d: (d.effective_from, d.id))
-
-
 def _risk_unit_for(
     trip: RoundTrip,
     trading_day: str,
@@ -74,13 +59,16 @@ def _risk_unit_for(
     Only the first two may ever be a denominator on a v1 screen. The premium is the
     most an option could have lost rather than what was at risk, so it is recorded
     and never divided by; the Mirror says so in section 6.6.
+
+    What this writes is what was knowable when the file was read. A budget declared
+    afterwards -- which is where the PRD's flow puts the question -- is applied when
+    the figure is read, by the same two functions from ``risk_budget``, so the two
+    paths cannot drift apart.
     """
-    declaration = _declaration_in_force(declarations, trading_day)
-    if declaration is not None and declaration.unit == "INR":
-        return s.RiskUnitSourceV1.DECLARED_BUDGET, declaration.value, declaration.id
-    if declaration is not None and declaration.capital_amount:
-        rupees = declaration.capital_amount * declaration.value / Decimal(100)
-        return s.RiskUnitSourceV1.DECLARED_BUDGET, rupees, declaration.id
+    declaration = rb.in_force(declarations, trading_day)
+    amount = rb.rupees(declaration)
+    if amount is not None and declaration is not None:
+        return s.RiskUnitSourceV1.DECLARED_BUDGET, amount, declaration.id
 
     if trip.risk_unit_source is CtrRiskSource.RECORDED_STOP and trip.risk_unit:
         return s.RiskUnitSourceV1.DEFINED_STOP, trip.risk_unit, None

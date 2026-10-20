@@ -15,10 +15,12 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.production.accounts import risk_budget as rb
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.mirror.metrics import Trip
+from services.shared.schemas import scope_v1 as s
 
 PROFILE_DIR = Path(__file__).resolve().parents[1] / "ctr" / "profiles"
 
@@ -29,6 +31,26 @@ class UnknownAdapter(Exception):
 
 class MisdeclaredQuantityUnit(Exception):
     """A quantity that cannot be whole lots under the declared unit."""
+
+
+def _measured_against(
+    row: m.Trip, trading_day: str, declarations: list[m.RiskBudgetDeclaration]
+) -> s.RiskUnitSourceV1:
+    """Which denominator this trip is counted under, decided as it is read.
+
+    The row carries what was knowable when the file was imported. The declared
+    budget usually is not: PRD section 4 asks for it after the import, and trips
+    are insert-only, so a trip written before the question was answered would
+    report `premium_paid` forever. The first walkthrough showed exactly that --
+    forty trades against premium paid, none against the budget, with a declaration
+    covering every one of them.
+
+    PRD 5.5 puts the declared budget first in the hierarchy, so it wins here too,
+    over a stop and over the premium.
+    """
+    if rb.rupees(rb.in_force(declarations, trading_day)) is not None:
+        return s.RiskUnitSourceV1.DECLARED_BUDGET
+    return row.risk_unit_source
 
 
 def lots_for(
@@ -132,17 +154,20 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             )
         quantity_unit = adapter.file_map().quantity_unit
 
-    trips = [
-        Trip(
+    declarations = rb.for_trader(sess, trader)
+
+    trips = []
+    for row in rows:
+        zone = zone_for(row)
+        trading_day = row.entry_ts.astimezone(zone).date().isoformat()
+        trips.append(Trip(
             trip_id=row.trip_id,
-            trading_day=row.entry_ts.astimezone(zone_for(row)).date().isoformat(),
-            entry_ts=row.entry_ts.astimezone(zone_for(row)),
-            exit_ts=row.exit_ts.astimezone(zone_for(row)),
+            trading_day=trading_day,
+            entry_ts=row.entry_ts.astimezone(zone),
+            exit_ts=row.exit_ts.astimezone(zone),
             holding_seconds=int((row.exit_ts - row.entry_ts).total_seconds()),
             net=row.net,
             lots=lots_for(row.quantity or 1, profile_for(row), quantity_unit),
-            risk_unit_source=row.risk_unit_source,
-        )
-        for row in rows
-    ]
+            risk_unit_source=_measured_against(row, trading_day, declarations),
+        ))
     return trips, imp

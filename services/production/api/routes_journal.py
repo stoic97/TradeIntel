@@ -146,14 +146,40 @@ def journal_page(request: Request, journal_id: int):
 def journal_field(
     request: Request,
     journal_id: int,
-    field: str = Form(...),
+    field: str = Form(None),
     value: str = Form(""),
     trip_id: str = Form(None),
+    planned_sl: str = Form(None),
+    rationale: str = Form(None),
+    stop_existed_at_entry: str = Form(None),
     csrf_token: str = Form(None),
 ):
+    """One trade's answers, or one named field.
+
+    A trade's three questions arrive together, from one form with one Save. The
+    first version of this page gave every question its own form and its own button
+    -- three per trade, twenty-four on a day with eight trades -- which is a page
+    that looks like data entry rather than a journal.
+
+    Submitting all three together means two of them usually arrive unchanged. Edits
+    are append-only versions (PRD 7.4), so writing those would fill a trader's
+    history with rows recording that he did not change his mind. Only a value that
+    differs from the one on record is written.
+    """
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.",
                             status_code=403)
+
+    submitted: dict[str, str] = {}
+    if field is not None:
+        submitted[field] = value
+    else:
+        for name, given in (("planned_sl", planned_sl), ("rationale", rationale),
+                            ("stop_existed_at_entry", stop_existed_at_entry)):
+            if given is not None:
+                submitted[name] = given
+    if not submitted:
+        raise HTTPException(status_code=400)
 
     with make_session(request.app.state.engine) as sess:
         trader, elsewhere = _gate(request, sess)
@@ -173,8 +199,16 @@ def journal_field(
             trip_entry, trip_exit = trip.entry_ts, trip.exit_ts
 
         try:
-            fields.record(sess, journal=journal, field=field, value=value,
-                          trip_id=trip_id, trip_entry=trip_entry, trip_exit=trip_exit)
+            for name, given in submitted.items():
+                on_record = fields.current(sess, journal=journal, field=name,
+                                           trip_id=trip_id)
+                if on_record is not None and (on_record.value or "") == given:
+                    continue
+                if on_record is None and not given.strip():
+                    continue
+                fields.record(sess, journal=journal, field=name, value=given,
+                              trip_id=trip_id, trip_entry=trip_entry,
+                              trip_exit=trip_exit)
         except fields.UnknownField:
             raise HTTPException(status_code=400) from None
         sess.commit()

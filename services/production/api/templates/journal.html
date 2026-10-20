@@ -33,17 +33,18 @@
   {% for row in rows %}
   <div class="trade">
     <h3>{{ row.label }} — {{ row.net }}</h3>
-    {% for name, question in prompts %}
-    <form method="post" action="/journals/{{ journal.id }}/field" class="field">
+    <form method="post" action="/journals/{{ journal.id }}/field" class="trade-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="field" value="{{ name }}">
       <input type="hidden" name="trip_id" value="{{ row.trip_id }}">
-      <label for="{{ name }}-{{ row.trip_id }}">{{ question }}</label>
-      <input id="{{ name }}-{{ row.trip_id }}" name="value"
-             value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}">
+      {% for name, question in prompts %}
+      <div class="field">
+        <label for="{{ name }}-{{ row.trip_id }}">{{ question }}</label>
+        <input id="{{ name }}-{{ row.trip_id }}" name="{{ name }}"
+               value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}">
+      </div>
+      {% endfor %}
       <button type="submit">Save</button>
     </form>
-    {% endfor %}
   </div>
   {% endfor %}
 </section>
