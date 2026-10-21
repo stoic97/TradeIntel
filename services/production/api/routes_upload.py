@@ -185,13 +185,22 @@ def confirm_duplicates(request: Request, import_id: int,
         text = content.decode("utf-8-sig", errors="replace")
 
         existing = persist.existing_days(sess, trader=trader, source_account="A")
-        plan = pl.plan_import(
-            text,
-            context=pl.ImportContext(
-                trader_id=str(trader.id), source_account="A",
-                code_version=_code_version(request), existing_days=existing,
-            ),
-        )
+        # The same gate the upload path keeps. A confirmation re-reads the file
+        # from the store and re-plans it, so an unchecked broker map has to
+        # refuse here too -- otherwise the gate held on upload and let go one
+        # click later, which is the worse failure of the two (TD-024).
+        try:
+            plan = pl.plan_import(
+                text,
+                context=pl.ImportContext(
+                    trader_id=str(trader.id), source_account="A",
+                    code_version=_code_version(request), existing_days=existing,
+                ),
+                production=request.app.state.settings.production,
+            )
+        except filemap.UnverifiedFileMap:
+            return page(request, "upload_closed.html", status_code=503,
+                        title="Not open for your broker yet")
         confirmed = dup.confirm_group(
             dup.Classification(tuple(
                 dup.ClassifiedRow(r.row_no, r.raw_text, r.flag, r.dup_group, r.fill_id)

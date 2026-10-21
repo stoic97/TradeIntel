@@ -275,3 +275,37 @@ def test_an_unchecked_broker_map_refuses_with_a_page_not_a_crash(client, monkeyp
     assert "cannot take a file" in body
     assert "internal server error" not in body
     assert "nothing of yours has been stored" in body
+
+
+def test_a_confirmation_respects_the_production_gate(client, engine, monkeypatch):
+    """The gate held on upload and let go one click later.
+
+    ``confirm-duplicates`` re-reads the stored file and re-plans it, so it is a
+    second door into the pipeline -- and it passed no ``production`` flag. An
+    unchecked broker map would therefore refuse the upload and accept the
+    confirmation, which is the worse of the two failures: by then the trader has
+    been shown what we read.
+    """
+    import dataclasses
+
+    from services.production.ctr.adapters import filemap
+
+    response = upload(client, DUPES / "duplicated_block.csv")
+    location = response.headers["location"]
+    page = client.get(location).text
+    csrf = CSRF.search(page).group(1)
+    group = re.search(r'name="dup_group" value="([^"]+)"', page).group(1)
+
+    app = client.app
+    app.state.settings = dataclasses.replace(app.state.settings, production=True)
+
+    def unchecked(file_map):
+        raise filemap.UnverifiedFileMap("nobody has opened this broker's app")
+
+    monkeypatch.setattr(filemap, "require_verified", unchecked)
+    confirmed = client.post(f"{location}/confirm-duplicates",
+                            data={"dup_group": group, "csrf_token": csrf})
+
+    assert confirmed.status_code == 503, "a refusal, not a crash and not a quiet accept"
+    with make_session(engine) as sess:
+        assert len(sess.scalars(select(m.Import)).all()) == 1, "no second version written"
