@@ -64,8 +64,11 @@ def delete_submit(
         retained = record.what_retained
         sess.commit()
 
+    # hide_nav: the header would otherwise offer "Your account" and "Sign out"
+    # for an account that no longer exists, because the cookie is still on the
+    # request that renders this page.
     response = page(request, "delete_done.html", title="Deleted",
-                    removed=removed, retained=retained)
+                    removed=removed, retained=retained, hide_nav=True)
     # His session points at an account that no longer exists. Clearing the cookie
     # is tidiness, not security: current_trader already finds nothing.
     response.delete_cookie(auth.SESSION_COOKIE)

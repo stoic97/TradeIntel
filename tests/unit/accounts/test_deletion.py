@@ -230,3 +230,45 @@ def test_the_deletion_drill_the_release_gate_asks_for(engine, store):
         assert deletion.nothing_remains(sess, store, trader_id) == []
         assert not store.exists(digest)
         assert sess.scalars(select(m.DeletionRecord)).one().id == record.id
+
+
+def test_an_admin_import_puts_the_file_where_deletion_can_reach_it(engine, store,
+                                                                   tmp_path):
+    """The CLI wrote the raw file in plaintext, outside the encrypted store.
+
+    Found by the deletion drill on the dev box: the record said
+    "files_deleted: 0" after deleting an account whose tradebook had been
+    imported by the admin command. The file was there, as `<digest>.csv`, in
+    plaintext -- so it was neither encrypted at rest (ADR-007) nor reachable by
+    the trader's own deletion, while the data-flow map said it was both.
+    """
+    import os
+
+    from services.production.api import cli
+
+    csv = tmp_path / "book.csv"
+    csv.write_text(
+        "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,"
+        "Trade Price,Trade Value,Status\n"
+        "2026-10-14,09:20:01,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
+        "Commodity,1,5200.00,5200.00,Traded\n"
+        "2026-10-14,10:11:30,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
+        "Commodity,1,5215.00,5215.00,Traded\n"
+    )
+    db = os.environ["SCOPE_DB"]
+    cli.main(["--db", db, "create-trader", "--login-id", "cli", "--name", "C"])
+    cli.main(["--db", db, "import", "--login-id", "cli", "--file", str(csv)])
+
+    live = cli.file_store()
+    with make_session(engine) as sess:
+        digest = sess.scalars(select(m.RawFile.sha256)).one()
+    assert live.exists(digest), "the file is not in the encrypted store"
+    assert not list(cli.store_root().glob("*.csv")), "plaintext left behind"
+
+    with make_session(engine) as sess:
+        trader = sess.scalars(
+            select(m.Trader).where(m.Trader.login_id == "cli")).one()
+        record = deletion.delete_trader(sess, live, trader=trader)
+        sess.commit()
+    assert json.loads(record.what_removed)["files_deleted"] == 1
+    assert not live.exists(digest)
