@@ -26,6 +26,7 @@ timestamp produces when one order fills twice in the same second. Both are real.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 HEADER = (
@@ -36,9 +37,35 @@ HEADER_WITH_ID = HEADER + ",Order ID"
 HERE = Path(__file__).parent
 
 
-def row(date: str, time: str, name: str, side: str, qty: int, price: str, value: str) -> str:
+LOT = Decimal(100)
+"""Units in one lot of the synthetic instrument, from MCX_WIDGETOIL.yaml.
+
+Dhan reports quantity in units, not lots: one NIFTY lot appears as its contract
+size, and `Trade Value / Quantity` equals the quoted premium, which only holds
+if the quantity is units (TD-029, confirmed 21 Oct 2026). These fixtures said 1
+where a real export says 100.
+"""
+
+
+def row(date: str, time: str, name: str, side: str, lots: int, lot_price: str,
+        value: str) -> str:
+    """One row, written the way the broker writes it.
+
+    Call sites give lots and the value of one lot, because that is how a person
+    thinks about the trade. The file carries units and the price of one unit,
+    because that is what Dhan writes.
+    """
+    assert Decimal(value) == lots * Decimal(lot_price), (
+        f"{lots} x {lot_price} is not {value}"
+    )
+    units = lots * LOT
+    unit_price = (Decimal(value) / units).quantize(Decimal("0.01"))
+    assert unit_price * units == Decimal(value), (
+        f"{value} over {units} units is not a clean price"
+    )
     return (
-        f"{date},{time},{name},{side},INTRADAY,MCX,Commodity,{qty},{price},{value},Traded"
+        f"{date},{time},{name},{side},INTRADAY,MCX,Commodity,{units},"
+        f"{unit_price},{value},Traded"
     )
 
 

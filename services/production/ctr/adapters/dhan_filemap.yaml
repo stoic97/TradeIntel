@@ -11,9 +11,9 @@
 # together with test_quantity_unit.py and TD-029.
 broker: Dhan
 adapter_id: dhan_tradebook_v1
-version: "0-draft"
-verified: false
-verified_on: null
+version: "1"
+verified: true
+verified_on: '2026-10-21'
 # DRAFT, and the one below is the riskiest line in this file. "Quantity/Lot" is
 # the column's real name and it does not say which it holds. Both readings satisfy
 # Trade Value / Quantity = Trade Price, so no file here can settle it. To check:
@@ -21,10 +21,10 @@ verified_on: null
 # 3 -> lots) or a multiple of the contract's lot size (75, 100, 200 -> units).
 # Getting it wrong prints a trader "100 lots" where he traded one, or the reverse.
 # Money does not depend on this; only the size figure does.
-quantity_unit: lots
+quantity_unit: units
 exports:
-  - broker_name: Tradebook
-    where_it_lives: Reports
+  - broker_name: All Exchange Transactions
+    where_it_lives: Profile
     is_the_one_we_need: true
     note: >
       Every executed trade with date, time, price, quantity and trade value. This is

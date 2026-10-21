@@ -73,7 +73,7 @@ def client(engine):
                 symbol=row["symbol"], segment="OPT", direction="LONG",
                 entry_ts=datetime.fromisoformat(row["entry_ts"]),
                 exit_ts=datetime.fromisoformat(row["exit_ts"]),
-                quantity=row["lots"], entry_price=Decimal(100),
+                quantity=row["quantity"], entry_price=Decimal(100),
                 exit_price=Decimal(100), gross=Decimal(row["gross"]),
                 fees=Decimal(row["fees"]), net=Decimal(row["net"]),
                 fees_available=False,

@@ -40,6 +40,9 @@ OUT = HERE / "demo_tradebook.csv"
 HEADER = ("Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,"
           "Trade Price,Trade Value,Status")
 BASE_PRICE = Decimal(5200)
+"""The value of one lot at entry. The file carries the price of one unit."""
+LOT = 100
+"""Units in one lot, from MCX_WIDGETOIL.yaml. Dhan writes units (TD-029)."""
 EXPIRY = "19 SEP"
 
 
@@ -50,6 +53,7 @@ def rows() -> list[tuple[datetime, str]]:
         strike = 5000 + n * 50
         name = f"WIDGETOIL {EXPIRY} {strike} CALL"
         lots = int(trip["lots"])
+        units = lots * LOT
         entry_value = BASE_PRICE * lots
         exit_value = entry_value + Decimal(trip["gross"])
         for ts_key, side, value in (
@@ -57,10 +61,10 @@ def rows() -> list[tuple[datetime, str]]:
             ("exit_ts", "SELL", exit_value),
         ):
             ts = datetime.fromisoformat(trip[ts_key])
-            price = (value / lots).quantize(Decimal("0.01"))
+            price = (value / units).quantize(Decimal("0.01"))
             out.append((ts, ",".join([
                 ts.date().isoformat(), ts.strftime("%H:%M:%S"), name, side,
-                "INTRADAY", trip["exchange"], "Commodity", str(lots),
+                "INTRADAY", trip["exchange"], "Commodity", str(units),
                 f"{price:.2f}", f"{value:.2f}", "Traded",
             ])))
     return out

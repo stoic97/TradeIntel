@@ -251,9 +251,9 @@ def test_an_admin_import_puts_the_file_where_deletion_can_reach_it(engine, store
         "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,"
         "Trade Price,Trade Value,Status\n"
         "2026-10-14,09:20:01,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
-        "Commodity,1,5200.00,5200.00,Traded\n"
+        "Commodity,100,52.00,5200.00,Traded\n"
         "2026-10-14,10:11:30,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
-        "Commodity,1,5215.00,5215.00,Traded\n"
+        "Commodity,100,52.15,5215.00,Traded\n"
     )
     db = os.environ["SCOPE_DB"]
     cli.main(["--db", db, "create-trader", "--login-id", "cli", "--name", "C"])
