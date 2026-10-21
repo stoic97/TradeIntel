@@ -1,0 +1,36 @@
+# /etc/caddy/Caddyfile
+#
+# Caddy terminates TLS and proxies to the app on localhost. Let's Encrypt is the
+# only external service in the data-flow map, and the only thing it learns is the
+# hostname (docs/runbooks/data-flow-map.md).
+
+scope.plusev.in {
+	reverse_proxy 127.0.0.1:8000
+
+	encode gzip
+
+	# Paths and status codes only. No request bodies, so no uploaded content and
+	# no figures reach the log. The map says 14 days; this is where that is set.
+	log {
+		output file /var/log/caddy/scope.log {
+			roll_size 10mb
+			roll_keep_for 336h
+		}
+		format console
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+	}
+}
+
+# Before DNS exists, comment out the block above and use this one. Caddy issues
+# its own certificate; the browser warns, which is correct and is why this is not
+# the production block.
+# :443 {
+# 	tls internal
+# 	reverse_proxy 127.0.0.1:8000
+# }

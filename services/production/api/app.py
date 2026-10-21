@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from services.production.api import (
     routes_budget,
     routes_consent,
+    routes_deletion,
     routes_eligibility,
     routes_events,
     routes_identity,
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
     app.include_router(routes_eligibility.router)
+    app.include_router(routes_deletion.router)
 
     @app.get("/health")
     def health() -> JSONResponse:

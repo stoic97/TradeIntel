@@ -129,6 +129,38 @@ def cmd_classify(args: argparse.Namespace) -> None:
         print("  he can no longer be shown unreviewed consent text")
 
 
+def cmd_delete_trader(args: argparse.Namespace) -> None:
+    """Delete a trader and everything derived from him, on his request.
+
+    The page is how a trader does it himself. This is for the request that arrives
+    as a message, which at stage 0 is how most of them will: the runbook says to
+    record who asked and when, and this writes the same record the page writes.
+
+    It prints what came out by table and by file count. It prints no trade.
+    """
+    from services.production.accounts import deletion
+    from services.production.accounts.file_store import FileStore
+
+    engine = make_engine(args.db)
+    run_migrations(engine)
+    store = FileStore(STORE, os.environ["SCOPE_FILE_KEY"])
+    with make_session(engine) as sess:
+        trader = _trader(sess, args.login_id)
+        if not args.yes:
+            raise SystemExit(
+                f"this deletes {args.login_id} and everything derived from him, and "
+                "it cannot be undone. Add --yes when you mean it."
+            )
+        _log(sess, os.environ.get("USER", "admin"), "delete_trader", args.login_id)
+        record = deletion.delete_trader(sess, store, trader=trader)
+        removed = record.what_removed
+        sess.commit()
+    print(f"deleted {args.login_id}")
+    print(f"  removed   {removed}")
+    print("  retained  the consent record and this deletion record")
+    print("  backups   roll off within 30 days; check them per the runbook")
+
+
 def cmd_invite(args: argparse.Namespace) -> None:
     """Mint an invite code and print the URL it opens.
 
@@ -261,6 +293,12 @@ def main(argv: list[str] | None = None) -> None:
     imp.add_argument("--production", action="store_true",
                      help="refuse an unverified broker file map (TD-024)")
     imp.set_defaults(func=cmd_import)
+
+    delete = sub.add_parser("delete-trader")
+    delete.add_argument("--login-id", required=True)
+    delete.add_argument("--yes", action="store_true",
+                        help="required: this cannot be undone")
+    delete.set_defaults(func=cmd_delete_trader)
 
     classify = sub.add_parser("classify")
     classify.add_argument("--login-id", required=True)
