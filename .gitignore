@@ -40,3 +40,6 @@ scope.db
 scope.db-wal
 scope.db-shm
 _files/
+
+# the concierge mirror report generator writes here
+out/
