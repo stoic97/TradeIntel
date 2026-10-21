@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>We cannot take a file from your broker yet</h1>
+
+  <p>Before we read anyone's tradebook we check, against the broker's own app,
+    which export we need and where it sits. That check has not been done for
+    your broker.</p>
+
+  <p>It matters because of what happens when the wrong file arrives. We tell you
+    which export to send instead and where to find it, and if nobody has checked,
+    that sentence sends you somewhere that may not exist. Rather than guess at
+    your broker's menus, we are not taking files until someone has looked.</p>
+
+  <p>Nothing you did caused this, and nothing of yours has been stored.</p>
+</section>
+{% endblock %}
