@@ -11,7 +11,7 @@
 <body>
   <header class="bar">
     <span class="mark">PlusEV Scope</span>
-    {% if signed_in %}
+    {% if signed_in and not hide_nav %}
     <nav class="nav"><a href="/account">Your account</a></nav>
     <form method="post" action="/logout" class="inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

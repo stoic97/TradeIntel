@@ -15,7 +15,7 @@ Multiplying the quoted price would inject up to Rs 8 of error per row, so ``pric
 is derived as ``value / quantity`` at full precision and the quoted figure is kept
 as ``quoted_price`` for display only.
 
-**The expiry has no year.** ``NIFTY 22 SEP 23300 PUT`` -- the year is inferred as the
+**The expiry has no year.** ``WIDGETOIL 22 SEP 5000 PUT`` -- the year is inferred as the
 first ``DD MON`` on or after the trade date. 78 real rows trade in December against a
 January expiry, so this is not an edge case. An inferred expiry more than
 ``MAX_EXPIRY_HORIZON_DAYS`` ahead means the inference misfired, and the row is
@@ -71,7 +71,7 @@ _MONTHS = {
     )
 }
 
-# "CRUDEOILM 14 MAY 9700 CALL" -> symbol, day, month, strike, CALL|PUT
+# "WIDGETOIL 14 MAY 5000 CALL" -> symbol, day, month, strike, CALL|PUT
 _CONTRACT = re.compile(
     r"^(?P<symbol>\S+)\s+(?P<day>\d{1,2})\s+(?P<mon>[A-Za-z]{3})\s+"
     r"(?P<strike>\d+(?:\.\d+)?)\s+(?P<kind>CALL|PUT)$"
