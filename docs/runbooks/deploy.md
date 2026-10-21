@@ -4,9 +4,10 @@ ADR-007 fixes the shape: one DigitalOcean Basic Droplet in Bangalore, under a
 product-only account, Caddy and Let's Encrypt in front, systemd behind, daily
 droplet backups. Everything below follows from that.
 
-**Nothing here has been run yet.** It is written from the code and the ADR, and
-the first person to follow it should expect to correct a line or two and commit
-the correction.
+**First run: 21 October 2026**, on the cheapest Basic droplet (512 MB, 10 GB) in
+BLR1, which is comfortable for a few dozen invited traders. Everything below has
+been done once and the corrections that run produced are folded in. Expect to
+correct a line or two anyway, and commit the correction.
 
 ## Before you start
 
@@ -21,6 +22,33 @@ the correction.
 Basic droplet, Bangalore (BLR1), Ubuntu LTS. Enable **daily backups** when you
 create it — the consent text's 30-day sentence depends on them existing.
 
+    apt update && apt upgrade -y
+    apt install -y git curl ufw sqlite3 debian-keyring debian-archive-keyring apt-transport-https
+    ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable
+
+`sqlite3` is not optional: `backup.sh` takes the backup with the sqlite CLI's
+`.backup`, and without it `cron.daily` fails with "command not found" — a
+backup that silently never happens.
+
+If `apt upgrade` asks about `sshd_config`, **keep the version currently
+installed**. The image's SSH config is deliberately key-only; the maintainer's
+version would replace it, and you would find out on the next reboot.
+
+On a 512 MB droplet, add swap before installing anything. The app does not need
+it — it runs in about 100 MB — but the install does, and an OOM-killed
+`uv sync` leaves you guessing.
+
+    fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+Caddy, which Ubuntu ships at 2.6.2; the project's own repository is current:
+
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main" > /etc/apt/sources.list.d/caddy-stable.list
+    apt update && apt install -y caddy
+
+Then the user and the directories:
+
     adduser --system --group --home /srv/scope scope
     mkdir -p /srv/scope/data/files /etc/scope /var/backups/scope
     chown -R scope:scope /srv/scope
@@ -28,7 +56,10 @@ create it — the consent text's 30-day sentence depends on them existing.
 
 ## 2. The keys
 
-Generate both on the box, into `/etc/scope/scope.env`, mode 0600:
+Generate both on the box, into `/etc/scope/scope.env`, mode 0600. The session
+key first; the file key after step 3, because it needs the project's own
+`cryptography` and a 512 MB box does not want a second Python stack installed
+system-wide just to generate one string:
 
     SCOPE_SECRET_KEY   python3 -c "import secrets; print(secrets.token_urlsafe(48))"
     SCOPE_FILE_KEY     python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -46,9 +77,24 @@ export against Dhan's own interface.
 
 ## 3. The code
 
-    curl -LsSf https://astral.sh/uv/install.sh | sh    # to /usr/local/bin/uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh    # installs to /root/.local/bin
+    cp /root/.local/bin/uv /usr/local/bin/uv
     git clone <repo> /srv/scope && cd /srv/scope
-    uv sync --frozen --no-group research
+
+uv's interpreter must not live under `/root`. The service runs as `scope`,
+`/root` is 0700, and the venv's `python` is a symlink into it — so the service
+fails with `203/EXEC` and "Permission denied" on `.venv/bin/python`, which reads
+like a problem with the venv rather than with where the interpreter went:
+
+    mkdir -p /opt/uv/python
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv python install 3.11
+    chmod -R a+rX /opt/uv
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
+    chown -R scope:scope /srv/scope
+
+Now the file key, from the project's own environment:
+
+    uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 The research group is not installed on the server: it is the Bayesian stack, the
 product does not import it, and leaving it out keeps the box small.
@@ -59,13 +105,24 @@ product does not import it, and leaving it out keeps the box small.
     systemctl daemon-reload && systemctl enable --now scope
     systemctl status scope
 
+Startup takes about five seconds on the smallest droplet — the migration check
+and the framework read on one shared vCPU. A `curl` fired straight after a
+restart returns 502 with nothing whatever wrong; wait for "Application startup
+complete" in `journalctl -u scope`.
+
     cp deploy/Caddyfile /etc/caddy/Caddyfile
     systemctl reload caddy
 
-Then, as the `scope` user with the environment loaded:
+Then, as the `scope` user with the environment loaded. `/etc/scope` is 0700 and
+root-owned, so root reads the file and passes it in:
 
-    python -m services.production.api.cli init-db
-    python -m services.production.api.cli invite --code <code-for-the-first-partner>
+    sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
+        .venv/bin/python -m services.production.api.cli init-db
+    sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
+        .venv/bin/python -m services.production.api.cli invite --code <code>
+
+The invite command prints a `127.0.0.1` URL because it has no idea what hostname
+it is reachable at. Substitute the real one.
 
 ## 5. Backups and the drill
 

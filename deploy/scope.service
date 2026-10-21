@@ -20,9 +20,12 @@ WorkingDirectory=/srv/scope
 # two.
 EnvironmentFile=/etc/scope/scope.env
 
-ExecStart=/usr/local/bin/uv run --frozen --no-group research \
-    uvicorn services.production.api.app:create_app --factory \
-    --host 127.0.0.1 --port 8000
+# Not `uv run`. ProtectSystem=strict leaves only /srv/scope/data writable and
+# uv wants a cache under the service user's home, and uv installed to /root,
+# which ProtectHome=yes puts out of reach anyway. The venv's own uvicorn needs
+# neither uv on PATH nor anywhere to write.
+ExecStart=/srv/scope/.venv/bin/uvicorn services.production.api.app:create_app \
+    --factory --host 127.0.0.1 --port 8000
 
 # Caddy is the only thing that talks to it; it never listens on a public address.
 Restart=on-failure

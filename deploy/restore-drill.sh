@@ -27,8 +27,12 @@ sqlite3 "$WORK/scope.db" "select count(*) || ' tables' from sqlite_master where 
 sqlite3 "$WORK/scope.db" "select 'imports: ' || count(*) from \"import\";"
 
 echo "--- a stored file decrypts with the live key"
+# The project's own interpreter, not `uv run`. uv rebuilds the editable install
+# and leaves venv files owned by whoever ran the drill -- root, from cron.daily --
+# and the service then cannot start. A monthly drill that breaks the thing it is
+# meant to reassure you about is worse than no drill.
 cd /srv/scope
-SCOPE_FILES="$WORK/files" uv run --frozen --no-group research python - <<'PY'
+SCOPE_FILES="$WORK/files" .venv/bin/python - <<'PY'
 import os
 from pathlib import Path
 from services.production.accounts.file_store import FileStore

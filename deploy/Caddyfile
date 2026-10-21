@@ -30,7 +30,15 @@ scope.plusev.in {
 # Before DNS exists, comment out the block above and use this one. Caddy issues
 # its own certificate; the browser warns, which is correct and is why this is not
 # the production block.
-# :443 {
+# https://203.0.113.10, https://127.0.0.1 {
 # 	tls internal
 # 	reverse_proxy 127.0.0.1:8000
 # }
+#
+# Name the addresses. A bare `:443` with `tls internal` has no identifier to
+# issue a certificate for, and the handshake fails with a TLS internal alert
+# that looks like a Caddy fault rather than a missing site name. Substitute the
+# droplet's own address for the example one.
+#
+# Leave HSTS out of that block. Pinning it against a self-signed certificate
+# makes the later move to the real hostname needlessly painful.

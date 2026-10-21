@@ -43,3 +43,4 @@ _files/
 
 # the concierge mirror report generator writes here
 out/
+data/files/
