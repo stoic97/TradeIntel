@@ -27,6 +27,7 @@ from sqlalchemy import select
 from services.production.accounts.file_store import FileStore
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import duplicates as dup
 from services.production.ctr.intake import persist
 from services.production.ctr.intake import pipeline as pl
@@ -95,16 +96,27 @@ async def upload_file(
         stored = _store(request).put(content)
         text = content.decode("utf-8-sig", errors="replace")
         existing = persist.existing_days(sess, trader=trader, source_account="A")
-        plan = pl.plan_import(
-            text,
-            context=pl.ImportContext(
-                trader_id=str(trader.id),
-                source_account="A",
-                code_version=_code_version(request),
-                existing_days=existing,
-            ),
-            production=request.app.state.settings.production,
-        )
+        # In production the pipeline refuses a file whose broker map nobody has
+        # checked, which is right: a rejection built from a guessed map names an
+        # export that may not exist. It refused by raising and nothing caught it,
+        # so an upload from an unchecked broker reached the trader as "Internal
+        # Server Error" -- the same shape as the consent gate's 500, on the
+        # screen that matters most. Dhan is checked now; the second adapter will
+        # not be (TD-027), and this is the path it takes.
+        try:
+            plan = pl.plan_import(
+                text,
+                context=pl.ImportContext(
+                    trader_id=str(trader.id),
+                    source_account="A",
+                    code_version=_code_version(request),
+                    existing_days=existing,
+                ),
+                production=request.app.state.settings.production,
+            )
+        except filemap.UnverifiedFileMap:
+            return page(request, "upload_closed.html", status_code=503,
+                        title="Not open for your broker yet")
         imp = persist.write_plan(
             sess, trader=trader, plan=plan, raw_sha256=stored.sha256,
             original_name=file.filename or "tradebook.csv",

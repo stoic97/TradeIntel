@@ -244,3 +244,34 @@ def test_an_upload_writes_a_journal_for_every_complete_day(client, engine):
 def test_the_journal_list_shows_what_the_upload_generated(client):
     upload(client, content=_two_days())
     assert "2026-10-14" in client.get("/journals").text
+
+
+def test_an_unchecked_broker_map_refuses_with_a_page_not_a_crash(client, monkeypatch):
+    """The refusal is right; "Internal Server Error" is not how to say it.
+
+    The pipeline will not read a file whose broker map nobody has checked against
+    the broker's interface, because the rejection it would write names an export
+    that may not exist. That refusal reached the browser as a 500 until now --
+    found by reading the deploy runbook, not by a test, because no test ran the
+    app in production mode.
+    """
+    import dataclasses
+
+    from services.production.ctr.adapters import filemap
+
+    # Two things have to be true for the refusal to fire, and the first is why
+    # no existing test caught this: the check only runs in production, and the
+    # suite never runs the app that way.
+    app = client.app
+    app.state.settings = dataclasses.replace(app.state.settings, production=True)
+
+    def unchecked(file_map):
+        raise filemap.UnverifiedFileMap("nobody has opened this broker's app")
+
+    monkeypatch.setattr(filemap, "require_verified", unchecked)
+    response = upload(client, content=_two_days())
+    assert response.status_code == 503, "a refusal, not a crash"
+    body = " ".join(response.text.lower().split())
+    assert "cannot take a file" in body
+    assert "internal server error" not in body
+    assert "nothing of yours has been stored" in body
