@@ -39,28 +39,36 @@ def test_every_export_entry_states_a_name_and_a_location():
         assert isinstance(e.is_the_one_we_need, bool)
 
 
-def test_the_dhan_map_is_marked_unverified_today():
-    """When someone verifies it against Dhan's interface, this test is updated."""
+def test_the_dhan_map_was_checked_against_dhan():
+    """Verified 21 October 2026, and this test is how that is recorded.
+
+    It asserted the opposite until then, so flipping the flag had to be done on
+    purpose rather than by someone editing a yaml file in passing. What was
+    checked: the trade-level export's name and where it sits, the header row,
+    and that quantity is reported in units.
+    """
     m = fm.load(MAP_DIR / "dhan_filemap.yaml")
-    assert m.verified is False
-    assert m.verified_on is None
+    assert m.verified is True
+    assert m.verified_on == "2026-10-21"
+    assert m.quantity_unit == "units"
+    assert m.wanted.broker_name == "All Exchange Transactions"
+    assert m.wanted.where_it_lives == "Profile"
 
 
-def test_an_unverified_map_is_refused_in_production():
-    m = fm.load(MAP_DIR / "dhan_filemap.yaml")
-    with pytest.raises(fm.UnverifiedFileMap):
-        fm.require_verified(m)
-
-
-def test_a_verified_map_passes_the_production_check(tmp_path):
-    draft = (MAP_DIR / "dhan_filemap.yaml").read_text()
-    checked = draft.replace("verified: false", "verified: true").replace(
-        "verified_on: null", "verified_on: '2026-10-16'"
-    )
-    assert "verified: true" in checked, "the corruption did not apply"
+def test_an_unverified_map_is_still_refused_in_production(tmp_path):
+    """The gate itself, on a map that has not been checked."""
+    draft = (MAP_DIR / "dhan_filemap.yaml").read_text().replace(
+        "verified: true", "verified: false"
+    ).replace("verified_on: '2026-10-21'", "verified_on: null")
+    assert "verified: false" in draft, "the edit did not apply"
     path = tmp_path / "x_filemap.yaml"
-    path.write_text(checked)
-    fm.require_verified(fm.load(path))
+    path.write_text(draft)
+    with pytest.raises(fm.UnverifiedFileMap):
+        fm.require_verified(fm.load(path))
+
+
+def test_a_verified_map_passes_the_production_check():
+    fm.require_verified(fm.load(MAP_DIR / "dhan_filemap.yaml"))
 
 
 def test_the_rejection_message_names_the_export_and_where_it_lives():

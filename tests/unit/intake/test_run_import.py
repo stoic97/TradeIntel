@@ -13,9 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import pipeline as pl
 from services.shared.schemas import scope_v1 as s
 
@@ -112,15 +109,18 @@ def test_the_digest_ignores_wall_clock_time():
     assert a.digest() == b.digest()
 
 
-def test_an_unverified_file_map_is_refused_in_production_mode():
-    """TD-024: Dhan's map is a draft, so a real file cannot be planned in production.
+def test_a_checked_file_map_lets_a_real_file_be_planned_in_production():
+    """TD-024 closed 21 Oct 2026: the Dhan map was checked against Dhan.
 
-    The file must be one the adapter recognises -- a file matching no adapter has no
-    map to verify, and its broker-neutral rejection names no export.
+    This asserted the refusal until then, and the refusal was right while the map
+    was a guess -- a rejection built from a guessed map sends a trader to the
+    wrong export. The gate has not gone anywhere; it is tested on an unchecked
+    map in tests/unit/shared/test_file_maps.py. What changed is that this
+    broker's map is no longer one.
     """
     text = (DUPES / "clean.csv").read_text()
-    with pytest.raises(filemap.UnverifiedFileMap):
-        pl.plan_import(text, context=CONTEXT, production=True)
+    result = pl.plan_import(text, context=CONTEXT, production=True)
+    assert result.outcome is not s.ImportOutcome.REJECTED
 
 
 def test_a_file_matching_no_adapter_is_rejected_even_in_production():

@@ -88,6 +88,10 @@ TRIPS: list[tuple[str, str, str, int, int, int, str]] = [
 ]
 
 
+LOT = 100
+"""Units in one lot of the synthetic instrument, from MCX_WIDGETOIL.yaml."""
+
+
 def build() -> list[dict]:
     out = []
     for trip_id, day, entry, minutes, net, lots, source in TRIPS:
@@ -104,6 +108,10 @@ def build() -> list[dict]:
             "fees": "0",
             "fees_available": False,
             "lots": lots,
+            # What the broker's file would carry. Dhan reports units, not lots
+            # (TD-029), so a one-lot trade in this instrument appears as 100.
+            # `lots` above stays the derived answer the Mirror must reach.
+            "quantity": lots * LOT,
             "risk_unit_source": source,
             "exchange": "MCX",
             "symbol": "WIDGETOIL",

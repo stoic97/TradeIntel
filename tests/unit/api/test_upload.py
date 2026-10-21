@@ -215,13 +215,13 @@ def _two_days() -> bytes:
     base = (DUPES / "clean.csv").read_text().rstrip("\n").splitlines()
     later = [
         ("2026-10-15,09:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
-         "Commodity,1,5300.00,5300.00,Traded"),
+         "Commodity,100,53.00,5300.00,Traded"),
         ("2026-10-15,10:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
-         "Commodity,1,5310.00,5310.00,Traded"),
+         "Commodity,100,53.10,5310.00,Traded"),
         ("2026-10-15,11:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
-         "Commodity,1,5320.00,5320.00,Traded"),
+         "Commodity,100,53.20,5320.00,Traded"),
         ("2026-10-15,12:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
-         "Commodity,1,5330.00,5330.00,Traded"),
+         "Commodity,100,53.30,5330.00,Traded"),
     ]
     return ("\n".join(base + later) + "\n").encode()
 

@@ -97,16 +97,17 @@ def test_the_file_map_must_declare_a_unit_it_recognises(tmp_path):
         filemap.load(bad)
 
 
-def test_the_dhan_map_declares_its_quantity_unit_and_is_still_unverified():
-    """The declaration is a draft until someone opens Dhan and looks.
+def test_the_dhan_map_declares_units_and_has_been_checked():
+    """Checked 21 October 2026. It said "lots", and lots was wrong.
 
-    When that happens, this test is the one that has to be changed on purpose.
+    Dhan reports quantity in units: one NIFTY lot appears as its contract size.
+    The decisive evidence was already in the adapter -- `Trade Value / Quantity`
+    equals the quoted premium on all but 217 of 3,828 real rows, and that only
+    holds if the quantity is units. Read as lots, the Mirror would have told a
+    trader he traded sixty-five times the size he did.
     """
     adapter = oc.adapter_for(dhan_tradebook.FORMAT_ID)
     assert adapter is not None
     file_map = adapter.file_map()
-    assert file_map.quantity_unit in ("lots", "units")
-    assert file_map.verified is False, (
-        "if the map is now verified, the quantity unit was checked too -- update "
-        "this test and TD-029 together"
-    )
+    assert file_map.quantity_unit == "units"
+    assert file_map.verified is True

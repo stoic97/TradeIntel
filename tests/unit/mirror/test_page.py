@@ -102,7 +102,7 @@ def client(engine):
                 direction="LONG",
                 entry_ts=datetime.fromisoformat(t["entry_ts"]),
                 exit_ts=datetime.fromisoformat(t["exit_ts"]),
-                quantity=t["lots"],
+                quantity=t["quantity"],
                 entry_price=Decimal(100), exit_price=Decimal(100),
                 gross=Decimal(t["gross"]), fees=Decimal(t["fees"]),
                 net=Decimal(t["net"]),
