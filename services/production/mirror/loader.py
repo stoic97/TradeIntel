@@ -127,19 +127,14 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
         instrument's offset and nothing would say so. The import already records
         instruments without a profile; this makes the Mirror refuse to guess.
         """
-        profile = profile_map.get((row.exchange, row.symbol))
+        return profile_for(row).timezone()
+
+    def profile_for(row: m.Trip) -> profiles.InstrumentProfile:
+        profile = profiles.lookup(profile_map, row.exchange, row.symbol, row.segment)
         if profile is None:
             raise profiles.UnknownInstrument(
                 f"no instrument profile for {row.exchange}:{row.symbol} -- the "
                 "Mirror cannot show a time or a trading day without one"
-            )
-        return profile.timezone()
-
-    def profile_for(row: m.Trip) -> profiles.InstrumentProfile:
-        profile = profile_map.get((row.exchange, row.symbol))
-        if profile is None:
-            raise profiles.UnknownInstrument(
-                f"no instrument profile for {row.exchange}:{row.symbol}"
             )
         return profile
 

@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page
+from services.production.ctr.profiles import registry as profiles
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
@@ -73,7 +74,13 @@ def mirror(request: Request):
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
 
-        trips, imp = loader.load_for(sess, trader)
+        try:
+            trips, imp = loader.load_for(sess, trader)
+        except profiles.UnknownInstrument as exc:
+            # Our gap, not his error, and the import review already recorded it. A
+            # page that names the instrument beats a 500 that names nothing.
+            return page(request, "mirror_no_profile.html", title="Your record",
+                        reason=str(exc))
         if not trips:
             return page(request, "mirror_empty.html", title="Your record")
         context = _mirror_context(trips)

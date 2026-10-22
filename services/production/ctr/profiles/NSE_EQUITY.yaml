@@ -1,0 +1,20 @@
+# NSE cash equity -- the whole segment, not one symbol. Every share on NSE is one
+# unit per unit, one rupee per point, has no expiry, and trades in the one IST
+# session, so these facts belong to the segment and declaring them once is not a
+# default. It applies only to trades the adapter marked Equity: an NSE option or
+# future is a contract with its own lot size and expiry and needs its own file.
+exchange: NSE
+symbol: "*"
+segment: EQ
+version: "1"
+contract_multiplier: "1"        # one share per unit; the "lots" figure is shares
+tick_size: "0.01"               # the finest tick on NSE equity, so every price is a
+                                # multiple of it. Scrips at or above Rs 250 tick at
+                                # 0.05 (NSE, 10 June 2024). Nothing in v1 reads
+                                # tick_size; model the band before anything does.
+currency_per_point: "1"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: none

@@ -62,6 +62,15 @@ class UnknownInstrument(Exception):
     """No profile for this exchange and symbol. Never defaulted (PRD section 9)."""
 
 
+# A profile whose symbol is this covers every instrument on its exchange in the
+# segment it names. It is not a default: it is used only where the facts really are
+# the segment's and not any one symbol's -- NSE cash equity, where every share is one
+# unit, one rupee per point, no expiry, one IST session. A derivative never resolves
+# to it, because its lot size and expiry are the contract's own.
+SEGMENT_WILDCARD = "*"
+KNOWN_SEGMENTS: frozenset[str] = frozenset({"EQ", "FUT", "OPT"})
+
+
 @dataclass(frozen=True)
 class InstrumentProfile:
     """One instrument's facts, at one version."""
@@ -77,10 +86,17 @@ class InstrumentProfile:
     session_start: time
     session_end: time
     expiry_rule: str
+    # Set only on a segment profile (symbol == SEGMENT_WILDCARD): which segment's
+    # instruments it covers. None on an ordinary, single-instrument profile.
+    segment: str | None = None
 
     @property
     def key(self) -> tuple[str, str]:
         return (self.exchange, self.symbol)
+
+    @property
+    def covers_segment(self) -> bool:
+        return self.symbol == SEGMENT_WILDCARD
 
     def timezone(self) -> ZoneInfo:
         return ZoneInfo(self.timezone_name)
@@ -147,9 +163,25 @@ def load_one(path: Path) -> InstrumentProfile:
     if not isinstance(version, str) or not version:
         raise InvalidProfile(f"{where}: version must be a non-empty quoted string")
 
+    symbol = str(raw["symbol"])
+    segment = raw.get("segment")
+    if symbol == SEGMENT_WILDCARD:
+        if segment not in KNOWN_SEGMENTS:
+            raise InvalidProfile(
+                f"{where}: a profile for every symbol on an exchange must name the "
+                f"segment it covers, one of {sorted(KNOWN_SEGMENTS)}"
+            )
+        if segment == "EQ" and expiry_rule != "none":
+            raise InvalidProfile(f"{where}: cash equity has no expiry; expiry_rule must be none")
+    elif segment is not None:
+        raise InvalidProfile(
+            f"{where}: segment is only for a profile whose symbol is {SEGMENT_WILDCARD!r}; "
+            "a named instrument's segment comes from the trade, not the profile"
+        )
+
     return InstrumentProfile(
         exchange=str(raw["exchange"]),
-        symbol=str(raw["symbol"]),
+        symbol=symbol,
         version=version,
         contract_multiplier=_decimal_from_string(
             raw["contract_multiplier"], "contract_multiplier", where
@@ -163,6 +195,7 @@ def load_one(path: Path) -> InstrumentProfile:
         session_start=session_start,
         session_end=session_end,
         expiry_rule=str(expiry_rule),
+        segment=None if segment is None else str(segment),
     )
 
 
@@ -187,6 +220,31 @@ def get(
             f"no instrument profile for {exchange}:{symbol} -- add one rather than "
             "defaulting a multiplier (PRD section 9)"
         ) from None
+
+
+def lookup(
+    profiles: dict[tuple[str, str], InstrumentProfile],
+    exchange: str,
+    symbol: str,
+    segment: object,
+) -> InstrumentProfile | None:
+    """The profile for a trade, or None when there is none to be had.
+
+    The instrument's own profile first. Failing that, the exchange's segment
+    profile, and only when the trade's segment is the one it covers: an NSE share
+    resolves to NSE cash equity, an NSE option with no file of its own does not.
+    ``segment`` may be the enum or its value; the stored row carries the value.
+    """
+    exact = profiles.get((exchange, symbol))
+    if exact is not None:
+        return exact
+    wildcard = profiles.get((exchange, SEGMENT_WILDCARD))
+    if wildcard is None:
+        return None
+    segment_value = getattr(segment, "value", segment)
+    if wildcard.segment == segment_value:
+        return wildcard
+    return None
 
 
 def versions_used(used: list[InstrumentProfile]) -> dict[str, str]:

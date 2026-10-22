@@ -102,3 +102,60 @@ def test_money_fields_are_never_floats(tmp_path):
     (tmp_path / "MCX_Y.yaml").write_text(broken)
     with pytest.raises(reg.InvalidProfile):
         reg.load_all(tmp_path)
+
+
+def test_nse_cash_equity_is_covered_as_a_segment_not_a_default():
+    """Every NSE share is one unit, one rupee a point, no expiry, one IST session."""
+    profiles = reg.load_all(PROFILE_DIR)
+    p = reg.lookup(profiles, "NSE", "Jio Financial Services", "EQ")
+    assert p is not None and p.covers_segment and p.segment == "EQ"
+    assert p.contract_multiplier == Decimal("1") and p.currency_per_point == Decimal("1")
+    assert p.expiry_rule == "none" and p.timezone_name == "Asia/Kolkata"
+    assert reg.versions_used([p]) == {"NSE:*": p.version}
+
+
+def test_a_segment_profile_never_resolves_a_derivative():
+    """An NSE option with no file of its own stays unknown: its lot size is its own."""
+    profiles = reg.load_all(PROFILE_DIR)
+    assert reg.lookup(profiles, "NSE", "BANKNIFTY", "OPT") is None
+    assert reg.lookup(profiles, "NSE", "BANKNIFTY", "FUT") is None
+    assert reg.lookup(profiles, "MCX", "NOTATHING", "EQ") is None
+
+
+def test_a_named_profile_wins_over_the_segment_profile():
+    profiles = reg.load_all(PROFILE_DIR)
+    p = reg.lookup(profiles, "NSE", "NIFTY", "OPT")
+    assert p is not None and p.symbol == "NIFTY"
+
+
+def test_lookup_accepts_the_segment_enum_as_well_as_its_value():
+    from services.shared.schemas.ctr_v1 import Segment
+
+    profiles = reg.load_all(PROFILE_DIR)
+    assert reg.lookup(profiles, "NSE", "ANYSHARE", Segment.EQ) is not None
+    assert reg.lookup(profiles, "NSE", "ANYSHARE", Segment.OPT) is None
+
+
+def test_a_segment_profile_must_name_its_segment(tmp_path):
+    good = (PROFILE_DIR / "NSE_EQUITY.yaml").read_text()
+    broken = "\n".join(line for line in good.splitlines() if not line.startswith("segment:"))
+    assert "segment:" not in broken
+    (tmp_path / "NSE_EQUITY.yaml").write_text(broken)
+    with pytest.raises(reg.InvalidProfile):
+        reg.load_all(tmp_path)
+
+
+def test_a_named_instrument_may_not_carry_a_segment(tmp_path):
+    good = (PROFILE_DIR / "MCX_CRUDEOIL.yaml").read_text()
+    (tmp_path / "MCX_CRUDEOIL.yaml").write_text(good + "segment: FUT\n")
+    with pytest.raises(reg.InvalidProfile):
+        reg.load_all(tmp_path)
+
+
+def test_a_cash_equity_segment_profile_cannot_declare_an_expiry(tmp_path):
+    good = (PROFILE_DIR / "NSE_EQUITY.yaml").read_text()
+    broken = good.replace("expiry_rule: none", "expiry_rule: monthly_day_19")
+    assert "monthly_day_19" in broken
+    (tmp_path / "NSE_EQUITY.yaml").write_text(broken)
+    with pytest.raises(reg.InvalidProfile):
+        reg.load_all(tmp_path)

@@ -136,7 +136,7 @@ def _trading_day(
     NSE gets one day; a US exchange's profile carries its own zone. With no profile
     the stored zone is used and the import records that no profile was found.
     """
-    profile = profile_map.get((trip.exchange, trip.symbol))
+    profile = profiles.lookup(profile_map, trip.exchange, trip.symbol, trip.segment)
     if profile is not None:
         return trip.entry_ts.astimezone(profile.timezone()).date().isoformat()
     return trip.entry_ts.date().isoformat()
@@ -146,7 +146,7 @@ def _fill_trading_day(
     fill: Fill, profile_map: dict[tuple[str, str], profiles.InstrumentProfile]
 ) -> str:
     """A fill's trading day, by the same rule as a trip's (definitions_v1.md s1)."""
-    profile = profile_map.get((fill.exchange, fill.symbol))
+    profile = profiles.lookup(profile_map, fill.exchange, fill.symbol, fill.segment)
     if profile is not None:
         return fill.ts.astimezone(profile.timezone()).date().isoformat()
     return fill.ts.date().isoformat()
@@ -215,21 +215,21 @@ def plan_import(
     result = rc.reconstruct(fills, fees_available=parsed.fees_available)
 
     profile_map = profiles.load_all(PROFILE_DIR)
-    used = {
-        (t.exchange, t.symbol): profile_map[(t.exchange, t.symbol)]
+    resolved = {
+        (t.exchange, t.symbol): profiles.lookup(profile_map, t.exchange, t.symbol, t.segment)
         for t in result.round_trips
-        if (t.exchange, t.symbol) in profile_map
     }
+    # Keyed by the profile actually used, so a segment profile is recorded once as
+    # NSE:* rather than once per share, and its version is what the import cites.
+    used = {p.key: p for p in resolved.values() if p is not None}
     # An instrument with no profile has no multiplier, tick size or timezone of its
     # own (PRD 9: never hard-coded, never defaulted). The trips are still read -- a
     # missing profile is our gap, not the trader's error -- but it is recorded and
     # shown, never silent, and no figure that needs a multiplier may be derived.
     unprofiled = sorted(
-        {
-            f"{t.exchange}:{t.symbol}"
-            for t in result.round_trips
-            if (t.exchange, t.symbol) not in profile_map
-        }
+        f"{exchange}:{symbol}"
+        for (exchange, symbol), profile in resolved.items()
+        if profile is None
     )
     days = [_trading_day(t, profile_map) for t in result.round_trips]
 
