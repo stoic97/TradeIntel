@@ -10,7 +10,19 @@
 </head>
 <body>
   <header class="bar">
-    <a class="mark" href="https://plusev.in">PlusEV Scope</a>
+    {# The house lockup. The fills sit at uneven intervals on purpose: a particular
+       trade, not two brackets. The anchor is the one absolute URL in the app, allowed
+       by name in tests/unit/api/test_app_skeleton.py. #}
+    <a class="mark" href="https://plusev.in">
+      <svg viewBox="0 0 30 24" width="20" height="16" aria-hidden="true" focusable="false">
+        <path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
+        <path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
+        <circle cx="15" cy="7" r="1.9" fill="currentColor"/>
+        <circle cx="15" cy="11.8" r="1.9" fill="currentColor"/>
+        <circle cx="15" cy="18" r="1.9" fill="currentColor"/>
+      </svg>
+      <span>PlusEV</span><span class="sub">Scope</span>
+    </a>
     {% if signed_in and not hide_nav %}
     <nav class="nav"><a href="/account">Your account</a></nav>
     <form method="post" action="/logout" class="inline">

@@ -100,6 +100,23 @@ def test_the_allowance_for_the_wordmark_is_only_for_a_link():
         assert external_reference(forbidden) is not None, forbidden
 
 
+def test_fonts_are_served_from_our_own_static_folder(client):
+    """Plex and Source Serif come from static/fonts, never from a font service."""
+    css = client.get("/static/scope.css").text
+    assert "IBM Plex Sans" in css and "Source Serif 4" in css
+    assert "://" not in css, "the stylesheet reaches outside the app"
+    for name in (
+        "IBMPlexSans-latin.woff2",
+        "IBMPlexMono-Regular-latin.woff2",
+        "IBMPlexMono-Medium-latin.woff2",
+        "SourceSerif4-latin.woff2",
+    ):
+        assert f"/static/fonts/{name}" in css, name
+        served = client.get(f"/static/fonts/{name}")
+        assert served.status_code == 200, name
+        assert served.content[:4] == b"wOF2", f"{name} is not a woff2 file"
+
+
 def test_settings_read_the_environment_and_default_no_secret(monkeypatch):
     monkeypatch.delenv("SCOPE_SECRET_KEY", raising=False)
     with pytest.raises(RuntimeError, match="SCOPE_SECRET_KEY"):
