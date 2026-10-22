@@ -27,7 +27,7 @@ from services.production.journal import constants as k
 
 ABSOLUTE_URL = re.compile(r"""(?:src|href|action)\s*=\s*["'](https?:)?//""", re.IGNORECASE)
 WORDMARK_LINK = re.compile(
-    r"""<a\b[^>]*\bhref\s*=\s*["']https://plusev\.in/?["'][^>]*>""", re.IGNORECASE
+    r"""<a\b[^>]*\bhref\s*=\s*["']https://plusev\.in(?:/[^"']*)?["'][^>]*>""", re.IGNORECASE
 )
 
 
@@ -89,6 +89,9 @@ def test_no_page_references_anything_outside_this_app(client):
 def test_the_allowance_for_the_wordmark_is_only_for_a_link():
     """The exception must not become a hole in the shape of plusev.in."""
     assert external_reference('<a href="https://plusev.in">PlusEV Scope</a>') is None
+    # A page on the site, such as the data page the consent text mirrors, is the
+    # same kind of thing: a link the trader chooses, loading nothing until he does.
+    assert external_reference('<a href="https://plusev.in/scope/data">your data</a>') is None
 
     for forbidden in (
         '<script src="https://plusev.in/analytics.js"></script>',
@@ -96,6 +99,7 @@ def test_the_allowance_for_the_wordmark_is_only_for_a_link():
         '<img src="https://plusev.in/pixel.gif">',
         '<form action="https://plusev.in/collect">',
         '<a href="https://example.com">somewhere else entirely</a>',
+        '<a href="https://plusev.in.example.com/">a look-alike host</a>',
     ):
         assert external_reference(forbidden) is not None, forbidden
 
