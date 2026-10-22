@@ -1,0 +1,16 @@
+# NSE HDFCBANK stock options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# 550 and 650 both live in June 2026 in the first real history: a changeover.
+exchange: NSE
+symbol: HDFCBANK
+version: "1"
+contract_multiplier: "650"
+tick_size: "0.05"
+currency_per_point: "650"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: from_instrument_name
+lot_sizes:
+  - {units: "550", from: "2000-01-01", until: "2026-07-31"}
+  - {units: "650", from: "2026-06-01"}                         # ~ both traded in June 2026

@@ -1,0 +1,20 @@
+# NSE BANKNIFTY index options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# Weekly expiry withdrawn Nov 2024; monthly only since.
+exchange: NSE
+symbol: BANKNIFTY
+version: "2"
+contract_multiplier: "35"
+tick_size: "0.05"
+currency_per_point: "35"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: from_instrument_name
+# Lot sizes with the dates they were in force. Windows overlap at a changeover
+# because expiries already listed keep the old lot. Dates marked ~ are the
+# boundary seen in the first real history, not yet confirmed from the circular.
+lot_sizes:
+  - {units: "15", from: "2000-01-01", until: "2024-12-31"}
+  - {units: "30", from: "2024-11-20", until: "2025-09-30"}     # SEBI min contract value, 20 Nov 2024
+  - {units: "35", from: "2025-04-01"}                          # ~ first seen 1 Sep 2025; start date unconfirmed

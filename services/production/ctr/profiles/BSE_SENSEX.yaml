@@ -1,0 +1,15 @@
+# BSE SENSEX index options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+exchange: BSE
+symbol: SENSEX
+version: "1"
+contract_multiplier: "20"
+tick_size: "0.05"
+currency_per_point: "20"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: from_instrument_name
+lot_sizes:
+  - {units: "10", from: "2000-01-01", until: "2024-12-31"}
+  - {units: "20", from: "2024-11-20"}                          # SEBI min contract value, 20 Nov 2024

@@ -17,7 +17,7 @@ arithmetic decides a trader-facing number).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -72,6 +72,24 @@ KNOWN_SEGMENTS: frozenset[str] = frozenset({"EQ", "FUT", "OPT"})
 
 
 @dataclass(frozen=True)
+class LotSize:
+    """One lot size and the dates it was in force.
+
+    Exchanges revise lot sizes, and at a changeover both sizes trade at once for a
+    while because existing expiries keep the old lot while new ones get the new. So
+    windows may overlap, and a trade resolves to whichever in-force size divides
+    its quantity. ``until`` is None for the size in force today.
+    """
+
+    units: Decimal
+    from_day: date
+    until_day: date | None
+
+    def in_force_on(self, day: date) -> bool:
+        return self.from_day <= day and (self.until_day is None or day <= self.until_day)
+
+
+@dataclass(frozen=True)
 class InstrumentProfile:
     """One instrument's facts, at one version."""
 
@@ -89,6 +107,16 @@ class InstrumentProfile:
     # Set only on a segment profile (symbol == SEGMENT_WILDCARD): which segment's
     # instruments it covers. None on an ordinary, single-instrument profile.
     segment: str | None = None
+    # Every lot size the contract has had, with its dates. Empty when the lot size
+    # has never changed; then ``contract_multiplier`` is the one size, always.
+    lot_sizes: tuple[LotSize, ...] = ()
+
+    def lot_sizes_on(self, day: date | None) -> tuple[Decimal, ...]:
+        """The lot sizes in force on a day, largest first; today's when no day is given."""
+        if day is None or not self.lot_sizes:
+            return (self.contract_multiplier,)
+        sizes = sorted({ls.units for ls in self.lot_sizes if ls.in_force_on(day)}, reverse=True)
+        return tuple(sizes)
 
     @property
     def key(self) -> tuple[str, str]:
@@ -125,6 +153,46 @@ def _time_from_string(raw: Any, field: str, where: str) -> time:
         return time(hour, minute)
     except ValueError as exc:
         raise InvalidProfile(f"{where}: {field} is not HH:MM: {raw!r}") from exc
+
+
+def _date_from(raw: Any, field: str, where: str) -> date:
+    if isinstance(raw, date):
+        return raw
+    if isinstance(raw, str):
+        try:
+            return date.fromisoformat(raw)
+        except ValueError as exc:
+            raise InvalidProfile(f"{where}: {field} is not YYYY-MM-DD: {raw!r}") from exc
+    raise InvalidProfile(f"{where}: {field} must be a date")
+
+
+def _lot_sizes(raw: Any, multiplier: Decimal, where: str) -> tuple[LotSize, ...]:
+    """Parse ``lot_sizes``; the open-ended entry must agree with contract_multiplier."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not raw:
+        raise InvalidProfile(f"{where}: lot_sizes must be a non-empty list")
+    out: list[LotSize] = []
+    for i, entry in enumerate(raw):
+        if not isinstance(entry, dict) or "units" not in entry or "from" not in entry:
+            raise InvalidProfile(f"{where}: lot_sizes[{i}] needs units and from")
+        units = _decimal_from_string(entry["units"], f"lot_sizes[{i}].units", where)
+        from_day = _date_from(entry["from"], f"lot_sizes[{i}].from", where)
+        until_day = None
+        if entry.get("until") is not None:
+            until_day = _date_from(entry["until"], f"lot_sizes[{i}].until", where)
+            if until_day < from_day:
+                raise InvalidProfile(f"{where}: lot_sizes[{i}] ends before it starts")
+        out.append(LotSize(units=units, from_day=from_day, until_day=until_day))
+    current = [ls for ls in out if ls.until_day is None]
+    if len(current) != 1:
+        raise InvalidProfile(f"{where}: exactly one lot_sizes entry may be open-ended (no until)")
+    if current[0].units != multiplier:
+        raise InvalidProfile(
+            f"{where}: contract_multiplier {multiplier} must equal the open-ended "
+            f"lot_sizes entry {current[0].units} -- one current lot size, stated once"
+        )
+    return tuple(out)
 
 
 def load_one(path: Path) -> InstrumentProfile:
@@ -179,13 +247,12 @@ def load_one(path: Path) -> InstrumentProfile:
             "a named instrument's segment comes from the trade, not the profile"
         )
 
+    multiplier = _decimal_from_string(raw["contract_multiplier"], "contract_multiplier", where)
     return InstrumentProfile(
         exchange=str(raw["exchange"]),
         symbol=symbol,
         version=version,
-        contract_multiplier=_decimal_from_string(
-            raw["contract_multiplier"], "contract_multiplier", where
-        ),
+        contract_multiplier=multiplier,
         tick_size=_decimal_from_string(raw["tick_size"], "tick_size", where),
         currency_per_point=_decimal_from_string(
             raw["currency_per_point"], "currency_per_point", where
@@ -196,6 +263,7 @@ def load_one(path: Path) -> InstrumentProfile:
         session_end=session_end,
         expiry_rule=str(expiry_rule),
         segment=None if segment is None else str(segment),
+        lot_sizes=_lot_sizes(raw.get("lot_sizes"), multiplier, where),
     )
 
 

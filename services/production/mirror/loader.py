@@ -9,6 +9,7 @@ is history, not his record, and showing both would double-count a re-upload.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -54,7 +55,10 @@ def _measured_against(
 
 
 def lots_for(
-    quantity: int, profile: profiles.InstrumentProfile, quantity_unit: str
+    quantity: int,
+    profile: profiles.InstrumentProfile,
+    quantity_unit: str,
+    on: date | None = None,
 ) -> int:
     """The trader's size in lots, from the count his broker exported.
 
@@ -66,22 +70,34 @@ def lots_for(
     A count that is not a whole number of lots is refused. It means the declared
     unit is wrong, and the alternative is printing a trader a fractional lot he
     cannot have held.
+
+    Lot sizes change, and at a changeover two are live at once for different
+    expiries, so the profile may carry dated sizes and ``on`` picks the ones in
+    force that day. The largest one that divides the quantity wins; with no date,
+    or no history, the current size is the only candidate.
     """
     if quantity_unit == "lots":
         return quantity
-    lot_size = profile.contract_multiplier
-    if lot_size <= 0:
+    candidates = profile.lot_sizes_on(on)
+    if not candidates:
         raise MisdeclaredQuantityUnit(
-            f"{profile.exchange}:{profile.symbol} has a lot size of {lot_size}"
+            f"{profile.exchange}:{profile.symbol} has no lot size in force on {on}"
         )
-    lots, remainder = divmod(Decimal(quantity), lot_size)
-    if remainder != 0:
-        raise MisdeclaredQuantityUnit(
-            f"{quantity} units of {profile.exchange}:{profile.symbol} is "
-            f"{quantity / lot_size} lots at a lot size of {lot_size} -- not a "
-            "position anyone can hold, so the declared quantity unit is wrong"
-        )
-    return int(lots)
+    for lot_size in candidates:
+        if lot_size <= 0:
+            raise MisdeclaredQuantityUnit(
+                f"{profile.exchange}:{profile.symbol} has a lot size of {lot_size}"
+            )
+        lots, remainder = divmod(Decimal(quantity), lot_size)
+        if remainder == 0:
+            return int(lots)
+    sizes = ", ".join(str(c) for c in candidates)
+    raise MisdeclaredQuantityUnit(
+        f"{quantity} units of {profile.exchange}:{profile.symbol} is not a whole "
+        f"number of lots at any lot size in force"
+        f"{f' on {on}' if on else ''} ({sizes}) -- not a position anyone can "
+        "hold, so either the declared quantity unit or the profile's lot history is wrong"
+    )
 
 
 def current_import(sess: Session, trader: m.Trader) -> m.Import | None:
@@ -162,7 +178,8 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             exit_ts=row.exit_ts.astimezone(zone),
             holding_seconds=int((row.exit_ts - row.entry_ts).total_seconds()),
             net=row.net,
-            lots=lots_for(row.quantity or 1, profile_for(row), quantity_unit),
+            lots=lots_for(row.quantity or 1, profile_for(row), quantity_unit,
+                          on=date.fromisoformat(trading_day)),
             risk_unit_source=_measured_against(row, trading_day, declarations),
         ))
     return trips, imp

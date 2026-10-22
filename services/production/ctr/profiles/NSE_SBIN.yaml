@@ -1,0 +1,15 @@
+# NSE SBIN stock options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# Seen at 750 in June 2026.
+exchange: NSE
+symbol: SBIN
+version: "1"
+contract_multiplier: "750"
+tick_size: "0.05"
+currency_per_point: "750"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: from_instrument_name
+lot_sizes:
+  - {units: "750", from: "2000-01-01"}

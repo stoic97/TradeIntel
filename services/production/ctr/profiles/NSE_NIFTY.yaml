@@ -1,12 +1,21 @@
-# NSE NIFTY index derivatives. Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# NSE NIFTY index options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# Four lot sizes in the first real history's span alone.
 exchange: NSE
 symbol: NIFTY
-version: "1"
-contract_multiplier: "75"       # units per lot
+version: "2"
+contract_multiplier: "65"
 tick_size: "0.05"
-currency_per_point: "75"
+currency_per_point: "65"
 currency: INR
 timezone: Asia/Kolkata
 session_start: "09:15"
 session_end: "15:30"
 expiry_rule: from_instrument_name
+# Lot sizes with the dates they were in force. Windows overlap at a changeover
+# because expiries already listed keep the old lot. Dates marked ~ are the
+# boundary seen in the first real history, not yet confirmed from the circular.
+lot_sizes:
+  - {units: "50", from: "2000-01-01", until: "2024-07-31"}
+  - {units: "25", from: "2024-04-26", until: "2024-12-31"}     # ~ 50 -> 25, 2024
+  - {units: "75", from: "2024-11-20", until: "2026-01-31"}     # SEBI min contract value, 20 Nov 2024
+  - {units: "65", from: "2025-12-29"}                          # ~ first seen 29 Dec 2025

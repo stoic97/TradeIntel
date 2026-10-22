@@ -76,7 +76,7 @@ def mirror(request: Request):
 
         try:
             trips, imp = loader.load_for(sess, trader)
-        except profiles.UnknownInstrument as exc:
+        except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
             return page(request, "mirror_no_profile.html", title="Your record",

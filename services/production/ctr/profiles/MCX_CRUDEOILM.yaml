@@ -1,0 +1,13 @@
+# MCX CRUDEOILM options (on the futures contract). # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# Quoted in rupees per barrel.
+exchange: MCX
+symbol: CRUDEOILM
+version: "1"
+contract_multiplier: "10"      # barrels per lot (Crude Oil Mini)
+tick_size: "1"
+currency_per_point: "10"       # one rupee per quoted unit, times the lot
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:00"
+session_end: "23:30"
+expiry_rule: from_instrument_name

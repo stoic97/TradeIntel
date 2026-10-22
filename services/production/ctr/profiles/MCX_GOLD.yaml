@@ -1,0 +1,13 @@
+# MCX GOLD options (on the futures contract). # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
+# Quoted in rupees per 10 grams; the lot is one kilogram.
+exchange: MCX
+symbol: GOLD
+version: "1"
+contract_multiplier: "100"      # units of 10 g per lot: 1 kg
+tick_size: "1"
+currency_per_point: "100"       # one rupee per quoted unit, times the lot
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:00"
+session_end: "23:30"
+expiry_rule: from_instrument_name

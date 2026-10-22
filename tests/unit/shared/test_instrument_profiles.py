@@ -117,8 +117,8 @@ def test_nse_cash_equity_is_covered_as_a_segment_not_a_default():
 def test_a_segment_profile_never_resolves_a_derivative():
     """An NSE option with no file of its own stays unknown: its lot size is its own."""
     profiles = reg.load_all(PROFILE_DIR)
-    assert reg.lookup(profiles, "NSE", "BANKNIFTY", "OPT") is None
-    assert reg.lookup(profiles, "NSE", "BANKNIFTY", "FUT") is None
+    assert reg.lookup(profiles, "NSE", "FINNIFTY", "OPT") is None
+    assert reg.lookup(profiles, "NSE", "FINNIFTY", "FUT") is None
     assert reg.lookup(profiles, "MCX", "NOTATHING", "EQ") is None
 
 
@@ -157,5 +157,64 @@ def test_a_cash_equity_segment_profile_cannot_declare_an_expiry(tmp_path):
     broken = good.replace("expiry_rule: none", "expiry_rule: monthly_day_19")
     assert "monthly_day_19" in broken
     (tmp_path / "NSE_EQUITY.yaml").write_text(broken)
+    with pytest.raises(reg.InvalidProfile):
+        reg.load_all(tmp_path)
+
+
+# ---- lot sizes with dates ----
+
+def test_lot_history_resolves_by_the_day_and_overlaps_at_a_changeover():
+    from datetime import date
+
+    profiles = reg.load_all(PROFILE_DIR)
+    nifty = reg.get(profiles, "NSE", "NIFTY")
+    assert nifty.lot_sizes_on(date(2024, 10, 5)) == (Decimal(25),)
+    assert nifty.lot_sizes_on(date(2025, 6, 1)) == (Decimal(75),)
+    # Both live at the turn of 2025: expiries already listed keep 75.
+    assert nifty.lot_sizes_on(date(2026, 1, 10)) == (Decimal(75), Decimal(65))
+    assert nifty.lot_sizes_on(None) == (nifty.contract_multiplier,)
+
+
+def test_lots_pick_the_in_force_size_that_divides_the_quantity():
+    from datetime import date
+
+    from services.production.mirror import loader
+
+    profiles = reg.load_all(PROFILE_DIR)
+    nifty = reg.get(profiles, "NSE", "NIFTY")
+    assert loader.lots_for(75, nifty, "units", on=date(2025, 6, 1)) == 1
+    assert loader.lots_for(130, nifty, "units", on=date(2026, 7, 24)) == 2
+    assert loader.lots_for(150, nifty, "units", on=date(2026, 1, 10)) == 2
+    hdfc = reg.get(profiles, "NSE", "HDFCBANK")
+    assert loader.lots_for(550, hdfc, "units", on=date(2026, 6, 18)) == 1
+    assert loader.lots_for(650, hdfc, "units", on=date(2026, 6, 25)) == 1
+    with pytest.raises(loader.MisdeclaredQuantityUnit):
+        loader.lots_for(25, nifty, "units", on=date(2025, 6, 1))
+
+
+def test_a_profile_without_history_uses_its_one_size_on_any_day():
+    from datetime import date
+
+    from services.production.mirror import loader
+
+    profiles = reg.load_all(PROFILE_DIR)
+    crude = reg.get(profiles, "MCX", "CRUDEOIL")
+    assert crude.lot_sizes == ()
+    assert loader.lots_for(700, crude, "units", on=date(2025, 2, 11)) == 7
+
+
+def test_the_open_ended_lot_size_must_be_the_contract_multiplier(tmp_path):
+    good = (PROFILE_DIR / "NSE_SBIN.yaml").read_text()
+    broken = good.replace('contract_multiplier: "750"', 'contract_multiplier: "1500"')
+    assert 'contract_multiplier: "1500"' in broken
+    (tmp_path / "NSE_SBIN.yaml").write_text(broken)
+    with pytest.raises(reg.InvalidProfile):
+        reg.load_all(tmp_path)
+
+
+def test_exactly_one_lot_size_may_be_open_ended(tmp_path):
+    good = (PROFILE_DIR / "NSE_SBIN.yaml").read_text()
+    broken = good + '  - {units: "750", from: "2026-01-01"}\n'
+    (tmp_path / "NSE_SBIN.yaml").write_text(broken)
     with pytest.raises(reg.InvalidProfile):
         reg.load_all(tmp_path)
