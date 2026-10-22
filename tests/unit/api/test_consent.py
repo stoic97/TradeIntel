@@ -151,7 +151,10 @@ def test_the_text_contains_everything_prd_section_10_requires(signed_in):
     client, _ = signed_in
     body = client.get("/consent").text.lower()
     assert "the file" in body and "journal" in body, "what we store"
-    assert "24 months" in body, "for how long"
+    # "Until you delete it" and nothing more: a dormancy sweep was promised once and
+    # nothing implemented it, so the sentence came out (launch runbook, part C1).
+    assert "until you delete it" in body, "for how long"
+    assert "24 months" not in body, "a promise nothing implements"
     assert "no third party" in body or "nobody else" in body, "who can access it"
     assert "backup" in body and "30 days" in body, "what deletion covers"
     assert "cannot be undone" in body, "what deletion cannot undo"

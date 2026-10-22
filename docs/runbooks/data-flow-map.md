@@ -20,7 +20,7 @@ taken from his history is his data too.
 |---|---|---|---|---|
 | The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
 | The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in backups | Until deleted | Yes, same module |
-| Daily droplet backups (DigitalOcean) | Yesterday's copy of both of the above | As on disk | Roll off within 30 days | No — by retention, not by code. Checked by the runbook |
+| Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |
 | The trader's own browser | A signed session cookie. No trade data | Signed, not encrypted | 30 days, or sign-out | n/a |
 | The server's logs | Request paths and status codes. **No request bodies, no uploaded content, no figures** | No | Rotated at 14 days | Nothing of his to delete |

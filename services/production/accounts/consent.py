@@ -59,15 +59,13 @@ CURRENT = ConsentText(
         "first; that is a record of what you read, never of anything you type. "
         "Nothing else about you."
     ),
-    how_long=(
-        "Until you delete it. If you do not sign in for 24 months we delete it "
-        "ourselves and tell you we have."
-    ),
+    how_long="Until you delete it.",
     who_can_access=(
-        "The founder, who is the only person with access to the server. No third "
-        "party receives the file, and no external service touches anything derived "
-        "from it — there is no analytics, no error reporting and no email in this "
-        "product. If that ever changes, this page names the service before it does."
+        "The two people who run the product: the founder, and the engineer who runs "
+        "the server. No third party receives the file, and no external service "
+        "touches anything derived from it — there is no analytics, no error "
+        "reporting and no email in this product. If that ever changes, this page "
+        "names the service before it does."
     ),
     what_deletion_covers=(
         "The file, every artefact derived from it, and every Journal. Backups roll "
