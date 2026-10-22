@@ -106,6 +106,7 @@ input[type=file] { width: 100%; padding: 0.5rem 0; font: inherit; }
 
 .drawer-link { margin: 0.8rem 0 0; }
 .drawer { margin-top: 0.5rem; }
+.drawer summary { cursor: pointer; }
 .drawer-body { border-left: 3px solid var(--rule); padding-left: 0.9rem; }
 .drawer-body table { font-size: 0.9rem; }
 

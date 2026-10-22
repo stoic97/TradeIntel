@@ -24,7 +24,7 @@
       <span>PlusEV</span><span class="sub">Scope</span>
     </a>
     {% if signed_in and not hide_nav %}
-    <nav class="nav"><a href="/account">Your account</a></nav>
+    <nav class="nav"><a href="/mirror">Your record</a> · <a href="/account">Your account</a></nav>
     <form method="post" action="/logout" class="inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button type="submit" class="link">Sign out</button>

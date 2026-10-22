@@ -15,6 +15,9 @@
     <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
   </table>
 
+  <p><a href="/mirror">See your record</a> — what these trades say, with the trades
+     behind every line.</p>
+
   {% if not imp.fees_available %}
   <p class="warn">This export has no charges column, so every rupee figure from it is
      gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
@@ -49,7 +52,25 @@
   {% endif %}
 
   {% if days %}
+  {% set first_upload = (days | map(attribute="rows_before") | sum) == 0 %}
   <h2>Days in this upload</h2>
+  {% if first_upload %}
+  {# A first upload has nothing to compare against: every day is new. The
+     day-by-day comparison is for the next upload, so here it folds away. #}
+  <p>{{ days|length }} trading days, from {{ days[0].trading_day }} to
+     {{ days[-1].trading_day }}. All of them are new to Scope.</p>
+  <details class="drawer">
+    <summary class="quiet">Every day, with its row count</summary>
+    <div class="drawer-body">
+    <table>
+      <tr><th>Day</th><th>Rows</th></tr>
+      {% for day in days %}
+      <tr><td>{{ day.trading_day }}</td><td>{{ day.rows_after }}</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+  </details>
+  {% else %}
   <table>
     <tr><th>Day</th><th>Rows before</th><th>Rows now</th><th></th></tr>
     {% for day in days %}
@@ -63,11 +84,13 @@
     {% endfor %}
   </table>
   {% endif %}
+  {% endif %}
 
   <p class="quiet">Journal unit for this upload: {{ imp.density_default_unit }}.</p>
   <p class="quiet">Read by Scope version {{ imp.code_version }} using
      {{ imp.adapter_id }}. Every figure above can be reproduced from your file and
      these versions.</p>
+  <p><a href="/mirror">See your record</a></p>
   {% endif %}
 </section>
 {% endblock %}
