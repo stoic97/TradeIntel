@@ -1025,6 +1025,8 @@ Concepts were worked through one at a time with the CEO; each closed decision is
 
 ## Annex J — Thesis touches created by the walkthrough, for one v1.5 pass
 
+**Applied 24 October 2026 in Thesis v1.5**, all twelve, in one pass with six decisions of that day. J5's timing is taken from PRD v1.2 §3 (the connection ships with the subscription in Scope v3); J7 is brought forward from "due week 3" to "written now". The table below is kept as the record of what was asked.
+
 The thesis is frozen at v1.4 and wins every conflict (§1). None of the items below is a conflict: each is wording the thesis should carry to match a decision it has already accepted in principle, or a row its decision log and unknowns register do not yet hold. They are collected here so the amendment is one pass rather than six.
 
 | # | Where in the thesis | Touch | Source |
