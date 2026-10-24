@@ -1,6 +1,6 @@
 # PlusEV–TradeDNA · What happens next — the Phase 0 plan
 
-*3 October 2026 · Child of Thesis v1.4 (→ v1.5 this week) and Research Specification v1.0 (frozen) · Owner: founder*
+*3 October 2026 · Child of Thesis v1.4 (→ v1.5, applied 24 Oct 2026) and Research Specification v1.0 (frozen) · Owner: founder*
 
 Three frozen documents say what the product is, what it promises, and how a claim earns the right to be made. None of them is the work. This page is the work, for the next nine weeks, with one owner per line.
 
@@ -34,7 +34,7 @@ R-Spec §14 names six seats. A team of two or three fills them, with two excepti
 |---|---|---|
 | Move `trade_dna_research_spec_v1_0.md` to the top level — **done** | Founder | The freeze |
 | **Start recruiting.** Post the partner brief in the places MCX crude retail traders actually are; screen for ≥ 200 crude trades over ≥ 3 months, willingness to export a tradebook, a 45-minute call. Target named: twenty by 16 Oct | Founder | A tracker with names, broker, trade count, status |
-| Apply the twelve Annex J touches → **Thesis v1.5** | Claude drafts, founder freezes | `trade_dna_product_thesis_v1.5.md` |
+| Apply the twelve Annex J touches → **Thesis v1.5** — **done 24 Oct**, together with six decisions of that day; awaiting the founder's freeze | Claude drafts, founder freezes | `trade_dna_product_thesis_v1.5.md` |
 | Write `framework_v1.yaml` — Part I of the spec, machine-readable: tiers, kills, nulls and their algorithms, families, θ_min per test, δ_pool, the risk envelope, the baseline procedure | Claude drafts, research lead owns | The file to be hashed |
 | PRD skeleton — twelve sections, Input and Safety written, the rest as the question each must answer | Claude drafts | `prd_v0.1_skeleton.md` |
 | Create `post_freeze_notes.md` | Founder | Where reviews go now |

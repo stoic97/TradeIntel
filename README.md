@@ -7,7 +7,7 @@ Layout follows `docs/methodology.md` §5. A folder is created when its first fil
 
 | Folder | What |
 |---|---|
-| `docs/` | Frozen documents (Thesis v1.4, Workbook v1.1, Research Spec v1.0, Phase 0 plan), `methodology.md`, `adr/`, `runbooks/`, `architecture/`, `phase0/` (method findings, corpus A) |
+| `docs/` | Frozen documents (Thesis v1.5, Workbook v1.1, Research Spec v1.0, Phase 0 plan), `methodology.md`, `adr/`, `runbooks/`, `architecture/`, `phase0/` (method findings, corpus A) |
 | `services/shared/schemas/` | Contracts both sides use: `ctr_v1.py` (and `evidence_object_v1.py`, when written) — versioned by file |
 | `services/production/ctr/` | Broker export → Canonical Trade Record. One adapter per broker |
 | `services/research/prereg/` | `framework_v1.yaml` (+ `.sha256` once locked at kickoff) — Part I of the Research Spec |

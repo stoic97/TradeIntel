@@ -1,6 +1,6 @@
 # PlusEV · Trade DNA — Brainstorm Workbook v1.1 (Frozen)
 
-*29 September 2026 · The thinking floor · Companion: Product Thesis v1.4 — Baseline, frozen 30 September 2026 and amended 1 October 2026 (referenced as T§)*
+*29 September 2026 · The thinking floor · Companion: Product Thesis v1.5 — Baseline, frozen 30 September 2026 and amended 1 and 24 October 2026 (referenced as T§)*
 
 **Status: FROZEN on 29 September 2026.** This workbook is the reference for Phase 0. It is reopened only when Phase 0 produces evidence that changes a DECIDED item, or when a HYPOTHESIS is promoted or refuted (§17). The thesis is the living document.
 
