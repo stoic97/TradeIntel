@@ -2,6 +2,8 @@
 
 _v1 · 27 October 2026 · For the engineer building the new Scope UI and taking it live. **This is the one document to work from.** It replaces the navigation spec, user story, flow map, backend-gaps note, UI engineering plan, design-prompt kit, app–site connection note and launch runbook (all removed from the project on 27 Oct; their content is folded in here). Checked against `stoic97/TradeIntel` `main` at 1020a3c and `stoic97/plusev-web` `main` at 9bde8af, plus the founder's local working tree._
 
+**Where it lives:** in the repo at `docs/product/scope_engineering_handoff_v1.md`, with the testing register beside it, and in the claude.ai Project "TradDNA" (ask the founder for access to read the PRD and other Project docs named in §15). Keep the two copies the same.
+
 **If anything elsewhere disagrees with this document, this document wins.** That includes the design kit's README, older PRD text and any canvas note. Raise a conflict with the founder instead of guessing.
 
 ---
@@ -23,8 +25,8 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | Code for import, accounts, consent, upload, Mirror, Journal, eligibility, deletion | Built and merged; about 700 tests | `main` |
 | App on the droplet `139.59.38.160`, Caddy, systemd, backups | Running | `deploy/`, `docs/runbooks/deploy.md` |
 | Deletion gate on the real server | **Done 22 Oct** through the page | `docs/runbooks/deletion-log.md` |
-| Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, but only in the founder's local working tree, not pushed** | See §3, step 1 |
-| Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Local only, not pushed** | Same 26 files |
+| Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, on `main`** (PR #2, 27 Oct) | `accounts/consent.py` |
+| Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Done, on `main`** (PR #2) | `base.html`, `scope.css` |
 | Link from plusev.in to scope.plusev.in | In `plusev-web/content/copy.ts` | — |
 | `scope.plusev.in` with TLS | Believed live (the deletion gate ran through the page); **verify**: `dig +short scope.plusev.in` → `139.59.38.160`, padlock in a browser | — |
 | New Scope UI | Designed and prototyped; **not built** | §3, step 2 |
@@ -33,10 +35,10 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 
 | # | Who | Action |
 |---|---|---|
-| 1 | Founder | **Commit and push the 26 uncommitted files on `main` in `~/…/TradeIntel`:** `consent.py` (v1 reviewed, with its docstring), `test_consent.py`, `scope.css`, `base.html` and 22 templates (the hero blocks). Without this, the repo still has the draft consent text that refuses real accounts, and the templates the design's wording was taken from. Check `git status` shows clean afterwards. |
-| 2 | Founder | **Put the design into the repo** so it travels with the code: unzip `plusev-scope-kit.zip` (from the Claude Design chat) into `TradeIntel/docs/design/scope-kit/`, and copy the 81 PNGs from `Downloads/PlusEV Scope Prototype-png/` into `TradeIntel/docs/design/screens/`. Commit both. |
+| 1 | Founder | ~~Commit and push consent v1 and the site chrome~~ **Done 27 Oct, PR #2.** |
+| 2 | Founder | **The design in the repo.** Done: `docs/design/screens/` (81 screens, pre-polish look) and `screens/latest/` (final dial and motion), with `docs/design/README.md` saying which to trust. **To follow:** the engineering kit in `docs/design/scope-kit/` and the final full export replacing `screens/`. |
 | 3 | Founder | **Share the two Claude Design canvases with the engineer** (Share menu on each): "PlusEV Scope Prototype" (the clickable prototype, Play mode) and "PlusEV Scope Design System" (tokens, components, brand book). |
-| 4 | Founder | **Answer the blocking decisions in §13** (D1, D2, D5 at least) and write the answers into §13. |
+| 4 | Founder | **Decisions in §13.** D1 and D5 answered 27 Oct; D2 is open but doesn't block Phases 0–3. |
 | 4b | Founder | **Brand PR for the font rule.** The brand docs are mirrored from `plusev-web/docs/brand/` and change only by PR (their README, "How to make a change"). `BRAND_RULES_CARD.md` "How it looks" and C12 still say "Serif for display"; the 26 Oct decision (§7 here) needs a `docs/brand-…` PR with a change-log row, then the Project mirror refreshed. Not blocking the build: §7 of this document is what to build. |
 | 5 | Engineer | Read this document, open the prototype in Play, then open `docs/design/scope-kit/components.html` and `screens/preview/` in a browser. |
 
@@ -94,7 +96,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 4 | Sign in | `/login` | Restyle | One error for any failure |
 | 5, 5b, 5c | Consent, what you agreed to, consent declined | `/consent`, `/settings/consent` | Restyle; 5c new | Consent text in full from `consent.py` |
 | 6, 7a, 7b, 7c | Upload, broker not open, not a tradebook, Scope not open | `/upload` | Restyle | |
-| 8 | Calculating | during `POST /upload` | New | Decision D1 |
+| 8 | Calculating | during `POST /upload` | New | D1 = (a): the strip animates as "Reading your file" while the request runs, then the real final counts; no live counts, no backend change |
 | 9 | Import check | `/imports/{id}` | Restyle | Exit goes to 10, not 13 |
 | 10 | Guess | `/guess` | New | B6; labels TR-009 |
 | 11 | What we can check | `/eligibility` | Restyle | One tap from the guess; back returns to the guess |
@@ -145,7 +147,7 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 | faint | `#5D6B96` | Small labels, column heads (4.92:1 on surface) |
 | action blue | `#04408D` | Only things you can tap, on white |
 | gain / loss | `#0D7A3F` / `#B42318` | Only signed rupee figures, on white |
-| building | `#8A5A00` | Only the counts while Calculating is still moving |
+| building | `#8A5A00` | Only a ledger state still in progress. Under D1 (a) Calculating has no moving counts, so it doesn't use it |
 
 - **Navy for the stage and the doors, white for the record.** Navy: Scope home and chapters (the dial), the reveal, the front door and the Scope page. Everything else is white.
 - **On navy, taps are white,** never blue. Rupee figures on navy are white with their sign; they turn red/green again on the white story card below.
@@ -153,7 +155,7 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 - **Fonts:** IBM Plex Mono for every number, figure, state and label (tabular figures); IBM Plex Sans semibold for headings and UI; Source Serif 4 only for the Mirror's sentences. Self-hosted only, **with latin-ext** so ₹ renders (§8, T2).
 - **Type scale:** mono hero 56 / large 32 / medium 22 / small 15 / label 11; Sans title 34 / heading 22 / card title 17 / UI 15; serif 22 on fact pages, 19 on cards; gross line 13.
 - Spacing on a 4 px base; card radius 16; controls pill; at most two elevation levels; hairlines 1 and 1.5 px. No gradients, glow, glass or shadows beyond elevation 1. One motion per screen. Touch targets ≥ 44 px; text ≥ 4.5:1.
-- **The mark:** decision D5.
+- **The mark:** the bracket mark already in `base.html` (D5). Lockup: the mark at the wordmark's height, "PlusEV" in Plex Sans semibold, "Scope" beneath in Plex Mono; ink on white, white on navy; the mark alone only for favicon, app icon and tab.
 
 **The Scope dial** (geometry functions in `scope-geometry.js`, to port to Python):
 - Phone dial 260 px; lens 56 px; desktop dial 440 px in a 640 px stage, story beside it.
@@ -168,7 +170,7 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 
 **Fact page:** hero figure 56 (32 on How long you hold, shown as "[N] min · [N] min" over "winners · losers"); 32 px around it; the gross line straight under the sentences; figures 96 px tall with a mono "Figure N · …" caption, tables labelled "Table N"; then 72 px and a 3 px ink rule before "The trades behind this". Each day's header (and the column heads) is pinned under the lens bar while its trades scroll. Each trade: its label line, one row (Trade · In · Out · Held · Net (gross)), its trade strip drawn to time, its fills (Time · Side · Qty · Price · Row in your file).
 
-**Calculating (8):** white; the trade strip as hero, the latest rebuilt trade's fills landing as dots, a pause, then the bar; under it "Rows read [N] of [N]" and "Trades rebuilt [N]" in mono 22, amber while moving, ink when done; "Still counting. These figures come from the server as it reads." → done: "Every row is accounted for on the next screen." and "Continue". **Never show a figure the server hasn't reported.**
+**Calculating (8), per D1 (a):** white; the trade strip as hero. While `POST /upload` runs, the strip animates as an illustration (fills landing as dots, a pause, then the bar) under "Reading your file", **with no counts**: the import is synchronous, so none exist yet. When the response arrives, show the real final "Rows read [N] of [N]" and "Trades rebuilt [N]" in mono 22, ink, the latest rebuilt trade drawn in the strip, "Every row is accounted for on the next screen." and "Continue". Don't use the prototype's "Still counting. These figures come from the server as it reads." line or the amber counts: under (a) they would describe something that doesn't happen. **Never show a figure the server hasn't reported.**
 
 **Motion**
 
@@ -256,20 +258,20 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 6. `/scope/data` on plusev-web, the consent text and `docs/runbooks/data-flow-map.md` say the same thing about storage, access and backups.
 7. Invite the first trader with the `invite --code <code>` command from `deploy.md` §4 (it prints a `127.0.0.1` URL; substitute `https://scope.plusev.in`), and send code and link together.
 
-## 13. Decisions (founder to fill in; D1, D2, D5 block Phase 0)
+## 13. Decisions
 
 | # | Decision | Options | Recommendation | Answer |
 |---|---|---|---|---|
-| D1 | **Calculating**: the import runs synchronously inside `POST /upload`, so no live counts exist while it runs | (a) Show the strip as a plain "Reading your file" state during the request, then the real final counts on arrival; (b) background job + progress endpoint | (a) for v1 | |
-| D2 | **WhatsApp link** on the leaving card is an absolute URL the skeleton test refuses | Allow `wa.me` by name and add it to the data-flow map, or use `mailto:team@plusev.in` | `mailto:` for v1; it matches the brand CTA "Write to team@plusev.in" | |
+| D1 | **Calculating**: the import runs synchronously inside `POST /upload`, so no live counts exist while it runs | (a) Show the strip as a plain "Reading your file" state during the request, then the real final counts on arrival; (b) background job + progress endpoint | (a) for v1 | **(a)**, founder, 27 Oct |
+| D2 | **WhatsApp link** on the leaving card is an absolute URL the skeleton test refuses | (i) the founder's WhatsApp group, `https://chat.whatsapp.com/KKn9At6cW5JJlkkB3uamGr` (tracking parameters removed); (ii) a 1:1 chat, `https://wa.me/<number>`, which matches the 24 Oct rule "1:1 WhatsApp before any group"; (iii) `mailto:team@plusev.in` | Either WhatsApp option needs the host exempted by name in `test_app_skeleton.py` (as `plusev.in` is) and a row in the data-flow map | **Open**, founder. Needed by Phase 4 (leaving card) |
 | D3 | **Guess labels and question** (TR-009) | Research seat freezes them; build with placeholders | — | |
 | D4 | **Fills (B5)** in v1 or after | Ship v1 with the trade list as the end of a fact page | After v1 | |
-| D5 | **The mark**: the app and plusev.in draw the bracket-and-dots mark; the design uses the trade strip | Pick one | — | |
+| D5 | **The mark**: the app and plusev.in draw the bracket-and-dots mark; the design drew a bar-with-dots glyph | Pick one | — | **The bracket mark** (`plusev-web/app/mark.tsx`, already in `base.html`), founder, 27 Oct. The trade strip is the product's motif only (loader, trade records, motion), never the logo |
 | D6 | **Sign out** once the header nav goes | On the Account page | Account page | |
 | D7 | ~~"In development." tag~~ | **Resolved:** it is the brand's fixed status line (`BRAND_RULES_CARD.md`, changeable only by the founder). Keep it | — | Keep |
 | D8 | **₹[price] in the willingness-to-pay question** vs the "no cost figure" brand rule | Keep the figure (research question) or drop it | — | |
 | D9 | **New copy** in the kit's list | Copy owner signs off before Phase 4 | — | |
-| D10 | **The founder's WhatsApp link**, if D2 keeps WhatsApp | — | — | |
+| D10 | ~~The founder's WhatsApp link~~ | Folded into D2 | — | — |
 
 ## 14. Open tickets that are not this build
 
@@ -284,7 +286,7 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 
 **Read these** (claude.ai project "TradDNA" unless a repo path):
 - This document.
-- `claude/scope_testing_register_v1.md`: every open bug, feature and change; new items go here.
+- `claude/scope_testing_register_v1.md` (repo copy: `docs/product/scope_testing_register_v1.md`): every open bug, feature and change; new items go here.
 - Frozen PRD `scope_prd_v1_2_frozen.md` and `claude/scope_prd_v1_2_amendments.md`: product rules not restated here.
 - `claude/trade_dna_product_thesis_v1.5.md` and `trade_dna_research_spec_v1_0.md`: background only; nothing in this build depends on them.
 - `Brand Strategy/BRAND_RULES_CARD.md` and `C12_distinctive_assets_v1_2.md`: brand rules. **Typography is as in §7 of this document** (decided 26 Oct; it replaced "serif for display").
