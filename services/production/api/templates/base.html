@@ -9,34 +9,49 @@
   <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
-  <header class="bar">
-    <div class="row">
-      {# The house lockup, as plusev.in draws it: the mark in the house blue, the
-         wordmark, and the product name beneath in mono (brand C12 B). The anchor
-         is the one kind of absolute URL the app allows, by name, in
-         tests/unit/api/test_app_skeleton.py. #}
-      <a class="mark" href="https://plusev.in" aria-label="PlusEV Scope">
-        <svg viewBox="0 0 30 24" width="19" height="24" aria-hidden="true" focusable="false">
-          <path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
-          <path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
-          <circle cx="15" cy="7" r="1.9" fill="currentColor"/>
-          <circle cx="15" cy="11.8" r="1.9" fill="currentColor"/>
-          <circle cx="15" cy="18" r="1.9" fill="currentColor"/>
-        </svg>
-        <span class="word"><span class="name">PlusEV</span><span class="sub">Scope</span></span>
-      </a>
-      {% if signed_in and not hide_nav %}
-      <nav class="nav">
-        <a href="/mirror">Your record</a>
-        <a href="/account">Your account</a>
-        <form method="post" action="/logout" class="inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="link">Sign out</button>
-        </form>
-      </nav>
-      {% endif %}
-    </div>
-  </header>
+  {# The site opens every page as one navy field with the header inside it:
+     dark for identity, light for reading (plusev-web app/page-hero.tsx). The
+     app does the same. A page supplies its h1 through the hero block; the body
+     below stays white because the pages people read run to many lines. #}
+  <div class="hero">
+    <header class="bar">
+      <div class="row">
+        {# The house lockup as plusev.in draws it on dark: the mark and the
+           wordmark in white, the product beneath in mono. The anchor is the one
+           kind of absolute URL the app allows, by name, in
+           tests/unit/api/test_app_skeleton.py. #}
+        <a class="mark" href="https://plusev.in" aria-label="PlusEV Scope">
+          <svg viewBox="0 0 30 24" width="19" height="24" aria-hidden="true" focusable="false">
+            <path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
+            <path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/>
+            <circle cx="15" cy="7" r="1.9" fill="currentColor"/>
+            <circle cx="15" cy="11.8" r="1.9" fill="currentColor"/>
+            <circle cx="15" cy="18" r="1.9" fill="currentColor"/>
+          </svg>
+          <span class="word"><span class="name">PlusEV</span><span class="sub">Scope</span></span>
+        </a>
+        {% if signed_in and not hide_nav %}
+        <nav class="nav">
+          <a href="/mirror">Your record</a>
+          <a href="/account">Your account</a>
+          <form method="post" action="/logout" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="link">Sign out</button>
+          </form>
+        </nav>
+        {% endif %}
+      </div>
+    </header>
+    <section class="hero-body">
+      <div class="row">
+        <div class="hero-text">
+          {% block label %}{% endblock %}
+          {% block hero %}<h1>{{ title }}</h1>{% endblock %}
+          {% block lede %}{% endblock %}
+        </div>
+      </div>
+    </section>
+  </div>
   <main>
     {% block content %}{% endblock %}
   </main>

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% block label %}<p class="label">Counted from your file</p>{% endblock %}
+{% block hero %}<h1>Your record</h1>{% endblock %}
 {% macro drawer_link(line, label) %}
 <p class="drawer-link">
   <button class="link" hx-get="/mirror/{{ line }}/drawer"
@@ -9,7 +11,6 @@
 {% endmacro %}
 {% block content %}
 <section class="panel">
-  <h1>Your record</h1>
   <p class="quiet">{{ trips|length }} trades, {{ days.counts|length }} trading days.
     Every figure here is counted from your file. Open any line to see the trades
     behind it.</p>

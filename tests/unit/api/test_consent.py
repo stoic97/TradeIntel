@@ -11,6 +11,8 @@ that omits what deletion cannot undo is not a smaller promise, it is a different
 
 from __future__ import annotations
 
+import dataclasses
+
 import re
 
 import pytest
@@ -160,14 +162,25 @@ def test_the_text_contains_everything_prd_section_10_requires(signed_in):
     assert "cannot be undone" in body, "what deletion cannot undo"
 
 
+DRAFT = dataclasses.replace(cs.CURRENT, version="2-draft", reviewed=False)
+"""The next version, before anyone has read it. The gate is tested against this,
+not against CURRENT, because CURRENT has been reviewed and is open."""
+
+
+def test_the_current_text_is_reviewed_and_versioned():
+    assert cs.CURRENT.reviewed is True
+    assert cs.CURRENT.version == "1"
+    assert "24 months" not in cs.CURRENT.how_long
+
+
 def test_a_draft_consent_version_is_refused_for_a_real_account():
-    assert cs.CURRENT.version.endswith("draft")
+    assert DRAFT.version.endswith("draft")
     with pytest.raises(cs.UnreviewedConsentText):
-        cs.require_reviewed(cs.CURRENT, development_data=False)
-    cs.require_reviewed(cs.CURRENT, development_data=True)
+        cs.require_reviewed(DRAFT, development_data=False)
+    cs.require_reviewed(DRAFT, development_data=True)
 
 
-def test_a_real_account_cannot_see_the_draft_text(app_env):
+def test_a_real_account_cannot_see_the_draft_text(app_env, monkeypatch):
     """The gate, from the outside: a partner account is refused the unreviewed text.
 
     PRD section 10 publishes the consent text only after the data-flow map is
@@ -185,6 +198,7 @@ def test_a_real_account_cannot_see_the_draft_text(app_env):
     the path a real partner takes, not an edge case.
     """
     from datetime import UTC, datetime
+    monkeypatch.setattr(cs, "CURRENT", DRAFT)
     engine = app_env
     with make_session(engine) as sess:
         sess.add(m.InviteCode(code="REAL-1", created_at=datetime.now(UTC)))

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% block label %}<p class="label">Journal</p>{% endblock %}
+{% block hero %}<h1>{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>{% endblock %}
 {% block content %}
 <nav class="crumbs"><a href="/journals">Your Journals</a></nav>
 
 <article class="journal">
-  <h1>{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
   {% if journal.version_no > 1 %}
   <p class="tag">Version {{ journal.version_no }}. A later upload changed this period.
     The earlier version is kept.</p>

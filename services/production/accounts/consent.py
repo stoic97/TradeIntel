@@ -1,11 +1,15 @@
 """The consent text and the ledger rules (thesis 19.3, PRD 10).
 
-The text below is a DRAFT. PRD section 10's release gate says the consent text is
-published only after the data-flow map is written and verified and the deletion
-runbook has been executed end to end, and the face roadmap adds counsel's sign-off
-before any tradebook is accepted. So ``require_reviewed`` refuses this version for a
-real account: it can be shown to a development-data account and in tests, and
-nowhere else, until someone reviews it and bumps the version.
+PRD section 10's release gate says the consent text is published only after the
+data-flow map is written and verified and the deletion runbook has been executed
+end to end. ``require_reviewed`` refuses an unreviewed version for a real account:
+it can be shown to a development-data account and in tests, and nowhere else.
+
+Version 1 was reviewed on 22 October 2026: the deletion runbook was run on the
+server through the page (docs/runbooks/deletion-log.md), the data-flow map was
+corrected to the weekly backups the server actually keeps, and the rendered page
+was read against that map by Rikk, who did not write it. Any change to the
+wording below is a new version, unreviewed until someone reads it again.
 
 Each purpose is a separate decision. Only DIAGNOSIS is required for the product to
 run; refusing any other never degrades what the trader gets. The exact wording shown
@@ -49,8 +53,8 @@ class ConsentText:
 
 
 CURRENT = ConsentText(
-    version="0-draft",
-    reviewed=False,
+    version="1",
+    reviewed=True,
     what_we_store=(
         "The file you upload, exactly as your broker produced it. The reconstruction "
         "we build from it — your trades matched into round trips. And the Journals "
