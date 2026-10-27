@@ -1,9 +1,8 @@
 {% extends "base.html" %}
+{% block label %}<p class="label">Invitation only.</p>{% endblock %}
+{% block hero %}<h1>A record of how you traded, built from your own tradebook.</h1>{% endblock %}
 {% block content %}
 <section class="panel">
-  <h1>Scope</h1>
-  <p>A record of how you traded, built from your own tradebook.</p>
-  <p class="quiet">Invitation only.</p>
   <p><a href="/login">Sign in</a> if you already have an account.</p>
 </section>
 {% endblock %}

@@ -62,25 +62,43 @@ body {
   max-width: var(--measure); margin: 0 auto; padding: 0 1.5rem;
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.5rem;
 }
-.bar { border-bottom: 1px solid var(--rule); padding: 1.25rem 0; }
+/* The hero: one navy field holding the header and the page's statement, exactly
+   as plusev.in opens every page. Dark for identity, light for reading. */
+.hero { background: var(--ink); color: var(--paper); }
+.bar { padding: 1.25rem 0; }
 .bar .row { align-items: center; }
+.hero-body { padding: 3.5rem 0 5rem; }
+@media (min-width: 640px) { .hero-body { padding: 5rem 0 6rem; } }
+.hero .label {
+  margin: 0 0 1.5rem; font: 0.68rem var(--mono); letter-spacing: 0.18em;
+  text-transform: uppercase; color: rgba(255,255,255,0.55);
+}
+.hero h1 {
+  color: #fff; margin: 0; max-width: 19ch;
+  font: 400 clamp(2.2rem, 6.5vw, 3.5rem)/1.05 var(--serif); letter-spacing: -0.02em;
+}
+.hero .lede { margin: 1.5rem 0 0; max-width: var(--text); font-size: 1.0625rem; color: rgba(255,255,255,0.7); }
 .mark {
   display: inline-flex; align-items: center; gap: 0.625rem;
-  color: var(--ink); text-decoration: none;
+  color: #fff; text-decoration: none;
 }
-.mark svg { flex: none; color: var(--accent); }
+.mark svg { flex: none; color: #fff; }
 .mark .word { display: flex; flex-direction: column; line-height: 1; }
 .mark .name { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
 .mark .sub {
   margin-top: 0.3rem; font: 0.6rem var(--mono); letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--quiet);
+  text-transform: uppercase; color: rgba(255,255,255,0.7);
 }
-main { max-width: var(--measure); margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+main { max-width: var(--measure); margin: 0 auto; padding: 4rem 1.5rem 0; }
+@media (min-width: 640px) { main { padding-top: 5rem; } }
 .panel { margin-bottom: 2rem; }
-h1 { font: 400 2rem/1.1 var(--serif); letter-spacing: -0.02em; margin: 0 0 1rem; max-width: 19ch; }
-h2 { font: 500 1rem/1.4 var(--sans); letter-spacing: -0.01em; margin: 2.5rem 0 0.75rem; }
+.panel > h2:first-child, .panel > .quiet:first-child + h2 { margin-top: 0; }
+h2 { font: 500 1rem/1.4 var(--sans); letter-spacing: -0.01em; margin: 4rem 0 1rem; }
+h2:first-child { margin-top: 0; }
 p { margin: 0 0 0.9rem; max-width: var(--text); }
 .foot { border-top: 1px solid var(--rule); margin-top: 6rem; padding: 2.5rem 0 3rem; }
+.foot .mark { color: var(--ink); }
+.foot .mark svg { color: var(--accent); }
 .foot .row { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
 .foot .nav { margin: 0; }
 .foot p { margin: 0; font-size: 0.75rem; }
@@ -118,6 +136,8 @@ input[type=file] { width: 100%; padding: 0.5rem 0; font: inherit; }
 .nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-size: 0.875rem; }
 .nav a, .nav button.link { color: var(--muted); text-decoration: none; font-weight: 400; }
 .nav a:hover, .nav button.link:hover { color: var(--ink); text-decoration: underline; }
+.hero .nav a, .hero .nav button.link { color: rgba(255,255,255,0.7); }
+.hero .nav a:hover, .hero .nav button.link:hover { color: #fff; }
 
 .drawer-link { margin: 0.8rem 0 0; }
 .drawer { margin-top: 0.5rem; }
@@ -125,4 +145,4 @@ input[type=file] { width: 100%; padding: 0.5rem 0; font: inherit; }
 .drawer-body { border-left: 3px solid var(--rule); padding-left: 0.9rem; }
 .drawer-body table { font-size: 0.9rem; }
 
-.bar .mark:hover .name { text-decoration: underline; }
+.mark:hover .name { text-decoration: underline; }

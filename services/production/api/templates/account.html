@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% block label %}<p class="label">Your account</p>{% endblock %}
+{% block hero %}<h1>{{ display_name }}</h1>{% endblock %}
 {% block content %}
 <section class="panel">
-  <h1>{{ display_name }}</h1>
   <p class="quiet">Signed in as {{ login_id }}.</p>
 
   <h2>Your uploads</h2>
