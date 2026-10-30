@@ -12,7 +12,6 @@ that omits what deletion cannot undo is not a smaller promise, it is a different
 from __future__ import annotations
 
 import dataclasses
-
 import re
 
 import pytest
