@@ -126,3 +126,9 @@ def test_a_field_shows_its_hint_and_its_own_error_sentence():
 
 def test_what_a_trader_types_is_escaped():
     assert "<script>" not in str(call("field", "Login id", "login_id", value="<script>"))
+
+
+def test_a_field_can_be_required():
+    assert 'autocomplete="username" required>' in str(
+        call("field", "Login id", "login_id", autocomplete="username", required=True))
+    assert " required" not in str(call("field", "Login id", "login_id"))

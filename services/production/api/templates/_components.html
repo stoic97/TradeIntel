@@ -59,6 +59,6 @@
 {#- A labelled input. error=true marks the field (the page states the sentence once,
     above the form); error="..." marks it and says why under the input. A password is
     never written back into the page. -#}
-{% macro field(label, name, type="text", value="", error=none, hint=none, autocomplete=none) -%}
-<label class="field{% if error %} field--error{% endif %}"><span class="field__label">{{ label }}</span><input class="field__input" name="{{ name }}" type="{{ type }}"{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if value and type != "password" %} value="{{ value }}"{% endif %}{% if error %} aria-invalid="true"{% endif %}>{% if error is string %}<span class="field__error">{{ error }}</span>{% endif %}{% if hint %}<span class="field__hint">{{ hint }}</span>{% endif %}</label>
+{% macro field(label, name, type="text", value="", error=none, hint=none, autocomplete=none, required=false) -%}
+<label class="field{% if error %} field--error{% endif %}"><span class="field__label">{{ label }}</span><input class="field__input" name="{{ name }}" type="{{ type }}"{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if required %} required{% endif %}{% if value and type != "password" %} value="{{ value }}"{% endif %}{% if error %} aria-invalid="true"{% endif %}>{% if error is string %}<span class="field__error">{{ error }}</span>{% endif %}{% if hint %}<span class="field__hint">{{ hint }}</span>{% endif %}</label>
 {%- endmacro %}
