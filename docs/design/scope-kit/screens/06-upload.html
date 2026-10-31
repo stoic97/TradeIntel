@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload your tradebook · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 6 · Upload
+  Route:  GET /upload · POST /upload
+  accepted_formats is an owner slot.
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label label--plain">Your upload</p>
+  <h1 class="title">Upload your tradebook</h1>
+  <p class="body">The trade-level export from your broker — every executed trade, with the time of day, the price and the quantity. Not the profit-and-loss statement.</p>
+  <form class="upload" method="post" action="/upload" enctype="multipart/form-data" hx-post="/upload" hx-encoding="multipart/form-data" hx-target="body" hx-push-url="true">
+    <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" name="file" required></label>
+    <span class="upload__formats">{{ accepted_formats }}</span>
+    <button class="btn btn--primary upload__button" type="submit">Upload</button>
+  </form>
+  <p class="body-small upload__note">Nothing is shown to anyone else. You can delete it at any time.</p>
+</main>
+</div>
+</body>
+</html>

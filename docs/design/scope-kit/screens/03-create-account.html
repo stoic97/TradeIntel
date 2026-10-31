@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create your account · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 3 · Create your account
+  Route:  GET /invite/{code} · POST /invite/{code}
+  Error states: errors.login_id ("That login id is taken."), errors.password ("A password needs at least 12 characters.").
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <div class="demo-bar"><a class="link link--back" href="/">‹ Scope page</a><span class="label label--plain">/invite/{{ invite_code }}</span></div>
+  <h1 class="title">Create your account</h1>
+  <p class="body">You were invited to Scope. Choose a login id and a password.</p>
+  <form method="post" action="/invite/{{ invite_code }}">
+    <label class="field"><span class="field__label">Your name</span><input class="field__input" name="name" type="text" autocomplete="name" value="{{ form.name }}"></label>
+    <label class="field{% if errors.login_id %} field--error{% endif %}"><span class="field__label">Login id</span><input class="field__input" name="login_id" type="text" autocomplete="username" value="{{ form.login_id }}">
+      {% if errors.login_id %}<span class="field__error">That login id is taken.</span>{% endif %}</label>
+    <label class="field{% if errors.password %} field--error{% endif %}"><span class="field__label">Password</span><input class="field__input" name="password" type="password" autocomplete="new-password">
+      {% if errors.password %}<span class="field__error">A password needs at least 12 characters.</span>{% endif %}
+      <span class="field__hint">At least 12 characters. There is no email on your account, so keep this somewhere safe — a reset has to go through us.</span></label>
+    <div class="screen__actions">
+      <button class="btn btn--primary btn--block" type="submit">Create account</button>
+      <a class="btn btn--text" href="/login">I already have an account · Sign in</a>
+    </div>
+  </form>
+</main>
+</div>
+</body>
+</html>

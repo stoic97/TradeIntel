@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>See what your tradebook has been hiding · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 1 · Scope page (plusev.in)
+  Route:  GET https://plusev.in/scope  (marketing site; same templates)
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<header class="stage stage--door on-navy">
+  <div class="stage__bar"><span class="lockup"><svg class="lockup__mark" viewBox="0 0 30 24" aria-hidden="true"><path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><circle cx="15" cy="7" r="1.9" fill="currentColor"/><circle cx="15" cy="11.8" r="1.9" fill="currentColor"/><circle cx="15" cy="18" r="1.9" fill="currentColor"/></svg><span class="lockup__name">PlusEV</span><span class="lockup__sub">Scope</span></span><span class="chip chip--on-navy">In development.</span></div>
+  <h1 class="title door__title">See what your tradebook has been hiding.</h1>
+  <p class="lead">PlusEV Scope shows you what your trades actually did.</p>
+</header>
+<main class="screen__body">
+  <p class="body">Your broker’s tradebook holds every fill you made. Scope rebuilds your trades from it and counts what they did. Every figure opens to the trades behind it.</p>
+  <figure class="figure mark-figure">
+    <svg class="chart" viewBox="0 0 326 64" width="326" height="64" aria-hidden="true"><path class="strip__axis" d="M0 56H326"/><path class="strip__tick" d="M33 20V49M121 20V49M167 20V49M293 20V49"/><path class="strip__dot" d="M29 56a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M117 56a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M163 56a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M289 56a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path class="calc__bar" d="M33 20H293"/></svg>
+    <figcaption class="figure__axis"><span>Four fills</span><span>one trade</span></figcaption>
+  </figure>
+  <ol class="promise-list">
+    <li class="promise-list__item"><span class="num num--label promise-list__n">01</span><span class="body">Counted from your own file.</span></li>
+    <li class="promise-list__item"><span class="num num--label promise-list__n">02</span><span class="body">Every figure in the Scope opens to the trades behind it.</span></li>
+    <li class="promise-list__item"><span class="num num--label promise-list__n">03</span><span class="body">No buy or sell calls, ever.</span></li>
+  </ol>
+  <p class="body-small">We tell you what your history can't yet show, instead of guessing.</p>
+  <div class="screen__actions">
+    <a class="btn btn--primary btn--block" href="/demo">See it on a sample trader</a>
+    <a class="btn btn--secondary btn--block" href="/invite">Start with my trades</a>
+    <a class="btn btn--text" href="/login">I already have an account · Sign in</a>
+  </div>
+  <p class="body-small door__house">The research desk every trader deserves.</p>
+</main>
+</div>
+</body>
+</html>

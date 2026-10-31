@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feedback · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 17 · Accurate / Not sure / Wrong (states)
+  Route:  POST /scope/{chapter}/feedback  →  returns the .feedback partial
+  Each state is the same <section class="feedback"> returned by the server and swapped in with hx-swap="outerHTML".
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label label--plain">State 1 · asked (default, under every chapter's story cards)</p>
+  <section class="feedback" aria-label="Does this match your trading?">
+  <h2 class="feedback__question">Does this match your trading?</h2>
+  <div class="feedback__options">
+      <button class="btn btn--pill-small" name="answer" value="accurate" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Accurate</button>
+      <button class="btn btn--pill-small" name="answer" value="not_sure" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Not sure</button>
+      <button class="btn btn--pill-small" name="answer" value="wrong" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Wrong</button>
+    </div>
+</section>
+  <p class="label label--plain feedback-demo__label">State 2 · after "Wrong"</p>
+  <section class="feedback" aria-label="Does this match your trading?">
+  <h2 class="feedback__question">Does this match your trading?</h2>
+  <div class="feedback__options"><span class="btn btn--quiet">Accurate</span><span class="btn btn--quiet">Not sure</span><span class="btn btn--selected">Wrong</span></div>
+  <div class="feedback__follow"><p class="body">If you like, tell us which:</p>
+    <div class="feedback__follow-options">
+      <button class="btn btn--pill-small" name="reason" value="wrong_facts" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Wrong facts</button>
+      <button class="btn btn--pill-small" name="reason" value="wrong_reading" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Right facts, wrong reading</button>
+      <button class="btn btn--pill-small" name="reason" value="already_changed" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">I've already changed this</button>
+    </div></div>
+</section>
+  <p class="label label--plain feedback-demo__label">State 3 · recorded (after Accurate, Not sure, or a reason)</p>
+  <section class="feedback" aria-label="Does this match your trading?">
+  <h2 class="feedback__question">Does this match your trading?</h2>
+  <p class="feedback__done" role="status">Recorded. Thank you.</p>
+</section>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope" aria-current="page">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

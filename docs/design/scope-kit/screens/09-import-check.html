@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What we read · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 9 · What we read (import check)
+  Route:  GET /imports/{id}
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label label--plain">Your upload</p>
+  <h1 class="title">What we read</h1>
+  <dl class="facts-list">
+    <dt>Rows in the file</dt><dd>{{ import.rows_total }}</dd>
+    <dt>Rows we could read</dt><dd>{{ import.rows_read }}</dd>
+    <dt>Rows set aside</dt><dd>{{ import.rows_set_aside }}</dd>
+    <dt>Trades reconstructed</dt><dd>{{ import.trades_reconstructed }}</dd>
+  </dl>
+  <a class="link import__next" href="/guess">See your record — what these trades say, with the trades behind every line.</a>
+  <p class="gross-line">This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
+
+  <section class="import__section">
+    <h2 class="card-title">Rows we could not read (<span class="num ">{{ import.rows_set_aside }}</span>)</h2>
+    <p class="body-small">Kept, not discarded. Each one says why.</p>
+    <table class="table"><thead><tr><th class="table__day">Row</th><th>Why</th></tr></thead>
+      <tbody>{% for row in set_aside_rows %}<tr><td>{{ row.number }}</td><td class="table__text">{{ row.reason }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+
+  <section class="import__section">
+    <h2 class="card-title">Possible duplicates (<span class="num ">{{ duplicate_group_count }}</span> groups)</h2>
+    <p class="body-small">Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell.</p>
+    {% for group in duplicate_groups %}
+    <div class="card duplicate">
+      <p class="num num--label">{{ group.count }} identical rows</p>
+      <p class="num num--label duplicate__raw">{{ group.raw_row_text }}</p>
+      <form method="post" action="/imports/{{ import.id }}/duplicates/{{ group.id }}" hx-post="/imports/{{ import.id }}/duplicates/{{ group.id }}" hx-swap="outerHTML" hx-target="closest .duplicate">
+        <button class="btn btn--pill-small" type="submit">This is one trade recorded twice</button>
+      </form>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="import__section">
+    <h2 class="card-title">Days in this upload</h2>
+    <p class="body"><span class="num ">{{ import.trading_day_count }}</span> trading days, from <span class="num ">{{ import.first_day }}</span> to <span class="num ">{{ import.last_day }}</span>. All of them are new to Scope.</p>
+    <p class="subhead import__days-title">Every day, with its row count</p>
+    <table class="table"><thead><tr><th class="table__day">Day</th><th class="table__num">Rows</th></tr></thead>
+      <tbody>{% for day in import_days %}<tr><td>{{ day.date }}</td><td class="table__num">{{ day.rows }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <p class="provenance">Journal unit for this upload: {{ import.journal_unit }}.</p>
+  <p class="provenance provenance--tight">Read by Scope version {{ import.scope_version }} using {{ import.adapter }}. Every figure above can be reproduced from your file and these versions.</p>
+  <div class="screen__actions"><a class="btn btn--primary btn--block" href="/guess">See your record</a></div>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Before you look · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 10 · Guess
+  Route:  GET /guess
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label">BEFORE YOU LOOK</p>
+  <p class="check-line">Your history lets us check <span class="num ">{{ eligibility.checkable_count }}</span> of <span class="num ">{{ eligibility.library_count }}</span> things. <a class="link" href="/eligibility">What we can check</a></p>
+  <h1 class="heading guess__question">{{ guess_question }}</h1>
+  <div class="guess" role="list">
+    {% for option in guess_options %}
+    <a class="guess__option" role="listitem" href="/reveal?guess={{ option.id }}"><span class="guess__index">{{ option.number }}</span><span class="guess__label">{{ option.label }}</span></a>
+    {% endfor %}
+  </div>
+  <a class="btn btn--text" href="/reveal?guess=unknown">I don't know</a>
+</main>
+</div>
+</body>
+</html>

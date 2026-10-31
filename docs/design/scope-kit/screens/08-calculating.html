@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading your file · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 8 · Calculating (reading · done)
+  Route:  GET /imports/{id}/reading  ·  hx-get /imports/{id}/status every 2 s (204 while reading, the done fragment when finished)
+  Two states. Reading: title and the strip as an illustration (sample trades, CSS loop) — no counts, no status line, no amber.
+  Done: the counts appear once, final, in ink; the latest rebuilt trade; the line; Continue. The counts are never shown mid-import.
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body" id="calc"{% if not done %} hx-get="/imports/{{ import.id }}/status" hx-trigger="every 2s" hx-select="#calc" hx-target="#calc" hx-swap="outerHTML"{% endif %}>
+  <p class="label label--plain">{{ import.file_name }}</p>
+  <h1 class="title" aria-live="polite">{% if done %}Your file is read.{% else %}Reading your file{% endif %}</h1>
+  {% if not done %}
+  <!-- Reading: the strip is an illustration only — three fixed sample trades rebuild in a CSS loop (motion.css, .calc-loop).
+       It is not progress: no counts, no status line, nothing from the server. The status endpoint answers 204 (htmx does not swap)
+       until the import is finished, so the loop runs uninterrupted. Reduced motion: one still trade. -->
+  <figure class="calc">
+    <svg class="calc__strip calc-loop" viewBox="0 0 350 96" aria-hidden="true">
+      <path class="calc__strip-axis" d="M0 76.5H350"/>
+      <g class="calc-loop__trade calc-loop__trade--1"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M28 26V70"/><circle class="calc__fill-dot" cx="28" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M112 26V70"/><circle class="calc__fill-dot" cx="112" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M168 26V70"/><circle class="calc__fill-dot" cx="168" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M322 26V70"/><circle class="calc__fill-dot" cx="322" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M28 26H322"/></g><g class="calc-loop__trade calc-loop__trade--2"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M56 26V70"/><circle class="calc__fill-dot" cx="56" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M150 26V70"/><circle class="calc__fill-dot" cx="150" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M236 26V70"/><circle class="calc__fill-dot" cx="236" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M296 26V70"/><circle class="calc__fill-dot" cx="296" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M56 26H296"/></g><g class="calc-loop__trade calc-loop__trade--3"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M22 26V70"/><circle class="calc__fill-dot" cx="22" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M98 26V70"/><circle class="calc__fill-dot" cx="98" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M204 26V70"/><circle class="calc__fill-dot" cx="204" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M330 26V70"/><circle class="calc__fill-dot" cx="330" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M22 26H330"/></g>
+    </svg>
+  </figure>
+  {% else %}
+  <!-- Done: his latest rebuilt trade (fills placed to time across the trade's span), then the final counts, in ink. -->
+  <figure class="calc">
+    <svg class="calc__strip fills-land" viewBox="0 0 350 96" aria-hidden="true">
+      <path class="calc__strip-axis" d="M0 76.5H350"/>
+      {% for fill in latest_trade.fills %}<g class="calc__fill fill-{{ loop.index }}"><path class="calc__fill-stem" d="M{{ fill.x }} 26V70"/><circle class="calc__fill-dot" cx="{{ fill.x }}" cy="76.5" r="4.5"/></g>{% endfor %}
+      <path class="calc__bar bar-after-{{ latest_trade.fills|length }}" d="M{{ latest_trade.x_first }} 26H{{ latest_trade.x_last }}"/>
+    </svg>
+    <figcaption class="calc__caption">The latest trade, rebuilt from its fills</figcaption>
+  </figure>
+  <dl class="ledger">
+    <dt class="ledger__term">Rows read</dt><dd class="ledger__value">{{ import.rows_read }} of {{ import.rows_total }}</dd>
+    <dt class="ledger__term">Trades rebuilt</dt><dd class="ledger__value">{{ import.trades_rebuilt }}</dd>
+  </dl>
+  <p class="ledger__status">Every row is accounted for on the next screen.</p>
+  <div class="screen__actions"><a class="btn btn--primary btn--block" href="/imports/{{ import.id }}">Continue</a></div>
+  {% endif %}
+</main>
+</div>
+</body>
+</html>

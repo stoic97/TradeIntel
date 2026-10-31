@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" class="{{ enter_class }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share of your result · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 16 · Fact · Share of your result
+  Route:  GET /scope/results/share
+  enter_class: "vt-lens" when arriving from the chapter dial or a story card; empty otherwise.
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<nav class="path" aria-label="Scope path">
+  <a class="path__lens" href="/scope/results?enter=back&amp;fact=2" aria-label="Scope out to Where your results came from"><svg class="path__lens-svg" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"><path class="lens__outer" d="M0.5 28a27.5 27.5 0 1 0 55 0a27.5 27.5 0 1 0 -55 0"/><path class="lens__lit" d="M46.62 17.25A21.5 21.5 0 0 1 28 49.5L28 38.5A10.5 10.5 0 0 0 37.09 22.75Z"/><path class="lens__minor" d="M32.34 3.38L32.69 1.41M36.55 4.51L37.23 2.63M44.07 8.85L45.36 7.32M47.15 11.93L48.68 10.64M51.49 19.45L53.37 18.77M52.62 23.66L54.59 23.31M52.62 32.34L54.59 32.69M51.49 36.55L53.37 37.23M47.15 44.07L48.68 45.36M44.07 47.15L45.36 48.68M36.55 51.49L37.23 53.37M32.34 52.62L32.69 54.59M23.66 52.62L23.31 54.59M19.45 51.49L18.77 53.37M11.93 47.15L10.64 48.68M8.85 44.07L7.32 45.36M4.51 36.55L2.63 37.23M3.38 32.34L1.41 32.69M3.38 23.66L1.41 23.31M4.51 19.45L2.63 18.77M8.85 11.93L7.32 10.64M11.93 8.85L10.64 7.32M19.45 4.51L18.77 2.63M23.66 3.38L23.31 1.41"/><path class="lens__mid" d="M28 4L28 1M40 7.22L41.5 4.62M52 28L55 28M48.78 40L51.38 41.5M40 48.78L41.5 51.38M16 48.78L14.5 51.38M7.22 40L4.62 41.5M4 28L1 28M16 7.22L14.5 4.62"/><path class="lens__major" d="M8.51 16.75L4.62 14.5M47.49 16.75L51.38 14.5M28 50.5L28 55"/><path class="lens__inner" d="M6.5 28a21.5 21.5 0 1 0 43 0a21.5 21.5 0 1 0 -43 0"/><path class="lens__div" d="M18.04 22.25L10.68 18M37.96 22.25L45.32 18M28 39.5L28 48"/><path class="lens__arc" d="M13.34 12.28A21.5 21.5 0 0 1 42.66 12.28"/><path class="lens__ring" d="M17.5 28a10.5 10.5 0 1 0 21 0a10.5 10.5 0 1 0 -21 0"/><path class="lens__disc" d="M19 28a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/></svg></a>
+  <span class="path__crumbs path__crumbs--short">
+    <a class="path__link" href="/scope">Scope</a><span class="path__sep" aria-hidden="true">›</span>
+    <a class="path__link" href="/scope/results?enter=back&amp;fact=2" title="Where your results came from" aria-label="Where your results came from">Where your…</a><span class="path__sep" aria-hidden="true">›</span>
+    <span class="path__current" aria-current="page">Share of your result</span>
+  </span>
+</nav>
+<main class="screen__body screen__body--fact">
+  <div class="fact__head">
+    <p class="fact__chapter">CHAPTER 1 · FACT 2 OF 3</p>
+    <h1 class="title fact__title">Share of your result</h1>
+    <div class="fact__figure"><span class="num num--hero">{{ share_percent }}%</span></div>
+    
+    <p class="mirror">That is <span class="num ">{{ share_percent }}</span>% of your result for the whole period, which was <span class="num  num--{{ whole_period_result_tone }}">{{ whole_period_result }}</span>.</p>
+    <p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
+  </div>
+  <figure class="figure">
+    <figcaption class="figure__caption">Figure 1 · The five days within the whole period</figcaption>
+    <svg class="chart" viewBox="0 0 350 96" width="350" height="96" aria-hidden="true">{% for part in share_chart.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg>
+    
+    
+  </figure><p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th></th><th class="table__num">Days</th><th class="table__num">Net (gross)</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text"><span class="legend__swatch legend__swatch--ink"></span>Five worst days</td><td class="table__num">5</td><td class="table__num num--{{ five_day_sum_tone }}">{{ five_day_sum }}</td></tr>
+      <tr><td class="table__text"><span class="legend__swatch legend__swatch--light"></span>Other days</td><td class="table__num">{{ other_day_count }}</td><td class="table__num num--{{ other_days_net_tone }}">{{ other_days_net }}</td></tr>
+      <tr class="table__row--total"><td class="table__text">Whole period</td><td class="table__num">{{ trading_day_count }}</td><td class="table__num num--{{ whole_period_result_tone }}">{{ whole_period_result }}</td></tr>
+    </tbody>
+  </table>
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The trades behind this</h2>
+    <p class="evidence__caption">The five days, and every trade on them. <span class="num ">{{ trade_count }}</span> trades.</p>
+    <div class="trades">
+  {% for group in trade_groups %}
+  <section class="trades__group">
+    <div class="trades__head">
+      <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ group.summary }}</span></div>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+    </div>
+    {% for trade in group.trades %}
+    <article class="trade">
+      <div class="trade__label">Trade {{ trade.number }} · {{ trade.instrument }}</div>
+      <div class="trade__row"><span>{{ trade.day }}</span><span>{{ trade.time_in }}</span><span>{{ trade.time_out }}</span><span>{{ trade.held_minutes }} min</span><span class="trade__net num--{{ trade.net_tone }}">{{ trade.net }}</span></div>
+      <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ trade.strip.axis }}"/><path class="strip__tick" d="{{ trade.strip.ticks }}"/><path class="strip__dot" d="{{ trade.strip.dots }}"/><path class="strip__bar" d="{{ trade.strip.bar }}"/></svg>
+      <table class="fills">
+        <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>
+        <tbody>{% for fill in trade.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ fill.qty }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ fill.row }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </article>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+  </section>
+  
+</main>
+</div>
+</body>
+</html>

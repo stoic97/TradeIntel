@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earlier Journals · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 18c · Earlier Journals (catch-up)
+  Route:  GET /journals/earlier
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <p class="label label--plain">Journals</p>
+  <h1 class="title fact__title">Earlier Journals</h1>
+  <p class="body">Everything behind the five most recent, newest first. <a class="link" href="/journals">Back to the latest.</a></p>
+  <div class="journal-index">
+    {% for journal in earlier_journals %}
+    <a class="journal-index__row" href="/journals/{{ journal.date_iso }}"><span class="num journal-index__date">{{ journal.date }}</span>{% if journal.version > 1 %}<span class="num num--label">version {{ journal.version }}</span>{% endif %}{% if journal.unread %}<span class="tag">unread</span>{% endif %}<span class="journal-index__go" aria-hidden="true">›</span></a>
+    {% endfor %}
+  </div>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals" aria-current="page">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>
