@@ -109,7 +109,7 @@ def test_nse_cash_equity_is_covered_as_a_segment_not_a_default():
     profiles = reg.load_all(PROFILE_DIR)
     p = reg.lookup(profiles, "NSE", "Jio Financial Services", "EQ")
     assert p is not None and p.covers_segment and p.segment == "EQ"
-    assert p.contract_multiplier == Decimal("1") and p.currency_per_point == Decimal("1")
+    assert p.contract_multiplier == Decimal(1) and p.currency_per_point == Decimal(1)
     assert p.expiry_rule == "none" and p.timezone_name == "Asia/Kolkata"
     assert reg.versions_used([p]) == {"NSE:*": p.version}
 
