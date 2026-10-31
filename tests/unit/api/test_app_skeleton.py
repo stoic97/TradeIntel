@@ -74,8 +74,8 @@ def test_the_page_renders_with_a_title(client):
 
 def test_htmx_is_served_from_our_own_static_folder(client):
     page = client.get("/").text
-    assert "/static/htmx.min.js" in page
-    served = client.get("/static/htmx.min.js")
+    assert "/static/js/htmx.min.js" in page
+    served = client.get("/static/js/htmx.min.js")
     assert served.status_code == 200
     assert len(served.content) > 1000, "a stub would make the page silently inert"
 

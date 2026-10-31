@@ -177,7 +177,7 @@ def test_the_mirror_page_carries_the_dwell_script(engine):
     c.post("/login", data={"login_id": "wt", "password": "a-long-enough-password",
                            "csrf_token": csrf}, follow_redirects=False)
     body = c.get("/mirror").text
-    assert "/static/dwell.js" in body
+    assert "/static/js/dwell.js" in body
     assert 'data-dwell-line="worst-days"' in body
 
 
