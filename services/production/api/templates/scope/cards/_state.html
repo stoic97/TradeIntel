@@ -1,0 +1,19 @@
+{#- A fact that cannot be counted on this history, as a card (kit screens e1, e3):
+    the state's tag, a dash for the figure, still tappable - never hidden, never an
+    all-clear. The not-enough sentence with its counts ("[N] trades, and it needs
+    [N].") waits on the founder's minimum per fact; until then the card says what the
+    state is and how many trades there are so far. -#}
+{%- if f.state == "not-in-file" %}
+<a class="story-card story-card--state story-card--dashed" href="{{ f.href }}">
+  <span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-dashed"/></svg>Not in your file</span>
+  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
+  <span class="body">Your export has no stop column, and no budget is set. We do not estimate what is not in your file.</span>
+  <span class="story-card__foot"><span>What is missing, in full</span><span aria-hidden="true">›</span></span>
+</a>
+{%- else %}
+<a class="story-card story-card--state" href="{{ f.href }}">
+  <span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span>
+  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
+  <span class="story-card__foot"><span><span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }} so far</span><span aria-hidden="true">›</span></span>
+</a>
+{%- endif %}

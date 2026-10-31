@@ -16,7 +16,7 @@
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   <div class="story-list">
   {%- for fact in chapter.facts %}
-    {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
+    {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
   {%- endfor %}
   </div>
   {%- if chapter.number == 4 %}

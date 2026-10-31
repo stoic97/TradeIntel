@@ -1,15 +1,12 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Not ready yet</p>{% endblock %}
-{% block hero %}<h1>Your record is not ready yet</h1>{% endblock %}
+{#- In place of the Scope when the trader's instrument is not set up (handoff 4; kit
+    screen e6). The app's own wording, word for word (handoff 6). -#}
+{% extends "layout.html" %}
+{% set nav = "scope" %}
 {% block content %}
-<section class="panel">
-  <p>Your file was read in full, but it holds an instrument Scope does not yet
-     carry the facts for — the exchange's session hours and the contract's size —
-     and without those it cannot say which trading day a trade belongs to, or how
-     large it was. We do not guess them.</p>
-  <p class="quiet mono">{{ reason }}</p>
-  <p>This is our gap, not a problem with your file. Nothing has been discarded;
-     the record appears as soon as the instrument is added.</p>
-  <p><a href="/account">Your account</a></p>
-</section>
+  <p class="label label--plain">Not ready yet</p>
+  <h1 class="title">Your record is not ready yet</h1>
+  <p class="body">Your file was read in full, but it holds an instrument Scope does not yet carry the facts for — the exchange's session hours and the contract's size — and without those it cannot say which trading day a trade belongs to, or how large it was. We do not guess them.</p>
+  <p class="num num--label edge__reason">{{ reason }}</p>
+  <p class="body">This is our gap, not a problem with your file. Nothing has been discarded; the record appears as soon as the instrument is added.</p>
+  <a class="link" href="/account">Your account</a>
 {% endblock %}
