@@ -13,9 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader
+from tests.unit.api.templating import template_env
 
-TEMPLATES = Path("services/production/api/templates")
 STATIC = Path("services/production/api/static")
 
 STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
@@ -23,10 +22,8 @@ STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
 
 
 def render(child: str, **context) -> str:
-    env = Environment(loader=ChoiceLoader([DictLoader({"probe.html": child}),
-                                           FileSystemLoader(str(TEMPLATES))]))
     context.setdefault("title", "Sign in")
-    return env.get_template("probe.html").render(**context)
+    return template_env({"probe.html": child}).get_template("probe.html").render(**context)
 
 
 PLAIN = '{% extends "layout.html" %}{% block content %}<p>Body</p>{% endblock %}'
