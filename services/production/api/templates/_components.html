@@ -62,3 +62,10 @@
 {% macro field(label, name, type="text", value="", error=none, hint=none, autocomplete=none, required=false) -%}
 <label class="field{% if error %} field--error{% endif %}"><span class="field__label">{{ label }}</span><input class="field__input" name="{{ name }}" type="{{ type }}"{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if required %} required{% endif %}{% if value and type != "password" %} value="{{ value }}"{% endif %}{% if error %} aria-invalid="true"{% endif %}>{% if error is string %}<span class="field__error">{{ error }}</span>{% endif %}{% if hint %}<span class="field__hint">{{ hint }}</span>{% endif %}</label>
 {%- endmacro %}
+
+{#- The Scope dial, drawn on the server with the page's own figures (handoff section 8,
+    T3). view is scope_geometry.build_dial's shape with plain hrefs; api/dial.py escapes
+    them and draws the kit's SVG. size: phone (260 px) or desktop (440 px). -#}
+{% macro dial(view, size="phone") -%}
+<div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}</div>
+{%- endmacro %}

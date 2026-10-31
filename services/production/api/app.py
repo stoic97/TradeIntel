@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
+    dial,
     formatting,
     routes_budget,
     routes_consent,
@@ -35,6 +36,7 @@ from services.production.db.session import make_engine, run_migrations
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
+dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
 
 
 def code_version() -> str:
