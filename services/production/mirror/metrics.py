@@ -164,6 +164,14 @@ class HoldingTime:
 
 
 @dataclass(frozen=True)
+class HoldingSeries:
+    """Seconds each trade was held, in entry order, split by how it ended."""
+
+    winners_seconds: list[int]
+    losers_seconds: list[int]
+
+
+@dataclass(frozen=True)
 class HourResult:
     hour: int
     net: Decimal
@@ -201,15 +209,23 @@ def _by_day(trips: list[Trip]) -> dict[str, list[Trip]]:
     return dict(sorted(days.items()))
 
 
+def daily_series(trips: list[Trip]) -> list[DayNet]:
+    """Net and trade count for every trading day with a trade, in date order.
+
+    The one place a day's net is decided: the worst-days and busiest-day charts draw
+    it (B2), and five_worst_days picks from it.
+    """
+    return [
+        DayNet(day, sum((t.net for t in day_trips), Decimal(0)), len(day_trips))
+        for day, day_trips in _by_day(trips).items()
+    ]
+
+
 def five_worst_days(trips: list[Trip]) -> FiveWorstDays:
     """Sum of net per trading day, ascending, first five. Ties: earlier date first."""
     if not trips:
         return FiveWorstDays((), Decimal(0), s.ResultState.INSUFFICIENT_SAMPLE)
-    days = [
-        DayNet(day, sum((t.net for t in day_trips), Decimal(0)), len(day_trips))
-        for day, day_trips in _by_day(trips).items()
-    ]
-    worst = sorted(days, key=lambda d: (d.net, d.trading_day))[:5]
+    worst = sorted(daily_series(trips), key=lambda d: (d.net, d.trading_day))[:5]
     return FiveWorstDays(
         days=tuple(worst),
         sum=sum((d.net for d in worst), Decimal(0)),
@@ -362,10 +378,22 @@ def average_lots(trips: list[Trip]) -> AverageLots:
     )
 
 
+def holding_series(trips: list[Trip]) -> HoldingSeries:
+    """Each trade's hold in entry order, winners and losers apart; scratches in neither.
+
+    The one place a hold is sorted by outcome: the hold chart draws a dot per value
+    (B2), and holding_time takes its medians from the same two lists.
+    """
+    return HoldingSeries(
+        winners_seconds=[t.holding_seconds for t in trips if t.is_win],
+        losers_seconds=[t.holding_seconds for t in trips if t.is_loss],
+    )
+
+
 def holding_time(trips: list[Trip]) -> HoldingTime:
     """Median hold by outcome. Scratches excluded; a zero median gives no ratio."""
-    winners = [t.holding_seconds for t in trips if t.is_win]
-    losers = [t.holding_seconds for t in trips if t.is_loss]
+    held = holding_series(trips)
+    winners, losers = held.winners_seconds, held.losers_seconds
     if not winners or not losers:
         return HoldingTime(
             int(median(winners)) if winners else None,
