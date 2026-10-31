@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 4 · Sign in
+  Route:  GET /login · POST /login
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <a class="link link--back" href="/">‹ Scope page</a>
+  <h1 class="title">Sign in</h1>
+  {% if error %}<p class="field__error field__error--block" role="alert">That login id and password do not match an account.</p>{% endif %}
+  <form method="post" action="/login">
+    <label class="field{% if error %} field--error{% endif %}"><span class="field__label">Login id</span><input class="field__input" name="login_id" type="text" autocomplete="username" value="{{ form.login_id }}"></label>
+    <label class="field{% if error %} field--error{% endif %}"><span class="field__label">Password</span><input class="field__input" name="password" type="password" autocomplete="current-password"></label>
+    <div class="screen__actions"><button class="btn btn--primary btn--block" type="submit">Sign in</button></div>
+  </form>
+</main>
+</div>
+</body>
+</html>

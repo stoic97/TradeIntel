@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" class="{{ enter_class }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your behaviour · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 15 · Chapter 3 · Your behaviour
+  Route:  GET /scope/behaviour
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<header class="stage on-navy" aria-label="The Scope">
+  <div class="scope">
+<svg class="scope__svg" viewBox="-40 0 438 358" width="438" height="358" role="img" aria-label="The Scope inside this chapter"><defs><pattern id="scope-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/></pattern></defs><path class="scope__outer" d="M49.43 179a129.57 129.57 0 1 0 259.13 0a129.57 129.57 0 1 0 -259.13 0"/><g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="M184.5 53.02L184.63 49.99M189.99 53.38L190.25 50.36M195.46 53.98L195.86 50.97M200.9 54.82L201.42 51.83M206.29 55.89L206.95 52.93M211.64 57.2L212.42 54.27M216.92 58.74L217.83 55.84M222.13 60.5L223.17 57.65M227.26 62.5L228.42 59.7M232.29 64.71L233.57 61.97M237.23 67.15L238.63 64.46M246.75 72.65L248.38 70.09M251.33 75.7L253.07 73.22M255.76 78.96L257.61 76.55M260.06 82.4L262.01 80.08M264.19 86.03L266.24 83.79M268.17 89.83L270.31 87.69M271.97 93.81L274.21 91.76M275.6 97.94L277.92 95.99M279.04 102.24L281.45 100.39M282.3 106.67L284.78 104.93M285.35 111.25L287.91 109.62M290.85 120.77L293.54 119.37M293.29 125.71L296.03 124.43M295.5 130.74L298.3 129.58M297.5 135.87L300.35 134.83M299.26 141.08L302.16 140.17M300.8 146.36L303.73 145.58M302.11 151.71L305.07 151.05M303.18 157.1L306.17 156.58M304.02 162.54L307.03 162.14M304.62 168.01L307.64 167.75M304.98 173.5L308.01 173.37M304.98 184.5L308.01 184.63M304.62 189.99L307.64 190.25M304.02 195.46L307.03 195.86M303.18 200.9L306.17 201.42M302.11 206.29L305.07 206.95M300.8 211.64L303.73 212.42M299.26 216.92L302.16 217.83M297.5 222.13L300.35 223.17M295.5 227.26L298.3 228.42M293.29 232.29L296.03 233.57M290.85 237.23L293.54 238.63M285.35 246.75L287.91 248.38M282.3 251.33L284.78 253.07M279.04 255.76L281.45 257.61M275.6 260.06L277.92 262.01M271.97 264.19L274.21 266.24M268.17 268.17L270.31 270.31M264.19 271.97L266.24 274.21M260.06 275.6L262.01 277.92M255.76 279.04L257.61 281.45M251.33 282.3L253.07 284.78M246.75 285.35L248.38 287.91M237.23 290.85L238.63 293.54M232.29 293.29L233.57 296.03M227.26 295.5L228.42 298.3M222.13 297.5L223.17 300.35M216.92 299.26L217.83 302.16M211.64 300.8L212.42 303.73M206.29 302.11L206.95 305.07M200.9 303.18L201.42 306.17M195.46 304.02L195.86 307.03M189.99 304.62L190.25 307.64M184.5 304.98L184.63 308.01M173.5 304.98L173.37 308.01M168.01 304.62L167.75 307.64M162.54 304.02L162.14 307.03M157.1 303.18L156.58 306.17M151.71 302.11L151.05 305.07M146.36 300.8L145.58 303.73M141.08 299.26L140.17 302.16M135.87 297.5L134.83 300.35M130.74 295.5L129.58 298.3M125.71 293.29L124.43 296.03M120.77 290.85L119.37 293.54M111.25 285.35L109.62 287.91M106.67 282.3L104.93 284.78M102.24 279.04L100.39 281.45M97.94 275.6L95.99 277.92M93.81 271.97L91.76 274.21M89.83 268.17L87.69 270.31M86.03 264.19L83.79 266.24M82.4 260.06L80.08 262.01M78.96 255.76L76.55 257.61M75.7 251.33L73.22 253.07M72.65 246.75L70.09 248.38M67.15 237.23L64.46 238.63M64.71 232.29L61.97 233.57M62.5 227.26L59.7 228.42M60.5 222.13L57.65 223.17M58.74 216.92L55.84 217.83M57.2 211.64L54.27 212.42M55.89 206.29L52.93 206.95M54.82 200.9L51.83 201.42M53.98 195.46L50.97 195.86M53.38 189.99L50.36 190.25M53.02 184.5L49.99 184.63M53.02 173.5L49.99 173.37M53.38 168.01L50.36 167.75M53.98 162.54L50.97 162.14M54.82 157.1L51.83 156.58M55.89 151.71L52.93 151.05M57.2 146.36L54.27 145.58M58.74 141.08L55.84 140.17M60.5 135.87L57.65 134.83M62.5 130.74L59.7 129.58M64.71 125.71L61.97 124.43M67.15 120.77L64.46 119.37M72.65 111.25L70.09 109.62M75.7 106.67L73.22 104.93M78.96 102.24L76.55 100.39M82.4 97.94L80.08 95.99M86.03 93.81L83.79 91.76M89.83 89.83L87.69 87.69M93.81 86.03L91.76 83.79M97.94 82.4L95.99 80.08M102.24 78.96L100.39 76.55M106.67 75.7L104.93 73.22M111.25 72.65L109.62 70.09M120.77 67.15L119.37 64.46M125.71 64.71L124.43 61.97M130.74 62.5L129.58 59.7M135.87 60.5L134.83 57.65M141.08 58.74L140.17 55.84M146.36 57.2L145.58 54.27M151.71 55.89L151.05 52.93M157.1 54.82L156.58 51.83M162.54 53.98L162.14 50.97M168.01 53.38L167.75 50.36M173.5 53.02L173.37 49.99"/><path class="scope__tick scope__tick--mid" d="M179 55.5L179 49.87M240.75 72.05L243.57 67.17M285.95 117.25L290.83 114.43M285.95 240.75L290.83 243.57M240.75 285.95L243.57 290.83M179 302.5L179 308.13M117.25 285.95L114.43 290.83M72.05 240.75L67.17 243.57M72.05 117.25L67.17 114.43M117.25 72.05L114.43 67.17"/><path class="scope__tick scope__tick--major" d="M58.1 179L49.87 179M299.9 179L308.13 179"/></g><path class="scope__inner" d="M60.27 179a118.73 118.73 0 1 0 237.47 0a118.73 118.73 0 1 0 -237.47 0"/><path class="scope__arc" d="M98.02 92.16A118.73 118.73 0 0 1 259.98 92.16"/><g class="scope__dividers"><path class="scope__divider" d="M118.33 179L64.6 179"/><path class="scope__divider" d="M239.67 179L293.4 179"/></g><a class="scope__slice" href="/scope/behaviour/down?enter=lens" aria-label="1. Trading on while already down."><path class="scope__hit" d="M49.43 179A129.57 129.57 0 0 1 308.57 179L234.47 179A55.47 55.47 0 0 0 123.53 179Z"/><path class="scope__lift" d="M60.27 179A118.73 118.73 0 0 1 297.73 179L234.47 179A55.47 55.47 0 0 0 123.53 179Z"/><path class="scope__focus" d="M62.31 175.94A116.73 116.73 0 0 1 295.69 175.94L236.18 177.5A57.2 57.2 0 0 0 121.82 177.5Z"/><text class="scope__number" x="179" y="76.88" text-anchor="middle"><tspan x="179" dy="0">1</tspan></text><text class="scope__figure scope__figure--s15 scope__figure--plain" x="179" y="97.28" text-anchor="middle"><tspan x="179" dy="0">{{ facts.down.figure }}</tspan></text><g class="scope__mini chart chart--on-navy" transform="translate(161 103.53)">{% for part in mini_charts.down.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</g></a><path class="scope__leader" d="M179 47.43L179 35.43"/><text class="scope__name" x="179" y="29.28" text-anchor="middle"><tspan x="179" dy="0">Trading on while already down</tspan></text><a class="scope__slice" href="/scope/behaviour/busy?enter=lens" aria-label="2. Your busiest day."><path class="scope__hit" d="M308.57 179A129.57 129.57 0 0 1 49.43 179L123.53 179A55.47 55.47 0 0 0 234.47 179Z"/><path class="scope__lift" d="M297.73 179A118.73 118.73 0 0 1 60.27 179L123.53 179A55.47 55.47 0 0 0 234.47 179Z"/><path class="scope__focus" d="M295.69 182.06A116.73 116.73 0 0 1 62.31 182.06L121.82 180.5A57.2 57.2 0 0 0 236.18 180.5Z"/><text class="scope__number" x="179" y="250.82" text-anchor="middle"><tspan x="179" dy="0">2</tspan></text><text class="scope__figure scope__figure--s15 scope__figure--plain" x="179" y="271.22" text-anchor="middle"><tspan x="179" dy="0">{{ facts.busy.figure }}</tspan></text><g class="scope__mini chart chart--on-navy" transform="translate(161 277.47)">{% for part in mini_charts.busy.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</g></a><path class="scope__leader" d="M179 310.57L179 322.57"/><text class="scope__name" x="179" y="336.42" text-anchor="middle"><tspan x="179" dy="0">Your busiest day</tspan></text><path class="scope__disc" d="M127 179a52 52 0 1 0 104 0a52 52 0 1 0 -104 0"/><path class="scope__centre-ring" d="M123.53 179a55.47 55.47 0 1 0 110.93 0a55.47 55.47 0 1 0 -110.93 0"/><text class="scope__centre-name" x="179" y="174.35" text-anchor="middle"><tspan x="179" dy="0">Your behaviour</tspan></text><a class="scope__centre-link" href="/scope?enter=out&amp;tap=3" aria-label="Scope out to all four chapters"><text class="scope__centre-scope" x="179" y="191.85" text-anchor="middle"><tspan x="179" dy="0">Scope</tspan></text><circle cx="179" cy="179" r="52" class="scope__centre-hit"/></a></svg>
+</div>
+</header>
+<main class="screen__body screen__body--with-nav">
+  <p class="label">CHAPTER 3 OF 4</p>
+  <h1 class="title fact__title">Your behaviour</h1>
+  <p class="body">2 facts, counted from your file.</p>
+  <p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
+  
+  <div class="story-list">
+    <a class="story-card" href="/scope/behaviour/down?enter=lens">
+  <span class="story-card__head"><span class="story-card__num">1</span><span class="story-card__title">Trading on while already down</span><span class="story-card__figure">{{ facts.down.occasion_count }}</span></span>
+  <span class="mirror mirror--card">On <span class="num ">{{ facts.down.occasion_count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss. On <span class="num ">{{ facts.down.both_lost_count }}</span> of those, the two most recent had both lost.</span>
+  
+  <span class="story-card__chart">
+    <span class="table-label table-label--card">Table 1</span>
+    <table class="table table--card"><thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Net (gross)</th><th class="table__num">Average</th></tr></thead>
+      <tbody><tr><td class="table__text">After two straight losses</td><td class="table__num">{{ facts.down.after_two.trades }}</td><td class="table__num num--{{ facts.down.after_two.net_tone }}">{{ facts.down.after_two.net }}</td><td class="table__num num--{{ facts.down.after_two.average_tone }}">{{ facts.down.after_two.average }}</td></tr>
+      <tr><td class="table__text">Your other trades that qualified</td><td class="table__num">{{ facts.down.others.trades }}</td><td class="table__num num--{{ facts.down.others.net_tone }}">{{ facts.down.others.net }}</td><td class="table__num num--{{ facts.down.others.average_tone }}">{{ facts.down.others.average }}</td></tr></tbody></table>
+    <span class="table-label table-label--card">Table 2</span>
+    <table class="table table--card"><thead><tr><th></th><th class="table__num">Strike rate</th><th class="table__num">Average lots</th></tr></thead>
+      <tbody><tr><td class="table__text">After two straight losses</td><td class="table__num">{{ facts.down.after_two.strike_percent }}%</td><td class="table__num">{{ facts.down.after_two.average_lots }}</td></tr>
+      <tr><td class="table__text">Every other trade</td><td class="table__num">{{ facts.down.every_other.strike_percent }}%</td><td class="table__num">{{ facts.down.every_other.average_lots }}</td></tr></tbody></table>
+    <span class="body-small">This happened on <span class="num ">{{ facts.down.day_count }}</span> of your <span class="num ">{{ trading_day_count }}</span> trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run.</span>
+  </span>
+  <span class="story-card__foot"><span><span class="num ">{{ facts.down.trade_count }}</span> trades behind this</span><span aria-hidden="true">›</span></span>
+</a>
+    <a class="story-card" href="/scope/behaviour/busy?enter=lens">
+  <span class="story-card__head"><span class="story-card__num">2</span><span class="story-card__title">Your busiest day</span><span class="story-card__figure">{{ facts.busy.multiple }}×</span></span>
+  <span class="mirror mirror--card">Your normal day is <span class="num ">{{ facts.busy.normal_day }}</span> trades. Your busiest was <span class="num ">{{ facts.busy.busiest_date }}</span>, at <span class="num ">{{ facts.busy.busiest_count }}</span> — <span class="num ">{{ facts.busy.multiple }}</span>× that.</span>
+  <span class="story-card__chart"><svg class="chart" viewBox="0 0 302 84" width="302" height="84" aria-hidden="true">{% for part in facts.busy.chart.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg><span class="figure__axis"><span>{{ facts.busy.first_day }}</span><span>trades per day</span><span>{{ facts.busy.last_day }}</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Busiest day</span><span>- - your normal day</span></span></span>
+  
+  <span class="story-card__foot"><span><span class="num ">{{ facts.busy.busiest_count }}</span> trades behind this</span><span aria-hidden="true">›</span></span>
+</a>
+  </div>
+  
+  <section class="feedback" aria-label="Does this match your trading?">
+  <h2 class="feedback__question">Does this match your trading?</h2>
+  <div class="feedback__options">
+      <button class="btn btn--pill-small" name="answer" value="accurate" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Accurate</button>
+      <button class="btn btn--pill-small" name="answer" value="not_sure" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Not sure</button>
+      <button class="btn btn--pill-small" name="answer" value="wrong" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">Wrong</button>
+    </div>
+</section>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope" aria-current="page">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

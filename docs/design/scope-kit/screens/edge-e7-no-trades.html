@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your record · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: Edge · No trades rebuilt · Your record, nothing to count yet
+  Route:  GET /scope  (no trades)
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <p class="label label--plain">Nothing to count yet</p>
+  <h1 class="title">Your record</h1>
+  <p class="body">There is nothing here yet. Upload a tradebook and this page fills with what it says.</p>
+  <div class="screen__actions"><a class="btn btn--primary btn--block" href="/upload">Upload a tradebook</a></div>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope" aria-current="page">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

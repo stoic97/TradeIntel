@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample trader · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 2c · Demo · the trades
+  Route:  GET /demo/trades
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <div class="demo-bar"><a class="link link--back" href="/demo/reveal">‹ Back</a><span class="chip">Sample trader · invented</span></div>
+  <p class="label demo__step">STEP 3 OF 3 · THE TRADES BEHIND IT</p>
+  <h1 class="heading">Your worst trading days</h1>
+  <p class="mirror mirror--card">Those five days came to <span class="num  num--{{ demo_five_day_sum_tone }}">{{ demo_five_day_sum }}</span>.</p>
+  <p class="evidence__caption">The five days, and every trade on them. <span class="num ">{{ demo_trade_count }}</span> trades.</p>
+  <div class="trades">
+  {% for group in trade_groups %}
+  <section class="trades__group">
+    <div class="trades__head trades__head--top">
+      <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ group.summary }}</span></div>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+    </div>
+    {% for trade in group.trades %}
+    <article class="trade">
+      <div class="trade__label">Trade {{ trade.number }} · {{ trade.instrument }}</div>
+      <div class="trade__row"><span>{{ trade.day }}</span><span>{{ trade.time_in }}</span><span>{{ trade.time_out }}</span><span>{{ trade.held_minutes }} min</span><span class="trade__net num--{{ trade.net_tone }}">{{ trade.net }}</span></div>
+      <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ trade.strip.axis }}"/><path class="strip__tick" d="{{ trade.strip.ticks }}"/><path class="strip__dot" d="{{ trade.strip.dots }}"/><path class="strip__bar" d="{{ trade.strip.bar }}"/></svg>
+      <table class="fills">
+        <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>
+        <tbody>{% for fill in trade.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ fill.qty }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ fill.row }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </article>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+</main>
+<footer class="screen__footer"><a class="btn btn--primary btn--block" href="/invite">Try it with your own trades</a></footer>
+</div>
+</body>
+</html>

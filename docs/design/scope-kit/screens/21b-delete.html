@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete everything · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 21b · Delete everything · tick the box to enable
+  Route:  GET /account/delete · POST /account/delete
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">Delete everything</h1>
+  <p class="body">This removes the file you uploaded, every trade we rebuilt from it, every Journal written from those trades, your risk figures, and the record of which lines you opened. It removes your account with them, so you will not be able to sign in again.</p>
+  <p class="body">Backups hold yesterday's copy, and they roll off within 30 days. After that your data is gone from those too.</p>
+  <section class="consent__section"><h2 class="subhead">What we keep</h2><p class="body">Two rows: that this account agreed to what we do with a tradebook, and that it asked to be deleted and was. No name, no trades, no figure worked out from them.</p></section>
+  <section class="consent__section"><h2 class="subhead">What deleting cannot undo</h2><p class="body">Your file and everything built from it can be removed at any time. What cannot be undone is that looking at your data informed decisions we have already made about the engine. This is the same as any research partnership, and we say so plainly.</p></section>
+  <form method="post" action="/account/delete" class="delete-form">
+    <label class="choice"><input class="choice__input delete-form__confirm" type="checkbox" name="confirm" value="yes" required><span class="body">I have read this and I want everything deleted.</span></label>
+    <div class="screen__actions">
+      <!-- Disabled until the box is ticked: the :has() rule in components.css enables it; the server also requires confirm=yes. -->
+      <button class="btn btn--primary btn--block delete-form__submit" type="submit">Delete everything</button>
+      <a class="btn btn--text" href="/account">Back to your account — nothing has been deleted yet.</a>
+    </div>
+  </form>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What you agreed to · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 5b · What you agreed to (consent ledger, from Account)
+  Route:  GET /account/consent
+  consent.*.status_sentence: "Currently granted." (live-app wording); decisions: granted | withdrawn.
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">What you agreed to</h1>
+  <p class="body">Every change is kept, so this reads as a history rather than a current state.</p>
+  <section class="consent-row"><h2 class="subhead">Process my tradebook to produce my own record</h2><p class="body-small">{{ consent.process.status_sentence }}</p><a class="link" href="/account/delete">Withdraw this and stop using Scope</a></section>
+  <section class="consent-row"><h2 class="subhead">Use my tradebook to check and calibrate the engine</h2><p class="body-small">{{ consent.calibrate.status_sentence }}</p><form method="post" action="/account/consent/calibrate/withdraw"><button class="btn btn--text" type="submit">Withdraw this</button></form></section>
+  <h2 class="card-title consent__ledger-title">Your ledger</h2>
+  <table class="table">
+    <thead><tr><th>When</th><th>Purpose</th><th>Decision</th><th class="table__num">Version</th></tr></thead>
+    <tbody>{% for row in consent_ledger %}<tr><td>{{ row.date }}</td><td class="table__text">{{ row.purpose }}</td><td>{{ row.decision }}</td><td class="table__num">{{ row.version }}</td></tr>{% endfor %}</tbody>
+  </table>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account" aria-current="page">Account</a></nav>
+</div>
+</body>
+</html>

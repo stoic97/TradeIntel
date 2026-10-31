@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What we can check · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 11 · What we can check (eligibility)
+  Route:  GET /eligibility
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <div class="demo-bar"><a class="link link--back" href="/guess">‹ Back to the guess</a><span class="label label--plain">Eligibility</span></div>
+  <h1 class="title">What we can check</h1>
+  <p class="body">Your <span class="num ">{{ eligibility.trade_count }}</span> trades across <span class="num ">{{ eligibility.trading_day_count }}</span> trading days, against the <span class="num ">{{ eligibility.library_count }}</span> checks in our research library.</p>
+  <p class="body"><span class="num ">{{ eligibility.enough_count }}</span> have enough to work with. <span class="num ">{{ eligibility.need_more_count }}</span> need more history than you have given us so far, <span class="num ">{{ eligibility.waiting_count }}</span> are waiting on something that is not your trades at all, and <span class="num ">{{ eligibility.unknown_count }}</span> we cannot judge from this page.</p>
+  <p class="body-small">The minimums below come from our pre-registered framework, version {{ eligibility.framework_version }}, which is still a draft — the thresholds are written down but not yet fixed. When they are fixed, this page says so and the numbers stop moving.</p>
+  <section class="import__section">
+    <h2 class="card-title">Enough to work with</h2>
+    <table class="table"><thead><tr><th>Check</th><th>What it needs</th><th>What you have</th></tr></thead>
+      <tbody>{% for check in checks_enough %}<tr><td>{{ check.id }}</td><td>{{ check.needs }}</td><td class="table__text">{{ check.has }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">Not enough history yet</h2>
+    <table class="table"><thead><tr><th>Check</th><th>What it needs</th><th>Why not</th></tr></thead>
+      <tbody>{% for check in checks_need_more %}<tr><td>{{ check.id }}</td><td>{{ check.needs }}</td><td class="table__text">{{ check.reason }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">Waiting on something that is not your trades</h2>
+    <table class="table"><thead><tr><th>Check</th><th>What is missing</th></tr></thead>
+      <tbody>{% for check in checks_waiting %}<tr><td>{{ check.id }}</td><td class="table__text">{{ check.reason }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">We cannot tell from here</h2>
+    <table class="table"><thead><tr><th>Check</th><th>Why we cannot say</th></tr></thead>
+      <tbody>{% for check in checks_unknown %}<tr><td>{{ check.id }}</td><td class="table__text">{{ check.reason }}</td></tr>{% endfor %}</tbody></table>
+    <p class="body-small">These need the trades sorted into groups this page does not build — by session, or by the cells of a map. Not knowing is not the same as not having enough, and it is not the same as having it.</p>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">What this page is not</h2>
+    <p class="body">A check with enough to work with has not been run, and a check without enough has found nothing — there is nothing yet to find either way. None of this says anything about how you trade. It says what your file can and cannot support.</p>
+    <p class="body">The checks are named by their identifiers here. They belong to the research library, and naming them in our own words before they have been run would be telling you what they would say.</p>
+  </section>
+  <a class="link import__next" href="/guess">Go to your record — counted from your own trades, and separate from all of this.</a>
+</main>
+</div>
+</body>
+</html>

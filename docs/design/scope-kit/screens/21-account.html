@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your account · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 21 · Account
+  Route:  GET /account
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <p class="label label--plain">Your account</p>
+  <h1 class="title fact__title">{{ user.display_name }}</h1>
+  <p class="body">Signed in as {{ user.login_id }}.</p>
+  <section class="import__section">
+    <h2 class="card-title">Your uploads</h2>
+    <table class="table"><thead><tr><th class="table__wide">When</th><th>What we read</th><th></th></tr></thead>
+      <tbody>{% for upload in uploads %}<tr><td>{{ upload.date }}</td><td>{% if upload.rejected %}not a tradebook{% else %}{{ upload.rows }} rows, {{ upload.trades }} trades{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ upload.id }}">Open</a></td></tr>{% endfor %}</tbody></table>
+    <a class="btn btn--secondary btn--block account__upload" href="/upload">Upload a tradebook</a>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">Your settings</h2>
+    <a class="settings-row" href="/account/consent"><span class="body">What you agreed to</span><span class="journal-index__go" aria-hidden="true">›</span></a>
+  </section>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account" aria-current="page">Account</a></nav>
+</div>
+</body>
+</html>

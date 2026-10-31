@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The reveal · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 12 · The reveal (share / no share)
+  Route:  GET /reveal?guess=…
+  share_shown: the slice is drawn only when 0 < share < 100 %. Otherwise the dial has no slice and no figure, and the Mirror's other sentence shows.
+  reveal_slice_edge_tick: the major tick at the slice's end angle — scope_geometry.radial(150,150, share·360, 139.5, 149).
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen screen--navy on-navy">
+<main class="screen__body reveal">
+  <p class="body-small body-small--soft">You guessed: {{ guess_label }}.</p>
+  <div class="reveal__dial">
+    <svg class="reveal__svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="Your five worst days as one slice of your whole result">
+      <path class="scope__outer" d="M0.5 150a149.5 149.5 0 1 0 299 0a149.5 149.5 0 1 0 -299 0"/>
+      <path class="scope__tick scope__tick--minor" d="M156.35 4.64L156.5 1.14M162.68 5.05L162.99 1.57M168.99 5.74L169.45 2.27M175.27 6.71L175.87 3.26M181.49 7.95L182.25 4.53M187.66 9.46L188.56 6.08M193.75 11.23L194.81 7.9M199.76 13.27L200.96 9.99M205.68 15.58L207.02 12.34M211.49 18.13L212.97 14.96M217.18 20.94L218.8 17.84M228.18 27.29L230.06 24.33M233.46 30.81L235.46 27.95M238.57 34.57L240.71 31.79M243.53 38.54L245.78 35.86M248.3 42.73L250.66 40.15M252.88 47.12L255.36 44.64M257.27 51.7L259.85 49.34M261.46 56.47L264.14 54.22M265.43 61.43L268.21 59.29M269.19 66.54L272.05 64.54M272.71 71.82L275.67 69.94M279.06 82.82L282.16 81.2M281.87 88.51L285.04 87.03M284.42 94.32L287.66 92.98M286.73 100.24L290.01 99.04M288.77 106.25L292.1 105.19M290.54 112.34L293.92 111.44M292.05 118.51L295.47 117.75M293.29 124.73L296.74 124.13M294.26 131.01L297.73 130.55M294.95 137.32L298.43 137.01M295.36 143.65L298.86 143.5M295.36 156.35L298.86 156.5M294.95 162.68L298.43 162.99M294.26 168.99L297.73 169.45M293.29 175.27L296.74 175.87M292.05 181.49L295.47 182.25M290.54 187.66L293.92 188.56M288.77 193.75L292.1 194.81M286.73 199.76L290.01 200.96M284.42 205.68L287.66 207.02M281.87 211.49L285.04 212.97M279.06 217.18L282.16 218.8M272.71 228.18L275.67 230.06M269.19 233.46L272.05 235.46M265.43 238.57L268.21 240.71M261.46 243.53L264.14 245.78M257.27 248.3L259.85 250.66M252.88 252.88L255.36 255.36M248.3 257.27L250.66 259.85M243.53 261.46L245.78 264.14M238.57 265.43L240.71 268.21M233.46 269.19L235.46 272.05M228.18 272.71L230.06 275.67M217.18 279.06L218.8 282.16M211.49 281.87L212.97 285.04M205.68 284.42L207.02 287.66M199.76 286.73L200.96 290.01M193.75 288.77L194.81 292.1M187.66 290.54L188.56 293.92M181.49 292.05L182.25 295.47M175.27 293.29L175.87 296.74M168.99 294.26L169.45 297.73M162.68 294.95L162.99 298.43M156.35 295.36L156.5 298.86M143.65 295.36L143.5 298.86M137.32 294.95L137.01 298.43M131.01 294.26L130.55 297.73M124.73 293.29L124.13 296.74M118.51 292.05L117.75 295.47M112.34 290.54L111.44 293.92M106.25 288.77L105.19 292.1M100.24 286.73L99.04 290.01M94.32 284.42L92.98 287.66M88.51 281.87L87.03 285.04M82.82 279.06L81.2 282.16M71.82 272.71L69.94 275.67M66.54 269.19L64.54 272.05M61.43 265.43L59.29 268.21M56.47 261.46L54.22 264.14M51.7 257.27L49.34 259.85M47.12 252.88L44.64 255.36M42.73 248.3L40.15 250.66M38.54 243.53L35.86 245.78M34.57 238.57L31.79 240.71M30.81 233.46L27.95 235.46M27.29 228.18L24.33 230.06M20.94 217.18L17.84 218.8M18.13 211.49L14.96 212.97M15.58 205.68L12.34 207.02M13.27 199.76L9.99 200.96M11.23 193.75L7.9 194.81M9.46 187.66L6.08 188.56M7.95 181.49L4.53 182.25M6.71 175.27L3.26 175.87M5.74 168.99L2.27 169.45M5.05 162.68L1.57 162.99M4.64 156.35L1.14 156.5M4.64 143.65L1.14 143.5M5.05 137.32L1.57 137.01M5.74 131.01L2.27 130.55M6.71 124.73L3.26 124.13M7.95 118.51L4.53 117.75M9.46 112.34L6.08 111.44M11.23 106.25L7.9 105.19M13.27 100.24L9.99 99.04M15.58 94.32L12.34 92.98M18.13 88.51L14.96 87.03M20.94 82.82L17.84 81.2M27.29 71.82L24.33 69.94M30.81 66.54L27.95 64.54M34.57 61.43L31.79 59.29M38.54 56.47L35.86 54.22M42.73 51.7L40.15 49.34M47.12 47.12L44.64 44.64M51.7 42.73L49.34 40.15M56.47 38.54L54.22 35.86M61.43 34.57L59.29 31.79M66.54 30.81L64.54 27.95M71.82 27.29L69.94 24.33M82.82 20.94L81.2 17.84M88.51 18.13L87.03 14.96M94.32 15.58L92.98 12.34M100.24 13.27L99.04 9.99M106.25 11.23L105.19 7.9M112.34 9.46L111.44 6.08M118.51 7.95L117.75 4.53M124.73 6.71L124.13 3.26M131.01 5.74L130.55 2.27M137.32 5.05L137.01 1.57M143.65 4.64L143.5 1.14"/><path class="scope__tick scope__tick--mid" d="M221.25 26.59L224.5 20.96M273.41 78.75L279.04 75.5M292.5 150L299 150M273.41 221.25L279.04 224.5M221.25 273.41L224.5 279.04M150 292.5L150 299M78.75 273.41L75.5 279.04M26.59 221.25L20.96 224.5M7.5 150L1 150M26.59 78.75L20.96 75.5M78.75 26.59L75.5 20.96"/>
+      <path class="scope__tick scope__tick--major" d="M150 10.5L150 1"/>
+      <path class="scope__inner" d="M13 150a137 137 0 1 0 274 0a137 137 0 1 0 -274 0"/>
+      {% if share_shown %}
+      <!-- The slice: a stroke on r = 99, width 74; its length is 2π·99·share. Server fills reveal_slice_length = 622.04 × share (0 < share < 1). -->
+      <circle class="reveal__slice" cx="150" cy="150" r="99" stroke-dasharray="{{ reveal_slice_length }} 622.04" transform="rotate(-90 150 150)"/>
+      <path class="scope__tick scope__tick--major" d="{{ reveal_slice_edge_tick }}"/>
+      <circle class="reveal__disc" cx="150" cy="150" r="56"/>
+      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ share_percent }}%</text>
+      {% else %}
+      <circle class="reveal__disc reveal__disc--empty" cx="150" cy="150" r="56"/>
+      {% endif %}
+      <circle class="scope__centre-ring" cx="150" cy="150" r="61"/>
+    </svg>
+  </div>
+  {% if share_shown %}
+  <p class="mirror mirror--card">Those five days came to <span class="num  num--{{ five_day_sum_tone }}">{{ five_day_sum }}</span>. That is <span class="num ">{{ share_percent }}</span>% of your result for the whole period, which was <span class="num  num--{{ whole_period_result_tone }}">{{ whole_period_result }}</span>.</p>
+  {% else %}
+  <p class="mirror mirror--card">Those five days came to <span class="num  num--{{ five_day_sum_tone }}">{{ five_day_sum }}</span>.</p>
+  <p class="mirror mirror--card">Your result for the whole period was <span class="num  num--{{ whole_period_result_tone }}">{{ whole_period_result }}</span>. The other <span class="num ">{{ other_day_count }}</span> days were net <span class="num  num--{{ other_days_net_tone }}">{{ other_days_net }}</span>.</p>
+  {% endif %}
+  <div class="screen__actions">
+    <a class="btn btn--on-navy btn--block" href="/scope/results/worst-days?enter=lens">Show me those days</a>
+    <a class="btn btn--text-on-navy" href="/risk">Continue</a>
+  </div>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Before you upload · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 5 · Before you upload (consent, in full)
+  Route:  GET /consent · POST /consent
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body">
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">Before you upload</h1>
+  <p class="body consent__intro">A tradebook is among the most sensitive files you own. Here is exactly what happens to it. The same promises are made in plainer words on <a class="link" href="https://plusev.in/scope">plusev.in</a>; if the two ever disagree, this page is the one you agreed to, and we want to hear about it.</p>
+  <section class="consent__section"><h2 class="subhead">What we store</h2><p class="body">The file you upload, exactly as your broker produced it. The reconstruction we build from it — your trades matched into round trips. And the Journals written from those trades. We also record which lines you open and how long you read them, so that a later version can put the lines that matter to you first; that is a record of what you read, never of anything you type. Nothing else about you.</p></section>
+  <section class="consent__section"><h2 class="subhead">For how long</h2><p class="body">Until you delete it.</p></section>
+  <section class="consent__section"><h2 class="subhead">Who can access it</h2><p class="body">The two people who run the product: the founder, and the engineer who runs the server. No third party receives the file, and no external service touches anything derived from it — there is no analytics, no error reporting and no email in this product. If that ever changes, this page names the service before it does.</p></section>
+  <section class="consent__section"><h2 class="subhead">What deletion covers</h2><p class="body">The file, every artefact derived from it, and every Journal. Backups roll off within 30 days, so your data is gone from those too. What we keep is the record that you consented and the record that you deleted — the proof that both happened.</p></section>
+  <section class="consent__section"><h2 class="subhead">What deletion cannot undo</h2><p class="body">Your file and everything derived from it can be deleted at any time. What cannot be undone is that looking at your data informed decisions we have already made about the engine. This is the same as any research partnership, and we say so plainly.</p></section>
+  <form method="post" action="/consent" class="consent__section">
+    <h2 class="subhead">What you are agreeing to</h2>
+    <label class="choice"><input class="choice__input" type="checkbox" name="purpose" value="process" checked><span><span class="choice__title">Process my tradebook to produce my own record</span><span class="choice__text">We read your file, reconstruct your trades, and show you what they say. This is the product: without it there is nothing to run.</span></span></label>
+    <label class="choice"><input class="choice__input" type="checkbox" name="purpose" value="calibrate" checked><span><span class="choice__title">Use my tradebook to check and calibrate the engine</span><span class="choice__text">Your history helps us find out where our reconstruction and our measurements are wrong. We do this by running our own code against your trades and comparing what it says with what your file shows. You can refuse this and still get everything else, exactly as it is.</span></span></label>
+    <div class="screen__actions">
+      <button class="btn btn--primary btn--block" type="submit">Agree and continue</button>
+      <p class="body-small">You can withdraw any of these at any time, from your settings.</p>
+      <a class="btn btn--text" href="/consent/declined">I don't agree</a>
+    </div>
+  </form>
+</main>
+</div>
+</body>
+</html>

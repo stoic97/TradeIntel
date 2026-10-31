@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 20 · Home, signed in
+  Route:  GET /  (signed in)
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <div class="stage__bar stage__bar--record"><span class="lockup"><svg class="lockup__mark" viewBox="0 0 30 24" aria-hidden="true"><path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><circle cx="15" cy="7" r="1.9" fill="currentColor"/><circle cx="15" cy="11.8" r="1.9" fill="currentColor"/><circle cx="15" cy="18" r="1.9" fill="currentColor"/></svg><span class="lockup__name">PlusEV</span><span class="lockup__sub">Scope</span></span><span class="num num--label">{{ user.name }}</span></div>
+  <a class="scope-card on-navy" href="/scope">
+    <span class="label label--soft">YOUR SCOPE · IMPORT {{ import.id }} · {{ import.date }}</span>
+    <span class="num num--hero scope-card__figure">{{ five_day_share_percent }}%</span>
+    <span class="body scope-card__caption">of your result in five days</span>
+    <span class="scope-card__foot"><span>Open the Scope</span><span aria-hidden="true">›</span></span>
+  </a>
+  <section class="latest">
+    <div class="latest__head"><h2 class="card-title">Latest Journals</h2><a class="link link--back" href="/journals">All days</a></div>
+    {% for day in latest_days %}
+    <a class="latest__row" href="/journals/{{ day.date_iso }}"><span class="body">{{ day.long_date }}</span><span class="num table__num">{{ day.trades }} trades</span><span class="num table__num num--{{ day.net_tone }}">{{ day.net }}</span><span class="journal-index__go" aria-hidden="true">›</span></a>
+    {% endfor %}
+  </section>
+  <section class="card upload-card">
+    <a class="btn btn--primary btn--block" href="/upload">Upload new trades</a>
+    <p class="body-small upload-card__note">A new file replaces the days it covers.</p>
+  </section>
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Journals · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 18 · Your Journals
+  Route:  GET /journals
+  
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <p class="label label--plain">Journals</p>
+  <h1 class="title fact__title">Your Journals</h1>
+  <p class="body">One for every complete trading day in what you have uploaded — <span class="num ">{{ journal_count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
+  <div class="journal-index">
+    {% for journal in latest_journals %}
+    <a class="journal-index__row" href="/journals/{{ journal.date_iso }}"><span class="num journal-index__date">{{ journal.date }}</span>{% if journal.version > 1 %}<span class="num num--label">version {{ journal.version }}</span>{% endif %}{% if journal.unread %}<span class="tag">unread</span>{% endif %}<span class="journal-index__go" aria-hidden="true">›</span></a>
+    {% endfor %}
+  </div>
+  <p class="body journal__earlier">You have <span class="num ">{{ earlier_journal_count }}</span> earlier Journals. <a class="link" href="/journals/earlier">Read them one at a time</a>, or <a class="link" href="/scope">go to your record</a>.</p>
+  {% if price_question_open %}<a class="card card--link" href="/journals/{{ latest_journals[0].date_iso }}#one-question">One question, and it changes nothing about your account<span class="card__go" aria-hidden="true">›</span></a>{% endif %}
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals" aria-current="page">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

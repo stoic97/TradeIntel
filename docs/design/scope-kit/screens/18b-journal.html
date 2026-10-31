@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journal · PlusEV Scope</title>
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/app-icon-180.png">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<script src="/static/js/htmx.min.js" defer></script>
+</head>
+<!--
+  Screen: 18b · One Journal (with the one question, shown once)
+  Route:  GET /journals/{date} · POST /journals/{date}/note · POST /journals/{date}/trades/{n} · POST /price-question
+  journal.sentences are the Journal's own sentences, written by the engine (e.g. "{{ n }} trades, all before noon. Net −{{ x }}. …"). price is an owner slot.
+-->
+<body>
+<svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
+<div class="screen">
+<main class="screen__body screen__body--with-nav">
+  <div class="demo-bar"><span class="label label--plain">Journal</span><a class="link" href="/journals">Your Journals</a></div>
+  <h1 class="title num-title">{{ journal.date }}</h1>
+  {% if journal.version > 1 %}<p class="body-small">Version <span class="num ">{{ journal.version }}</span>. A later upload changed this period. The earlier version is kept.</p>{% endif %}
+  <section class="journal__section">
+    <h2 class="card-title">{{ journal.long_date }}</h2>
+    {% for sentence in journal.sentences %}<p class="mirror mirror--card">{{ sentence }}</p>{% endfor %}
+  </section>
+  <form class="journal__section" method="post" action="/journals/{{ journal.date_iso }}/note" hx-post="/journals/{{ journal.date_iso }}/note" hx-swap="none">
+    <h2 class="card-title">Your own note</h2>
+    <p class="body-small">Nothing on this page is required.</p>
+    <label class="field"><span class="field__label">Anything you want to add about this period?</span><textarea class="field__input field__textarea" name="note">{{ journal.note }}</textarea></label>
+    <button class="btn btn--secondary journal__save" type="submit">Save</button>
+  </form>
+  <section class="journal__section">
+    <h2 class="card-title">The trades, one at a time</h2>
+    <p class="body-small">In the order you opened them. Result is gross — your export carries no charges.</p>
+    {% for trade in journal.trades %}
+    <form class="card journal-trade" method="post" action="/journals/{{ journal.date_iso }}/trades/{{ trade.number }}" hx-post="/journals/{{ journal.date_iso }}/trades/{{ trade.number }}" hx-swap="none">
+      <p class="journal-trade__head"><span>{{ trade.label }}</span> — <span class="num num--{{ trade.net_tone }}">{{ trade.net }}</span></p>
+      <label class="field"><span class="field__label">Where was your stop?</span><input class="field__input field__input--mono" name="stop" inputmode="decimal" value="{{ trade.stop }}"></label>
+      <label class="field"><span class="field__label">What was the trade?</span><input class="field__input" name="what" value="{{ trade.what }}"></label>
+      <fieldset class="fieldset"><legend class="fieldset__legend">Was the stop on the chart when you entered?</legend>
+        <label class="choice choice--inline"><input class="choice__input" type="radio" name="stop_on_chart" value="yes"{% if trade.stop_on_chart == 'yes' %} checked{% endif %}><span class="body">yes</span></label>
+        <label class="choice choice--inline"><input class="choice__input" type="radio" name="stop_on_chart" value="no"{% if trade.stop_on_chart == 'no' %} checked{% endif %}><span class="body">no</span></label>
+      </fieldset>
+      <button class="btn btn--secondary journal__save" type="submit">Save</button>
+    </form>
+    {% endfor %}
+  </section>
+  {% if price_question_open %}
+  <form class="journal__section question" id="one-question" method="post" action="/price-question" hx-post="/price-question" hx-swap="outerHTML">
+    <h2 class="card-title">One question, and it changes nothing about your account</h2>
+    <p class="body">We are deciding what to charge. Would you pay ₹{{ price }} a month for this Journal and a monthly record of how you traded? Yes, no, or maybe — and if not, what would change it?</p>
+    <div class="question__options">
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="yes"><span class="body">Yes</span></label>
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="no"><span class="body">No</span></label>
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="maybe"><span class="body">Maybe</span></label>
+    </div>
+    <label class="field"><span class="field__label">If not, what would change that?</span><input class="field__input" name="what_would_change"></label>
+    <button class="btn btn--primary journal__save" type="submit">Send</button>
+  </form>
+  {% endif %}
+</main>
+<nav class="bottom-nav" aria-label="Main"><a class="bottom-nav__item" href="/scope">Scope</a><a class="bottom-nav__item" href="/journals" aria-current="page">Journal</a><a class="bottom-nav__item" href="/account">Account</a></nav>
+</div>
+</body>
+</html>

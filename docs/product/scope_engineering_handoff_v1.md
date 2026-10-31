@@ -36,7 +36,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | # | Who | Action |
 |---|---|---|
 | 1 | Founder | ~~Commit and push consent v1 and the site chrome~~ **Done 27 Oct, PR #2.** |
-| 2 | Founder | **The design in the repo.** Done: `docs/design/screens/` (81 screens, pre-polish look) and `screens/latest/` (final dial and motion), with `docs/design/README.md` saying which to trust. **To follow:** the engineering kit in `docs/design/scope-kit/` and the final full export replacing `screens/`. |
+| 2 | Founder | **The design in the repo.** Done: `docs/design/screens/` (81 screens, pre-polish look) and `screens/latest/` (final dial and motion), with `docs/design/README.md` saying which to trust. The engineering kit in `docs/design/scope-kit/` (31 Oct). **To follow:** a final full export replacing `screens/`. |
 | 3 | Founder | **Share the two Claude Design canvases with the engineer** (Share menu on each): "PlusEV Scope Prototype" (the clickable prototype, Play mode) and "PlusEV Scope Design System" (tokens, components, brand book). |
 | 4 | Founder | **Decisions in §13.** D1 and D5 answered 27 Oct; D2 is open but doesn't block Phases 0–3. |
 | 4b | Founder | **Brand PR for the font rule.** The brand docs are mirrored from `plusev-web/docs/brand/` and change only by PR (their README, "How to make a change"). `BRAND_RULES_CARD.md` "How it looks" and C12 still say "Serif for display"; the 26 Oct decision (§7 here) needs a `docs/brand-…` PR with a change-log row, then the Project mirror refreshed. Not blocking the build: §7 of this document is what to build. |
