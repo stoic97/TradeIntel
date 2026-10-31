@@ -143,7 +143,7 @@ def fact_href(key: str, *, lens: bool = True) -> str:
 def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
     """Every trade a fact is counted from, in the order the trader opened them.
 
-    ctx is routes_mirror._mirror_context(). "unread" is rows, not trades, and
+    ctx is scope_facts.record_context(). "unread" is rows, not trades, and
     "not-told" has nothing behind it: both list none here.
     """
     trips: list[mx.Trip] = ctx["trips"]

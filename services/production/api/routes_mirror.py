@@ -14,6 +14,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from services.production.api import scope_facts as SF
+from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page
 from services.production.ctr.profiles import registry as profiles
@@ -33,46 +35,20 @@ DRAWERS = {
 }
 
 
-def _mirror_context(trips: list[mx.Trip]) -> dict:
-    """Every Appendix A figure, computed once."""
-    return {
-        "worst_days": mx.five_worst_days(trips),
-        "share": mx.share_of_total(trips),
-        "days": mx.day_counts(trips),
-        "best": mx.best_five(trips),
-        "worst": mx.worst_five(trips),
-        "two_losses": mx.two_straight_losses(trips),
-        "strike": mx.strike_rate(trips),
-        "lots": mx.average_lots(trips),
-        "holding": mx.holding_time(trips),
-        "hours": mx.result_by_hour(trips),
-        "run": mx.longest_losing_run(trips),
-        "risk": mx.risk_figure_counts(trips),
-        "trips": trips,
-    }
+def _record(request: Request):
+    """The signed-in trader's record, or the page to show instead of it.
 
-
-def _comparison_context(trips: list[mx.Trip], two_losses) -> dict:
-    """PRD 6.3: those trades against the rest, on strike rate and average lots."""
-    after_losses = mx.subset(trips, two_losses.condition_trip_ids)
-    the_rest = mx.complement(trips, two_losses.condition_trip_ids)
-    return {
-        "after_strike": mx.strike_rate(after_losses),
-        "after_lots": mx.average_lots(after_losses),
-        "rest_strike": mx.strike_rate(the_rest),
-        "rest_lots": mx.average_lots(the_rest),
-        "days_with_the_condition": len({t.trading_day for t in after_losses}),
-    }
-
-
-@router.get("/mirror", response_class=HTMLResponse)
-def mirror(request: Request):
+    Returns (response, None) when the trader must go elsewhere first - sign in,
+    consent - or when there is no record to show: the instrument is not set up, or
+    no trade was rebuilt (handoff 4, edge states). Otherwise (None, (trips, imp,
+    context)), context being every figure the Mirror and the Scope read.
+    """
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
-            return RedirectResponse("/login", status_code=303)
+            return RedirectResponse("/login", status_code=303), None
         if not has_diagnosis_consent(sess, trader):
-            return RedirectResponse("/consent", status_code=303)
+            return RedirectResponse("/consent", status_code=303), None
 
         try:
             trips, imp = loader.load_for(sess, trader)
@@ -80,15 +56,56 @@ def mirror(request: Request):
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
             return page(request, "mirror_no_profile.html", title="Your record",
-                        reason=str(exc))
+                        reason=str(exc)), None
         if not trips:
-            return page(request, "mirror_empty.html", title="Your record")
-        context = _mirror_context(trips)
-        context.update(_comparison_context(trips, context["two_losses"]))
-        return page(request, "mirror.html", title="Your record",
-                    imp=imp, drawers=DRAWERS,
-                    sources=s_enums.RiskUnitSourceV1,
-                    showable=s_enums.SHOWABLE_DENOMINATORS, **context)
+            return page(request, "mirror_empty.html", title="Your record"), None
+        return None, (trips, imp, SF.record_context(trips))
+
+
+ENTER = {"in": "vt-in vt-tap-{tap}", "out": "vt-out vt-tap-{tap}", "lens": "vt-lens",
+         "back": "vt-back"}
+"""The kit's ?enter= values and the class each puts on <html> (motion.css plays it)."""
+
+
+def enter_class(request: Request) -> str:
+    """The motion hook for the page, from ?enter= and ?tap=; anything else is no class."""
+    enter, tap = request.query_params.get("enter"), request.query_params.get("tap", "")
+    if enter not in ENTER:
+        return ""
+    if "{tap}" in ENTER[enter] and tap not in {str(c.number) for c in SM.CHAPTERS}:
+        return ""
+    return ENTER[enter].format(tap=tap)
+
+
+@router.get("/mirror", response_class=HTMLResponse)
+def mirror(request: Request):
+    early, record = _record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    return page(request, "mirror.html", title="Your record",
+                imp=imp, drawers=DRAWERS,
+                sources=s_enums.RiskUnitSourceV1,
+                showable=s_enums.SHOWABLE_DENOMINATORS, **context)
+
+
+@router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
+def scope_chapter(request: Request, n: int):
+    """A chapter: the dial re-divided into its facts, a story card for each."""
+    try:
+        chapter = SM.chapter(n)
+    except KeyError:
+        return HTMLResponse("", status_code=404)
+    early, record = _record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    figs = SF.facts(context, imp)
+    return page(request, "scope/chapter.html", title=chapter.name,
+                enter_class=enter_class(request), chapter=chapter,
+                view=SF.chapter_view(n, figs), facts=figs, imp=imp,
+                trading_day_count=len(context["days"].counts),
+                sources=s_enums.RiskUnitSourceV1, **context)
 
 
 @router.get("/mirror/{line}/drawer", response_class=HTMLResponse)
@@ -102,7 +119,7 @@ def drawer(request: Request, line: str):
         if not trips or line not in DRAWERS:
             return HTMLResponse("", status_code=404)
 
-        context = _mirror_context(trips)
+        context = SF.record_context(trips)
         shown: list[mx.Trip] = trips
         if line == "worst-days":
             days = {d.trading_day for d in context["worst_days"].days}

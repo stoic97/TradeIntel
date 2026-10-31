@@ -1,0 +1,10 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{%- set figure -%}
+{%- if f.state %}—{% else %}{{ holding.winners_median_seconds|minutes }} min · {{ holding.losers_median_seconds|minutes }} min<span class="figure-pair__label">winners · losers</span>{% endif -%}
+{%- endset %}
+{% call story_card(number, f.title, f.href, figure, trades_behind(f.trade_count), stacked=true) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.{% if holding.ratio %} That is a ratio of <span class="num">{{ holding.ratio }}</span>.{% endif %}</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>0 min</span><span>minutes open</span><span>{{ f.max_seconds|minutes }} min</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink legend__swatch--dot"></span>Winners</span><span><span class="legend__swatch legend__swatch--faint legend__swatch--dot"></span>Losers</span><span>| median</span></span></span>
+  {%- endif %}
+{% endcall %}

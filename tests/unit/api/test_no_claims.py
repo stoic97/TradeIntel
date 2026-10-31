@@ -39,8 +39,9 @@ def template_id(path: Path) -> str:
 TEMPLATES = templates_under(TEMPLATE_ROOT)
 
 # Section 6.7 exists to say the product names no cause and recommends nothing, which
-# it cannot say without those words. It is the only exemption, and it is by name.
-DISCLAIMER_TEMPLATES = {"mirror.html"}
+# it cannot say without those words. It is the only exemption, and it is by name: the
+# Mirror's section, and the Scope's card that tells it word for word.
+DISCLAIMER_TEMPLATES = {"mirror.html", "scope/cards/not-told.html"}
 DISCLAIMER_MARKER = "What we have not told you"
 
 NEVER_USED = [
@@ -135,9 +136,9 @@ def test_no_template_prints_an_unqualified_r(path):
 
 def test_the_disclaimer_is_exempt_by_name_not_by_luck():
     """If 6.7 is renamed, this fails rather than silently exempting nothing."""
-    mirror = (Path("services/production/api/templates/mirror.html")).read_text()
-    assert DISCLAIMER_MARKER in mirror
-    assert mirror.count(DISCLAIMER_MARKER) == 1
+    for name in DISCLAIMER_TEMPLATES:
+        text = (Path("services/production/api/templates") / name).read_text()
+        assert text.count(DISCLAIMER_MARKER) == 1, name
 
 
 # The never-say list in the Scope engineering handoff, section 6 (27 Oct). Every new

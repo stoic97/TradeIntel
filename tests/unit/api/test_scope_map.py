@@ -1,6 +1,6 @@
 """The Scope's map (api/scope_map.py): the chapters, the links, the trades behind each fact.
 
-Run on the Mirror's 40-trade contract fixture, through the same _mirror_context the
+Run on the Mirror's 40-trade contract fixture, through the same record_context the
 pages read, so a list here is the list a page will show.
 """
 
@@ -14,31 +14,14 @@ import pytest
 
 from services.production.api import formatting
 from services.production.api import scope_map as S
+from services.production.api.scope_facts import record_context
 from services.production.mirror import metrics as mx
 from tests.unit.api.templating import template_env
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
 
 
-def context(trips=TRIPS) -> dict:
-    """routes_mirror._mirror_context, without importing the app (no database here)."""
-    return {
-        "worst_days": mx.five_worst_days(trips),
-        "share": mx.share_of_total(trips),
-        "days": mx.day_counts(trips),
-        "best": mx.best_five(trips),
-        "worst": mx.worst_five(trips),
-        "two_losses": mx.two_straight_losses(trips),
-        "strike": mx.strike_rate(trips),
-        "holding": mx.holding_time(trips),
-        "hours": mx.result_by_hour(trips),
-        "run": mx.longest_losing_run(trips),
-        "risk": mx.risk_figure_counts(trips),
-        "trips": trips,
-    }
-
-
-CTX = context()
+CTX = record_context(TRIPS)
 
 
 # ---------- The map ----------

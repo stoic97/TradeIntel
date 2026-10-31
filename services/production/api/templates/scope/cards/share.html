@@ -1,0 +1,9 @@
+{% from "_components.html" import story_card, trades_behind, money, chart %}
+{% call story_card(number, f.title, f.href, f.figure if share.shown_as_percentage else money(share.total), trades_behind(f.trade_count)) %}
+  {%- if share.shown_as_percentage %}
+  <span class="mirror mirror--card">That is <span class="num">{{ share.share_percent }}</span>% of your result for the whole period, which was {{ money(share.total) }}.</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend legend--three"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst<br>{{ money(share.five_day_sum) }}</span><span><span class="legend__swatch legend__swatch--light"></span>Other days<br>{{ money(share.other_days_net) }}</span><span>Whole period<br>{{ money(share.total) }}</span></span></span>
+  {%- else %}
+  <span class="mirror mirror--card">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</span>
+  {%- endif %}
+{% endcall %}

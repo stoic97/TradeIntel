@@ -1,0 +1,4 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>{{ f.first_hour }}:00</span><span>Net (gross), by the hour you opened</span><span>{{ f.last_hour }}:00</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--light legend__swatch--hatch"></span>— few trades</span></span></span>
+{% endcall %}

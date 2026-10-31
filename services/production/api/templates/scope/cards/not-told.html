@@ -1,0 +1,8 @@
+{#- What we have not told you: the Mirror's section 6.7, word for word. It names a
+    cause and a cost only to say the product does neither (test_no_claims exempts it
+    by name, from here down). -#}
+{% from "_components.html" import story_card %}
+{% call story_card(number, f.title, f.href, f.figure, "Read in full") %}
+  <span class="mirror mirror--card">Nothing above names a cause. Nothing scores you, against yourself or anyone else. Nothing estimates what a habit cost you. Nothing recommends a change.</span>
+  <span class="mirror mirror--card">These are counts from your own file, and that is all they are. The checks that could say more need work we have not finished and evidence we have not earned.</span>
+{% endcall %}

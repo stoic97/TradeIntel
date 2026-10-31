@@ -1,0 +1,25 @@
+{#- A chapter (handoff 4, level 2; kit screens 15-chapter-*): the dial re-divided into
+    the chapter's facts on the navy stage, then one story card per fact, in slice order.
+    Every sentence is the Mirror's own (mirror.html), word for word. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import dial, gross_line %}
+{% set nav = "scope" %}
+{% block stage %}
+<header class="stage on-navy" aria-label="The Scope">
+  {{ dial(view) }}
+</header>
+{% endblock %}
+{% block content %}
+  <p class="label">CHAPTER {{ chapter.number }} OF 4</p>
+  <h1 class="title fact__title">{{ chapter.name }}</h1>
+  <p class="body">{{ chapter.facts|length }} facts, counted from your file.</p>
+  {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+  <div class="story-list">
+  {%- for fact in chapter.facts %}
+    {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
+  {%- endfor %}
+  </div>
+  {%- if chapter.number == 4 %}
+  {% include "scope/_lineage.html" %}
+  {%- endif %}
+{% endblock %}

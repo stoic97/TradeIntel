@@ -119,6 +119,7 @@ def layout_templates() -> list[Path]:
     root = Path("services/production/api/templates")
     return [p for p in sorted(root.rglob("*.html"))
             if p.name in {"layout.html", "_components.html"}
+            or "scope" in p.relative_to(root).parts  # the Scope's pages and their parts
             or '{% extends "layout.html" %}' in p.read_text()]
 
 
