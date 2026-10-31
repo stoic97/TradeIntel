@@ -1,0 +1,218 @@
+/* =====================================================================
+   PlusEV Scope — motion
+   Requires tokens.css and components.css.
+   One motion per transition, never looping, no bounce, no glow.
+
+   HOW THE SERVER DRIVES IT
+   Links carry where they came from; the server turns that into classes
+   on <html> of the page it renders:
+     Home slice        → /scope/<chapter>?enter=in&tap=<1-4>      html: "vt-in vt-tap-<n>"
+     Chapter centre    → /scope?enter=out&tap=<chapter 1-4>      html: "vt-out vt-tap-<n>"
+     Chapter slice/card→ /scope/<chapter>/<fact>?enter=lens      html: "vt-lens"
+     Lens / path link  → /scope/<chapter>?enter=back&fact=<1-4>  html: "vt-back"
+   Full-page navigations use cross-document View Transitions
+   (@view-transition below; Chromium 126+, Safari 18.2+). With htmx boosted
+   links, set htmx.config.globalViewTransitions = true — the same
+   ::view-transition rules apply. Browsers without View Transitions get
+   the in-page keyframe fallbacks (the .vt-* classes on the new page alone).
+   ===================================================================== */
+
+@view-transition { navigation: auto; }
+
+/* Shared names: the dial and the navy stage morph between pages. */
+.scope { view-transition-name: scope-dial; }
+.stage { view-transition-name: navy-stage; }
+.path { view-transition-name: navy-stage; }         /* the lens bar is where the stage collapses to */
+.path__lens { view-transition-name: scope-lens; }
+.vt-lens .scope, .vt-back .path__lens { view-transition-name: scope-lens; } /* the dial and the lens are one object */
+
+/* Registered properties so masks and counters can animate */
+@property --scope-open { syntax: "<angle>"; inherits: false; initial-value: 180deg; }
+@property --scope-turn { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@property --count { syntax: "<integer>"; inherits: false; initial-value: 0; }
+
+/* The tapped chapter's midpoint on Home (diagonals) */
+html.vt-tap-1 { --scope-turn: 45deg; }
+html.vt-tap-2 { --scope-turn: 135deg; }
+html.vt-tap-3 { --scope-turn: 225deg; }
+html.vt-tap-4 { --scope-turn: 315deg; }
+
+/* ---------- Pressed (before navigating) ----------
+   On pointerdown the tapped wedge lifts one tone and the others fade to 20 %.
+   Add .is-leaving to .scope and .is-pressed to the slice (one line of htmx:
+   hx-on:pointerdown="this.closest('.scope').classList.add('is-leaving');this.classList.add('is-pressed')").
+   The View Transition snapshot is taken after this, so the motion starts from it. */
+.scope__slice { transition: opacity 120ms var(--ease-in-out); }
+.scope__lift { transition: fill-opacity 120ms var(--ease-in-out); }
+.scope.is-leaving .scope__slice:not(.is-pressed) { opacity: .2; }
+.scope.is-leaving .scope__name, .scope.is-leaving .scope__leader { opacity: 0; transition: opacity 120ms var(--ease-in-out); }
+
+/* =====================================================================
+   SCOPE IN — tap a chapter. 480 ms, ease-in-out.
+     0–120   wedge lifts, others fade, names out           (the pressed state above)
+     120–320 the whole dial turns the wedge to twelve      (old snapshot rotates)
+     320–480 the wedge opens to the full circle; dividers draw in from the centre
+             40 ms apart; the arc draws in; figures count up; new names fade in
+     centre  old text gone by 240; new text fades in 240–480
+   ===================================================================== */
+html.vt-in::view-transition-group(scope-dial) { animation-duration: var(--dur-scope-in); }
+html.vt-in::view-transition-old(scope-dial) { animation: scope-turn-away var(--dur-scope-in) var(--ease-in-out) both; }
+html.vt-in::view-transition-new(scope-dial) { animation: scope-open var(--dur-scope-in) var(--ease-in-out) both; }
+@keyframes scope-turn-away {
+  0%, 25% { transform: rotate(0deg); opacity: 1; }
+  66.7%   { transform: rotate(calc(-1 * var(--scope-turn))); opacity: 1; }
+  100%    { transform: rotate(calc(-1 * var(--scope-turn))); opacity: 0; }
+}
+/* The new dial is revealed as a wedge centred at twelve that opens to the full circle. */
+@keyframes scope-open {
+  0%, 66.7% { --scope-open: 45deg; opacity: 0; }
+  67%       { --scope-open: 45deg; opacity: 1; }
+  100%      { --scope-open: 180deg; opacity: 1; }
+}
+html.vt-in::view-transition-new(scope-dial) {
+  -webkit-mask-image: conic-gradient(from calc(-1 * var(--scope-open)), #000 0 calc(2 * var(--scope-open)), transparent 0);
+          mask-image: conic-gradient(from calc(-1 * var(--scope-open)), #000 0 calc(2 * var(--scope-open)), transparent 0);
+}
+
+/* Inside the new chapter page: dividers, arc, contents, names, centre (also the fallback without View Transitions) */
+.vt-in .scope__divider { stroke-dasharray: 80; stroke-dashoffset: 80; animation: draw-in 80ms var(--ease-in-out) forwards; }
+.vt-in .scope__divider:nth-child(1) { animation-delay: 320ms; }
+.vt-in .scope__divider:nth-child(2) { animation-delay: 360ms; }
+.vt-in .scope__divider:nth-child(3) { animation-delay: 400ms; }
+.vt-in .scope__divider:nth-child(4) { animation-delay: 440ms; }
+.vt-in .scope__divider:nth-child(5) { animation-delay: 480ms; }
+.vt-in .scope__arc { stroke-dasharray: 400; stroke-dashoffset: 400; animation: draw-in 160ms var(--ease-in-out) 320ms forwards; }
+.vt-in .scope__slice { animation: fade-in 100ms linear 380ms both; }
+.vt-in .scope__name, .vt-in .scope__leader { animation: fade-in 80ms linear 400ms both; }
+.vt-in .scope__centre-name, .vt-in .scope__centre-scope { animation: fade-in 240ms linear 240ms both; }
+@keyframes draw-in { to { stroke-dashoffset: 0; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* =====================================================================
+   SCOPE OUT — tap the centre. The exact reverse of scope in, 480 ms.
+   The chapter's facts fold back into one wedge, the dial turns back,
+   the chapters and their names fade back in.
+   ===================================================================== */
+html.vt-out::view-transition-old(scope-dial) { animation: scope-fold var(--dur-scope-out) var(--ease-in-out) both;
+  -webkit-mask-image: conic-gradient(from calc(-1 * var(--scope-open)), #000 0 calc(2 * var(--scope-open)), transparent 0);
+          mask-image: conic-gradient(from calc(-1 * var(--scope-open)), #000 0 calc(2 * var(--scope-open)), transparent 0); }
+html.vt-out::view-transition-new(scope-dial) { animation: scope-turn-back var(--dur-scope-out) var(--ease-in-out) both; }
+@keyframes scope-fold {
+  0%   { --scope-open: 180deg; opacity: 1; }
+  33.3%{ --scope-open: 45deg; opacity: 1; }
+  34%, 100% { --scope-open: 45deg; opacity: 0; }
+}
+@keyframes scope-turn-back {
+  0%, 33.3% { transform: rotate(calc(-1 * var(--scope-turn))); opacity: 0; }
+  34%  { transform: rotate(calc(-1 * var(--scope-turn))); opacity: 1; }
+  75%  { transform: rotate(0deg); opacity: 1; }
+  100% { transform: rotate(0deg); opacity: 1; }
+}
+.vt-out .scope__slice { animation: fade-in 120ms linear 360ms both; }
+.vt-out .scope__name, .vt-out .scope__leader { animation: fade-in 120ms linear 360ms both; }
+.vt-out .scope__centre-figure, .vt-out .scope__centre-caption { animation: fade-in 240ms linear 240ms both; }
+
+/* =====================================================================
+   SHRINK TO LENS — tap a fact. 400 ms. No colour crossfade.
+     0–80    the fact's wedge turns blue (.is-pressed on the slice → .scope__lift turns blue)
+     80–320  the navy stage collapses upward: its bottom edge rises to the lens bar
+             while the dial shrinks into the lens (shared name: scope-lens)
+     320–400 the navy wipes off the bar, leaving the white lens bar
+     200–400 the fact's title and figure rise 16 px into place
+   BACK FROM A FACT — the exact reverse: the navy grows down from the lens bar
+   and the lens grows back into the chapter dial.
+   ===================================================================== */
+.scope.is-leaving-to-fact .scope__slice.is-pressed .scope__lift { fill: var(--color-action-blue); fill-opacity: 1; transition: fill-opacity 80ms var(--ease-in-out); }
+
+html.vt-lens::view-transition-group(navy-stage),
+html.vt-lens::view-transition-group(scope-lens) { animation-duration: 240ms; animation-delay: 80ms; animation-timing-function: var(--ease-in-out); }
+/* The navy stays navy: no crossfade. The old (navy) image sits on top and is wiped off at the end. */
+html.vt-lens::view-transition-image-pair(navy-stage) { isolation: auto; }
+html.vt-lens::view-transition-old(navy-stage) { animation: navy-wipe-up var(--dur-shrink-to-lens) var(--ease-in-out) both; mix-blend-mode: normal; z-index: 1; }
+html.vt-lens::view-transition-new(navy-stage) { animation: none; opacity: 1; mix-blend-mode: normal; }
+@keyframes navy-wipe-up {
+  0%, 80% { clip-path: inset(0 0 0 0); }
+  100%    { clip-path: inset(0 0 100% 0); }
+}
+html.vt-lens::view-transition-old(scope-lens) { animation: navy-wipe-up var(--dur-shrink-to-lens) var(--ease-in-out) both; z-index: 2; }
+html.vt-lens::view-transition-new(scope-lens) { animation: none; opacity: 1; }
+html.vt-lens::view-transition-old(root) { animation: none; }
+html.vt-lens::view-transition-new(root) { animation: none; }
+.vt-lens .fact__head { animation: rise 200ms var(--ease-standard) 200ms both; }
+@keyframes rise { from { transform: translateY(16px); } to { transform: none; } }
+
+html.vt-back::view-transition-group(navy-stage),
+html.vt-back::view-transition-group(scope-lens) { animation-duration: 240ms; animation-delay: 80ms; animation-timing-function: var(--ease-in-out); }
+html.vt-back::view-transition-new(navy-stage) { animation: navy-wipe-down var(--dur-shrink-to-lens) var(--ease-in-out) both; z-index: 1; }
+html.vt-back::view-transition-old(navy-stage) { animation: none; opacity: 1; }
+@keyframes navy-wipe-down {
+  0%   { clip-path: inset(0 0 100% 0); }
+  20%, 100% { clip-path: inset(0 0 0 0); }
+}
+html.vt-back::view-transition-old(root), html.vt-back::view-transition-new(root) { animation: none; }
+.vt-back .scope__lift--lit { animation: fade-out 80ms linear 320ms both; }
+.vt-back .scope__name, .vt-back .scope__leader { animation: fade-in 80ms linear 320ms both; }
+
+/* =====================================================================
+   FILLS LAND — the trade strip and the loader (Calculating).
+   Each fill lands 40 ms after the last, a 160 ms pause, then the bar draws in 200 ms.
+   Set the per-fill delay with .fill-1 … .fill-8; the bar uses .bar-after-<n>.
+   ===================================================================== */
+.fills-land .strip__fill, .fills-land .calc__fill { animation: fill-land 200ms var(--ease-out) both; }
+.fills-land .fill-1 { animation-delay: 0ms; }   .fills-land .fill-2 { animation-delay: 40ms; }
+.fills-land .fill-3 { animation-delay: 80ms; }  .fills-land .fill-4 { animation-delay: 120ms; }
+.fills-land .fill-5 { animation-delay: 160ms; } .fills-land .fill-6 { animation-delay: 200ms; }
+.fills-land .fill-7 { animation-delay: 240ms; } .fills-land .fill-8 { animation-delay: 280ms; }
+.fills-land .strip__bar, .fills-land .calc__bar { stroke-dasharray: 400; animation: draw-bar var(--dur-fills-bar) var(--ease-out) both; }
+.fills-land .bar-after-2 { animation-delay: 240ms; } .fills-land .bar-after-3 { animation-delay: 280ms; }
+.fills-land .bar-after-4 { animation-delay: 320ms; } .fills-land .bar-after-5 { animation-delay: 360ms; }
+.fills-land .bar-after-6 { animation-delay: 400ms; } .fills-land .bar-after-7 { animation-delay: 440ms; }
+.fills-land .bar-after-8 { animation-delay: 480ms; }
+@keyframes fill-land { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes draw-bar { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+/* Calculating · reading: the strip is an illustration, not progress. Three sample trades rebuild in turn,
+   1.8 s each (fills land 40 ms apart, 160 ms pause, bar 200 ms), on a 5.4 s loop. It does not follow the server.
+   Calculating · done: the latest rebuilt trade lands once with .fills-land. */
+.calc-loop__trade { opacity: 0; animation: calc-trade 5400ms linear infinite both; }
+.calc-loop__trade--2 { animation-delay: 1800ms; }
+.calc-loop__trade--3 { animation-delay: 3600ms; }
+.calc-loop__fill { animation: calc-fill 5400ms var(--ease-out) infinite both; }
+.calc-loop__bar { stroke-dasharray: 350; animation: calc-bar 5400ms var(--ease-out) infinite both; }
+.calc-loop__trade .fill-2 { animation-delay: 40ms; }  .calc-loop__trade .fill-3 { animation-delay: 80ms; }  .calc-loop__trade .fill-4 { animation-delay: 120ms; }
+.calc-loop__trade--2 .fill-1 { animation-delay: 1800ms; } .calc-loop__trade--2 .fill-2 { animation-delay: 1840ms; } .calc-loop__trade--2 .fill-3 { animation-delay: 1880ms; } .calc-loop__trade--2 .fill-4 { animation-delay: 1920ms; }
+.calc-loop__trade--3 .fill-1 { animation-delay: 3600ms; } .calc-loop__trade--3 .fill-2 { animation-delay: 3640ms; } .calc-loop__trade--3 .fill-3 { animation-delay: 3680ms; } .calc-loop__trade--3 .fill-4 { animation-delay: 3720ms; }
+.calc-loop__trade--1 .calc-loop__bar { animation-delay: 320ms; }
+.calc-loop__trade--2 .calc-loop__bar { animation-delay: 2120ms; }
+.calc-loop__trade--3 .calc-loop__bar { animation-delay: 3920ms; }
+@keyframes calc-trade { 0% { opacity: 1; } 30.5% { opacity: 1; } 33% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes calc-fill { 0% { transform: translateY(-18px); opacity: 0; } 3.7% { transform: none; opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes calc-bar { 0% { stroke-dashoffset: 350; } 3.7% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+
+/* =====================================================================
+   NUMBER COUNT — a whole-number figure counts to its value once, 600 ms ease-out,
+   the first time it enters view. Markup: <span class="num count" style="--to: 62"></span>
+   is the only inline style in the kit; or emit per-value classes. Rupee figures with
+   separators are shown at their value without counting (fade-in only).
+   ===================================================================== */
+.count { counter-reset: count var(--count); animation: count-up var(--dur-number-count) var(--ease-out) both; }
+.count::after { content: counter(count); }
+@keyframes count-up { from { --count: 0; } to { --count: var(--to); } }
+.count-fade { animation: fade-in var(--dur-number-count) var(--ease-out) both; }
+
+/* =====================================================================
+   REDUCED MOTION — every Scope transition becomes a 120 ms crossfade.
+   Nothing moves, turns or scales. Counts show their value at once.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) { animation: none !important; }
+  ::view-transition-old(*) { animation: fade-out var(--dur-reduced-motion) linear both !important; -webkit-mask-image: none !important; mask-image: none !important; clip-path: none !important; transform: none !important; }
+  ::view-transition-new(*) { animation: fade-in var(--dur-reduced-motion) linear both !important; -webkit-mask-image: none !important; mask-image: none !important; clip-path: none !important; transform: none !important; }
+  .vt-in *, .vt-out *, .vt-lens *, .vt-back * { animation: none !important; stroke-dashoffset: 0 !important; }
+  .scope__slice, .scope__lift, .scope.is-leaving .scope__name { transition: none !important; }
+  .fills-land *, .calc__strip * { animation: none !important; }
+  .calc-loop__trade { opacity: 0; }
+  .calc-loop__trade--1 { opacity: 1; }              /* Calculating · reading: one still trade */
+  .count { animation: none; --count: var(--to); }
+  .count-fade { animation: none; }
+}
