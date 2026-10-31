@@ -35,6 +35,7 @@ def contract_trips() -> list[Trip]:
     return [
         Trip(
             trip_id=row["trip_id"],
+            symbol=row["symbol"],
             trading_day=row["trading_day"],
             entry_ts=datetime.fromisoformat(row["entry_ts"]),
             exit_ts=datetime.fromisoformat(row["exit_ts"]),
@@ -155,7 +156,7 @@ def test_above_the_floor_the_page_says_the_engine_decides():
              entry_ts=one_day.entry_ts, exit_ts=one_day.exit_ts,
              holding_seconds=one_day.holding_seconds,
              net=Decimal(100) if n % 2 else Decimal(-100),
-             lots=1, risk_unit_source=one_day.risk_unit_source)
+             lots=1, risk_unit_source=one_day.risk_unit_source, symbol=one_day.symbol)
         for n in range(400)
     ]
     r2 = next(v for v in el.assess(many).verdicts if v.test.id == "R2")
