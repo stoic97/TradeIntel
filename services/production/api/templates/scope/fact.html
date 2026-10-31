@@ -1,0 +1,30 @@
+{#- A fact (handoff 4, level 3; kit screens 16-f*): the lens and path pinned at the top,
+    the Mirror's sentences and figures, then "The trades behind this" - every trade,
+    never a sample. No bottom nav: only the lens and the path go anywhere.
+
+    Each fact's page extends this one and fills `head` (its figure and sentences under
+    the title), `body` (its figures and tables) and `caption` (what the trades below
+    are). A fact in a state shows the state in place of its figure and sentences. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import path, gross_line, trades %}
+{% block stage %}
+{{ path(chapter.facts|length, index, chapter.name, back_href, fact.title) }}
+{% endblock %}
+{% block content %}
+  <div class="fact__head">
+    <p class="fact__chapter">CHAPTER {{ chapter.number }} · FACT {{ number }} OF {{ chapter.facts|length }}</p>
+    <h1 class="title fact__title">{{ fact.title }}</h1>
+    {% if f.state %}{% include "scope/_state.html" %}{% else %}{% block head %}{% endblock %}{% endif %}
+    {% block gross %}{% if not imp.fees_available %}{{ gross_line() }}{% endif %}{% endblock %}
+  </div>
+  {% if not f.state %}{% block body %}{% endblock %}{% endif %}
+  {% block evidence %}
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The trades behind this</h2>
+    <p class="evidence__caption">{% block caption %}{% endblock %} <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    {% block caption_more %}{% endblock %}
+    {{ trades(groups) }}
+  </section>
+  {% endblock %}
+  {% block lineage %}{% endblock %}
+{% endblock %}

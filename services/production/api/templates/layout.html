@@ -4,7 +4,8 @@
     the front door), and `content`, the white record. An in-app page names its tab with
     {% set nav = "scope" | "journal" | "account" %} and gets the bottom nav; a page that
     names none has no nav (fact pages, and every page before sign-in). `enter_class` is
-    the motion hook (handoff section 7): the server sets it from ?enter=.
+    the motion hook (handoff section 7): the server sets it from ?enter=. `body_class`
+    adds the kit's modifier to <main> (screen__body--fact on a fact page).
 
     base.html and scope.css serve the pages not yet moved here. Each page moves when it
     is rebuilt; the old pair is deleted when the last one has (Phase 4). -#}
@@ -30,7 +31,7 @@
 <svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
 <div class="screen">
 {% block stage %}{% endblock %}
-<main class="screen__body{% if nav %} screen__body--with-nav{% endif %}">
+<main class="screen__body{% if nav %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
 {% block content %}{% endblock %}
 </main>
 {% if nav %}{{ bottom_nav(nav) }}{% endif %}

@@ -1,0 +1,21 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure fact__figure--pair"><span class="num num--large">{{ holding.winners_median_seconds|minutes }} min · {{ holding.losers_median_seconds|minutes }} min</span><span class="figure-pair__label">winners · losers</span></div>
+    <p class="mirror">Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.{% if holding.ratio %} That is a ratio of <span class="num">{{ holding.ratio }}</span>.{% endif %}</p>
+{% endblock %}
+{% block body %}
+  {% call figure(1, "Minutes open, winners and losers", f.page_chart) %}
+    <div class="figure__axis"><span>0 min</span><span>minutes open, one dot per trade</span><span>{{ f.max_seconds|minutes }} min</span></div>
+    <div class="legend"><span><span class="legend__swatch legend__swatch--ink legend__swatch--dot"></span>Winners</span><span><span class="legend__swatch legend__swatch--faint legend__swatch--dot"></span>Losers</span><span>| median</span></div>
+  {% endcall %}
+  <p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Median open</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text">Winners</td><td class="table__num">{{ f.winner_count|count }}</td><td class="table__num">{{ holding.winners_median_seconds|minutes }} min</td></tr>
+      <tr><td class="table__text">Losers</td><td class="table__num">{{ f.loser_count|count }}</td><td class="table__num">{{ holding.losers_median_seconds|minutes }} min</td></tr>
+    </tbody>
+  </table>
+{% endblock %}
+{% block caption %}How long each trade was open, by how it ended.{% endblock %}

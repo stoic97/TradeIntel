@@ -13,12 +13,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page
 from services.production.ctr.profiles import registry as profiles
+from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
@@ -106,6 +108,49 @@ def scope_chapter(request: Request, n: int):
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **context)
+
+
+@router.get("/mirror/fact/{key}", response_class=HTMLResponse)
+def scope_fact(request: Request, key: str):
+    """A fact (handoff 4, level 3): the lens and path, the Mirror's sentences and
+    figures, then every trade behind it."""
+    if key not in SM.FACTS:
+        return HTMLResponse("", status_code=404)
+    early, record = _record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    chapter, index = SM.chapter_of(key)
+    unread = _unread(request, imp) if key == "unread" else {}
+    figs = SF.facts(context, imp)
+    return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
+                enter_class=enter_class(request), body_class="screen__body--fact",
+                chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
+                back_href=SM.chapter_href(chapter.number, fact=index + 1),
+                f=figs[key], facts=figs,
+                groups=SM.groups(key, context), imp=imp,
+                trading_day_count=len(context["days"].counts),
+                sources=s_enums.RiskUnitSourceV1, **unread, **context)
+
+
+def _unread(request: Request, imp) -> dict:
+    """The rows behind "What we could not read": every row set aside or not read,
+    each with its reason, and every trade refused - as the import review lists them."""
+    with make_session(request.app.state.engine) as sess:
+        rows = sess.scalars(
+            select(m.ImportRow).where(m.ImportRow.import_id == imp.id,
+                                      m.ImportRow.status.in_(("EXCLUDED", "REJECTED")))
+            .order_by(m.ImportRow.row_no)
+        ).all()
+        refused = sess.scalars(
+            select(m.SkippedTrip).where(m.SkippedTrip.import_id == imp.id)
+            .order_by(m.SkippedTrip.id)
+        ).all()
+        return {
+            "excluded": [(r.row_no, r.reason) for r in rows if r.status == "EXCLUDED"],
+            "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
+            "refused": [t.reason for t in refused],
+        }
 
 
 @router.get("/mirror/{line}/drawer", response_class=HTMLResponse)

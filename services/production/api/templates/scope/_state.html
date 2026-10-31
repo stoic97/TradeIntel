@@ -1,0 +1,9 @@
+{#- A fact that cannot be counted on this history, told apart by shape as well as
+    colour (handoff 4): hatched for not enough trades yet, dashed for not in the file.
+    Never hidden, never an all-clear. The sentence with the counts comes in a later
+    step; until then the state says what it is and the kit's honest-limit note. -#}
+{%- if f.state == "not-in-file" %}
+<div class="result-state result-state--not-in-file"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-dashed"/></svg>Not in your file</span><p class="result-state__figure">—</p><p class="result-state__text">Your export has no stop column, and no budget is set. We do not estimate what is not in your file.</p></div>
+{%- else %}
+<div class="result-state result-state--not-enough"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span><p class="result-state__figure">—</p><p class="result-state__note">We tell you what your history can't yet show, instead of guessing.</p></div>
+{%- endif %}

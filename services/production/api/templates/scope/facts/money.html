@@ -1,0 +1,14 @@
+{% extends "scope/fact.html" %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+{% endblock %}
+{% block body %}
+  <p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th>Best five</th><th class="table__num">(net)</th><th>Worst five</th><th class="table__num">(net)</th></tr></thead>
+    <tbody>
+      {% for pair in f.pairs %}<tr><td>{{ pair.best_day }}</td><td class="table__num num--{{ pair.best.net|tone }}">{{ pair.best.net|rupees }}</td><td>{{ pair.worst_day }}</td><td class="table__num num--{{ pair.worst.net|tone }}">{{ pair.worst.net|rupees }}</td></tr>{% endfor %}
+    </tbody>
+  </table><p class="mirror mirror--card table-note">Ties are listed with the earlier trade first. Nothing is trimmed or capped.</p>
+{% endblock %}
+{% block caption %}Your best five and worst five, by result.{% endblock %}

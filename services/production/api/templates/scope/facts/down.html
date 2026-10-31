@@ -1,0 +1,25 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import money %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ two_losses.population|count }}</span></div>
+    <p class="mirror">On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss. On <span class="num">{{ two_losses.condition|count }}</span> of those, the two most recent had both lost.</p>
+{% endblock %}
+{% block body %}
+  <p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Net (gross)</th><th class="table__num">Average</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text">After two straight losses</td><td class="table__num">{{ two_losses.condition|count }}</td><td class="table__num">{{ money(two_losses.condition_net) }}</td><td class="table__num">{% if two_losses.condition_mean is not none %}{{ money(two_losses.condition_mean) }}{% else %}—{% endif %}</td></tr>
+      <tr><td class="table__text">Your other trades that qualified</td><td class="table__num">{{ two_losses.comparison|count }}</td><td class="table__num">{{ money(two_losses.comparison_net) }}</td><td class="table__num">{% if two_losses.comparison_mean is not none %}{{ money(two_losses.comparison_mean) }}{% else %}—{% endif %}</td></tr>
+    </tbody>
+  </table><p class="table-label">Table 2</p>
+  <table class="table">
+    <thead><tr><th></th><th class="table__num">Strike rate</th><th class="table__num">Average lots</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text">After two straight losses</td><td class="table__num">{% if after_strike.rate_percent is not none %}{{ after_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ after_lots.mean if after_lots.mean is not none else "—" }}</td></tr>
+      <tr><td class="table__text">Every other trade</td><td class="table__num">{% if rest_strike.rate_percent is not none %}{{ rest_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ rest_lots.mean if rest_lots.mean is not none else "—" }}</td></tr>
+    </tbody>
+  </table><p class="body table-note">This happened on <span class="num">{{ days_with_the_condition|count }}</span> of your <span class="num">{{ trading_day_count|count }}</span> trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run.</p>
+{% endblock %}
+{% block caption %}Every trade opened after two that had already closed at a loss.{% endblock %}
+{% block caption_more %}<p class="evidence__caption"><span class="num">{{ f.trade_count|count }}</span> of <span class="num">{{ two_losses.population|count }}</span> qualifying trades. Listed in the order you opened them.</p>{% endblock %}

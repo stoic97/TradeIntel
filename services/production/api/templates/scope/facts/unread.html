@@ -1,0 +1,37 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+{% endblock %}
+{% block gross %}{% endblock %}
+{% block body %}
+  {{ figure(1, "Rows read and set aside", f.page_chart) }}
+  <p class="table-label">Table 1</p>
+  <dl class="facts-list">
+    <dt>Rows in your file</dt><dd>{{ imp.rows_in|count }}</dd><dt>Rows we read</dt><dd>{{ imp.rows_parsed|count }}</dd>
+    <dt>Rows set aside</dt><dd>{{ imp.rows_excluded|count }}</dd><dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
+    <dt>Trades refused</dt><dd>{{ imp.trips_refused|count }}</dd><dt>Charges in the file</dt><dd class="facts-list__note">{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd>
+  </dl>
+{% endblock %}
+{#- Rows, not trades: "What we could not read" lists what was set aside and why.
+    A refused trade is kept with its reason but not yet with the rows it came from
+    (the same gap as fills, B5), so that table has no row numbers. -#}
+{% block evidence %}
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The rows behind this</h2>
+    <p class="evidence__caption">Every row we set aside, and why. <span class="num">{{ excluded|length|count }}</span> rows.</p>
+    <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why it was set aside</th></tr></thead>
+      <tbody>{% for number, reason in excluded %}<tr><td>{{ number|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+    {%- if rejected %}
+    <p class="evidence__caption evidence__caption--gap">Rows we could not read. Kept, not discarded. Each one says why. <span class="num">{{ rejected|length|count }}</span> rows.</p>
+    <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why</th></tr></thead>
+      <tbody>{% for number, reason in rejected %}<tr><td>{{ number|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+    {%- endif %}
+    {%- if refused %}
+    <p class="evidence__caption evidence__caption--gap">Every trade refused. <span class="num">{{ refused|length|count }}</span> trades.</p>
+    <table class="table"><thead><tr><th>Why it was refused</th></tr></thead>
+      <tbody>{% for reason in refused %}<tr><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+    {%- endif %}
+  </section>
+{% endblock %}
+{% block lineage %}{% include "scope/_lineage.html" %}{% endblock %}

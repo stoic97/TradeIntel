@@ -1,0 +1,12 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ run.length|count }}</span></div>
+    <p class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ f.day_count|count }}</span> days{% endif %}.</p>
+{% endblock %}
+{% block body %}
+  {% call figure(1, "Every trade, in order", f.page_chart) %}
+    <div class="legend"><span>one square per trade, in order</span><span><span class="legend__swatch legend__swatch--ink"></span>the run</span></div>
+  {% endcall %}
+{% endblock %}
+{% block caption %}The trades in that run.{% endblock %}

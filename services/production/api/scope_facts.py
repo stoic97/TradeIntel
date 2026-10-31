@@ -21,6 +21,7 @@ from services.shared.schemas import scope_v1 as s
 
 COUNTED = s.ResultState.COUNTED_FACT
 CARD_W = 302  # a story card's chart width (the kit's chapter screens)
+PAGE_W, PAGE_H = 350, 96  # a fact page's figure (the kit's fact screens)
 CARD_H = {
     "worst": 84,
     "share": 56,
@@ -210,6 +211,33 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     held = mx.holding_series(trips)
     out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["run"]["day_count"] = len(ctx["run"].days)
+    for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px
+        out[key]["page_chart"] = (
+            None if out[key]["state"] else _chart(fact.chart, ctx, imp, PAGE_W, PAGE_H, False)
+        )
+    normal = ctx["days"].normal_day
+    out["worst-days"]["rows"] = [
+        {
+            "day": formatting.day(d.trading_day),
+            "net": d.net,
+            "trades": d.trips,
+            # Exactly as the Mirror page printed it, "%.1f" of a float: moving the
+            # sum here changes where it is done, never the figure (2.25 stays 2.2).
+            "vs_normal": f"{d.trips / float(normal):.1f}" if normal else None,
+        }
+        for d in ctx["worst_days"].days
+    ]
+    out["money"]["pairs"] = [
+        {
+            "best": b,
+            "worst": w,
+            "best_day": formatting.day(b.trading_day),
+            "worst_day": formatting.day(w.trading_day),
+        }
+        for b, w in zip(ctx["best"], ctx["worst"], strict=False)
+    ]
+    out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
+    out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
     hours = ctx["hours"]
