@@ -69,3 +69,85 @@
 {% macro dial(view, size="phone") -%}
 <div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}</div>
 {%- endmacro %}
+
+{#- A chart from scope_geometry.CHARTS (each part a path, its role a .chart__ class).
+    Its size is the chart's own: 350 x 96 on a fact page, 302 wide in a story card. -#}
+{% macro chart(c, cls="") -%}
+<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg>
+{%- endmacro %}
+
+{#- A figure on a fact page: its number and caption, the chart, then - from a call
+    block - its axis and legend, which differ from fact to fact. -#}
+{% macro figure(number, caption, c) -%}
+<figure class="figure">
+    <figcaption class="figure__caption">Figure {{ number }} · {{ caption }}</figcaption>
+    {{ chart(c) }}
+    {%- if caller %}
+    {{ caller() }}{% endif %}
+  </figure>
+{%- endmacro %}
+
+{#- One fact on a chapter page; the whole card is the tap. figure and foot are text or
+    a component (money, trades_behind); the sentence and the chart come from a call
+    block. stacked: the title would wrap, so the figure takes its own line. -#}
+{% macro story_card(number, title, href, figure, foot, stacked=false) -%}
+<a class="story-card{% if stacked %} story-card--stacked{% endif %}" href="{{ href }}">
+  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ title }}</span><span class="story-card__figure">{{ figure }}</span></span>
+  {% if caller %}{{ caller() }}{% endif %}
+  <span class="story-card__foot"><span>{{ foot }}</span><span aria-hidden="true">›</span></span>
+</a>
+{%- endmacro %}
+
+{% macro trades_behind(n) -%}
+<span class="num">{{ n|count }}</span> {{ "trade" if n == 1 else "trades" }} behind this
+{%- endmacro %}
+
+{#- The bar at the top of a fact page: the lens (the chapter's dial at 56 px, this fact
+    lit) and the path. Tapping the lens or the chapter goes up one level. On the phone
+    a long chapter name is cut to fit (api/dial.py, crumb). -#}
+{% macro path(n_facts, fact_index, chapter, chapter_href, fact, scope_href="/mirror", size="phone") -%}
+{%- set lens = scope_lens(n_facts, fact_index) -%}
+{%- set name, short = scope_crumb(chapter, fact) if size == "phone" else (chapter, false) -%}
+<nav class="path" aria-label="Scope path">
+  <a class="path__lens" href="{{ chapter_href }}" aria-label="Scope out to {{ chapter }}"><svg class="path__lens-svg" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">{% for part in ("outer", "lit", "minor", "mid", "major", "inner", "div", "arc", "ring", "disc") %}<path class="lens__{{ part }}" d="{{ lens[part] }}"/>{% endfor %}</svg></a>
+  <span class="path__crumbs{% if short %} path__crumbs--short{% endif %}">
+    <a class="path__link" href="{{ scope_href }}">Scope</a><span class="path__sep" aria-hidden="true">›</span>
+    <a class="path__link" href="{{ chapter_href }}" title="{{ chapter }}" aria-label="{{ chapter }}">{{ name }}</a><span class="path__sep" aria-hidden="true">›</span>
+    <span class="path__current" aria-current="page">{{ fact }}</span>
+  </span>
+</nav>
+{%- endmacro %}
+
+{#- One trade, every fill of it: a label, one row, its strip drawn to time, its fills.
+    trade: number, instrument, day, time_in, time_out, held_minutes, net (the value),
+    fill_minutes (from the first fill), fills (time, side, qty, price as written, row). -#}
+{% macro trade(t) -%}
+{%- set s = scope_strip(t.fill_minutes) -%}
+<article class="trade">
+      <div class="trade__label">Trade {{ t.number }} · {{ t.instrument }}</div>
+      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees }}</span></div>
+      <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ s.axis }}"/><path class="strip__tick" d="{{ s.ticks }}"/><path class="strip__dot" d="{{ s.dots }}"/><path class="strip__bar" d="{{ s.bar }}"/></svg>
+      <table class="fills">
+        <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>
+        <tbody>{% for fill in t.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ fill.qty|count }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ fill.row|count }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </article>
+{%- endmacro %}
+
+{#- Every trade behind a fact, grouped by day - never a sample. group: title, trade_count,
+    net, trades. -#}
+{% macro trades(groups) -%}
+<div class="trades">
+  {%- for group in groups %}
+  <section class="trades__group">
+    <div class="trades__head">
+      <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ group.trade_count|count }} {{ "trade" if group.trade_count == 1 else "trades" }} · {{ group.net|rupees }}</span></div>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+    </div>
+    {%- for t in group.trades %}
+    {{ trade(t) }}
+    {%- endfor %}
+  </section>
+  {%- endfor %}
+</div>
+{%- endmacro %}
