@@ -23,6 +23,8 @@ splits it, and `scope.css` declares both:
 | `IBMPlexMono-Regular-latin-ext.woff2` | IBM Plex Mono | 400 | latin-ext |
 | `IBMPlexMono-Medium-latin.woff2` | IBM Plex Mono | 500 | latin |
 | `IBMPlexMono-Medium-latin-ext.woff2` | IBM Plex Mono | 500 | latin-ext |
+| `IBMPlexMono-SemiBold-latin.woff2` | IBM Plex Mono | 600 | latin |
+| `IBMPlexMono-SemiBold-latin-ext.woff2` | IBM Plex Mono | 600 | latin-ext |
 | `SourceSerif4-latin.woff2` | Source Serif 4 (variable) | 400–600 | latin |
 | `SourceSerif4-latin-ext.woff2` | Source Serif 4 (variable) | 400–600 | latin-ext |
 
@@ -32,5 +34,12 @@ latin files are byte-identical to the latin files already here, so each pair is
 one version of one font. Measured with fontTools: every latin-ext file contains
 U+20B9 and every latin file does not; every latin file contains U+2212.
 
-All eight are under the SIL Open Font License 1.1 (`SourceSerif4-OFL.txt`;
+**Plex Mono 600, 31 Oct 2026.** Added because the design kit sets the dial's slice
+numbers, its centre label and story-card numbers in Mono 600; without the file the
+browser would synthesise a bold from 500. Both files from one Google Fonts request
+(IBM Plex Mono v20, the version of the 400 and 500 files). fontTools reads each as
+IBM Plex Mono SemiBold, weight 600, with U+20B9 in latin-ext only and U+2212 in
+latin only.
+
+All ten are under the SIL Open Font License 1.1 (`SourceSerif4-OFL.txt`;
 IBM Plex carries the same licence, https://github.com/IBM/plex).

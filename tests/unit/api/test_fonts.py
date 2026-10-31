@@ -31,6 +31,7 @@ FACES = [
     ("IBM Plex Sans", "400 600"),
     ("IBM Plex Mono", "400"),
     ("IBM Plex Mono", "500"),
+    ("IBM Plex Mono", "600"),  # the kit sets slice numbers and the centre label in it
     ("Source Serif 4", "400 600"),
 ]
 
