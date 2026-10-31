@@ -1,12 +1,13 @@
-"""The Mirror: counted facts, in the order PRD section 6 fixes, each with a drawer.
+"""The Mirror, told as the Scope: Home, four chapters, twelve facts (handoff 4, 5).
 
-The page formats; it computes nothing. Every figure comes from
-services/production/mirror/metrics.py, so there is one place each is decided and a
-template cannot quietly invent a number.
+The pages format; they compute nothing. Every figure comes from
+services/production/mirror/metrics.py, through scope_facts.record_context, so there is
+one place each is decided and a template cannot quietly invent a number.
 
-The drawer is the cheapest trust mechanism in the product (PRD 6): a line a trader
-cannot open is a claim he has to take on faith, and this product's whole argument is
-that he should not have to.
+Every fact opens to the trades behind it, all of them. That was the long page's
+drawer, and it is the cheapest trust mechanism in the product (PRD 6): a line a
+trader cannot open is a claim he has to take on faith, and this product's whole
+argument is that he should not have to.
 """
 
 from __future__ import annotations
@@ -23,18 +24,9 @@ from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
-from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
-
-DRAWERS = {
-    "worst-days": "The five days, and every trade on them.",
-    "best-worst-trades": "Your best five and worst five, by result.",
-    "two-straight-losses": "Every trade opened after two that had already closed at a loss.",
-    "holding-time": "How long each trade was open, by how it ended.",
-    "by-hour": "Every trade, by the hour you opened it.",
-}
 
 
 def _record(request: Request):
@@ -80,15 +72,18 @@ def enter_class(request: Request) -> str:
 
 
 @router.get("/mirror", response_class=HTMLResponse)
-def mirror(request: Request):
+def scope_home(request: Request):
+    """Scope home (handoff 4, level 1): the four chapters on the dial, the five days'
+    share in its centre. Replaces the long Mirror page; its sentences live on in the
+    chapters and facts, word for word (tests/unit/mirror/test_wording_reference.py)."""
     early, record = _record(request)
     if early is not None:
         return early
-    _trips, imp, context = record
-    return page(request, "mirror.html", title="Your record",
-                imp=imp, drawers=DRAWERS,
-                sources=s_enums.RiskUnitSourceV1,
-                showable=s_enums.SHOWABLE_DENOMINATORS, **context)
+    trips, imp, context = record
+    figs = SF.facts(context, imp)
+    return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
+                view=SF.home_view(figs, context), imp=imp, trade_count=len(trips),
+                trading_day_count=len(context["days"].counts))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -151,30 +146,3 @@ def _unread(request: Request, imp) -> dict:
             "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
             "refused": [t.reason for t in refused],
         }
-
-
-@router.get("/mirror/{line}/drawer", response_class=HTMLResponse)
-def drawer(request: Request, line: str):
-    """The trades behind one line. An HTMX partial, so it opens in place."""
-    with make_session(request.app.state.engine) as sess:
-        trader = current_trader(request, sess)
-        if trader is None:
-            return HTMLResponse("", status_code=403)
-        trips, imp = loader.load_for(sess, trader)
-        if not trips or line not in DRAWERS:
-            return HTMLResponse("", status_code=404)
-
-        context = SF.record_context(trips)
-        shown: list[mx.Trip] = trips
-        if line == "worst-days":
-            days = {d.trading_day for d in context["worst_days"].days}
-            shown = [t for t in trips if t.trading_day in days]
-        elif line == "best-worst-trades":
-            shown = context["best"] + context["worst"]
-        elif line == "two-straight-losses":
-            ids = set(context["two_losses"].condition_trip_ids)
-            shown = [t for t in trips if t.trip_id in ids]
-
-        return page(request, "_drawer.html", title="Evidence",
-                    line=line, caption=DRAWERS[line], shown=shown, imp=imp,
-                    **context)

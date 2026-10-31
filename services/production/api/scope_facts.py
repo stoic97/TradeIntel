@@ -272,3 +272,29 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         "items": items,
         "centre": {"name": c.name, "scopeHref": S.home_href(tap=n)},
     }
+
+
+LEADS = {1: "share", 2: "hold", 3: "down", 4: "unread"}
+"""The fact each chapter's Home slice leads with (the kit's design, 14 · Scope home):
+the share, the two holds, the occasions after two losses, the rows read."""
+
+
+def home_view(figs: dict[str, dict], ctx: dict) -> dict:
+    """Home's dial: the four chapters in equal slices, the five days' share in the centre.
+
+    When the share is not a percentage (Appendix A), the centre says the whole
+    period's result instead, in the Mirror's words, and slice 1 leads with it too.
+    """
+    items = []
+    for c in S.CHAPTERS:
+        lead = figs[LEADS[c.number]]
+        items.append({"name": c.name, "figure": lead["figure"], "state": lead["state"],
+                      "href": S.chapter_href(c.number, from_home=True)})
+    share = ctx["share"]
+    if share.shown_as_percentage:
+        centre = {"figure": f"{share.share_percent}%"}
+    else:
+        centre = {"figure": formatting.rupees(share.total),
+                  "captionLines": ["your result for", "the whole period"]}
+    return {"kind": "home", "items": items, "centre": centre}
+

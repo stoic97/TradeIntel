@@ -40,8 +40,8 @@ TEMPLATES = templates_under(TEMPLATE_ROOT)
 
 # Section 6.7 exists to say the product names no cause and recommends nothing, which
 # it cannot say without those words. It is the only exemption, and it is by name: the
-# Mirror's section, and the Scope's card and fact page that tell it word for word.
-DISCLAIMER_TEMPLATES = {"mirror.html", "scope/cards/not-told.html", "scope/facts/not-told.html"}
+# Mirror's section as the Scope tells it word for word, on its card and its fact page.
+DISCLAIMER_TEMPLATES = {"scope/cards/not-told.html", "scope/facts/not-told.html"}
 DISCLAIMER_MARKER = "What we have not told you"
 
 NEVER_USED = [

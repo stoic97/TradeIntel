@@ -18,6 +18,11 @@ Python and JavaScript differ, the JavaScript wins and the difference is written 
   does not.
 * Math.max of nothing is -Infinity; max() of nothing raises. Every call here has values.
 
+One addition, which the kit's JavaScript does not have: on Home the centre's caption
+may be given as captionLines. The kit always writes "of your result / in five days";
+when the share is not a percentage (handoff 7, the second state) that would be false.
+Without captionLines the output is the kit's, byte for byte.
+
 Not ported: scopeInAt and easeInOut, which script frames for the prototype. The live
 motion is CSS (motion.css), and nothing on the server animates.
 """
@@ -676,7 +681,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         )
         o.append(
             _text_block(
-                ["of your result", "in five days"],
+                d["centre"].get("captionLines") or ["of your result", "in five days"],
                 d["cx"],
                 d["cy"] + 2,
                 13,

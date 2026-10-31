@@ -85,7 +85,7 @@ def test_every_trade_behind_a_fact_is_listed_and_the_count_matches(key):
 
 
 def test_each_fact_says_what_its_trades_are():
-    """The Mirror's drawer captions, where the Mirror had a drawer (routes_mirror.DRAWERS)."""
+    """The Mirror's drawer captions, where the Mirror had a drawer (wording.DRAWER_CAPTIONS)."""
     assert "The five days, and every trade on them." in fact_page("worst-days")
     assert "Your best five and worst five, by result." in fact_page("money")
     assert "How long each trade was open, by how it ended." in fact_page("hold")

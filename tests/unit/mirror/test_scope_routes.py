@@ -52,8 +52,15 @@ def test_the_page_is_told_how_it_was_entered(client, query, cls):
     assert "<script>" not in head
 
 
-def test_the_long_mirror_page_still_opens_until_scope_home_replaces_it(client):
-    assert client.get("/mirror").status_code == 200
+def test_scope_home_is_at_the_mirrors_address(client):
+    body = client.get("/mirror").text
+    assert 'aria-label="The Scope: four chapters of your story"' in body
+    assert body.count('<a class="scope__slice"') == 4
+
+
+def test_the_drawers_are_gone_with_the_long_page(client):
+    """Each became a fact page, with every trade behind it."""
+    assert client.get("/mirror/worst-days/drawer").status_code == 404
 
 
 @pytest.mark.parametrize("key", list(S.FACTS))

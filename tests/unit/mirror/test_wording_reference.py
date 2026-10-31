@@ -1,27 +1,46 @@
-"""The Mirror's wording, frozen before the Scope rebuild replaces its page.
+"""The Mirror's wording, kept word for word now that the Scope tells it.
 
 Handoff section 6: every Mirror sentence, heading and table label is used word for
-word; only the figures vary. The Scope splits today's one page into four chapters and
-twelve fact pages, after which mirror.html is no longer a page a trader sees and can
-no longer be what the new pages are checked against. So its words are taken now, from
-the page as it renders on the 40-trip contract fixture, figures out, and kept in
-tests/fixtures/mirror_wording/mirror_v1.json.
+word; only the figures vary. The Scope split the long page into Home, four chapters
+and twelve fact pages, and the page itself is gone. Its words were frozen first, from
+the page as it rendered on the 40-trip contract fixture, figures out, in
+tests/fixtures/mirror_wording/mirror_v1.json (Phase 0).
 
 That file is a golden in the Manual's sense: a recorded output, pinned on purpose. It
-is rewritten only by running this file with FREEZE_MIRROR_WORDING=1, and only when the
-wording is meant to change -- a decision with a reason in its commit, never a side
-effect of a test run.
+can no longer be re-recorded - there is no page to record - so it changes only by
+hand, as a wording decision with a reason in its commit. This file holds every Scope
+page to it: each sentence the Mirror said is still said, word for word, somewhere in
+the Scope.
 """
 
 from __future__ import annotations
 
-import json
-import os
-from pathlib import Path
+from services.production.api import scope_map as S
+from tests.unit.mirror.wording import (
+    SHARE_NOT_A_PERCENTAGE,
+    figures_out,
+    is_figure_only,
+    mirror_sentences,
+    page_text,
+    said_as_written,
+    sentences,
+    wording,
+)
 
-from tests.unit.mirror.wording import figures_out, is_figure_only, wording
+RETIRED = {
+    "Your record": "the long page's title; Scope home's title is the kit's new one (D9)",
+}
+"""Mirror lines the Scope does not say, each with why. Nothing else may go."""
 
-REFERENCE = Path("tests/fixtures/mirror_wording/mirror_v1.json")
+
+def scope_pages(client) -> dict[str, str]:
+    """Every page of the Scope, as a reader sees it."""
+    pages = {"/mirror": client.get("/mirror").text}
+    for c in S.CHAPTERS:
+        pages[S.chapter_href(c.number)] = client.get(S.chapter_href(c.number)).text
+    for key in S.FACTS:
+        pages[S.fact_href(key, lens=False)] = client.get(S.fact_href(key, lens=False)).text
+    return {url: page_text(html) for url, html in pages.items()}
 
 
 def test_a_figure_is_read_the_same_however_it_is_formatted():
@@ -65,36 +84,41 @@ def test_wording_keeps_headings_labels_and_sentences_and_drops_controls():
     }]
 
 
-def test_the_mirror_says_exactly_what_the_reference_says(client):
-    current = wording(client.get("/mirror").text)
-    if os.environ.get("FREEZE_MIRROR_WORDING") == "1":
-        REFERENCE.parent.mkdir(parents=True, exist_ok=True)
-        REFERENCE.write_text(json.dumps(
-            {"source": "/mirror rendered on tests/fixtures/mirror_contract/main.json",
-             "sections": current},
-            indent=2, ensure_ascii=False) + "\n")
-    assert REFERENCE.exists(), (
-        "No wording reference yet. Freeze it once, on purpose: "
-        "FREEZE_MIRROR_WORDING=1 pytest tests/unit/mirror/test_wording_reference.py")
-    assert current == json.loads(REFERENCE.read_text())["sections"]
+def test_page_text_joins_inline_figures_and_reads_a_date_as_a_date():
+    html = ('<p>Those five days came to <span class="num">−₹24,000</span>.</p>'
+            "<td>2026-09-07</td><p>Your busiest was <span>07 Sep</span>, at</p>")
+    assert page_text(html) == "Those five days came to [N]. [DATE] Your busiest was [DATE], at"
 
 
-# The sentence mirror.html prints when the share is not a percentage (Appendix A: a
-# positive total, or worst days larger than the whole). The 40-trip fixture never
-# reaches it, so it is not in the frozen reference above; it is written here from the
-# template, figures out, and the test below proves the template still prints exactly
-# this. The reveal's second state (handoff section 7) reuses it word for word.
-SHARE_NOT_A_PERCENTAGE = (
-    "Those five days came to [N]. Your result for the whole period was [N]. "
-    "The other [N] days were net [N]."
-)
+def test_the_reference_is_the_mirror_page_as_it_was():
+    lines = mirror_sentences()
+    assert lines[:2] == ["Counted from your file", "Your record"]
+    assert "Nothing recommends a change." in lines
+    assert set(RETIRED) <= set(lines)
+
+
+def test_every_mirror_sentence_is_said_somewhere_in_the_scope(client):
+    """On the fixture. The share's second state is not reached on it; the next test
+    but one covers those two sentences."""
+    second_state = set(sentences(SHARE_NOT_A_PERCENTAGE)) - {"Those five days came to [N]."}
+    everything = " || ".join(scope_pages(client).values())
+    unsaid = [line for line in mirror_sentences()
+              if line not in RETIRED and line not in second_state
+              and said_as_written(line) not in everything]
+    assert unsaid == []
+
+
+def test_a_retired_line_is_really_gone(client):
+    everything = " || ".join(scope_pages(client).values())
+    for line in RETIRED:
+        assert line not in everything, line
 
 
 def test_the_sentence_for_a_share_that_is_not_a_percentage_is_kept_too(client, engine):
     """One large winning trade on a new day turns the fixture trader's total positive.
 
     A positive total against negative worst days gives a negative share, which
-    Appendix A never shows as a percentage, so the page takes its other sentence.
+    Appendix A never shows as a percentage, so the pages take the other sentence.
     """
     from datetime import datetime
     from decimal import Decimal
@@ -118,6 +142,7 @@ def test_the_sentence_for_a_share_that_is_not_a_percentage_is_kept_too(client, e
             risk_unit_source=s_enums.RiskUnitSourceV1("declared_budget")))
         sess.commit()
 
-    blocks = [b for section in wording(client.get("/mirror").text)
-              for b in section["blocks"]]
-    assert SHARE_NOT_A_PERCENTAGE in blocks
+    worst = page_text(client.get("/mirror/fact/worst-days").text)
+    for sentence in sentences(SHARE_NOT_A_PERCENTAGE):
+        assert sentence in worst, sentence
+    assert "of your result for the whole period, which was" not in worst

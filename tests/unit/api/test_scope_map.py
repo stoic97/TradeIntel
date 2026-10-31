@@ -17,6 +17,7 @@ from services.production.api import scope_map as S
 from services.production.api.scope_facts import record_context
 from services.production.mirror import metrics as mx
 from tests.unit.api.templating import template_env
+from tests.unit.mirror.wording import mirror_sentences
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
 
@@ -46,7 +47,7 @@ def test_every_fact_has_a_chart_the_geometry_draws():
 
 def test_every_fact_title_is_a_heading_the_mirror_already_uses():
     """Handoff 6: the Mirror's own headings, word for word."""
-    mirror = Path("services/production/api/templates/mirror.html").read_text()
+    mirror = mirror_sentences()
     for f in S.FACTS.values():
         if f.key in ("share", "strike", "run", "busiest"):
             continue  # facts the long page told inside another section's sentences

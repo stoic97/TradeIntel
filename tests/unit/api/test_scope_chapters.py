@@ -22,6 +22,7 @@ from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 from tests.unit.api.templating import template_env
+from tests.unit.mirror.wording import figures_out, mirror_sentences
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
 IMP = SimpleNamespace(
@@ -213,7 +214,7 @@ def test_the_honest_close_carries_the_lineage():
 SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell them
     1: [
         "Those five days came to",
-        "% of your result for the whole period, which was",
+        "of your result for the whole period, which was",
         "Your best five and worst five, by result.",
         "Ties are listed with the earlier trade first. Nothing is trimmed or capped.",
     ],
@@ -272,17 +273,11 @@ def test_every_card_tells_the_mirrors_sentences(n):
 
 
 def test_every_sentence_here_is_in_the_mirror_word_for_word():
-    """In mirror.html or its drawer captions (routes_mirror.DRAWERS): handoff 6."""
-    mirror = " ".join(
-        (
-            Path("services/production/api/templates/mirror.html").read_text()
-            + Path("services/production/api/routes_mirror.py").read_text()
-        ).split()
-    )
-    mirror = mirror.replace("“", '"').replace("”", '"')
+    """Handoff 6: in the Mirror's frozen wording, or its drawer captions."""
+    mirror = " ".join(mirror_sentences()).replace("“", '"').replace("”", '"')
     for sentences in SENTENCES.values():
         for sentence in sentences:
-            assert sentence.replace("“", '"').replace("”", '"') in readable(mirror), sentence
+            assert figures_out(sentence).replace("“", '"').replace("”", '"') in mirror, sentence
 
 
 def test_level_trades_are_mentioned_only_when_there_are_some():

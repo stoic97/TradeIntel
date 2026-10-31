@@ -11,7 +11,7 @@
 {{ path(chapter.facts|length, index, chapter.name, back_href, fact.title) }}
 {% endblock %}
 {% block content %}
-  <div class="fact__head">
+  <div class="fact__head" data-dwell-line="{{ fact.key }}">
     <p class="fact__chapter">CHAPTER {{ chapter.number }} · FACT {{ number }} OF {{ chapter.facts|length }}</p>
     <h1 class="title fact__title">{{ fact.title }}</h1>
     {% if f.state %}{% include "scope/_state.html" %}{% else %}{% block head %}{% endblock %}{% endif %}
@@ -28,3 +28,6 @@
   {% endblock %}
   {% block lineage %}{% endblock %}
 {% endblock %}
+{#- Dwell (PRD decision 12): how long a fact was read, keyed by the fact
+    (scope_map.OLD_DWELL_LINES maps the long page's keys onto these). -#}
+{% block scripts %}<script src="/static/js/dwell.js" defer></script>{% endblock %}
