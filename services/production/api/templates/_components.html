@@ -8,3 +8,57 @@
 {%- for key, label, href in [("scope", "Scope", "/mirror"), ("journal", "Journal", "/journals"), ("account", "Account", "/account")] %}<a class="bottom-nav__item" href="{{ href }}"{% if key == active %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
 </nav>
 {%- endmacro %}
+
+{#- The PlusEV lockup: the mark at the wordmark's height, PlusEV, Scope beneath. Ink on
+    white, white on navy (components.css does that from .on-navy). The mark's shapes are
+    the kit's icons/mark.svg exactly: never redrawn, respaced or recoloured. -#}
+{% macro lockup() -%}
+<span class="lockup"><svg class="lockup__mark" viewBox="0 0 30 24" aria-hidden="true"><path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><circle cx="15" cy="7" r="1.9" fill="currentColor"/><circle cx="15" cy="11.8" r="1.9" fill="currentColor"/><circle cx="15" cy="18" r="1.9" fill="currentColor"/></svg><span class="lockup__name">PlusEV</span><span class="lockup__sub">Scope</span></span>
+{%- endmacro %}
+
+{% macro chip(text, on_navy=false) -%}
+<span class="chip{% if on_navy %} chip--on-navy{% endif %}">{{ text }}</span>
+{%- endmacro %}
+
+{#- A pill. A link when it goes somewhere, a button when it submits a form. kind is the
+    kit's: primary, secondary, text, on-navy, text-on-navy, pill-small, selected, quiet. -#}
+{% macro button(label, href=none, kind="primary", block=false, disabled=false, type="submit") -%}
+{%- set classes = "btn btn--" ~ kind ~ (" btn--block" if block else "") -%}
+{%- if href -%}
+<a class="{{ classes }}" href="{{ href }}">{{ label }}</a>
+{%- else -%}
+<button class="{{ classes }}" type="{{ type }}"{% if disabled %} disabled{% endif %}>{{ label }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{#- A rupee figure, written by the rupees filter and coloured by its sign: red and
+    green only on a signed result (handoff section 7); an amount is plain. size is the
+    kit's num-- scale: hero, large, medium, small, label. -#}
+{% macro money(value, size=none, signed=true) -%}
+<span class="num{% if size %} num--{{ size }}{% endif %} num--{{ value|tone if signed else "plain" }}">{{ value|rupees(signed=signed) }}</span>
+{%- endmacro %}
+
+{#- One plain line, never a box. Shown by the page only when the export has no charges
+    column; the wording is the Mirror's own (handoff section 7). -#}
+{% macro gross_line() -%}
+<p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
+{%- endmacro %}
+
+{#- Result states (handoff section 4): never hidden, never an all-clear, and told apart
+    by shape as well as colour - a hatched marker for not enough trades, a dashed one for
+    not in the file. The tag is written in sentence case; the kit's CSS sets it in
+    capitals, so a screen reader reads words, not letters. -#}
+{% macro not_enough(have, need) -%}
+<div class="result-state result-state--not-enough"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span><p class="result-state__figure">—</p><p class="result-state__text"><span class="num">{{ have|count }}</span> trades, and it needs <span class="num">{{ need|count }}</span>.</p><p class="result-state__note">We tell you what your history can't yet show, instead of guessing.</p></div>
+{%- endmacro %}
+
+{% macro not_in_file(sentence) -%}
+<div class="result-state result-state--not-in-file"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-dashed"/></svg>Not in your file</span><p class="result-state__figure">—</p><p class="result-state__text">{{ sentence }}</p></div>
+{%- endmacro %}
+
+{#- A labelled input. error=true marks the field (the page states the sentence once,
+    above the form); error="..." marks it and says why under the input. A password is
+    never written back into the page. -#}
+{% macro field(label, name, type="text", value="", error=none, hint=none, autocomplete=none) -%}
+<label class="field{% if error %} field--error{% endif %}"><span class="field__label">{{ label }}</span><input class="field__input" name="{{ name }}" type="{{ type }}"{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if value and type != "password" %} value="{{ value }}"{% endif %}{% if error %} aria-invalid="true"{% endif %}>{% if error is string %}<span class="field__error">{{ error }}</span>{% endif %}{% if hint %}<span class="field__hint">{{ hint }}</span>{% endif %}</label>
+{%- endmacro %}
