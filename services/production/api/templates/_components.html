@@ -120,17 +120,20 @@
 
 {#- One trade, every fill of it: a label, one row, its strip drawn to time, its fills.
     trade: number, instrument, day, time_in, time_out, held_minutes, net (the value),
-    fill_minutes (from the first fill), fills (time, side, qty, price as written, row). -#}
+    fill_minutes (from the first fill), fills (time, side, qty, price as written, row).
+    Fills are not kept yet (B5, handoff D4); with none, the fills table is left off. -#}
 {% macro trade(t) -%}
 {%- set s = scope_strip(t.fill_minutes) -%}
 <article class="trade">
       <div class="trade__label">Trade {{ t.number }} · {{ t.instrument }}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees }}</span></div>
       <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ s.axis }}"/><path class="strip__tick" d="{{ s.ticks }}"/><path class="strip__dot" d="{{ s.dots }}"/><path class="strip__bar" d="{{ s.bar }}"/></svg>
+      {%- if t.fills %}
       <table class="fills">
         <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>
         <tbody>{% for fill in t.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ fill.qty|count }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ fill.row|count }}</td></tr>{% endfor %}</tbody>
       </table>
+      {%- endif %}
     </article>
 {%- endmacro %}
 

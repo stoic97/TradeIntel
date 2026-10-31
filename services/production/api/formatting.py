@@ -68,6 +68,15 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def day(iso_date: str) -> str:
+    """A trading day as the kit writes it: 2026-09-07 is 07 Sep."""
+    _year, month, dom = iso_date.split("-")
+    return f"{dom} {MONTHS[int(month) - 1]}"
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes)
+    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day)
