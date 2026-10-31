@@ -37,6 +37,7 @@ class Trip:
     """One reconstructed round trip, as the Mirror sees it."""
 
     trip_id: str
+    symbol: str  # the instrument, as the broker's file names it (B1: trade records)
     trading_day: str
     entry_ts: datetime
     exit_ts: datetime
@@ -63,6 +64,7 @@ def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
     trips = [
         Trip(
             trip_id=row["trip_id"],
+            symbol=row["symbol"],
             trading_day=row["trading_day"],
             entry_ts=datetime.fromisoformat(row["entry_ts"]),
             exit_ts=datetime.fromisoformat(row["exit_ts"]),

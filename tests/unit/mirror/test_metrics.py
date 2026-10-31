@@ -163,3 +163,8 @@ def test_every_metric_returns_a_result_state(trips):
 def test_an_empty_history_says_so_rather_than_dividing_by_zero():
     for result in (mx.five_worst_days([]), mx.strike_rate([]), mx.holding_time([])):
         assert result.state is s.ResultState.INSUFFICIENT_SAMPLE
+
+
+def test_every_trip_carries_its_instrument(trips):
+    """B1: a trade record names what was traded. The fixture's one instrument."""
+    assert {t.symbol for t in trips} == {"WIDGETOIL"}
