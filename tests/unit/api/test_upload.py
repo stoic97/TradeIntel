@@ -30,25 +30,35 @@ PNL = b"Symbol,Realised P&L\nWIDGETOIL,1500.00\n"
 
 def sign_up(client, engine, code: str, login_id: str, consent: bool = True):
     from datetime import UTC, datetime
+
     with make_session(engine) as sess:
         sess.add(m.InviteCode(code=code, created_at=datetime.now(UTC)))
         sess.commit()
     csrf = CSRF.search(client.get(f"/invite/{code}").text).group(1)
-    client.post(f"/invite/{code}", data={"login_id": login_id, "display_name": login_id,
-                                         "password": "a-long-enough-password",
-                                         "csrf_token": csrf})
+    client.post(
+        f"/invite/{code}",
+        data={
+            "login_id": login_id,
+            "display_name": login_id,
+            "password": "a-long-enough-password",
+            "csrf_token": csrf,
+        },
+    )
     with make_session(engine) as sess:
-        sess.execute(update(m.Trader).where(m.Trader.login_id == login_id)
-                     .values(development_data=True))
+        sess.execute(
+            update(m.Trader).where(m.Trader.login_id == login_id).values(development_data=True)
+        )
         sess.commit()
     csrf = CSRF.search(client.get("/login").text).group(1)
-    client.post("/login", data={"login_id": login_id,
-                                "password": "a-long-enough-password",
-                                "csrf_token": csrf})
+    client.post(
+        "/login",
+        data={"login_id": login_id, "password": "a-long-enough-password", "csrf_token": csrf},
+    )
     if consent:
         csrf = CSRF.search(client.get("/consent").text).group(1)
-        client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                      "csrf_token": csrf})
+        client.post(
+            "/consent", data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": csrf}
+        )
     return client
 
 
@@ -60,6 +70,7 @@ def engine():
     write invites to a file create_app() never reads, and every page would 404.
     """
     import os
+
     e = make_engine(os.environ["SCOPE_DB"])
     run_migrations(e)
     return e
@@ -70,12 +81,17 @@ def client(engine):
     return sign_up(TestClient(create_app()), engine, "U-1", "rikk")
 
 
-def upload(client, path: Path | None = None, content: bytes | None = None,
-           name: str = "tradebook.csv"):
+def upload(
+    client, path: Path | None = None, content: bytes | None = None, name: str = "tradebook.csv"
+):
     csrf = CSRF.search(client.get("/upload").text).group(1)
     data = content if content is not None else path.read_bytes()
-    return client.post("/upload", files={"file": (name, data, "text/csv")},
-                       data={"csrf_token": csrf}, follow_redirects=False)
+    return client.post(
+        "/upload",
+        files={"file": (name, data, "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
 
 
 def test_upload_needs_consent(engine):
@@ -100,6 +116,7 @@ def test_the_stored_file_is_encrypted_and_matches_the_record(client, engine, tmp
     on_disk = Path(raw.stored_path).read_bytes()
     assert b"WIDGETOIL" not in on_disk
     import hashlib
+
     assert raw.sha256 == hashlib.sha256((DUPES / "clean.csv").read_bytes()).hexdigest()
 
 
@@ -112,6 +129,7 @@ def test_the_same_file_twice_is_refused_with_a_message(client):
 
 def test_a_file_over_the_cap_is_refused(client):
     from services.production.journal import constants as k
+
     oversized = b"x" * (k.MAX_UPLOAD_BYTES + 1)
     response = upload(client, content=oversized)
     assert response.status_code == 400
@@ -141,8 +159,7 @@ def test_confirming_duplicates_creates_a_new_version(client, engine):
     page = client.get(location).text
     csrf = CSRF.search(page).group(1)
     group = re.search(r'name="dup_group" value="([^"]+)"', page).group(1)
-    client.post(f"{location}/confirm-duplicates",
-                data={"dup_group": group, "csrf_token": csrf})
+    client.post(f"{location}/confirm-duplicates", data={"dup_group": group, "csrf_token": csrf})
     with make_session(engine) as sess:
         imports = sess.scalars(select(m.Import).order_by(m.Import.id)).all()
         assert len(imports) == 2
@@ -178,10 +195,11 @@ def test_signing_in_lands_on_the_upload_when_there_is_nothing_yet(engine):
     """A page saying 'nothing has been uploaded' is not a destination."""
     client = sign_up(TestClient(create_app()), engine, "U-4", "fresh")
     csrf = CSRF.search(client.get("/login").text).group(1)
-    response = client.post("/login", data={"login_id": "fresh",
-                                           "password": "a-long-enough-password",
-                                           "csrf_token": csrf},
-                           follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "fresh", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert "/upload" in response.headers["location"]
 
 
@@ -190,11 +208,13 @@ def test_signing_in_lands_on_the_latest_import_when_there_is_one(client, engine)
     with make_session(engine) as sess:
         import_id = sess.scalars(select(m.Import)).one().id
     csrf = CSRF.search(client.get("/login").text).group(1)
-    response = client.post("/login", data={"login_id": "rikk",
-                                           "password": "a-long-enough-password",
-                                           "csrf_token": csrf},
-                           follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert f"/imports/{import_id}" in response.headers["location"]
+
 
 def _two_days() -> bytes:
     """The clean fixture, plus a second trading day of two round trips.
@@ -214,14 +234,22 @@ def _two_days() -> bytes:
     """
     base = (DUPES / "clean.csv").read_text().rstrip("\n").splitlines()
     later = [
-        ("2026-10-15,09:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
-         "Commodity,100,53.00,5300.00,Traded"),
-        ("2026-10-15,10:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
-         "Commodity,100,53.10,5310.00,Traded"),
-        ("2026-10-15,11:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
-         "Commodity,100,53.20,5320.00,Traded"),
-        ("2026-10-15,12:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
-         "Commodity,100,53.30,5330.00,Traded"),
+        (
+            "2026-10-15,09:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
+            "Commodity,100,53.00,5300.00,Traded"
+        ),
+        (
+            "2026-10-15,10:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
+            "Commodity,100,53.10,5310.00,Traded"
+        ),
+        (
+            "2026-10-15,11:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,"
+            "Commodity,100,53.20,5320.00,Traded"
+        ),
+        (
+            "2026-10-15,12:30:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,"
+            "Commodity,100,53.30,5330.00,Traded"
+        ),
     ]
     return ("\n".join(base + later) + "\n").encode()
 
@@ -303,9 +331,76 @@ def test_a_confirmation_respects_the_production_gate(client, engine, monkeypatch
         raise filemap.UnverifiedFileMap("nobody has opened this broker's app")
 
     monkeypatch.setattr(filemap, "require_verified", unchecked)
-    confirmed = client.post(f"{location}/confirm-duplicates",
-                            data={"dup_group": group, "csrf_token": csrf})
+    confirmed = client.post(
+        f"{location}/confirm-duplicates", data={"dup_group": group, "csrf_token": csrf}
+    )
 
     assert confirmed.status_code == 503, "a refusal, not a crash and not a quiet accept"
     with make_session(engine) as sess:
         assert len(sess.scalars(select(m.Import)).all()) == 1, "no second version written"
+
+
+# ---------- Calculating (handoff 7, D1 a): the reading state is the request itself ----------
+
+HTMX = {"HX-Request": "true"}
+
+
+def htmx_upload(client, path: Path | None = None, content: bytes | None = None):
+    csrf = CSRF.search(client.get("/upload").text).group(1)
+    data = content if content is not None else path.read_bytes()
+    return client.post(
+        "/upload",
+        files={"file": ("tradebook.csv", data, "text/csv")},
+        data={"csrf_token": csrf},
+        headers=HTMX,
+        follow_redirects=False,
+    )
+
+
+GOOD = Path("data/fixtures/demo/demo_tradebook.csv")
+
+
+def test_the_upload_page_reads_while_it_posts_and_never_polls():
+    """D1 (a): no status endpoint, no every-2-s; the reading state waits on the post."""
+    page = Path("services/production/api/templates/upload.html").read_text()
+    assert 'hx-post="/upload"' in page and 'hx-indicator="#upload"' in page
+    assert "hx-trigger" not in page and "hx-get" not in page and "every 2s" not in page
+    assert '<h1 class="title">Reading your file</h1>' in page
+    css = Path("services/production/api/static/css/app.css").read_text()
+    assert "#upload.htmx-request .upload__reading { display: block; }" in css
+
+
+def test_the_reading_state_shows_no_figure(client):
+    reading = client.get("/upload").text.split('class="upload__reading"')[1]
+    assert not re.search(r">\s*\d", reading), "the reading state counts nothing"
+
+
+def test_an_htmx_upload_answers_with_the_final_counts_once(client, engine):
+    r = htmx_upload(client, GOOD)
+    assert r.status_code == 200
+    with make_session(engine) as sess:
+        imp = sess.scalars(select(m.Import)).one()
+        rows, read, trades = imp.rows_in, imp.rows_parsed, imp.trips_reconstructed
+    assert '<h1 class="title" aria-live="polite">Your file is read.</h1>' in r.text
+    assert f'<dd class="ledger__value">{read} of {rows}</dd>' in r.text
+    assert f'<dd class="ledger__value">{trades}</dd>' in r.text
+    assert "Every row is accounted for on the next screen." in r.text
+    assert f'href="/imports/{imp.id}">Continue</a>' in r.text
+    assert "The latest trade, from its first fill to its last" in r.text
+
+
+def test_without_javascript_the_upload_still_lands_on_its_review(client):
+    r = upload(client, GOOD)
+    assert r.status_code == 303 and "/imports/" in r.headers["location"]
+
+
+def test_a_refusal_through_htmx_keeps_its_status_and_its_words(client):
+    htmx_upload(client, GOOD)
+    again = htmx_upload(client, GOOD)
+    assert again.status_code == 400
+    assert "You have already uploaded this exact file." in again.text
+
+
+def test_a_file_that_rebuilds_no_trade_goes_to_its_review(client):
+    r = htmx_upload(client, content=PNL)
+    assert r.status_code == 200 and r.headers["HX-Redirect"].startswith("/imports/")

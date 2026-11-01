@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 
 from services.production.accounts.file_store import FileStore
@@ -125,7 +125,26 @@ async def upload_file(
         sess.commit()
         gen.for_import(sess, trader=trader)
         sess.commit()
+        if request.headers.get("HX-Request") == "true":
+            return _read(request, sess, imp)
         return RedirectResponse(f"/imports/{imp.id}", status_code=303)
+
+
+def _read(request: Request, sess, imp: m.Import):
+    """Calculating's done state, for an htmx upload (handoff 7, D1 a).
+
+    The final counts, once, and the latest rebuilt trade. A file that rebuilt no
+    trade has nothing to show here; htmx is sent straight to its review, which says
+    what happened to every row.
+    """
+    latest = sess.scalars(
+        select(m.Trip).where(m.Trip.import_id == imp.id).order_by(m.Trip.entry_ts.desc())
+    ).first()
+    if latest is None:
+        return Response(status_code=200, headers={"HX-Redirect": f"/imports/{imp.id}"})
+    raw = sess.get(m.RawFile, imp.raw_file_id)
+    return page(request, "calculating.html", title="Your file is read", imp=imp,
+                file_name=raw.original_name, latest=latest)
 
 
 @router.get("/imports/{import_id}", response_class=HTMLResponse)
