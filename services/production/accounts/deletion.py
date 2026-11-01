@@ -116,6 +116,7 @@ def delete_trader(
         _delete_where(sess, m.ChapterFeedbackReason,
                       m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
     _delete_where(sess, m.ChapterFeedback, m.ChapterFeedback.trader_id == trader_id, removed)
+    _delete_where(sess, m.GuessAnswer, m.GuessAnswer.trader_id == trader_id, removed)
 
     if import_ids:
         for model in (m.Trip, m.OpenPosition, m.SkippedTrip, m.ImportRow):
@@ -182,7 +183,8 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     found: list[str] = []
     for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback):
+                  m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
+                  m.GuessAnswer):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)

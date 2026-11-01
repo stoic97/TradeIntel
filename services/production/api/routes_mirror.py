@@ -30,7 +30,7 @@ from services.shared.schemas import scope_v1 as s_enums
 router = APIRouter()
 
 
-def _record(request: Request):
+def load_record(request: Request):
     """The signed-in trader's record, or the page to show instead of it.
 
     Returns (response, None) when the trader must go elsewhere first - sign in,
@@ -77,7 +77,7 @@ def scope_home(request: Request):
     """Scope home (handoff 4, level 1): the four chapters on the dial, the five days'
     share in its centre. Replaces the long Mirror page; its sentences live on in the
     chapters and facts, word for word (tests/unit/mirror/test_wording_reference.py)."""
-    early, record = _record(request)
+    early, record = load_record(request)
     if early is not None:
         return early
     trips, imp, context = record
@@ -94,7 +94,7 @@ def scope_chapter(request: Request, n: int):
         chapter = SM.chapter(n)
     except KeyError:
         return HTMLResponse("", status_code=404)
-    early, record = _record(request)
+    early, record = load_record(request)
     if early is not None:
         return early
     _trips, imp, context = record
@@ -160,7 +160,7 @@ def scope_fact(request: Request, key: str):
     figures, then every trade behind it."""
     if key not in SM.FACTS:
         return HTMLResponse("", status_code=404)
-    early, record = _record(request)
+    early, record = load_record(request)
     if early is not None:
         return early
     _trips, imp, context = record

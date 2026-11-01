@@ -304,6 +304,23 @@ class ChapterFeedbackReason(Base, _InsertOnly):
     given_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class GuessAnswer(Base, _InsertOnly):
+    """B6: the trader's guess, before the reveal shows him his five worst days.
+
+    One per trader, ever: a guess made after seeing the answer is not a guess. The
+    label is one of the frozen set (TR-009) or "unknown" for "I don't know". The
+    import is the record the reveal then showed him.
+    """
+
+    __tablename__ = "guess_answer"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    answer: Mapped[str] = mapped_column(String(32))
+    labels_version: Mapped[str] = mapped_column(String(32))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)
