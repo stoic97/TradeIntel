@@ -1,0 +1,13 @@
+/* The app's own rules, after the design kit's (fonts, tokens, components, motion).
+
+   The kit's stylesheets are served byte for byte (tests/unit/api/test_design_kit.py),
+   so a fix to how they render here lives in this file, each rule with the reason it
+   exists. Keep it short: a rule that belongs in the kit goes back to the kit. */
+
+/* The dial's SVG is 80 px wider than its stage on purpose, so slice names can run
+   past it (components.css, .scope__svg). On a 390 px phone that is 24 px past each
+   edge of the screen, and the page scrolls sideways - which the handoff's manual
+   check forbids (section 11). Clip at the stage, not the dial: the names are inside
+   the screen, only the SVG's empty margin is outside it. Found in the 390 px browser
+   walk of 1 Nov. `clip` where supported; `hidden` before it. */
+.stage { overflow-x: hidden; overflow-x: clip; }

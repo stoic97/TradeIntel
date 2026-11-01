@@ -20,8 +20,10 @@
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The rows behind this</h2>
     <p class="evidence__caption">Every row we set aside, and why. <span class="num">{{ excluded|length|count }}</span> rows.</p>
+    {%- if excluded %}
     <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why it was set aside</th></tr></thead>
       <tbody>{% for number, reason in excluded %}<tr><td>{{ number|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+    {%- endif %}
     {%- if rejected %}
     <p class="evidence__caption evidence__caption--gap">Rows we could not read. Kept, not discarded. Each one says why. <span class="num">{{ rejected|length|count }}</span> rows.</p>
     <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why</th></tr></thead>

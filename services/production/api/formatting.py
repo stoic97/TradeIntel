@@ -41,10 +41,19 @@ def indian_grouping(n: int) -> str:
     return ",".join([*groups, tail])
 
 
-def rupees(value, signed: bool = True) -> str:
-    """−₹12,345 / +₹12,345 / ₹0; with signed=False an amount, ₹12,345, has no plus."""
+def rupees(value, signed: bool = True, exact: bool = False) -> str:
+    """−₹12,345 / +₹12,345 / ₹0; with signed=False an amount, ₹12,345, has no plus.
+
+    exact=True keeps the paise metrics decided (an average, −₹911.76) rather than
+    cutting to whole rupees: a figure with paise is a different figure without them.
+    """
     n = _whole(value)
     written = RUPEE + indian_grouping(n)
+    if exact:
+        fraction = str(abs(Decimal(str(value)))).partition(".")[2]
+        written += f".{fraction}" if fraction else ""
+        if n == 0 and Decimal(str(value)) < 0:
+            return MINUS + written
     if n < 0:
         return MINUS + written
     if n > 0 and signed:

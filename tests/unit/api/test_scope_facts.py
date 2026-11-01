@@ -156,3 +156,17 @@ def test_a_share_that_is_not_a_percentage_is_told_as_the_mirror_tells_it():
         page = readable(fact_page(key, trips))
         assert "Your result for the whole period was" in page
         assert "% of your result" not in page
+
+
+def test_an_average_keeps_its_paise_as_the_mirror_printed_it():
+    """Found in the 390 px browser walk: −911.76 had become −₹911."""
+    tl = CTX["two_losses"]
+    page = fact_page("down")
+    for mean in (tl.condition_mean, tl.comparison_mean):
+        assert formatting.rupees(mean, exact=True) in page
+
+
+def test_no_rows_set_aside_is_said_without_an_empty_table():
+    page = fact_page("unread", unread={"excluded": [], "rejected": [], "refused": []})
+    assert 'Every row we set aside, and why. <span class="num">0</span> rows.' in page
+    assert "Why it was set aside" not in page

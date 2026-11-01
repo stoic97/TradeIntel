@@ -33,9 +33,10 @@
 
 {#- A rupee figure, written by the rupees filter and coloured by its sign: red and
     green only on a signed result (handoff section 7); an amount is plain. size is the
-    kit's num-- scale: hero, large, medium, small, label. -#}
-{% macro money(value, size=none, signed=true) -%}
-<span class="num{% if size %} num--{{ size }}{% endif %} num--{{ value|tone if signed else "plain" }}">{{ value|rupees(signed=signed) }}</span>
+    kit's num-- scale: hero, large, medium, small, label. exact keeps the paise
+    of a figure metrics decided with them, such as an average. -#}
+{% macro money(value, size=none, signed=true, exact=false) -%}
+<span class="num{% if size %} num--{{ size }}{% endif %} num--{{ value|tone if signed else "plain" }}">{{ value|rupees(signed=signed, exact=exact) }}</span>
 {%- endmacro %}
 
 {#- One plain line, never a box. Shown by the page only when the export has no charges

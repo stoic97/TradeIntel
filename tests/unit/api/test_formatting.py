@@ -25,21 +25,33 @@ from services.production.api.formatting import count, indian_grouping, minutes, 
 MINUS = "\u2212"
 
 
-@pytest.mark.parametrize("n,written", [
-    (0, "0"), (7, "7"), (999, "999"), (1000, "1,000"), (99999, "99,999"),
-    (100000, "1,00,000"), (1234567, "12,34,567"), (123456789, "12,34,56,789"),
-])
+@pytest.mark.parametrize(
+    "n,written",
+    [
+        (0, "0"),
+        (7, "7"),
+        (999, "999"),
+        (1000, "1,000"),
+        (99999, "99,999"),
+        (100000, "1,00,000"),
+        (1234567, "12,34,567"),
+        (123456789, "12,34,56,789"),
+    ],
+)
 def test_indian_grouping_is_three_digits_then_pairs(n, written):
     assert indian_grouping(n) == written
 
 
-@pytest.mark.parametrize("value,written", [
-    (Decimal("-12345.67"), f"{MINUS}₹12,345"),
-    (Decimal(4500), "+₹4,500"),
-    (Decimal(1234567), "+₹12,34,567"),
-    (0, "₹0"),
-    (-3, f"{MINUS}₹3"),
-])
+@pytest.mark.parametrize(
+    "value,written",
+    [
+        (Decimal("-12345.67"), f"{MINUS}₹12,345"),
+        (Decimal(4500), "+₹4,500"),
+        (Decimal(1234567), "+₹12,34,567"),
+        (0, "₹0"),
+        (-3, f"{MINUS}₹3"),
+    ],
+)
 def test_a_result_is_written_with_its_sign_and_the_rupee_sign(value, written):
     assert rupees(value) == written
 
@@ -60,10 +72,15 @@ def test_figures_are_cut_toward_zero_as_the_templates_always_cut_them():
     assert rupees(Decimal("-0.40")) == "₹0"
 
 
-@pytest.mark.parametrize("value,expected", [
-    (Decimal(-12345), "loss"), (Decimal(4500), "gain"), (0, "plain"),
-    (Decimal("-0.40"), "plain"),  # printed as ₹0, so it is not coloured as a loss
-])
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (Decimal(-12345), "loss"),
+        (Decimal(4500), "gain"),
+        (0, "plain"),
+        (Decimal("-0.40"), "plain"),  # printed as ₹0, so it is not coloured as a loss
+    ],
+)
 def test_the_tone_follows_the_figure_as_printed(value, expected):
     assert tone(value) == expected
 
@@ -73,9 +90,15 @@ def test_a_count_is_grouped_the_same_way():
     assert count(123456) == "1,23,456"
 
 
-@pytest.mark.parametrize("seconds,written", [
-    (1800, "30"), (1799, "29"), (Decimal("5400.0"), "90"), (59, "0"),
-])
+@pytest.mark.parametrize(
+    "seconds,written",
+    [
+        (1800, "30"),
+        (1799, "29"),
+        (Decimal("5400.0"), "90"),
+        (59, "0"),
+    ],
+)
 def test_minutes_are_whole_minutes_cut_as_before(seconds, written):
     assert minutes(seconds) == written
 
@@ -117,13 +140,31 @@ def test_the_arithmetic_check_lets_formatting_through():
 
 def layout_templates() -> list[Path]:
     root = Path("services/production/api/templates")
-    return [p for p in sorted(root.rglob("*.html"))
-            if p.name in {"layout.html", "_components.html"}
-            or "scope" in p.relative_to(root).parts  # the Scope's pages and their parts
-            or '{% extends "layout.html" %}' in p.read_text()]
+    return [
+        p
+        for p in sorted(root.rglob("*.html"))
+        if p.name in {"layout.html", "_components.html"}
+        or "scope" in p.relative_to(root).parts  # the Scope's pages and their parts
+        or '{% extends "layout.html" %}' in p.read_text()
+    ]
 
 
 def test_no_page_on_the_layout_computes_a_figure():
     assert layout_templates(), "layout.html itself must be found"
     for path in layout_templates():
         assert not arithmetic_in(path.read_text()), path
+
+
+@pytest.mark.parametrize(
+    ("value", "written"),
+    [
+        (Decimal("-911.76"), f"{MINUS}₹911.76"),  # an average, as metrics decided it
+        (Decimal(-900), f"{MINUS}₹900"),  # metrics trims a whole average, and so does this
+        (Decimal("1234567.5"), "+₹12,34,567.5"),
+        (Decimal("-0.5"), f"{MINUS}₹0.5"),  # under a rupee still has its sign
+    ],
+)
+def test_an_exact_figure_keeps_the_paise_metrics_decided(value, written):
+    """The long page printed an average as metrics returned it; cutting it to whole
+    rupees would change the figure, not only how it is written."""
+    assert rupees(value, exact=True) == written
