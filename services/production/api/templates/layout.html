@@ -4,7 +4,9 @@
     the front door), and `content`, the white record. An in-app page names its tab with
     {% set nav = "scope" | "journal" | "account" %} and gets the bottom nav; a page that
     names none has no nav (fact pages, and every page before sign-in). `enter_class` is
-    the motion hook (handoff section 7): the server sets it from ?enter=. `body_class`
+    the motion hook (handoff section 7): the server sets it from ?enter=, motion.css
+    plays it, and motion.js (in <head>, so it is ready before the first frame) adds
+    the pressed state, the count and the one-play-per-tap rule. `body_class`
     adds the kit's modifier to <main> (screen__body--fact on a fact page).
 
     base.html and scope.css serve the pages not yet moved here. Each page moves when it
@@ -26,6 +28,7 @@
 <link rel="stylesheet" href="/static/css/components.css">
 <link rel="stylesheet" href="/static/css/motion.css">
 <link rel="stylesheet" href="/static/css/app.css">
+<script src="/static/js/motion.js"></script>
 <script src="/static/js/htmx.min.js" defer></script>
 </head>
 <body>
