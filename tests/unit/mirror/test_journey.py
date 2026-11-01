@@ -10,19 +10,41 @@ Through the app, with the 40-trade fixture trader signed in.
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
 from services.production.api.routes_identity import landing_for
 from services.production.db import models as m
 from services.production.db.session import make_session
+from services.shared.schemas import scope_v1 as s
 
 TOKEN = re.compile(r'name="csrf_token" value="([^"]+)"')
 
 
 def the_import(engine) -> int:
+    """The upload his record comes from: the fixture's, the first."""
     with make_session(engine) as sess:
-        return sess.scalars(select(m.Import.id)).one()
+        return sess.scalars(select(m.Import.id).order_by(m.Import.id)).first()
+
+
+def refuse_a_later_file(engine) -> int:
+    """A second upload, refused: a P&L statement, say. No trips."""
+    with make_session(engine) as sess:
+        trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
+        raw = m.RawFile(trader_id=trader.id, sha256="e" * 64, original_name="pnl.csv",
+                        size=1, stored_path="/tmp/e", uploaded_at=datetime.now(UTC))
+        sess.add(raw)
+        sess.flush()
+        imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
+                       adapter_id="dhan_tradebook_v1", adapter_version="1",
+                       filemap_version="1", code_version="fixturesha",
+                       outcome=s.ImportOutcome.REJECTED, rejection_text="no prices",
+                       rows_in=1, rows_parsed=0, rows_excluded=0, fees_available=False,
+                       version_no=2, created_at=datetime.now(UTC))
+        sess.add(imp)
+        sess.commit()
+        return imp.id
 
 
 def landing(engine) -> str:
@@ -93,3 +115,10 @@ def test_where_the_guess_is_skipped_the_one_number_ends_the_walk(client, engine)
     assert landing(engine).startswith("/imports/")
     record_a_number(client)
     assert landing(engine) == "/"
+
+
+def test_a_refused_later_file_does_not_hide_the_walk(client, engine):
+    """Found walking it: his latest upload was a refused file, whose page has no way on."""
+    refused = refuse_a_later_file(engine)
+    assert refused != the_import(engine)
+    assert landing(engine) == f"/imports/{the_import(engine)}"
