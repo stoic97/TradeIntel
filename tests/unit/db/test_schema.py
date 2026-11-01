@@ -51,7 +51,7 @@ def test_every_design_table_exists():
         "raw_file", "import", "import_row", "trading_day_version", "trip",
         "open_position", "skipped_trip", "journal", "journal_field_entry",
         "wtp_answer", "dwell_event", "rule_declaration", "adherence_event",
-        "deletion_record", "admin_action",
+        "deletion_record", "admin_action", "chapter_feedback", "chapter_feedback_reason",
     }
     assert expected <= tables, f"missing: {sorted(expected - tables)}"
 
@@ -169,3 +169,26 @@ def test_the_migration_is_reversible(tmp_path):
     assert [t for t in inspect(engine).get_table_names() if t != "alembic_version"] == []
     run_migrations(engine)
     assert sorted(inspect(engine).get_table_names()) == before
+
+
+def test_a_chapter_takes_one_answer_per_trader(session):
+    """B4: the database, not only the route, refuses a second answer to a chapter."""
+    trader = _trader(session)
+    raw = m.RawFile(trader_id=trader.id, sha256="b" * 64, original_name="f.csv", size=1,
+                    stored_path="/tmp/f", uploaded_at=datetime.now(UTC))
+    session.add(raw)
+    session.flush()
+    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
+                   adapter_id="a", adapter_version="1", filemap_version="1",
+                   code_version="t", outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+                   rows_in=1, rows_parsed=1, rows_excluded=0, fees_available=False,
+                   version_no=1, trips_reconstructed=1, density_default_unit="day",
+                   created_at=datetime.now(UTC))
+    session.add(imp)
+    session.flush()
+    for answer in ("accurate", "wrong"):
+        session.add(m.ChapterFeedback(trader_id=trader.id, chapter=1, answer=answer,
+                                      import_id=imp.id, answered_at=datetime.now(UTC)))
+    with pytest.raises(IntegrityError):
+        session.flush()
+

@@ -12,17 +12,18 @@ argument is that he should not have to.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
-from services.production.api.routes_identity import current_trader, page
+from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
+from services.production.mirror import feedback as FB
 from services.production.mirror import loader
 from services.shared.schemas import scope_v1 as s_enums
 
@@ -102,7 +103,55 @@ def scope_chapter(request: Request, n: int):
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
                 trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **context)
+                sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
+                **context)
+
+
+def _feedback_context(request: Request, n: int) -> dict:
+    """What the feedback row needs: where it stands, its choices, where it posts."""
+    if n not in FB.CHAPTERS:
+        return {}
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        state = FB.state(sess, trader, n)
+    return {"feedback": state, "feedback_answers": FB.ANSWERS,
+            "feedback_reasons": FB.REASONS,
+            "feedback_url": f"/mirror/chapter/{n}/feedback"}
+
+
+@router.post("/mirror/chapter/{n}/feedback", response_class=HTMLResponse)
+def chapter_feedback(request: Request, n: int, answer: str = Form(None),
+                     reason: str = Form(None), csrf_token: str = Form(None)):
+    """B4: one answer per chapter (1-3), then an optional reason after Wrong.
+
+    htmx gets the feedback row back to swap in place; a plain form post goes back
+    to the chapter, where the row shows its new state.
+    """
+    if n not in FB.CHAPTERS:
+        return HTMLResponse("", status_code=404)
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        imp = loader.current_import(sess, trader)
+        if imp is None:
+            return HTMLResponse("", status_code=404)
+        try:
+            if answer is not None:
+                FB.record_answer(sess, trader=trader, chapter=n, answer=answer,
+                                 import_id=imp.id)
+            elif reason is not None:
+                FB.record_reason(sess, trader=trader, chapter=n, reason=reason)
+            else:
+                return HTMLResponse("", status_code=400)
+        except FB.NotAsked:
+            return HTMLResponse("", status_code=400)
+        sess.commit()
+    if request.headers.get("HX-Request") == "true":
+        return page(request, "scope/_feedback.html", **_feedback_context(request, n))
+    return RedirectResponse(f"{SM.chapter_href(n)}#feedback", status_code=303)
 
 
 @router.get("/mirror/fact/{key}", response_class=HTMLResponse)
