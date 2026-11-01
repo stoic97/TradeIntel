@@ -1,62 +1,40 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your account</p>{% endblock %}
-{% block hero %}<h1>What you risk</h1>{% endblock %}
+{#- The one number (handoff 5, screen 13), straight after the reveal (TR-008). The
+    app's own words on the kit's form. Recorded, it goes on to the Scope. Its history
+    is the app's own table, which the kit's screen does not draw: a new number is a
+    new line, never an edit. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import button %}
 {% block content %}
-<section class="panel">
-  <p>How much are you willing to lose on a single trade?</p>
-  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
-
+  <p class="label label--plain">Your account</p>
+  <h1 class="title">What you risk</h1>
+  <p class="lead">How much are you willing to lose on a single trade?</p>
+  {%- if error %}
+  <p class="field__error field__error--block" role="alert">{{ error }}</p>
+  {%- endif %}
   <form method="post" action="/budget">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-    <label for="value">Your number</label>
-    <input type="text" id="value" name="value" inputmode="decimal" required>
-
-    <label for="unit">In</label>
-    <select id="unit" name="unit">
-      <option value="INR">rupees</option>
-      <option value="PCT">per cent of my trading capital</option>
-    </select>
-
-    <label for="capital_amount">Your trading capital, in rupees</label>
-    <input type="text" id="capital_amount" name="capital_amount" inputmode="decimal">
-    <p class="quiet">Only needed if you answered in per cent.</p>
-
-    <label for="effective_from">Has that been your number for the whole history you
-      uploaded? If it changed, from when?</label>
-    <input type="date" id="effective_from" name="effective_from"
-           max="{{ today }}" value="{{ today }}" required>
-    <p class="quiet">Trades before this date keep whatever number was in force then.
-      Set an earlier date if this has been your number all along.</p>
-
-    <button type="submit">Record it</button>
+    <label class="field"><span class="field__label">Your number</span><input class="field__input field__input--mono" id="value" name="value" inputmode="decimal" required></label>
+    <fieldset class="fieldset"><legend class="fieldset__legend">In</legend>
+      <label class="choice"><input class="choice__input" type="radio" name="unit" value="INR" checked><span class="body">rupees</span></label>
+      <label class="choice"><input class="choice__input" type="radio" name="unit" value="PCT"><span class="body">per cent of my trading capital</span></label>
+    </fieldset>
+    <label class="field"><span class="field__label">Your trading capital, in rupees</span><input class="field__input field__input--mono" id="capital_amount" name="capital_amount" inputmode="decimal"><span class="field__hint">Only needed if you answered in per cent.</span></label>
+    <label class="field"><span class="field__label">Has that been your number for the whole history you uploaded? If it changed, from when?</span><input class="field__input field__input--mono" type="date" id="effective_from" name="effective_from" max="{{ today }}" value="{{ today }}" required><span class="field__hint">Trades before this date keep whatever number was in force then. Set an earlier date if this has been your number all along.</span></label>
+    <div class="screen__actions">
+      {{ button("Record it", block=true) }}
+      {{ button("Next: what we can and cannot check on your history", href="/eligibility", kind="text") }}
+    </div>
   </form>
-</section>
-
-{% if declarations %}
-<section class="panel">
-  <h2>What you have told us</h2>
-  <table>
-    <tr><th>From</th><th>Number</th><th>Recorded</th></tr>
-    {% for d in declarations %}
-    <tr>
-      <td>{{ d.effective_from }}</td>
-      <td>
-        {% if d.unit == "INR" %}₹{{ "{:,}".format(d.value|int) }}
-        {% else %}{{ d.value }}% of ₹{{ "{:,}".format(d.capital_amount|int) }}
-        {% endif %}
-      </td>
-      <td class="quiet">
-        {{ d.declared_at.strftime('%d %b %Y') }}{% if d.retrospective %} — about a
-        period that had already passed{% endif %}
-      </td>
-    </tr>
-    {% endfor %}
+  {%- if declarations %}
+  <p class="table-label">What you have told us</p>
+  <table class="table">
+    <thead><tr><th>From</th><th class="table__num">Number</th><th>Recorded</th></tr></thead>
+    <tbody>
+    {%- for d in declarations %}
+      <tr><td>{{ d.effective_from }}</td><td class="table__num">{% if d.unit == "INR" %}{{ d.value|rupees(signed=false) }}{% else %}{{ d.value }}% of {{ d.capital_amount|rupees(signed=false) }}{% endif %}</td><td class="table__text">{{ d.declared_at.strftime('%d %b %Y') }}{% if d.retrospective %} — about a period that had already passed{% endif %}</td></tr>
+    {%- endfor %}
+    </tbody>
   </table>
-  <p class="quiet">Nothing here is overwritten. A new number is a new line, and your
-    earlier trades keep the number that was in force when you took them.</p>
-</section>
-
-<p><a href="/eligibility">Next: what we can and cannot check on your history</a></p>
-{% endif %}
+  <p class="body-small table-note">Nothing here is overwritten. A new number is a new line, and your earlier trades keep the number that was in force when you took them.</p>
+  {%- endif %}
 {% endblock %}

@@ -78,16 +78,31 @@ def landing_for(sess, trader: m.Trader) -> str:
     """Where a trader belongs when he arrives.
 
     Not /account: a page telling him nothing has been uploaded is not a destination.
-    With nothing yet, the upload page; with an upload, his most recent import. In
-    phase 3 that second destination becomes his Mirror, which is the real answer --
-    the import review is what stands in for it until it exists.
+    With nothing yet, the upload page. With a record he has not yet been walked
+    through - import check, guess, reveal, one number (handoff 5) - his most recent
+    import, whose check starts the walk. Once he has, home. A guess or a number on
+    record says he has been through it: in production the guess is skipped until its
+    labels are frozen (TR-009), and the number is the walk's last step either way.
+    Home is only for a trader whose record has trips, since home without one sends
+    him back here.
     """
     latest = sess.scalars(
         select(m.Import)
         .where(m.Import.trader_id == trader.id)
         .order_by(m.Import.id.desc())
     ).first()
-    return f"/imports/{latest.id}" if latest is not None else "/upload"
+    if latest is None:
+        return "/upload"
+    has_trips = sess.scalars(
+        select(m.Trip.id)
+        .join(m.Import, m.Trip.import_id == m.Import.id)
+        .where(m.Import.trader_id == trader.id)
+    ).first() is not None
+    walked = any(
+        sess.scalars(select(model.id).where(model.trader_id == trader.id)).first() is not None
+        for model in (m.GuessAnswer, m.RiskBudgetDeclaration)
+    )
+    return "/" if has_trips and walked else f"/imports/{latest.id}"
 
 
 @router.get("/invite/{code}", response_class=HTMLResponse)

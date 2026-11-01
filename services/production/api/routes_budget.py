@@ -140,4 +140,6 @@ def budget_submit(
             retrospective=effective < _today(),
         ))
         sess.commit()
-    return RedirectResponse("/budget", status_code=303)
+    # The one number comes straight after the reveal (TR-008). Recorded, the journey
+    # goes on to the Scope; its history stays on this page.
+    return RedirectResponse("/mirror", status_code=303)
