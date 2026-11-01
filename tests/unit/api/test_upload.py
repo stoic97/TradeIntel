@@ -404,3 +404,14 @@ def test_a_refusal_through_htmx_keeps_its_status_and_its_words(client):
 def test_a_file_that_rebuilds_no_trade_goes_to_its_review(client):
     r = htmx_upload(client, content=PNL)
     assert r.status_code == 200 and r.headers["HX-Redirect"].startswith("/imports/")
+
+
+def test_a_refusal_is_swapped_in_where_htmx_fires_the_swap():
+    """Found in the browser: htmx fires before-swap on the target (<body>), so a handler
+    on the form never ran and a duplicate upload silently did nothing. The listener is
+    on the body, and acts only on this form's requests."""
+    page = Path("services/production/api/templates/upload.html").read_text()
+    assert "hx-on::before-swap" not in page
+    assert 'document.body.addEventListener("htmx:beforeSwap"' in page
+    assert 'from.matches("form.upload") && e.detail.xhr.status >= 400' in page
+
