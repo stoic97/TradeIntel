@@ -99,6 +99,11 @@ def a_trader(sess, login_id: str, store: FileStore, content: bytes) -> m.Trader:
                                      given_at=datetime.now(UTC)))
     sess.add(m.GuessAnswer(trader_id=trader.id, answer="unknown", labels_version="t",
                            import_id=imp.id, answered_at=datetime.now(UTC)))
+    sess.add(m.LeavingCardShown(trader_id=trader.id, copy_version="t",
+                                shown_at=datetime.now(UTC)))
+    sess.add(m.LeavingCardAnswer(trader_id=trader.id, outcome="answered",
+                                 answer="his own words", copy_version="t",
+                                 answered_at=datetime.now(UTC)))
     sess.add(m.DwellEvent(trader_id=trader.id, surface="mirror", key="worst-days",
                           event="drawer_opened", at=datetime.now(UTC),
                           duration_ms=1200))

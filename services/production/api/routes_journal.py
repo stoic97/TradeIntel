@@ -32,7 +32,7 @@ from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.db import models as m
 from services.production.db.session import make_session
-from services.production.journal import fields, prose, wtp
+from services.production.journal import fields, leaving, prose, wtp
 from services.production.journal import generate as gen
 
 router = APIRouter()
@@ -88,9 +88,38 @@ def journal_list(request: Request):
         if elsewhere is not None:
             return elsewhere
         surface = gen.surface(sess, trader=trader)
+        # The leaving card (B7): once, ever. Drawing it is what marks it shown.
+        card = leaving.due(sess, trader, production=request.app.state.settings.production)
+        if card:
+            leaving.mark_shown(sess, trader)
+            sess.commit()
         return page(request, "journals.html", title="Your Journals",
                     latest=surface.latest, catch_up_count=surface.catch_up_count,
-                    total=surface.total)
+                    total=surface.total, leaving_card=leaving if card else None)
+
+
+@router.post("/leaving-card")
+def leaving_card_answer(request: Request, answer: str = Form(None),
+                        csrf_token: str = Form(None)):
+    return _leaving_card(request, answer, csrf_token)
+
+
+@router.post("/leaving-card/dismiss")
+def leaving_card_dismiss(request: Request, csrf_token: str = Form(None)):
+    return _leaving_card(request, None, csrf_token)
+
+
+def _leaving_card(request: Request, answer: str | None, csrf_token: str | None):
+    """Kept once, for a card he was shown; then back to his Journals."""
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader, elsewhere = _gate(request, sess)
+        if elsewhere is not None:
+            return elsewhere
+        leaving.record(sess, trader=trader, answer=answer)
+        sess.commit()
+    return RedirectResponse("/journals", status_code=303)
 
 
 @router.get("/journals/catch-up", response_class=HTMLResponse)
@@ -122,7 +151,7 @@ def journal_page(request: Request, journal_id: int):
         trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
         rows = [
-            {"trip_id": t.trip_id, "label": f"Trade {n}", "net": f"{t.net:,.0f}"}
+            {"trip_id": t.trip_id, "label": f"Trade {n}", "net": t.net}  # the page writes it
             for n, t in enumerate(trips, start=1)
         ]
         answers = {

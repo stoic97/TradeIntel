@@ -321,6 +321,32 @@ class GuessAnswer(Base, _InsertOnly):
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class LeavingCardShown(Base, _InsertOnly):
+    """B7: that the leaving card was shown to this trader. It is shown once, ever:
+    this row is the "shown once" flag, written when the card is drawn, so a card he
+    scrolls past is not shown again."""
+
+    __tablename__ = "leaving_card_shown"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    copy_version: Mapped[str] = mapped_column(String(32))
+    shown_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class LeavingCardAnswer(Base, _InsertOnly):
+    """B7: what he did with the leaving card - his answer in his own words, or
+    "Not now". One per trader, never edited. The words are his, so deletion takes
+    them with everything else."""
+
+    __tablename__ = "leaving_card_answer"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    outcome: Mapped[str] = mapped_column(String(16))  # answered | dismissed
+    answer: Mapped[str | None] = mapped_column(Text)
+    copy_version: Mapped[str] = mapped_column(String(32))
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)

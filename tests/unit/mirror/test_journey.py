@@ -65,8 +65,8 @@ def record_a_number(client):
 
 def test_the_import_check_goes_on_to_the_guess(client, engine):
     page = client.get(f"/imports/{the_import(engine)}").text
-    assert '<a href="/guess">See your record</a>' in page
-    assert '<a href="/mirror">See your record</a>' not in page
+    assert page.count('href="/guess">See your record') == 2  # the line and the button
+    assert 'href="/mirror">See your record' not in page
 
 
 def test_the_one_number_is_the_kits_form_in_the_apps_words(client):
