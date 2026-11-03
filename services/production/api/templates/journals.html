@@ -5,6 +5,21 @@
 {% block content %}
   <p class="label label--plain">Journals</p>
   <h1 class="title fact__title">Your Journals</h1>
+  {%- if leaving_card %}
+  {#- The leaving card (kit screen 19; B7): once, ever. Its words and its link wait
+      for D9 and D2 (journal/leaving.py), and in production it is not shown until
+      they are signed. -#}
+  <form class="leaving-card" method="post" action="/leaving-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2 class="leaving-card__title">{{ leaving_card.HEADING }}</h2>
+    <label class="field"><span class="field__label">{{ leaving_card.QUESTION }}</span><textarea class="field__input field__textarea" name="answer" maxlength="{{ leaving_card.LONGEST }}" required></textarea></label>
+    <p class="body-small leaving-card__offer">{{ leaving_card.OFFER }}{% if leaving_card.LINK %} <a class="link" href="{{ leaving_card.LINK }}">Message on WhatsApp</a>{% endif %}</p>
+    <div class="leaving-card__actions">
+      <button class="btn btn--primary" type="submit">Send</button>
+      <button class="btn btn--text" type="submit" formaction="/leaving-card/dismiss" formnovalidate>Not now</button>
+    </div>
+  </form>
+  {%- endif %}
   {%- if latest %}
   <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ total|count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
   {% include "_journal_index.html" with context %}
