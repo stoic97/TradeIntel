@@ -1,44 +1,32 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your data</p>{% endblock %}
-{% block hero %}<h1>Before you upload</h1>{% endblock %}
+{#- Before you upload (kit screen 5), in the app's words. The promises are the
+    versioned consent text (text.*), never written here; the purposes keep their
+    field names. The kit's "I don't agree" and its declined page are new copy, and
+    wait for D9. -#}
+{% extends "layout.html" %}
 {% block content %}
-<section class="panel">
-  <p>A tradebook is among the most sensitive files you own. Here is exactly what
-     happens to it. The same promises are made in plainer words on
-     <a href="https://plusev.in/scope/data">plusev.in</a>; if the two ever disagree,
-     this page is the one you agreed to, and we want to hear about it.</p>
-  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
-
-  <h2>What we store</h2>
-  <p>{{ text.what_we_store }}</p>
-  <h2>For how long</h2>
-  <p>{{ text.how_long }}</p>
-  <h2>Who can access it</h2>
-  <p>{{ text.who_can_access }}</p>
-  <h2>What deletion covers</h2>
-  <p>{{ text.what_deletion_covers }}</p>
-  <h2>What deletion cannot undo</h2>
-  <p>{{ text.what_deletion_cannot_undo }}</p>
-
-  <h2>What you are agreeing to</h2>
-  <form method="post" action="/consent">
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">Before you upload</h1>
+  <p class="body consent__intro">A tradebook is among the most sensitive files you own. Here is exactly what happens to it. The same promises are made in plainer words on <a class="link" href="https://plusev.in/scope/data">plusev.in</a>; if the two ever disagree, this page is the one you agreed to, and we want to hear about it.</p>
+  {%- if error %}
+  <p class="field__error field__error--block" role="alert">{{ error }}</p>
+  {%- endif %}
+  <section class="consent__section"><h2 class="subhead">What we store</h2><p class="body">{{ text.what_we_store }}</p></section>
+  <section class="consent__section"><h2 class="subhead">For how long</h2><p class="body">{{ text.how_long }}</p></section>
+  <section class="consent__section"><h2 class="subhead">Who can access it</h2><p class="body">{{ text.who_can_access }}</p></section>
+  <section class="consent__section"><h2 class="subhead">What deletion covers</h2><p class="body">{{ text.what_deletion_covers }}</p></section>
+  <section class="consent__section"><h2 class="subhead">What deletion cannot undo</h2><p class="body">{{ text.what_deletion_cannot_undo }}</p></section>
+  <form method="post" action="/consent" class="consent__section">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {% for purpose in text.purposes %}
-    <div class="choice">
-      <label class="checkbox">
-        <input type="checkbox" name="{{ purpose.key }}" value="yes"
-               {% if purpose.required %}checked{% endif %}>
-        <strong>{{ purpose.title }}</strong>
-      </label>
-      <p class="quiet">{{ purpose.body }}</p>
+    <h2 class="subhead">What you are agreeing to</h2>
+    {%- for purpose in text.purposes %}
+    <label class="choice"><input class="choice__input" type="checkbox" name="{{ purpose.key }}" value="yes"{% if purpose.required %} checked{% endif %}><span><span class="choice__title">{{ purpose.title }}</span><span class="choice__text">{{ purpose.body }}</span></span></label>
+    {%- endfor %}
+    <div class="screen__actions">
+      <button class="btn btn--primary btn--block" type="submit">Agree and continue</button>
+      <p class="body-small">You can withdraw any of these at any time, from your settings.</p>
     </div>
-    {% endfor %}
-    <button type="submit">Agree and continue</button>
   </form>
-  <p class="quiet">You can withdraw any of these at any time, from your settings.</p>
-  {% if not text.reviewed %}
-  <p class="warn">Draft text, version {{ text.version }} — not yet reviewed. Shown
-    because this is a development account.</p>
-  {% endif %}
-</section>
+  {%- if not text.reviewed %}
+  <p class="body-small consent__draft">Draft text, version {{ text.version }} — not yet reviewed. Shown because this is a development account.</p>
+  {%- endif %}
 {% endblock %}

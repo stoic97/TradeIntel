@@ -327,7 +327,7 @@ def test_the_page_has_one_form_for_each_trade(engine, client):
     with make_session(engine) as sess:
         trades = len(json.loads(sess.get(m.Journal, journal.id).trip_ids))
     body = client.get(f"/journals/{journal.id}").text
-    assert body.count('class="trade-form"') == trades
+    assert body.count('class="card journal-trade"') == trades  # the kit's trade card
 
     # One a trade, plus one for the note, whose trip_id is empty because a note is
     # about the period and not about any single trade. Before this change there

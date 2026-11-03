@@ -12,14 +12,15 @@ running server — that happens with the deployment, and this line changes then.
 The uploaded file; anything reconstructed from it (fills, trips, open positions,
 skipped rows); anything written from those (Journals, their field entries, risk
 declarations, dwell events); what he answers about his record (his guess before
-the reveal, whether a chapter matches his trading, and why not); and the account that ties them together. A
+the reveal, whether a chapter matches his trading, and why not, and what he writes on
+the leaving card); and the account that ties them together. A
 count taken from his history is his data too.
 
 ## The systems
 
 | System | What it holds | Encrypted | Retention | Deletion reaches it |
 |---|---|---|---|---|
-| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
+| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
 | The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in backups | Until deleted | Yes, same module |
 | Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |

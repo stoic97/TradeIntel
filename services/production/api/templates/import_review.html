@@ -1,97 +1,78 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your upload</p>{% endblock %}
-{% block hero %}<h1>What we read</h1>{% endblock %}
+{#- What we read (kit screens 9 and 7b), in the app's words. The route says whether
+    this is his first upload (first_upload): the page formats, it does not add up
+    (T7). A first upload's days are all new, so its list is plain; a later one
+    compares each day with what was there before. -#}
+{% extends "layout.html" %}
 {% block content %}
-<section class="panel">
-
-  {% if imp.outcome.value == "rejected" %}
-    <p class="warn">{{ imp.rejection_text }}</p>
-    <p><a href="/upload">Upload a different file</a></p>
-  {% else %}
-
-  <table>
-    <tr><th>Rows in the file</th><td>{{ imp.rows_in }}</td></tr>
-    <tr><th>Rows we could read</th><td>{{ imp.rows_parsed }}</td></tr>
-    <tr><th>Rows set aside</th><td>{{ imp.rows_excluded }}</td></tr>
-    <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
-  </table>
-
-  <p><a href="/guess">See your record</a> — what these trades say, with the trades
-     behind every line.</p>
-
-  {% if not imp.fees_available %}
-  <p class="warn">This export has no charges column, so every rupee figure from it is
-     gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
-  {% endif %}
-
-  {% if rejected %}
-  <h2>Rows we could not read ({{ rejected|length }})</h2>
-  <p class="quiet">Kept, not discarded. Each one says why.</p>
-  <table>
-    <tr><th>Row</th><th>Why</th></tr>
-    {% for row in rejected[:20] %}
-    <tr><td>{{ row.row_no }}</td><td>{{ row.reason }}</td></tr>
-    {% endfor %}
-  </table>
-  {% endif %}
-
-  {% if groups %}
-  <h2>Possible duplicates ({{ groups|length }} groups)</h2>
-  <p>Identical rows can be two real fills a second apart, or the same trade recorded
-     twice. We cannot tell from the file, so we kept all of them. You can tell.</p>
-  {% for group, rows in groups.items() %}
-  <div class="choice">
-    <p><strong>{{ rows|length }} identical rows</strong></p>
-    <p class="quiet mono">{{ rows[0].raw_text }}</p>
-    <form method="post" action="/imports/{{ imp.id }}/confirm-duplicates" class="inline">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="dup_group" value="{{ group }}">
-      <button type="submit" class="link">This is one trade recorded twice</button>
-    </form>
-  </div>
-  {% endfor %}
-  {% endif %}
-
-  {% if days %}
-  {% set first_upload = (days | map(attribute="rows_before") | sum) == 0 %}
-  <h2>Days in this upload</h2>
-  {% if first_upload %}
-  {# A first upload has nothing to compare against: every day is new. The
-     day-by-day comparison is for the next upload, so here it folds away. #}
-  <p>{{ days|length }} trading days, from {{ days[0].trading_day }} to
-     {{ days[-1].trading_day }}. All of them are new to Scope.</p>
-  <details class="drawer">
-    <summary class="quiet">Every day, with its row count</summary>
-    <div class="drawer-body">
-    <table>
-      <tr><th>Day</th><th>Rows</th></tr>
-      {% for day in days %}
-      <tr><td>{{ day.trading_day }}</td><td>{{ day.rows_after }}</td></tr>
-      {% endfor %}
-    </table>
+  <p class="label label--plain">Your upload</p>
+  <h1 class="title">What we read</h1>
+  {%- if imp.outcome.value == "rejected" %}
+  <p class="lead file-error">{{ imp.rejection_text }}</p>
+  <a class="btn btn--text" href="/upload">Upload a different file</a>
+  {%- else %}
+  <dl class="facts-list">
+    <dt>Rows in the file</dt><dd>{{ imp.rows_in|count }}</dd>
+    <dt>Rows we could read</dt><dd>{{ imp.rows_parsed|count }}</dd>
+    <dt>Rows set aside</dt><dd>{{ imp.rows_excluded|count }}</dd>
+    <dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
+  </dl>
+  <a class="link import__next" href="/guess">See your record — what these trades say, with the trades behind every line.</a>
+  {%- if not imp.fees_available %}
+  <p class="gross-line">This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
+  {%- endif %}
+  {%- if rejected %}
+  <section class="import__section">
+    <h2 class="card-title">Rows we could not read (<span class="num">{{ rejected|length|count }}</span>)</h2>
+    <p class="body-small">Kept, not discarded. Each one says why.</p>
+    <table class="table"><thead><tr><th class="table__day">Row</th><th>Why</th></tr></thead>
+      <tbody>
+      {%- for row in rejected[:20] %}
+        <tr><td>{{ row.row_no }}</td><td class="table__text">{{ row.reason }}</td></tr>
+      {%- endfor %}
+      </tbody></table>
+  </section>
+  {%- endif %}
+  {%- if groups %}
+  <section class="import__section">
+    <h2 class="card-title">Possible duplicates (<span class="num">{{ groups|length|count }}</span> groups)</h2>
+    <p class="body-small">Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell.</p>
+    {%- for group, rows in groups.items() %}
+    <div class="card duplicate">
+      <p class="num num--label">{{ rows|length|count }} identical rows</p>
+      <p class="num num--label duplicate__raw">{{ rows[0].raw_text }}</p>
+      <form method="post" action="/imports/{{ imp.id }}/confirm-duplicates">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="dup_group" value="{{ group }}">
+        <button class="btn btn--pill-small" type="submit">This is one trade recorded twice</button>
+      </form>
     </div>
-  </details>
-  {% else %}
-  <table>
-    <tr><th>Day</th><th>Rows before</th><th>Rows now</th><th></th></tr>
-    {% for day in days %}
-    <tr>
-      <td>{{ day.trading_day }}</td>
-      <td>{{ day.rows_before }}</td>
-      <td>{{ day.rows_after }}</td>
-      <td>{% if day.day_shrank %}<span class="warn">fewer than before</span>
-          {% else %}{{ day.diff.value }}{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% endif %}
-  {% endif %}
-
-  <p class="quiet">Journal unit for this upload: {{ imp.density_default_unit }}.</p>
-  <p class="quiet">Read by Scope version {{ imp.code_version }} using
-     {{ imp.adapter_id }}. Every figure above can be reproduced from your file and
-     these versions.</p>
-  <p><a href="/guess">See your record</a></p>
-  {% endif %}
-</section>
+    {%- endfor %}
+  </section>
+  {%- endif %}
+  {%- if days %}
+  <section class="import__section">
+    <h2 class="card-title">Days in this upload</h2>
+    {%- if first_upload %}
+    <p class="body"><span class="num">{{ days|length|count }}</span> trading days, from <span class="num">{{ days[0].trading_day }}</span> to <span class="num">{{ days[-1].trading_day }}</span>. All of them are new to Scope.</p>
+    <p class="subhead import__days-title">Every day, with its row count</p>
+    <table class="table"><thead><tr><th class="table__day">Day</th><th class="table__num">Rows</th></tr></thead>
+      <tbody>
+      {%- for day in days %}
+        <tr><td>{{ day.trading_day }}</td><td class="table__num">{{ day.rows_after|count }}</td></tr>
+      {%- endfor %}
+      </tbody></table>
+    {%- else %}
+    <table class="table"><thead><tr><th class="table__day">Day</th><th class="table__num">Rows before</th><th class="table__num">Rows now</th><th></th></tr></thead>
+      <tbody>
+      {%- for day in days %}
+        <tr><td>{{ day.trading_day }}</td><td class="table__num">{{ day.rows_before|count }}</td><td class="table__num">{{ day.rows_after|count }}</td><td class="table__text">{% if day.day_shrank %}fewer than before{% else %}{{ day.diff.value }}{% endif %}</td></tr>
+      {%- endfor %}
+      </tbody></table>
+    {%- endif %}
+  </section>
+  {%- endif %}
+  <p class="provenance">Journal unit for this upload: {{ imp.density_default_unit }}.</p>
+  <p class="provenance provenance--tight">Read by Scope version {{ imp.code_version }} using {{ imp.adapter_id }}. Every figure above can be reproduced from your file and these versions.</p>
+  <div class="screen__actions"><a class="btn btn--primary btn--block" href="/guess">See your record</a></div>
+  {%- endif %}
 {% endblock %}

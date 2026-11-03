@@ -8,7 +8,7 @@ These are the same files `plusev.in` serves (Google Fonts, through Next.js
 `next/font/google`), so the app and the website render identically.
 
 Each face is split into two files by `unicode-range`, exactly as Google Fonts
-splits it, and `scope.css` declares both:
+splits it, and `css/fonts.css` declares both:
 
 - **latin**: Latin-1, general punctuation and the true minus (U+2212).
 - **latin-ext**: everything else Latin, and the currency block that holds the
