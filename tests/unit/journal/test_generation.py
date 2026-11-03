@@ -36,7 +36,8 @@ def load_trips() -> list[Trip]:
              exit_ts=datetime.fromisoformat(r["exit_ts"]),
              holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
              lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]))
+             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+             symbol=r["symbol"])
         for r in json.loads(
             Path("tests/fixtures/mirror_contract/main.json").read_text())
     ]

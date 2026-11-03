@@ -173,6 +173,7 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
         trading_day = row.entry_ts.astimezone(zone).date().isoformat()
         trips.append(Trip(
             trip_id=row.trip_id,
+            symbol=row.symbol,
             trading_day=trading_day,
             entry_ts=row.entry_ts.astimezone(zone),
             exit_ts=row.exit_ts.astimezone(zone),

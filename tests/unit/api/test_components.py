@@ -5,9 +5,9 @@ handoff's wording, so a page uses a component by name and cannot drift from the 
 one class at a time. Rendered here through Jinja with the app's filters, without the
 app, so each component is tested as itself.
 
-The components that draw from the dial's geometry - the lens, the trade strip, the
-trade record, the story card's mini chart - arrive in Phase 1 with the port of
-scope-geometry.js; drawing them now would mean drawing them twice.
+The components that draw from the dial's geometry - the dial, the charts, the lens and
+path, the trade record, the story card - are held to the kit's own screens in
+test_dial.py and test_scope_components.py.
 """
 
 from __future__ import annotations

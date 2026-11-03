@@ -163,3 +163,66 @@ def test_every_metric_returns_a_result_state(trips):
 def test_an_empty_history_says_so_rather_than_dividing_by_zero():
     for result in (mx.five_worst_days([]), mx.strike_rate([]), mx.holding_time([])):
         assert result.state is s.ResultState.INSUFFICIENT_SAMPLE
+
+
+def test_every_trip_carries_its_instrument(trips):
+    """B1: a trade record names what was traded. The fixture's one instrument."""
+    assert {t.symbol for t in trips} == {"WIDGETOIL"}
+
+
+# B2 (handoff section 9): the series the charts are drawn from. Expected values are
+# read off the trip table in tests/fixtures/mirror_contract/generate.py, the fixture's
+# hand-written specification, not from the functions' output.
+
+def test_the_daily_series_is_every_trading_day_in_date_order(trips):
+    """Eight days; the table's own day comments give each net and count."""
+    assert [(d.trading_day, d.net, d.trips) for d in mx.daily_series(trips)] == [
+        ("2026-09-01", Decimal(-300), 3),
+        ("2026-09-02", Decimal(-8000), 6),
+        ("2026-09-03", Decimal(-200), 4),
+        ("2026-09-04", Decimal(-2000), 5),
+        ("2026-09-07", Decimal(-12000), 8),
+        ("2026-09-08", Decimal(-500), 4),
+        ("2026-09-09", Decimal(-1000), 6),
+        ("2026-09-10", Decimal(-1000), 4),
+    ]
+
+
+def test_the_daily_series_adds_up_to_the_whole_result(trips, expected):
+    assert sum(d.net for d in mx.daily_series(trips)) == Decimal(expected["totals"]["net"])
+    assert sum(d.trips for d in mx.daily_series(trips)) == expected["totals"]["trips"]
+
+
+def test_the_five_worst_days_are_taken_from_the_daily_series(trips):
+    """One place decides a day's net: the five worst are five of the series' days."""
+    series = {d.trading_day: d for d in mx.daily_series(trips)}
+    for day in mx.five_worst_days(trips).days:
+        assert series[day.trading_day] == day
+
+
+def test_the_holding_series_is_each_trade_in_entry_order_by_outcome(trips):
+    """Winners t01 t07 t16 t27 t31 t35; losers t02 to t40 less the six winners and the
+    two scratches, t11 and t13, which are in neither (as in holding_time)."""
+    held = mx.holding_series(trips)
+    assert held.winners_seconds == [minutes * 60 for minutes in (30, 30, 30, 30, 20, 20)]
+    assert held.losers_seconds == [minutes * 60 for minutes in (
+        30, 20, 15, 10, 10, 10, 60,      # day 1 and day 2
+        10, 10,                          # day 3
+        10, 10, 10, 10,                  # day 4
+        5, 5, 5, 5, 5, 5, 5, 5,          # day 5
+        10, 10, 10,                      # day 6
+        10, 10, 10, 10,                  # day 7
+        10, 10, 10, 10,                  # day 8
+    )]
+
+
+def test_the_holding_medians_come_from_the_holding_series(trips, expected):
+    """One place decides a hold: the medians on the page are the series' medians."""
+    want = expected["holding_time"]
+    assert mx.holding_time(trips).winners_median_seconds == want["winners_median_seconds"]
+    assert mx.holding_time(trips).losers_median_seconds == want["losers_median_seconds"]
+
+
+def test_an_empty_history_has_empty_series():
+    assert mx.daily_series([]) == []
+    assert mx.holding_series([]) == mx.HoldingSeries(winners_seconds=[], losers_seconds=[])

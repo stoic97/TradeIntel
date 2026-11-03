@@ -32,7 +32,8 @@ def load() -> list[Trip]:
              exit_ts=datetime.fromisoformat(r["exit_ts"]),
              holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
              lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]))
+             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+             symbol=r["symbol"])
         for r in json.loads(FIXTURE.read_text())
     ]
 
@@ -47,7 +48,8 @@ def thin(days: int, trips_per_day: int) -> list[Trip]:
             out.append(Trip(trip_id=f"d{d}t{i}", trading_day=day, entry_ts=entry,
                             exit_ts=entry, holding_seconds=60, net=Decimal(-100),
                             lots=1,
-                            risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE))
+                            risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE,
+                            symbol="WIDGETOIL"))
     return out
 
 
