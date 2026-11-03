@@ -24,3 +24,6 @@
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
 button.guess__option { width: 100%; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--color-hairline); font: inherit; text-align: left; cursor: pointer; }
+
+/* Sign out on the Account page (D6); the kit draws no place for it. */
+.account__sign-out { margin-top: var(--space-4); }

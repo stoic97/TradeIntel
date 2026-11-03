@@ -1,18 +1,10 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Scope</p>{% endblock %}
-{% block hero %}<h1>Scope is not open yet</h1>{% endblock %}
+{#- Uploads not open (kit screen 07c), in the app's words; the link keeps the app's
+    address for the data page. -#}
+{% extends "layout.html" %}
 {% block content %}
-<section class="panel">
-
-  <p><a href="https://plusev.in/scope/data">The page that tells you what happens to
-    your tradebook</a> has not been checked yet. Someone other than the people who wrote it has to read it, and the
-    deletion process has to be run end to end and confirmed, before anyone is
-    asked to agree to it.</p>
-
-  <p>Until both are done, this account cannot upload a file. Nothing is stored
-    for you beyond the account itself, and nothing has been read.</p>
-
-  <p>If you were expecting to start today, <a href="mailto:team@plusev.in">tell
-    us</a> and we will say where this stands.</p>
-</section>
+  <p class="label label--plain">Scope</p>
+  <h1 class="title">Scope is not open yet</h1>
+  <p class="lead"><a class="link" href="https://plusev.in/scope/data">The page that tells you what happens to your tradebook</a> has not been checked yet. Someone other than the people who wrote it has to read it, and the deletion process has to be run end to end and confirmed, before anyone is asked to agree to it.</p>
+  <p class="body">Until both are done, this account cannot upload a file. Nothing is stored for you beyond the account itself, and nothing has been read.</p>
+  <p class="body">If you were expecting to start today, <a class="link" href="mailto:team@plusev.in">tell us</a> and we will say where this stands.</p>
 {% endblock %}

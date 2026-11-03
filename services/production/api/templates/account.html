@@ -1,35 +1,34 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your account</p>{% endblock %}
-{% block hero %}<h1>{{ display_name }}</h1>{% endblock %}
+{#- Your account (kit screen 21), in the app's words. The settings link keeps the
+    app's route; an upload's date keeps its year, as the app has always shown it.
+    Sign out lives here (D6): the bottom nav has none, and the kit's screen draws
+    none, so it is the app's own button under the settings. -#}
+{% extends "layout.html" %}
+{% set nav = "account" %}
 {% block content %}
-<section class="panel">
-  <p class="quiet">Signed in as {{ login_id }}.</p>
-
-  <h2>Your uploads</h2>
-  {% if imports %}
-  <table>
-    <tr><th>When</th><th>What we read</th><th></th></tr>
-    {% for imp in imports %}
-    <tr>
-      <td>{{ imp.created_at.strftime('%d %b %Y') }}</td>
-      <td>
-        {% if imp.outcome.value == "rejected" %}
-          <span class="warn">not a tradebook</span>
-        {% else %}
-          {{ imp.rows_in }} rows, {{ imp.trips_reconstructed }} trades
-        {% endif %}
-      </td>
-      <td><a href="/imports/{{ imp.id }}">Open</a></td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% else %}
-  <p>Nothing yet.</p>
-  {% endif %}
-
-  <p><a href="/upload">Upload a tradebook</a></p>
-
-  <h2>Your settings</h2>
-  <p><a href="/settings/consent">What you agreed to</a></p>
-</section>
+  <p class="label label--plain">Your account</p>
+  <h1 class="title fact__title">{{ display_name }}</h1>
+  <p class="body">Signed in as {{ login_id }}.</p>
+  <section class="import__section">
+    <h2 class="card-title">Your uploads</h2>
+    {%- if imports %}
+    <table class="table"><thead><tr><th class="table__wide">When</th><th>What we read</th><th></th></tr></thead>
+      <tbody>
+      {%- for imp in imports %}
+        <tr><td>{{ imp.created_at.strftime('%d %b %Y') }}</td><td class="table__text">{% if imp.outcome.value == "rejected" %}not a tradebook{% else %}{{ imp.rows_in|count }} rows, {{ imp.trips_reconstructed|count }} trades{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ imp.id }}">Open</a></td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+    {%- else %}
+    <p class="body">Nothing yet.</p>
+    {%- endif %}
+    <a class="btn btn--secondary btn--block account__upload" href="/upload">Upload a tradebook</a>
+  </section>
+  <section class="import__section">
+    <h2 class="card-title">Your settings</h2>
+    <a class="settings-row" href="/settings/consent"><span class="body">What you agreed to</span><span class="journal-index__go" aria-hidden="true">›</span></a>
+    <form method="post" action="/logout" class="account__sign-out">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn--text" type="submit">Sign out</button>
+    </form>
+  </section>
 {% endblock %}
