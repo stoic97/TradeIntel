@@ -1,0 +1,23 @@
+{#- The guess (handoff 5, screen 10; B6). Asked before anything is shown. The question
+    and labels are mirror/guess.py's - placeholders until the research seat freezes
+    them (TR-009), and never shown in production until then. The options are buttons
+    in one form, not links: a guess is stored, and a link anyone could send must not
+    be able to store one. The check line is TR-008: what his history lets us check,
+    one tap away. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="label">Before you look</p>
+  {%- if checkable %}
+  <p class="check-line">Your history lets us check <span class="num">{{ checkable[0]|count }}</span> of <span class="num">{{ checkable[1]|count }}</span> things. <a class="link" href="/eligibility">What we can check</a></p>
+  {%- endif %}
+  <h1 class="heading guess__question">{{ question }}</h1>
+  <form method="post" action="/guess">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="guess" role="list">
+      {%- for value, label in labels.items() %}
+      <button class="guess__option" role="listitem" type="submit" name="answer" value="{{ value }}"><span class="guess__index">{{ loop.index }}</span><span class="guess__label">{{ label }}</span></button>
+      {%- endfor %}
+    </div>
+    <button class="btn btn--text" type="submit" name="answer" value="{{ unknown }}">{{ unknown_label }}</button>
+  </form>
+{% endblock %}

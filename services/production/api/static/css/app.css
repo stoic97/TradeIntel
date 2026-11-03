@@ -11,3 +11,16 @@
    the screen, only the SVG's empty margin is outside it. Found in the 390 px browser
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
+
+/* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
+   so the reading state is the request itself: htmx puts .htmx-request on #upload
+   while it is in flight (hx-indicator), and the form gives way to "Reading your file"
+   and the kit's looping strip. Nothing here counts; the counts arrive once, final. */
+.upload__reading { display: none; }
+#upload.htmx-request .upload__idle { display: none; }
+#upload.htmx-request .upload__reading { display: block; }
+
+/* The guess's options are buttons in one form, because a guess is stored and a link
+   anyone could send must not be able to store one; the kit draws them as links
+   (components.css, .guess__option). Take away what a browser gives a button. */
+button.guess__option { width: 100%; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--color-hairline); font: inherit; text-align: left; cursor: pointer; }

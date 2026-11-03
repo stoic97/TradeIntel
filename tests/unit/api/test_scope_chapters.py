@@ -19,6 +19,7 @@ import pytest
 from services.production.api import dial, formatting
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
+from services.production.mirror import feedback as FB
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 from tests.unit.api.templating import template_env
@@ -60,9 +61,17 @@ def trips_from(nets: list[int], source=s.RiskUnitSourceV1.DECLARED_BUDGET) -> li
     return out
 
 
-def chapter_page(n: int, trips=TRIPS, imp=IMP) -> str:
+def chapter_page(n: int, trips=TRIPS, imp=IMP, feedback=None) -> str:
+    """What routes_mirror.scope_chapter renders, without the app."""
     ctx = SF.record_context(trips)
     figs = SF.facts(ctx, imp)
+    asked = {
+        "feedback": feedback or FB.State(None, None),
+        "feedback_answers": FB.ANSWERS,
+        "feedback_reasons": FB.REASONS,
+        "feedback_url": f"/mirror/chapter/{n}/feedback",
+        "csrf_token": "t",
+    }
     return (
         template_env()
         .get_template("scope/chapter.html")
@@ -74,6 +83,7 @@ def chapter_page(n: int, trips=TRIPS, imp=IMP) -> str:
             imp=imp,
             trading_day_count=len(ctx["days"].counts),
             sources=s.RiskUnitSourceV1,
+            **(asked if n in FB.CHAPTERS else {}),
             **ctx,
         )
     )
@@ -284,3 +294,28 @@ def test_level_trades_are_mentioned_only_when_there_are_some():
     assert CTX["strike"].scratches == 0 or "finished level" in readable(chapter_page(2))
     none_level = chapter_page(2, trips_from([100, -50, 30, -20]))
     assert "finished level" not in none_level
+
+
+@pytest.mark.parametrize(
+    ("state", "shows", "hides"),
+    [
+        (FB.State(None, None), 'name="answer" value="wrong">Wrong</button>', "Recorded."),
+        (FB.State("wrong", None), "If you like, tell us which:", 'name="answer"'),
+        (FB.State("wrong", "wrong_facts"), "Recorded. Thank you.", "<form"),
+        (FB.State("accurate", None), "Recorded. Thank you.", "If you like"),
+    ],
+)
+def test_the_feedback_row_shows_where_the_question_stands(state, shows, hides):
+    page = chapter_page(1, feedback=state)
+    assert shows in page and hides not in page
+
+
+def test_the_feedback_row_posts_its_token_as_a_plain_form_too():
+    page = chapter_page(2)
+    assert '<form method="post" action="/mirror/chapter/2/feedback"' in page
+    assert '<input type="hidden" name="csrf_token" value="t">' in page
+
+
+def test_the_honest_close_has_no_feedback_row():
+    assert "Does this match your trading?" not in chapter_page(4)
+

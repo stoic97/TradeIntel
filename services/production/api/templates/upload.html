@@ -1,17 +1,56 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your upload</p>{% endblock %}
-{% block hero %}<h1>Upload your tradebook</h1>{% endblock %}
+{#- Upload (handoff 5, screen 6) and Calculating's reading state (screen 8, D1 a).
+
+    The import runs inside POST /upload, so there is nothing to poll: while the request
+    is in flight htmx marks #upload with .htmx-request and app.css swaps the form for
+    "Reading your file" and the kit's looping strip - an illustration, never progress,
+    no counts. The answer is the done state (calculating.html). Without JavaScript the
+    form posts as it always has and lands on the import review.
+
+    htmx does not swap a 4xx or 5xx by default, and it fires before-swap on the swap's
+    target (<body>), not on the form - so a handler on the form never runs (found in
+    the browser, 1 Nov). The script below listens where the event fires and lets the
+    page that explains a refusal (a duplicate, a file too large, a broker not open)
+    arrive with its honest status code, for this form's requests only. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import button %}
 {% block content %}
-<section class="panel">
-  <p>The trade-level export from your broker — every executed trade, with the time of
-     day, the price and the quantity. Not the profit-and-loss statement.</p>
-  {% if error %}<p class="warn">{{ error }}</p>{% endif %}
-  <form method="post" action="/upload" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label for="file">Your export file</label>
-    <input type="file" id="file" name="file" accept=".csv,.txt" required>
-    <button type="submit">Upload</button>
-  </form>
-  <p class="quiet">Nothing is shown to anyone else. You can delete it at any time.</p>
-</section>
+<div id="upload">
+  <div class="upload__idle">
+    <p class="label label--plain">Your upload</p>
+    <h1 class="title">Upload your tradebook</h1>
+    <p class="body">The trade-level export from your broker — every executed trade, with the time of day, the price and the quantity. Not the profit-and-loss statement.</p>
+    {%- if error %}
+    <p class="field__error field__error--block" role="alert">{{ error }}</p>
+    {%- endif %}
+    <form class="upload" method="post" action="/upload" enctype="multipart/form-data" hx-post="/upload" hx-encoding="multipart/form-data" hx-target="body" hx-indicator="#upload">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" id="file" name="file" accept=".csv,.txt" required></label>
+      {{ button("Upload") }}
+    </form>
+    <p class="body-small upload__note">Nothing is shown to anyone else. You can delete it at any time.</p>
+  </div>
+  <div class="upload__reading" aria-live="polite">
+    <h1 class="title">Reading your file</h1>
+    <figure class="calc">
+    <svg class="calc__strip calc-loop" viewBox="0 0 350 96" aria-hidden="true">
+      <path class="calc__strip-axis" d="M0 76.5H350"/>
+      <g class="calc-loop__trade calc-loop__trade--1"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M28 26V70"/><circle class="calc__fill-dot" cx="28" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M112 26V70"/><circle class="calc__fill-dot" cx="112" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M168 26V70"/><circle class="calc__fill-dot" cx="168" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M322 26V70"/><circle class="calc__fill-dot" cx="322" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M28 26H322"/></g><g class="calc-loop__trade calc-loop__trade--2"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M56 26V70"/><circle class="calc__fill-dot" cx="56" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M150 26V70"/><circle class="calc__fill-dot" cx="150" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M236 26V70"/><circle class="calc__fill-dot" cx="236" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M296 26V70"/><circle class="calc__fill-dot" cx="296" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M56 26H296"/></g><g class="calc-loop__trade calc-loop__trade--3"><g class="calc-loop__fill fill-1"><path class="calc__fill-stem" d="M22 26V70"/><circle class="calc__fill-dot" cx="22" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-2"><path class="calc__fill-stem" d="M98 26V70"/><circle class="calc__fill-dot" cx="98" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-3"><path class="calc__fill-stem" d="M204 26V70"/><circle class="calc__fill-dot" cx="204" cy="76.5" r="4.5"/></g><g class="calc-loop__fill fill-4"><path class="calc__fill-stem" d="M330 26V70"/><circle class="calc__fill-dot" cx="330" cy="76.5" r="4.5"/></g><path class="calc__bar calc-loop__bar bar-after-4" d="M22 26H330"/></g>
+    </svg>
+    </figure>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+if (!window.scopeUploadRefusals) {
+  window.scopeUploadRefusals = true;
+  document.body.addEventListener("htmx:beforeSwap", function (e) {
+    var from = e.detail.requestConfig && e.detail.requestConfig.elt;
+    if (from && from.matches && from.matches("form.upload") && e.detail.xhr.status >= 400) {
+      e.detail.shouldSwap = true;
+      e.detail.isError = false;
+    }
+  });
+}
+</script>
 {% endblock %}

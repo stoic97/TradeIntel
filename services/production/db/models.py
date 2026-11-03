@@ -274,6 +274,53 @@ class WtpAnswer(Base, _InsertOnly):
     asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class ChapterFeedback(Base, _InsertOnly):
+    """B4: "Does this match your trading?" under chapters 1-3 (handoff 9).
+
+    One answer per chapter per trader: the unique constraint holds it, so a second
+    tap cannot quietly become a second vote. The import is the record he was
+    looking at when he answered, so an answer can be read against the figures it
+    was about.
+    """
+
+    __tablename__ = "chapter_feedback"
+    __table_args__ = (UniqueConstraint("trader_id", "chapter"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    chapter: Mapped[int] = mapped_column(Integer)
+    answer: Mapped[str] = mapped_column(String(16))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class ChapterFeedbackReason(Base, _InsertOnly):
+    """The optional reason after "Wrong" - its own row, because it comes later and
+    an answer is never edited. At most one per answer."""
+
+    __tablename__ = "chapter_feedback_reason"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    feedback_id: Mapped[int] = mapped_column(ForeignKey("chapter_feedback.id"), unique=True)
+    reason: Mapped[str] = mapped_column(String(32))
+    given_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class GuessAnswer(Base, _InsertOnly):
+    """B6: the trader's guess, before the reveal shows him his five worst days.
+
+    One per trader, ever: a guess made after seeing the answer is not a guess. The
+    label is one of the frozen set (TR-009) or "unknown" for "I don't know". The
+    import is the record the reveal then showed him.
+    """
+
+    __tablename__ = "guess_answer"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    answer: Mapped[str] = mapped_column(String(32))
+    labels_version: Mapped[str] = mapped_column(String(32))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)

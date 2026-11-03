@@ -78,16 +78,30 @@ def landing_for(sess, trader: m.Trader) -> str:
     """Where a trader belongs when he arrives.
 
     Not /account: a page telling him nothing has been uploaded is not a destination.
-    With nothing yet, the upload page; with an upload, his most recent import. In
-    phase 3 that second destination becomes his Mirror, which is the real answer --
-    the import review is what stands in for it until it exists.
+    With nothing yet, the upload page. With a record he has not yet been walked
+    through - import check, guess, reveal, one number (handoff 5) - the import check
+    of the upload his record comes from, which starts the walk: not simply his latest
+    upload, which may be a file we refused and whose page has no way on. Once he has
+    been through it, home. A guess or a number on record says he has: in production
+    the guess is skipped until its labels are frozen (TR-009), and the number is the
+    walk's last step either way. With uploads but no record, his latest, which says
+    why.
     """
-    latest = sess.scalars(
-        select(m.Import)
-        .where(m.Import.trader_id == trader.id)
-        .order_by(m.Import.id.desc())
-    ).first()
-    return f"/imports/{latest.id}" if latest is not None else "/upload"
+    def latest(*, with_trips: bool) -> m.Import | None:
+        query = select(m.Import).where(m.Import.trader_id == trader.id)
+        if with_trips:
+            query = query.join(m.Trip, m.Trip.import_id == m.Import.id)
+        return sess.scalars(query.order_by(m.Import.id.desc())).first()
+
+    record = latest(with_trips=True)
+    if record is None:
+        refused = latest(with_trips=False)
+        return f"/imports/{refused.id}" if refused is not None else "/upload"
+    walked = any(
+        sess.scalars(select(model.id).where(model.trader_id == trader.id)).first() is not None
+        for model in (m.GuessAnswer, m.RiskBudgetDeclaration)
+    )
+    return "/" if walked else f"/imports/{record.id}"
 
 
 @router.get("/invite/{code}", response_class=HTMLResponse)

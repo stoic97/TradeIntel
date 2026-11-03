@@ -16,7 +16,7 @@
     <tr><th>Trades reconstructed</th><td>{{ imp.trips_reconstructed }}</td></tr>
   </table>
 
-  <p><a href="/mirror">See your record</a> — what these trades say, with the trades
+  <p><a href="/guess">See your record</a> — what these trades say, with the trades
      behind every line.</p>
 
   {% if not imp.fees_available %}
@@ -91,7 +91,7 @@
   <p class="quiet">Read by Scope version {{ imp.code_version }} using
      {{ imp.adapter_id }}. Every figure above can be reproduced from your file and
      these versions.</p>
-  <p><a href="/mirror">See your record</a></p>
+  <p><a href="/guess">See your record</a></p>
   {% endif %}
 </section>
 {% endblock %}

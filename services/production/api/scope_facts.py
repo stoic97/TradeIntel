@@ -288,13 +288,50 @@ def home_view(figs: dict[str, dict], ctx: dict) -> dict:
     items = []
     for c in S.CHAPTERS:
         lead = figs[LEADS[c.number]]
-        items.append({"name": c.name, "figure": lead["figure"], "state": lead["state"],
-                      "href": S.chapter_href(c.number, from_home=True)})
+        items.append(
+            {
+                "name": c.name,
+                "figure": lead["figure"],
+                "state": lead["state"],
+                "href": S.chapter_href(c.number, from_home=True),
+            }
+        )
     share = ctx["share"]
     if share.shown_as_percentage:
         centre = {"figure": f"{share.share_percent}%"}
     else:
-        centre = {"figure": formatting.rupees(share.total),
-                  "captionLines": ["your result for", "the whole period"]}
+        centre = {
+            "figure": formatting.rupees(share.total),
+            "captionLines": ["your result for", "the whole period"],
+        }
     return {"kind": "home", "items": items, "centre": centre}
 
+
+REVEAL_C = 150  # the reveal's dial: 300 x 300, the outer ring at 149.5 (kit screen 12)
+REVEAL_SLICE_CIRCUMFERENCE = "622.04"  # 2 pi x 99, the slice's radius, as the kit writes it
+
+
+def reveal_view(ctx: dict) -> dict:
+    """The reveal's dial (handoff 7): the five worst days as one white slice from twelve
+    o'clock to their share, the share in the centre. Its bezel and ring are the
+    Scope's own (scope_geometry), at the kit's 300 px; a test holds them to the kit.
+
+    Shown only when the share is a percentage (Appendix A); otherwise no slice and no
+    figure, and the Mirror's other sentence says the whole result.
+    """
+    rr = G.radii(REVEAL_C)
+    share = ctx["share"]
+    view = {
+        "shown": share.shown_as_percentage,
+        "outer": G.circle(REVEAL_C, REVEAL_C, rr["outer"]),
+        "inner": G.circle(REVEAL_C, REVEAL_C, rr["inner"]),
+        "ticks": G.ticks(REVEAL_C, REVEAL_C, rr, [0]),
+        "circumference": REVEAL_SLICE_CIRCUMFERENCE,
+    }
+    if share.shown_as_percentage:
+        fraction = _f(share.share_percent) / 100
+        view["slice_length"] = G.fmt(float(REVEAL_SLICE_CIRCUMFERENCE) * fraction)
+        view["edge_tick"] = G.radial(
+            REVEAL_C, REVEAL_C, 360 * fraction, rr["majorStart"], rr["tickEnd"]
+        )
+    return view

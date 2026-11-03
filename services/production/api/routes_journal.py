@@ -65,7 +65,7 @@ def _owned(sess, trader: m.Trader, journal_id: int) -> m.Journal:
     return journal
 
 
-def _trips_of(sess, trader: m.Trader, journal: m.Journal) -> list[m.Trip]:
+def trips_of(sess, trader: m.Trader, journal: m.Journal) -> list[m.Trip]:
     """The trips this Journal covers, in the order they were opened.
 
     Looked up across all of the trader's imports rather than the current one: a
@@ -119,7 +119,7 @@ def journal_page(request: Request, journal_id: int):
             for para in prose.render(json.loads(journal.sections)).split("\n\n")
             if para.strip()
         ]
-        trips = _trips_of(sess, trader, journal)
+        trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
         rows = [
             {"trip_id": t.trip_id, "label": f"Trade {n}", "net": f"{t.net:,.0f}"}
