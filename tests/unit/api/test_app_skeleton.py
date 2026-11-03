@@ -74,8 +74,8 @@ def test_the_page_renders_with_a_title(client):
 
 def test_htmx_is_served_from_our_own_static_folder(client):
     page = client.get("/").text
-    assert "/static/htmx.min.js" in page
-    served = client.get("/static/htmx.min.js")
+    assert "/static/js/htmx.min.js" in page
+    served = client.get("/static/js/htmx.min.js")
     assert served.status_code == 200
     assert len(served.content) > 1000, "a stub would make the page silently inert"
 
@@ -106,7 +106,7 @@ def test_the_allowance_for_the_wordmark_is_only_for_a_link():
 
 def test_fonts_are_served_from_our_own_static_folder(client):
     """Plex and Source Serif come from static/fonts, never from a font service."""
-    css = client.get("/static/scope.css").text
+    css = client.get("/static/css/fonts.css").text
     assert "IBM Plex Sans" in css and "Source Serif 4" in css
     assert "://" not in css, "the stylesheet reaches outside the app"
     for name in (

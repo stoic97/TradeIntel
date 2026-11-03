@@ -40,6 +40,9 @@ ALLOWED: dict[int, str] = {
     8000: "the port the local development server listens on",
     50000: "the upload row cap",
     1_000_000: "a synthetic corpus id base, so two generators cannot collide",
+    12345: "the digits 1 to 5, the plain rupee example in formatting.py; a pattern",
+    1234567: "the digits 1 to 7, showing Indian grouping (12,34,567) in formatting.py",
+    2212: "U+2212, the true minus sign, named by its code point in formatting.py",
     2_000_000: "the same, for the clean-null corpus",
     3_000_000: "the same, for the adversarial corpus",
     3828: (

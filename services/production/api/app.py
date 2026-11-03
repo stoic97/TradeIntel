@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
+    formatting,
     routes_budget,
     routes_consent,
     routes_deletion,
@@ -33,6 +34,7 @@ from services.production.db.session import make_engine, run_migrations
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
+formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
 
 
 def code_version() -> str:

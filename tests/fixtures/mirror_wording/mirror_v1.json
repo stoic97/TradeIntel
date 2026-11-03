@@ -1,0 +1,116 @@
+{
+  "source": "/mirror rendered on tests/fixtures/mirror_contract/main.json",
+  "sections": [
+    {
+      "key": "section-0",
+      "blocks": [
+        "Counted from your file",
+        "Your record"
+      ]
+    },
+    {
+      "key": "section-1",
+      "blocks": [
+        "[N] trades, [N] trading days. Every figure here is counted from your file. Open any line to see the trades behind it.",
+        "Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file."
+      ]
+    },
+    {
+      "key": "section-2",
+      "blocks": [
+        "Your worst trading days",
+        "Day",
+        "Net (gross)",
+        "Trades",
+        "vs your normal day",
+        "Those five days came to [N]. That is [N] of your result for the whole period, which was [N].",
+        "Your normal day is [N] trades. Your busiest was [N]-[N]-[N], at [N] — [N] that."
+      ]
+    },
+    {
+      "key": "section-3",
+      "blocks": [
+        "Where the money came from",
+        "Best five",
+        "Worst five",
+        "Ties are listed with the earlier trade first. Nothing is trimmed or capped."
+      ]
+    },
+    {
+      "key": "section-4",
+      "blocks": [
+        "Trading on while already down",
+        "On [N] occasions you opened a trade after two earlier trades that day had already closed at a loss. On [N] of those, the two most recent had both lost.",
+        "Trades",
+        "Net (gross)",
+        "Average",
+        "After two straight losses",
+        "Your other trades that qualified",
+        "Strike rate",
+        "Average lots",
+        "After two straight losses",
+        "Every other trade",
+        "This happened on [N] of your [N] trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run."
+      ]
+    },
+    {
+      "key": "section-5",
+      "blocks": [
+        "How long you hold",
+        "Your winners were open a median of [N] minutes, your losers [N] minutes. That is a ratio of [N].",
+        "Your strike rate was [N] — [N] winners against [N] losers. [N] trades finished level and are in neither count. Your longest run of consecutive losers was [N] trades, running across [N] days."
+      ]
+    },
+    {
+      "key": "section-6",
+      "blocks": [
+        "The clock",
+        "Hour you opened",
+        "Net (gross)",
+        "Trades",
+        "[N] — few trades",
+        "[N] — few trades"
+      ]
+    },
+    {
+      "key": "section-7",
+      "blocks": [
+        "What we could not read",
+        "Rows in your file",
+        "Rows we read",
+        "Rows set aside",
+        "Trades reconstructed",
+        "Trades refused",
+        "Charges in the file",
+        "no — figures are gross",
+        "Trades with a risk figure",
+        "Measured against",
+        "Trades",
+        "Shown as a denominator",
+        "Your declared budget",
+        "yes — “× your declared budget”",
+        "Your stop",
+        "yes — “× your stop”",
+        "Premium paid",
+        "no — recorded, never divided by",
+        "Nothing we could use",
+        "no",
+        "Premium paid is the most you could have lost on an option, not what you had at risk, so it is counted here and used nowhere else."
+      ]
+    },
+    {
+      "key": "section-8",
+      "blocks": [
+        "What we have not told you",
+        "Nothing above names a cause. Nothing scores you, against yourself or anyone else. Nothing estimates what a habit cost you. Nothing recommends a change.",
+        "These are counts from your own file, and that is all they are. The checks that could say more need work we have not finished and evidence we have not earned."
+      ]
+    },
+    {
+      "key": "section-9",
+      "blocks": [
+        "Computed from import [N] by Scope version fixturesha, reading [N] rows with dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions."
+      ]
+    }
+  ]
+}
