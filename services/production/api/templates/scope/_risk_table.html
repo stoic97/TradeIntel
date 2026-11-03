@@ -1,0 +1,10 @@
+<p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th>Measured against</th><th class="table__num">Trades</th><th class="table__num">Shown as a denominator</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text">Your declared budget</td><td class="table__num">{{ risk.counts[sources.DECLARED_BUDGET]|count }}</td><td class="table__num table__text">yes — “× your declared budget”</td></tr>
+      <tr><td class="table__text">Your stop</td><td class="table__num">{{ risk.counts[sources.DEFINED_STOP]|count }}</td><td class="table__num table__text">yes — “× your stop”</td></tr>
+      <tr><td class="table__text">Premium paid</td><td class="table__num">{{ risk.counts[sources.PREMIUM_PAID]|count }}</td><td class="table__num table__text">no — recorded, never divided by</td></tr>
+      <tr><td class="table__text">Nothing we could use</td><td class="table__num">{{ facts.risk.nothing|count }}</td><td class="table__num">no</td></tr>
+    </tbody>
+  </table><p class="mirror mirror--card table-note">Premium paid is the most you could have lost on an option, not what you had at risk, so it is counted here and used nowhere else.</p>

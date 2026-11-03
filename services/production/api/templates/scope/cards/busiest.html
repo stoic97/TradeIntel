@@ -1,0 +1,7 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">Your normal day is <span class="num">{{ days.normal_day }}</span> trades. Your busiest was <span class="num">{{ f.busiest_date }}</span>, at <span class="num">{{ days.busiest_trips|count }}</span> — <span class="num">{{ days.busiest_vs_normal }}</span>× that.</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>{{ f.first }}</span><span>trades per day</span><span>{{ f.last }}</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Busiest day</span><span>- - your normal day</span></span></span>
+  {%- endif %}
+{% endcall %}

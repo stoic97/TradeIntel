@@ -1,69 +1,60 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Journal</p>{% endblock %}
-{% block hero %}<h1>{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>{% endblock %}
+{#- A Journal (kit screen 18b), in the app's words and field names. Each trade's result
+    is written by the rupees filter. The kit's per-question controls (a radio for the
+    stop on the chart) change what is asked, so the app's own questions stay as they
+    are; its demo bar's link becomes the plain link back. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import money %}
+{% set nav = "journal" %}
 {% block content %}
-<nav class="crumbs"><a href="/journals">Your Journals</a></nav>
-
-<article class="journal">
-  {% if journal.version_no > 1 %}
-  <p class="tag">Version {{ journal.version_no }}. A later upload changed this period.
-    The earlier version is kept.</p>
-  {% endif %}
-  {% for para in paragraphs %}
-  <p>{{ para }}</p>
-  {% endfor %}
-</article>
-
-<section class="prompt">
-  <h2>Your own note</h2>
-  <p>Nothing on this page is required.</p>
-  <form method="post" action="/journals/{{ journal.id }}/field">
+  <p class="label label--plain">Journal</p>
+  <h1 class="title num-title">{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
+  <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
+  {%- if journal.version_no > 1 %}
+  <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. A later upload changed this period. The earlier version is kept.</p>
+  {%- endif %}
+  <section class="journal__section">
+    {%- for para in paragraphs %}
+    <p class="mirror mirror--card">{{ para }}</p>
+    {%- endfor %}
+  </section>
+  <form class="journal__section" method="post" action="/journals/{{ journal.id }}/field">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="field" value="note">
     <input type="hidden" name="trip_id" value="">
-    <label for="note">Anything you want to add about this period?</label>
-    <textarea id="note" name="value" rows="3">{% if note %}{{ note.value }}{% endif %}</textarea>
-    <button type="submit">Save</button>
+    <h2 class="card-title">Your own note</h2>
+    <p class="body-small">Nothing on this page is required.</p>
+    <label class="field"><span class="field__label">Anything you want to add about this period?</span><textarea class="field__input field__textarea" name="value" rows="3">{% if note %}{{ note.value }}{% endif %}</textarea></label>
+    <button class="btn btn--secondary journal__save" type="submit">Save</button>
   </form>
-</section>
-
-{% if rows %}
-<section class="trade-prompts">
-  <h2>The trades, one at a time</h2>
-  <p>In the order you opened them. Result is {% if fees_available %}net{% else %}gross — your export carries no charges{% endif %}.</p>
-  {% for row in rows %}
-  <div class="trade">
-    <h3>{{ row.label }} — {{ row.net }}</h3>
-    <form method="post" action="/journals/{{ journal.id }}/field" class="trade-form">
+  {%- if rows %}
+  <section class="journal__section">
+    <h2 class="card-title">The trades, one at a time</h2>
+    <p class="body-small">In the order you opened them. Result is {% if fees_available %}net{% else %}gross — your export carries no charges{% endif %}.</p>
+    {%- for row in rows %}
+    <form class="card journal-trade" method="post" action="/journals/{{ journal.id }}/field">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="trip_id" value="{{ row.trip_id }}">
-      {% for name, question in prompts %}
-      <div class="field">
-        <label for="{{ name }}-{{ row.trip_id }}">{{ question }}</label>
-        <input id="{{ name }}-{{ row.trip_id }}" name="{{ name }}"
-               value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}">
-      </div>
-      {% endfor %}
-      <button type="submit">Save</button>
+      <p class="journal-trade__head"><span>{{ row.label }}</span> — {{ money(row.net, "label") }}</p>
+      {%- for name, question in prompts %}
+      <label class="field"><span class="field__label">{{ question }}</span><input class="field__input" name="{{ name }}" value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}"></label>
+      {%- endfor %}
+      <button class="btn btn--secondary journal__save" type="submit">Save</button>
     </form>
-  </div>
-  {% endfor %}
-</section>
-{% endif %}
-
-{% if ask_wtp %}
-<section class="wtp">
-  <h2>One question, and it changes nothing about your account</h2>
-  <p>{{ wtp_question }}</p>
-  <form method="post" action="/journals/{{ journal.id }}/wtp">
+    {%- endfor %}
+  </section>
+  {%- endif %}
+  {%- if ask_wtp %}
+  <form class="journal__section question" id="one-question" method="post" action="/journals/{{ journal.id }}/wtp">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label><input type="radio" name="answer" value="yes" required> Yes</label>
-    <label><input type="radio" name="answer" value="no"> No</label>
-    <label><input type="radio" name="answer" value="maybe"> Maybe</label>
-    <label for="wtp_text">If not, what would change that?</label>
-    <input id="wtp_text" name="free_text">
-    <button type="submit">Send</button>
+    <h2 class="card-title">One question, and it changes nothing about your account</h2>
+    <p class="body">{{ wtp_question }}</p>
+    <div class="question__options">
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="yes" required><span class="body">Yes</span></label>
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="no"><span class="body">No</span></label>
+      <label class="choice choice--inline"><input class="choice__input" type="radio" name="answer" value="maybe"><span class="body">Maybe</span></label>
+    </div>
+    <label class="field"><span class="field__label">If not, what would change that?</span><input class="field__input" name="free_text"></label>
+    <button class="btn btn--primary journal__save" type="submit">Send</button>
   </form>
-</section>
-{% endif %}
+  {%- endif %}
 {% endblock %}

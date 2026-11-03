@@ -41,10 +41,19 @@ def indian_grouping(n: int) -> str:
     return ",".join([*groups, tail])
 
 
-def rupees(value, signed: bool = True) -> str:
-    """−₹12,345 / +₹12,345 / ₹0; with signed=False an amount, ₹12,345, has no plus."""
+def rupees(value, signed: bool = True, exact: bool = False) -> str:
+    """−₹12,345 / +₹12,345 / ₹0; with signed=False an amount, ₹12,345, has no plus.
+
+    exact=True keeps the paise metrics decided (an average, −₹911.76) rather than
+    cutting to whole rupees: a figure with paise is a different figure without them.
+    """
     n = _whole(value)
     written = RUPEE + indian_grouping(n)
+    if exact:
+        fraction = str(abs(Decimal(str(value)))).partition(".")[2]
+        written += f".{fraction}" if fraction else ""
+        if n == 0 and Decimal(str(value)) < 0:
+            return MINUS + written
     if n < 0:
         return MINUS + written
     if n > 0 and signed:
@@ -68,6 +77,15 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def day(iso_date: str) -> str:
+    """A trading day as the kit writes it: 2026-09-07 is 07 Sep."""
+    _year, month, dom = iso_date.split("-")
+    return f"{dom} {MONTHS[int(month) - 1]}"
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes)
+    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day)

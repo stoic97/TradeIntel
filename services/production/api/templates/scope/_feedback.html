@@ -1,0 +1,27 @@
+{#- "Does this match your trading?" (B4; kit screen 17), under chapters 1-3. One
+    <section class="feedback"> in three states - asked, why (after Wrong), recorded -
+    swapped in place by htmx. Without JavaScript the form posts and the chapter page
+    comes back with the new state, so the question works either way. -#}
+<section class="feedback" id="feedback" aria-label="Does this match your trading?">
+  <h2 class="feedback__question">Does this match your trading?</h2>
+  {%- if feedback.stage == "recorded" %}
+  <p class="feedback__done" role="status">Recorded. Thank you.</p>
+  {%- else %}
+  <form method="post" action="{{ feedback_url }}" hx-post="{{ feedback_url }}" hx-target="closest .feedback" hx-swap="outerHTML">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {%- if feedback.stage == "asked" %}
+    <div class="feedback__options">
+      {%- for value, label in feedback_answers.items() %}<button class="btn btn--pill-small" type="submit" name="answer" value="{{ value }}">{{ label }}</button>{% endfor -%}
+    </div>
+    {%- else %}
+    <div class="feedback__options">
+      {%- for value, label in feedback_answers.items() %}<span class="btn {{ "btn--selected" if value == feedback.answer else "btn--quiet" }}">{{ label }}</span>{% endfor -%}
+    </div>
+    <div class="feedback__follow"><p class="body">If you like, tell us which:</p>
+      <div class="feedback__follow-options">
+        {%- for value, label in feedback_reasons.items() %}<button class="btn btn--pill-small" type="submit" name="reason" value="{{ value }}">{{ label }}</button>{% endfor -%}
+      </div></div>
+    {%- endif %}
+  </form>
+  {%- endif %}
+</section>

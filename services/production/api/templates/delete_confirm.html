@@ -1,37 +1,23 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your data</p>{% endblock %}
-{% block hero %}<h1>Delete everything</h1>{% endblock %}
+{#- Delete everything (kit screen 21b), in the app's words. The box keeps the app's
+    field name; the kit's :has() rule greys the button until it is ticked, and the
+    server refuses without it either way. -#}
+{% extends "layout.html" %}
 {% block content %}
-
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-
-<p>This removes the file you uploaded, every trade we rebuilt from it, every
-  Journal written from those trades, your risk figures, and the record of which
-  lines you opened. It removes your account with them, so you will not be able to
-  sign in again.</p>
-
-<p>Backups hold yesterday's copy, and they roll off within 30 days. After that
-  your data is gone from those too.</p>
-
-<h2>What we keep</h2>
-<p>Two rows: that this account agreed to what we do with a tradebook, and that it
-  asked to be deleted and was. No name, no trades, no figure worked out from
-  them.</p>
-
-<h2>What deleting cannot undo</h2>
-<p>Your file and everything built from it can be removed at any time. What cannot
-  be undone is that looking at your data informed decisions we have already made
-  about the engine. This is the same as any research partnership, and we say so
-  plainly.</p>
-
-<form method="post" action="/account/delete">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <label>
-    <input type="checkbox" name="understood" value="yes">
-    I have read this and I want everything deleted.
-  </label>
-  <button type="submit">Delete everything</button>
-</form>
-
-<p><a href="/account">Back to your account</a> — nothing has been deleted yet.</p>
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">Delete everything</h1>
+  {%- if error %}
+  <p class="field__error field__error--block" role="alert">{{ error }}</p>
+  {%- endif %}
+  <p class="body">This removes the file you uploaded, every trade we rebuilt from it, every Journal written from those trades, your risk figures, and the record of which lines you opened. It removes your account with them, so you will not be able to sign in again.</p>
+  <p class="body">Backups hold yesterday's copy, and they roll off within 30 days. After that your data is gone from those too.</p>
+  <section class="consent__section"><h2 class="subhead">What we keep</h2><p class="body">Two rows: that this account agreed to what we do with a tradebook, and that it asked to be deleted and was. No name, no trades, no figure worked out from them.</p></section>
+  <section class="consent__section"><h2 class="subhead">What deleting cannot undo</h2><p class="body">Your file and everything built from it can be removed at any time. What cannot be undone is that looking at your data informed decisions we have already made about the engine. This is the same as any research partnership, and we say so plainly.</p></section>
+  <form method="post" action="/account/delete" class="delete-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="choice"><input class="choice__input delete-form__confirm" type="checkbox" name="understood" value="yes"><span class="body">I have read this and I want everything deleted.</span></label>
+    <div class="screen__actions">
+      <button class="btn btn--primary btn--block delete-form__submit" type="submit">Delete everything</button>
+      <a class="btn btn--text" href="/account">Back to your account — nothing has been deleted yet.</a>
+    </div>
+  </form>
 {% endblock %}

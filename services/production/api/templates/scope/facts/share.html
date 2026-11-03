@@ -1,0 +1,26 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import money, figure %}
+{% block head %}
+    {%- if share.shown_as_percentage %}
+    <div class="fact__figure"><span class="num num--hero">{{ share.share_percent }}%</span></div>
+    <p class="mirror">That is <span class="num">{{ share.share_percent }}</span>% of your result for the whole period, which was {{ money(share.total) }}.</p>
+    {%- else %}
+    <div class="fact__figure">{{ money(share.total, "hero") }}</div>
+    <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
+    {%- endif %}
+{% endblock %}
+{% block body %}
+  {%- if f.page_chart %}
+  {{ figure(1, "The five days within the whole period", f.page_chart) }}
+  {%- endif %}
+  <p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th></th><th class="table__num">Days</th><th class="table__num">Net (gross)</th></tr></thead>
+    <tbody>
+      <tr><td class="table__text"><span class="legend__swatch legend__swatch--ink"></span>Five worst days</td><td class="table__num">{{ f.worst_day_count|count }}</td><td class="table__num num--{{ share.five_day_sum|tone }}">{{ share.five_day_sum|rupees }}</td></tr>
+      <tr><td class="table__text"><span class="legend__swatch legend__swatch--light"></span>Other days</td><td class="table__num">{{ share.other_days_count|count }}</td><td class="table__num num--{{ share.other_days_net|tone }}">{{ share.other_days_net|rupees }}</td></tr>
+      <tr class="table__row--total"><td class="table__text">Whole period</td><td class="table__num">{{ trading_day_count|count }}</td><td class="table__num num--{{ share.total|tone }}">{{ share.total|rupees }}</td></tr>
+    </tbody>
+  </table>
+{% endblock %}
+{% block caption %}The five days, and every trade on them.{% endblock %}

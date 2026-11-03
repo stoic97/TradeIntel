@@ -1,0 +1,7 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">Your strike rate was <span class="num">{{ strike.rate_percent }}</span>% — <span class="num">{{ strike.wins|count }}</span> winners against <span class="num">{{ strike.losses|count }}</span> losers.{% if strike.scratches %} <span class="num">{{ strike.scratches|count }}</span> trades finished level and are in neither count.{% endif %}</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Winners {{ strike.wins|count }}</span><span><span class="legend__swatch legend__swatch--faint"></span>Losers {{ strike.losses|count }}</span><span>Level {{ strike.scratches|count }}</span></span></span>
+  {%- endif %}
+{% endcall %}

@@ -91,6 +91,19 @@ def a_trader(sess, login_id: str, store: FileStore, content: bytes) -> m.Trader:
         journal_id=journal.id, trip_id=f"{login_id}-trip", field="planned_sl",
         value="250", entered_at=datetime.now(UTC),
         capture_phase=s.CapturePhase.AFTER_CLOSE))
+    feedback = m.ChapterFeedback(trader_id=trader.id, chapter=1, answer="wrong",
+                                 import_id=imp.id, answered_at=datetime.now(UTC))
+    sess.add(feedback)
+    sess.flush()
+    sess.add(m.ChapterFeedbackReason(feedback_id=feedback.id, reason="wrong_facts",
+                                     given_at=datetime.now(UTC)))
+    sess.add(m.GuessAnswer(trader_id=trader.id, answer="unknown", labels_version="t",
+                           import_id=imp.id, answered_at=datetime.now(UTC)))
+    sess.add(m.LeavingCardShown(trader_id=trader.id, copy_version="t",
+                                shown_at=datetime.now(UTC)))
+    sess.add(m.LeavingCardAnswer(trader_id=trader.id, outcome="answered",
+                                 answer="his own words", copy_version="t",
+                                 answered_at=datetime.now(UTC)))
     sess.add(m.DwellEvent(trader_id=trader.id, surface="mirror", key="worst-days",
                           event="drawer_opened", at=datetime.now(UTC),
                           duration_ms=1200))
@@ -272,3 +285,18 @@ def test_an_admin_import_puts_the_file_where_deletion_can_reach_it(engine, store
         sess.commit()
     assert json.loads(record.what_removed)["files_deleted"] == 1
     assert not live.exists(digest)
+
+
+def test_every_table_holding_a_traders_rows_is_reached_by_deletion():
+    """A table with a trader_id that deletion.py never names would survive "delete
+    everything" without a test noticing. The deletion record is the one exception:
+    it is the proof the deletion happened, and the consent text says it is kept."""
+    from pathlib import Path
+
+    source = Path("services/production/accounts/deletion.py").read_text()
+    kept = {"deletion_record"}
+    for mapper in m.Base.registry.mappers:
+        table = mapper.class_.__table__
+        if "trader_id" in table.c and table.name not in kept:
+            assert f"m.{mapper.class_.__name__}" in source, table.name
+

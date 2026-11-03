@@ -1,0 +1,33 @@
+{#- Home, signed in (handoff 5, screen 20): the headline card that opens the Scope,
+    the latest Journals, and the upload. The headline is the share, as on Scope home;
+    when the share is not a percentage, the whole period's result in the Mirror's
+    words, as Scope home's centre says it. No tab is current: home is none of the three. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import lockup %}
+{% set nav = "home" %}
+{% block content %}
+  <div class="stage__bar stage__bar--record">{{ lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
+  <a class="scope-card on-navy" href="/mirror">
+    <span class="label label--soft">Your Scope · Import {{ imp.id }} · {{ imported }}</span>
+    {%- if share.shown_as_percentage %}
+    <span class="num num--hero scope-card__figure">{{ share.share_percent }}%</span>
+    <span class="body scope-card__caption">of your result in five days</span>
+    {%- else %}
+    <span class="num num--hero scope-card__figure">{{ share.total|rupees }}</span>
+    <span class="body scope-card__caption">your result for the whole period</span>
+    {%- endif %}
+    <span class="scope-card__foot"><span>Open the Scope</span><span aria-hidden="true">›</span></span>
+  </a>
+  {%- if latest %}
+  <section class="latest">
+    <div class="latest__head"><h2 class="card-title">Latest Journals</h2><a class="link link--back" href="/journals">All days</a></div>
+    {%- for day in latest %}
+    <a class="latest__row" href="/journals/{{ day.id }}"><span class="body">{{ day.period }}</span><span class="num table__num">{{ day.trades|count }} {{ "trade" if day.trades == 1 else "trades" }}</span><span class="num table__num num--{{ day.net|tone }}">{{ day.net|rupees }}</span><span class="journal-index__go" aria-hidden="true">›</span></a>
+    {%- endfor %}
+  </section>
+  {%- endif %}
+  <section class="card upload-card">
+    <a class="btn btn--primary btn--block" href="/upload">Upload new trades</a>
+    <p class="body-small upload-card__note">A new file replaces the days it covers.</p>
+  </section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{#- Calculating, done (handoff 5 and 7, screen 8; D1 a): what POST /upload answers an
+    htmx request with. The counts appear once, final, in ink - never a figure the server
+    has not reported. Fills are not kept yet (B5, D4), so the latest trade is drawn from
+    its first fill to its last, and the caption says only that. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import button %}
+{% block content %}
+  <p class="label label--plain">{{ file_name }}</p>
+  <h1 class="title" aria-live="polite">Your file is read.</h1>
+  {%- if latest %}
+  <figure class="calc">
+    <svg class="calc__strip fills-land" viewBox="0 0 350 96" aria-hidden="true">
+      <path class="calc__strip-axis" d="M0 76.5H350"/>
+      <g class="calc__fill fill-1"><path class="calc__fill-stem" d="M28 26V70"/><circle class="calc__fill-dot" cx="28" cy="76.5" r="4.5"/></g><g class="calc__fill fill-2"><path class="calc__fill-stem" d="M322 26V70"/><circle class="calc__fill-dot" cx="322" cy="76.5" r="4.5"/></g>
+      <path class="calc__bar bar-after-2" d="M28 26H322"/>
+    </svg>
+    <figcaption class="calc__caption">The latest trade, from its first fill to its last · {{ latest.symbol }}</figcaption>
+  </figure>
+  {%- endif %}
+  <dl class="ledger">
+    <dt class="ledger__term">Rows read</dt><dd class="ledger__value">{{ imp.rows_parsed|count }} of {{ imp.rows_in|count }}</dd>
+    <dt class="ledger__term">Trades rebuilt</dt><dd class="ledger__value">{{ imp.trips_reconstructed|count }}</dd>
+  </dl>
+  <p class="ledger__status">Every row is accounted for on the next screen.</p>
+  <div class="screen__actions">{{ button("Continue", href="/imports/" ~ imp.id, block=true) }}</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, "—" if f.state else run.length|count, trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ f.day_count|count }}</span> days{% endif %}.</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>one square per trade, in order</span><span></span><span><span class="legend__swatch legend__swatch--ink"></span>the run</span></span></span>
+  {%- endif %}
+{% endcall %}

@@ -1,17 +1,9 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Journals</p>{% endblock %}
-{% block hero %}<h1>Earlier Journals</h1>{% endblock %}
+{#- Earlier Journals (kit screen 18c), in the app's words. -#}
+{% extends "layout.html" %}
+{% set nav = "journal" %}
 {% block content %}
-<p>Everything behind the five most recent, newest first.
-  <a href="/journals">Back to the latest</a>.</p>
-
-<ul class="journals">
-  {% for j in journals %}
-  <li>
-    <a href="/journals/{{ j.id }}">{{ j.period_start }}{% if j.period_end != j.period_start %} – {{ j.period_end }}{% endif %}</a>
-    {% if j.version_no > 1 %}<span class="tag">version {{ j.version_no }}</span>{% endif %}
-    {% if not j.opened_at %}<span class="tag">unread</span>{% endif %}
-  </li>
-  {% endfor %}
-</ul>
+  <p class="label label--plain">Journals</p>
+  <h1 class="title fact__title">Earlier Journals</h1>
+  <p class="body">Everything behind the five most recent, newest first. <a class="link" href="/journals">Back to the latest</a>.</p>
+  {% with latest = journals %}{% include "_journal_index.html" %}{% endwith %}
 {% endblock %}

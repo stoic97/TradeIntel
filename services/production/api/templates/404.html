@@ -1,7 +1,6 @@
-{% extends "base.html" %}
-{% block hero %}<h1>Not found</h1>{% endblock %}
+{#- Not found. The kit draws no screen for it; this is the kit's plain white page. -#}
+{% extends "layout.html" %}
 {% block content %}
-<section class="panel">
-  <p>There is nothing at this address.</p>
-</section>
+  <h1 class="title">Not found</h1>
+  <p class="body">There is nothing at this address.</p>
 {% endblock %}

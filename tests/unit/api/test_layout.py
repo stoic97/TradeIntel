@@ -4,8 +4,8 @@ It carries the design kit's head, a navy stage block, a white content block and 
 bottom nav. Rendered here through Jinja alone, with a one-line probe page per case, so
 the layout is tested as a layout and not through any one screen that happens to use it.
 
-Pages move onto it one at a time; base.html and scope.css serve the rest until the
-last page has moved (Phase 4), so no page is ever left half-styled.
+Pages moved onto it one at a time, and base.html and scope.css served the rest until
+the last had moved (Phase 4). Now every page stands on it, and the old pair is gone.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from tests.unit.api.templating import template_env
 STATIC = Path("services/production/api/static")
 
 STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
-               "/static/css/components.css", "/static/css/motion.css"]
+               "/static/css/components.css", "/static/css/motion.css", "/static/css/app.css"]
 
 
 def render(child: str, **context) -> str:
@@ -29,11 +29,17 @@ def render(child: str, **context) -> str:
 PLAIN = '{% extends "layout.html" %}{% block content %}<p>Body</p>{% endblock %}'
 
 
-def test_the_stylesheets_are_the_kits_with_fonts_first_and_nothing_else():
+def test_the_stylesheets_are_the_kits_with_fonts_first_then_ours_last():
     html = render(PLAIN)
     linked = re.findall(r'<link rel="stylesheet" href="([^"]+)">', html)
     assert linked == STYLESHEETS
     assert "scope.css" not in html
+
+
+def test_the_dial_page_cannot_scroll_sideways():
+    """Found in the 390 px browser walk: the dial's SVG runs 24 px past each edge."""
+    css = (STATIC / "css" / "app.css").read_text()
+    assert ".stage { overflow-x: hidden; overflow-x: clip; }" in css
 
 
 def test_htmx_and_the_icons_come_from_this_app():
@@ -104,3 +110,18 @@ def test_a_page_that_names_no_tab_has_no_bottom_nav():
 def test_the_motion_class_is_set_only_when_the_server_gives_one():
     assert '<html lang="en" class="vt-in vt-tap-2">' in render(PLAIN, enter_class="vt-in vt-tap-2")
     assert '<html lang="en">' in render(PLAIN)
+
+
+def test_every_page_stands_on_the_layout_and_the_old_base_is_gone():
+    """Phase 4's "done when": no page is left on the old look, half-styled."""
+    templates = Path("services/production/api/templates")
+    assert not (templates / "base.html").exists()
+    assert not (STATIC / "scope.css").exists()
+    pages = [p for p in templates.rglob("*.html")  # pieces are _named, or a story card
+             if not p.name.startswith("_") and p.name != "layout.html"
+             and "cards" not in p.parts]
+    stray = [str(p) for p in pages if '{% extends "' not in p.read_text()]
+    assert not stray, stray
+    for p in pages:
+        parent = re.search(r'{% extends "([^"]+)" %}', p.read_text())[1]
+        assert parent == "layout.html" or (templates / parent).is_file(), (p, parent)

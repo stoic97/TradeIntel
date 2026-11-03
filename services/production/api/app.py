@@ -18,15 +18,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
+    dial,
     formatting,
     routes_budget,
     routes_consent,
     routes_deletion,
     routes_eligibility,
     routes_events,
+    routes_home,
     routes_identity,
     routes_journal,
     routes_mirror,
+    routes_reveal,
     routes_upload,
 )
 from services.production.api.settings import Settings
@@ -35,6 +38,7 @@ from services.production.db.session import make_engine, run_migrations
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
+dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
 
 
 def code_version() -> str:
@@ -58,10 +62,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     run_migrations(app.state.engine)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
+    app.include_router(routes_home.router)
     app.include_router(routes_identity.router)
     app.include_router(routes_consent.router)
     app.include_router(routes_upload.router)
     app.include_router(routes_mirror.router)
+    app.include_router(routes_reveal.router)
     app.include_router(routes_events.router)
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
@@ -71,10 +77,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health")
     def health() -> JSONResponse:
         return JSONResponse({"status": "ok", "code_version": app.state.code_version})
-
-    @app.get("/", response_class=HTMLResponse)
-    def home(request: Request) -> HTMLResponse:
-        return routes_identity.page(request, "home.html", title="Scope")
 
     @app.exception_handler(404)
     def not_found(request: Request, _exc: Exception) -> HTMLResponse:

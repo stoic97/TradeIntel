@@ -109,6 +109,18 @@ def delete_trader(
     _delete_where(sess, m.WtpAnswer, m.WtpAnswer.trader_id == trader_id, removed)
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
+    # His answers to "Does this match your trading?" (B4), reasons first. Before the
+    # imports, which each answer points at.
+    feedback_ids = _ids(sess, m.ChapterFeedback.id, m.ChapterFeedback.trader_id == trader_id)
+    if feedback_ids:
+        _delete_where(sess, m.ChapterFeedbackReason,
+                      m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
+    _delete_where(sess, m.ChapterFeedback, m.ChapterFeedback.trader_id == trader_id, removed)
+    _delete_where(sess, m.GuessAnswer, m.GuessAnswer.trader_id == trader_id, removed)
+    # The leaving card (B7): that it was shown, and his words.
+    for model in (m.LeavingCardAnswer, m.LeavingCardShown):
+        _delete_where(sess, model, model.trader_id == trader_id, removed)
+
     if import_ids:
         for model in (m.Trip, m.OpenPosition, m.SkippedTrip, m.ImportRow):
             _delete_where(sess, model, model.import_id.in_(import_ids), removed)
@@ -174,7 +186,8 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     found: list[str] = []
     for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent):
+                  m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
+                  m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)

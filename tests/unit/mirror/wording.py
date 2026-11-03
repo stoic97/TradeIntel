@@ -6,13 +6,18 @@ happens to be formatted: today's templates print -12,345; the Scope prints âˆ’â‚
 with a true minus and Indian digit grouping. Both read [N] here.
 
 Pure functions over HTML text, standard library only, so they can be tested without
-the app.
+the app. The long page is gone now; the frozen reference it left, with the drawer
+captions and the one sentence the fixture never reaches, is the Mirror's wording, and
+every Scope page is read against it.
 """
 
 from __future__ import annotations
 
+import json
 import re
+from html import unescape
 from html.parser import HTMLParser
+from pathlib import Path
 
 PLACEHOLDER = "[N]"
 
@@ -94,3 +99,64 @@ def wording(html: str) -> list[dict]:
             continue
         out.append({"key": f"section-{i}", "blocks": blocks})
     return out
+
+
+# ---------- The Mirror's words, after its page has gone ----------
+
+REFERENCE = Path("tests/fixtures/mirror_wording/mirror_v1.json")
+
+DRAWER_CAPTIONS = (
+    "The five days, and every trade on them.",
+    "Your best five and worst five, by result.",
+    "Every trade opened after two that had already closed at a loss.",
+    "How long each trade was open, by how it ended.",
+    "Every trade, by the hour you opened it.",
+)
+"""The long page's drawer captions (routes_mirror.DRAWERS), taken word for word when
+the drawers became fact pages. Wording too (handoff 6), so kept here with the rest."""
+
+SHARE_NOT_A_PERCENTAGE = (
+    "Those five days came to [N]. Your result for the whole period was [N]. "
+    "The other [N] days were net [N]."
+)
+"""The sentence the Mirror printed when the share is not a percentage (Appendix A: a
+positive total, or worst days larger than the whole). The 40-trip fixture never
+reaches it, so it is not in the frozen reference; it was written from the template,
+figures out, and test_wording_reference.py held the template to it while it lived."""
+
+
+def sentences(text: str) -> list[str]:
+    """A block of wording split into its sentences; a label is one sentence."""
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip()]
+
+
+def mirror_sentences() -> list[str]:
+    """Every sentence, heading and label the Mirror said, figures out, in page order."""
+    frozen = json.loads(REFERENCE.read_text())["sections"]
+    out = [s for section in frozen for block in section["blocks"] for s in sentences(block)]
+    out += [s for caption in DRAWER_CAPTIONS for s in sentences(caption)]
+    out += sentences(SHARE_NOT_A_PERCENTAGE)
+    return list(dict.fromkeys(out))
+
+
+INLINE = r"span|strong|em|a|b|i|br|sup|sub"
+DATE = re.compile(r"\[N\]-\[N\]-\[N\]|\[N\] (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b")
+
+
+def page_text(html: str) -> str:
+    """Everything a reader sees on a page, figures out, as one line of words.
+
+    Inline tags join their text to the words around them; every other tag is a
+    break. A date reads [DATE] whichever way it is written - the long page printed
+    2026-09-07, the Scope prints 07 Sep as the kit does - so a sentence is not a
+    different sentence because a date's writing changed.
+    """
+    html = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.DOTALL)
+    html = re.sub(rf"</?(?:{INLINE})\b[^>]*>", "", html)
+    html = re.sub(r"<[^>]+>", " ", html)
+    return DATE.sub("[DATE]", figures_out(unescape(html)))
+
+
+def said_as_written(sentence: str) -> str:
+    """A Mirror sentence ready to look for in page_text."""
+    return DATE.sub("[DATE]", sentence)

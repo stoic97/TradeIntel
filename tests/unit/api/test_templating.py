@@ -2,7 +2,7 @@
 
 That lets a layout or a component be rendered without a database, a session or a
 route. It is only honest if the test environment renders as the app's does: HTML
-escaped, and the same formatting filters.
+escaped, the same formatting filters, and the same dial.
 """
 
 from __future__ import annotations
@@ -23,8 +23,9 @@ def test_the_test_environment_matches_the_apps():
         assert escapes(ours, name) == escapes(APP.env, name), name
     for env in (ours, APP.env):
         assert env.from_string("{{ x }}").render(x="<b>") == "&lt;b&gt;"
-    for name in ("rupees", "tone", "count", "minutes"):
+    for name in ("rupees", "tone", "count", "minutes", "day"):
         assert ours.filters[name] is APP.env.filters[name], name
+    assert ours.globals["scope_dial"] is APP.env.globals["scope_dial"]
 
 
 def test_a_probe_template_is_rendered_alongside_the_apps():

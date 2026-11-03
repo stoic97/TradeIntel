@@ -1,0 +1,5 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
+  <span class="mirror mirror--card">Your best five and worst five, by result. Ties are listed with the earlier trade first. Nothing is trimmed or capped.</span>
+  <span class="story-card__chart"><span class="money-days">{% for day in f.days %}<span class="num num--label">{{ day }}</span>{% endfor %}</span>{{ chart(f.chart) }}<span class="figure__axis"><span>Worst five trades</span><span>0</span><span>Best five trades</span></span></span>
+{% endcall %}

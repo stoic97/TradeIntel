@@ -1,15 +1,10 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Your data</p>{% endblock %}
-{% block hero %}<h1>Deleted</h1>{% endblock %}
+{#- Deleted (kit screen 21c), in the app's words. The kit's "Back to the Scope page"
+    is new copy and waits for D9. -#}
+{% extends "layout.html" %}
 {% block content %}
-
-<p>Your file, the trades rebuilt from it, your Journals and your account are gone
-  from our database and from the server's disk. Backups roll off within 30 days.</p>
-
-<p>We kept two rows, and this is all they say: that this account agreed to what we
-  do with a tradebook, and that it asked to be deleted and was. No name, no trades,
-  no figure worked out from them.</p>
-
-<p>This page is the confirmation — we have no way to email you, and we did not
-  keep an address to email.</p>
+  <p class="label label--plain">Your data</p>
+  <h1 class="title">Deleted</h1>
+  <p class="body">Your file, the trades rebuilt from it, your Journals and your account are gone from our database and from the server's disk. Backups roll off within 30 days.</p>
+  <p class="body">We kept two rows, and this is all they say: that this account agreed to what we do with a tradebook, and that it asked to be deleted and was. No name, no trades, no figure worked out from them.</p>
+  <p class="body">This page is the confirmation — we have no way to email you, and we did not keep an address to email.</p>
 {% endblock %}
