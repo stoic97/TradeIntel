@@ -122,7 +122,7 @@ def journal_page(request: Request, journal_id: int):
         trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
         rows = [
-            {"trip_id": t.trip_id, "label": f"Trade {n}", "net": f"{t.net:,.0f}"}
+            {"trip_id": t.trip_id, "label": f"Trade {n}", "net": t.net}  # the page writes it
             for n, t in enumerate(trips, start=1)
         ]
         answers = {

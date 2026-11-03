@@ -174,9 +174,12 @@ def import_review(request: Request, import_id: int):
         excluded = [r for r in rows if r.status == "EXCLUDED"]
         rejected = [r for r in rows if r.status == "REJECTED"]
 
+        # A first upload has nothing to compare against: every day is new, so the page
+        # lists them plainly. Decided here rather than summed in the template (T7).
+        first_upload = sum(d.rows_before for d in days) == 0
         return page(request, "import_review.html", title="What we read",
                     imp=imp, groups=groups, excluded=excluded, rejected=rejected,
-                    days=days)
+                    days=days, first_upload=first_upload)
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")

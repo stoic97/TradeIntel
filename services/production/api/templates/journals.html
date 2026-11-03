@@ -1,30 +1,17 @@
-{% extends "base.html" %}
-{% block label %}<p class="label">Journals</p>{% endblock %}
-{% block hero %}<h1>Your Journals</h1>{% endblock %}
+{#- Your Journals (kit screen 18), in the app's words. A period keeps the app's
+    dates; the kit's price-question card is new copy and waits for D9. -#}
+{% extends "layout.html" %}
+{% set nav = "journal" %}
 {% block content %}
-
-{% if latest %}
-<p>One for every complete trading day in what you have uploaded — {{ total }} so far.
-  Each one is written from your trades and needs nothing from you.</p>
-
-<ul class="journals">
-  {% for j in latest %}
-  <li>
-    <a href="/journals/{{ j.id }}">{{ j.period_start }}{% if j.period_end != j.period_start %} – {{ j.period_end }}{% endif %}</a>
-    {% if j.version_no > 1 %}<span class="tag">version {{ j.version_no }}</span>{% endif %}
-    {% if not j.opened_at %}<span class="tag">unread</span>{% endif %}
-  </li>
-  {% endfor %}
-</ul>
-
-{% if catch_up_count %}
-<p class="catch-up">You have {{ catch_up_count }} earlier Journals.
-  <a href="/journals/catch-up">Read them one at a time</a>, or
-  <a href="/mirror">go to your record</a>.</p>
-{% endif %}
-
-{% else %}
-<p>Your Journals start with your first upload. <a href="/upload">Send us a tradebook</a>
-  and one is written for every complete trading day in it.</p>
-{% endif %}
+  <p class="label label--plain">Journals</p>
+  <h1 class="title fact__title">Your Journals</h1>
+  {%- if latest %}
+  <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ total|count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
+  {% include "_journal_index.html" with context %}
+  {%- if catch_up_count %}
+  <p class="body journal__earlier">You have <span class="num">{{ catch_up_count|count }}</span> earlier Journals. <a class="link" href="/journals/catch-up">Read them one at a time</a>, or <a class="link" href="/mirror">go to your record</a>.</p>
+  {%- endif %}
+  {%- else %}
+  <p class="body">Your Journals start with your first upload. <a class="link" href="/upload">Send us a tradebook</a> and one is written for every complete trading day in it.</p>
+  {%- endif %}
 {% endblock %}
