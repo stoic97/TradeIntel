@@ -1,0 +1,18 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+{% endblock %}
+{% block body %}
+  {% call figure(1, "Net (gross) by the hour you opened", f.page_chart) %}
+    <div class="figure__axis"><span>{{ f.first_hour }}:00</span><span>one bar per hour</span><span>{{ f.last_hour }}:00</span></div>
+  {% endcall %}
+  <p class="table-label">Table 1</p>
+  <table class="table">
+    <thead><tr><th>Hour you opened</th><th class="table__num">Net (gross)</th><th class="table__num">Trades</th></tr></thead>
+    <tbody>
+      {% for hour in hours %}<tr><td>{{ "%02d"|format(hour.hour) }}:00{% if hour.small_sample %} — few trades{% endif %}</td><td class="table__num num--{{ hour.net|tone }}">{{ hour.net|rupees }}</td><td class="table__num">{{ hour.trips|count }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+{% block caption %}Every trade, by the hour you opened it.{% endblock %}

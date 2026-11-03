@@ -1,0 +1,15 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ strike.rate_percent }}%</span></div>
+    <p class="mirror">Your strike rate was <span class="num">{{ strike.rate_percent }}</span>% — <span class="num">{{ strike.wins|count }}</span> winners against <span class="num">{{ strike.losses|count }}</span> losers.</p>
+    {%- if strike.scratches %}
+    <p class="mirror"><span class="num">{{ strike.scratches|count }}</span> trades finished level and are in neither count.</p>
+    {%- endif %}
+{% endblock %}
+{% block body %}
+  {% call figure(1, "Every trade, by how it ended", f.page_chart) %}
+    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Winners {{ strike.wins|count }}</span><span><span class="legend__swatch legend__swatch--faint"></span>Losers {{ strike.losses|count }}</span><span>Level {{ strike.scratches|count }}</span></div>
+  {% endcall %}
+{% endblock %}
+{% block caption %}Every trade, by how it ended.{% endblock %}

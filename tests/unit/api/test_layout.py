@@ -18,7 +18,7 @@ from tests.unit.api.templating import template_env
 STATIC = Path("services/production/api/static")
 
 STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
-               "/static/css/components.css", "/static/css/motion.css"]
+               "/static/css/components.css", "/static/css/motion.css", "/static/css/app.css"]
 
 
 def render(child: str, **context) -> str:
@@ -29,11 +29,17 @@ def render(child: str, **context) -> str:
 PLAIN = '{% extends "layout.html" %}{% block content %}<p>Body</p>{% endblock %}'
 
 
-def test_the_stylesheets_are_the_kits_with_fonts_first_and_nothing_else():
+def test_the_stylesheets_are_the_kits_with_fonts_first_then_ours_last():
     html = render(PLAIN)
     linked = re.findall(r'<link rel="stylesheet" href="([^"]+)">', html)
     assert linked == STYLESHEETS
     assert "scope.css" not in html
+
+
+def test_the_dial_page_cannot_scroll_sideways():
+    """Found in the 390 px browser walk: the dial's SVG runs 24 px past each edge."""
+    css = (STATIC / "css" / "app.css").read_text()
+    assert ".stage { overflow-x: hidden; overflow-x: clip; }" in css
 
 
 def test_htmx_and_the_icons_come_from_this_app():

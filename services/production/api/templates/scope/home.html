@@ -1,0 +1,22 @@
+{#- Scope home (handoff 4, level 1; kit screen 14): the dial in four equal chapters on
+    the navy stage, the five days' share in its white centre; below, on white, the
+    Mirror's opening line and the gross line. Replaces the long Mirror page. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import dial, gross_line, lockup, chip %}
+{% set nav = "scope" %}
+{% block stage %}
+<header class="stage stage--home on-navy">
+  <div class="stage__bar">{{ lockup() }}{{ chip("In development.", on_navy=true) }}</div>
+  <div class="stage__dial">
+  {{ dial(view) }}
+  </div>
+</header>
+{% endblock %}
+{% block content %}
+  <p class="label">Counted from your file</p>
+  <h1 class="title fact__title">What your trades actually did.</h1>
+  <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>
+  {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+  <p class="label label--plain home__foot"><span>No buy or sell calls, ever.</span><span>4 chapters</span></p>
+  {% include "scope/_lineage.html" %}
+{% endblock %}

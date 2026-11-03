@@ -1,0 +1,10 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+{% endblock %}
+{% block body %}
+  {{ figure(1, "Every trade, by what it was measured against", f.page_chart) }}
+  {% include "scope/_risk_table.html" %}
+{% endblock %}
+{% block caption %}Every trade, by what it was measured against.{% endblock %}

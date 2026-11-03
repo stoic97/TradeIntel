@@ -23,7 +23,7 @@ def test_the_test_environment_matches_the_apps():
         assert escapes(ours, name) == escapes(APP.env, name), name
     for env in (ours, APP.env):
         assert env.from_string("{{ x }}").render(x="<b>") == "&lt;b&gt;"
-    for name in ("rupees", "tone", "count", "minutes"):
+    for name in ("rupees", "tone", "count", "minutes", "day"):
         assert ours.filters[name] is APP.env.filters[name], name
     assert ours.globals["scope_dial"] is APP.env.globals["scope_dial"]
 

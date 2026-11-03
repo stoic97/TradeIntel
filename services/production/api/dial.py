@@ -40,6 +40,8 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
     for key in ("figure", "name"):
         if centre.get(key):
             _text(centre[key], f"centre {key}")
+    for line in centre.get("captionLines") or ():
+        _text(line, "centre caption")
     if centre.get("scopeHref"):
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
