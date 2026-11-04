@@ -107,6 +107,7 @@ def delete_trader(
         _delete_where(sess, m.JournalFieldEntry,
                       m.JournalFieldEntry.journal_id.in_(journal_ids), removed)
     _delete_where(sess, m.WtpAnswer, m.WtpAnswer.trader_id == trader_id, removed)
+    _delete_where(sess, m.WtpAsked, m.WtpAsked.trader_id == trader_id, removed)
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
     # What he said about a whole report (TICKET-825), in his own words.
@@ -187,7 +188,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     """
     found: list[str] = []
     for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
-                  m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
+                  m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
         if sess.scalars(select(model.id)

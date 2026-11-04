@@ -1,0 +1,11 @@
+{#- One trade's questions, in one form with one Save (kit screen 18b). `row` is the trade. -#}
+{% from "_components.html" import money %}
+    <form class="card journal-trade" method="post" action="/journals/{{ journal.id }}/field">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="trip_id" value="{{ row.trip_id }}">
+      <p class="journal-trade__head"><span>{{ row.label }}</span> — {{ money(row.net, "label") }}{% if row.why %} · {{ row.why }}{% endif %}</p>
+      {%- for name, question in prompts %}
+      <label class="field"><span class="field__label">{{ question }}</span><input class="field__input" name="{{ name }}" value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}"></label>
+      {%- endfor %}
+      <button class="btn btn--secondary journal__save" type="submit">Save</button>
+    </form>
