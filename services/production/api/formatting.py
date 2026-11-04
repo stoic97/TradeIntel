@@ -114,9 +114,10 @@ MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", 
 
 
 def day(iso_date: str) -> str:
-    """A trading day as the kit writes it: 2026-09-07 is 07 Sep."""
-    _year, month, dom = iso_date.split("-")
-    return f"{dom} {MONTHS[int(month) - 1]}"
+    """A trading day with its year, 2026-09-07 is 07 Sep 2026. The kit writes 07 Sep, but
+    a history can span years and the day alone leaves him guessing which (TICKET-808)."""
+    year, month, dom = iso_date.split("-")
+    return f"{dom} {MONTHS[int(month) - 1]} {year}"
 
 
 def register(env) -> None:

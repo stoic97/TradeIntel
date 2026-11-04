@@ -25,7 +25,7 @@ def test_home_opens_the_scope_from_its_headline(client):
     assert '<a class="scope-card on-navy" href="/mirror">' in body
     assert '<span class="num num--hero scope-card__figure">96%</span>' in body
     assert "of your losses in five days" in body
-    assert re.search(r"Your Scope · Import \d+ · \d\d \w{3}</span>", body)
+    assert re.search(r"Your Scope · Import \d+ · \d\d \w{3} \d{4}</span>", body)
     assert "Open the Scope" in body
 
 
@@ -70,7 +70,7 @@ def test_the_latest_journals_say_their_day_their_trades_and_their_net(client, en
     body = client.get("/").text
     assert '<h2 class="card-title">Latest Journals</h2>' in body
     row = re.search(r'<a class="latest__row" href="/journals/\d+">(.*?)</a>', body).group(1)
-    assert '<span class="body">01 Sep</span>' in row
+    assert '<span class="body">01 Sep 2026</span>' in row
     assert f">{count} trades</span>" in row
     from services.production.api.formatting import rupees, tone
 

@@ -2,6 +2,7 @@
 {% from "_components.html" import figure %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    {% include "scope/_risk_read.html" %}
 {% endblock %}
 {% block body %}
   {{ figure(1, "Every trade, by what it was measured against", f.page_chart) }}

@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from math import ceil
 from statistics import median
 from typing import Any
 
@@ -62,15 +63,6 @@ class TradeLine:
             return self.symbol
         return f"{self.symbol} {self.strike.normalize():f} {self.option_type}"
 
-    @property
-    def paid(self) -> Decimal | None:
-        """Price x quantity on a bought option. A sold option took money in; a share has none."""
-        if self.segment != "OPT" or self.side != "Buy":
-            return None
-        if not self.entry_price or not self.quantity:
-            return None
-        return self.entry_price * self.quantity
-
 
 @dataclass(frozen=True)
 class Trip:
@@ -89,6 +81,7 @@ class Trip:
     legs: tuple[Leg, ...] = ()  # empty for a single leg
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
+    premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
 
     @property
     def is_win(self) -> bool:
@@ -119,16 +112,10 @@ class Trip:
         return f"{self.symbol} · {len(self.lines)} legs" if self.lines else self.symbol
 
     @property
-    def paid(self) -> Decimal | None:
-        """What one bought option cost, shown as what was paid and never used as R (feedback
-        12). A spread's cost is not a premium, so a position of several legs has none."""
-        return self.lines[0].paid if len(self.lines) == 1 else None
-
-    @property
     def result_percent(self) -> Decimal | None:
-        """The result as a share of what was paid, to one decimal."""
-        paid = self.paid
-        return _round(self.net / paid * 100, "0.1") if paid else None
+        """The result as a share of the premium, to one decimal. Shown beside what was paid
+        and never used as R (feedback 12)."""
+        return _round(self.net / self.premium * 100, "0.1") if self.premium else None
 
 
 def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
@@ -161,7 +148,7 @@ def _trim(value: Decimal) -> Decimal:
     Used for counts and medians, where a trailing zero is noise. NOT used for the
     holding-time ratio, where 3.0 says "measured" and 3 would say "round number".
     """
-    return value.normalize()
+    return Decimal(format(value.normalize(), "f"))  # 50, not 5E+1
 
 
 @dataclass(frozen=True)
@@ -213,6 +200,15 @@ class TwoStraightLosses:
     condition_mean: Decimal | None
     comparison_mean: Decimal | None
     state: s.ResultState
+
+
+@dataclass(frozen=True)
+class BreakEven:
+    """The win rate at which these average winners and losers would net to nothing."""
+
+    average_winner: Decimal | None
+    average_loser: Decimal | None
+    percent: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -395,7 +391,8 @@ def trade_book(trip: Trip) -> str:
     in one book with the other shares and ETFs, held or not; a future is in Futures.
     """
     if trip.is_option:
-        return "Crude options" if trip.symbol.startswith("CRUDE") else f"{trip.symbol} options"
+        book = book_of(trip.symbol)
+        return "Crude options" if book == "crude" else f"{book} options"
     if trip.lines and trip.lines[0].segment == "EQ":
         return "Stocks and ETFs"
     return "Futures"
@@ -477,6 +474,20 @@ def strike_rate(trips: list[Trip]) -> StrikeRate:
         rate_percent=_trim(_round(Decimal(wins) / Decimal(wins + losses) * 100, "0.1")),
         state=s.ResultState.COUNTED_FACT,
     )
+
+
+def break_even(trips: list[Trip]) -> BreakEven:
+    """Average loser over average winner plus average loser. Scratches are in neither.
+
+    Needs a winner and a loser: with one side empty there is nothing to balance.
+    """
+    wins = [t.net for t in trips if t.is_win]
+    losses = [-t.net for t in trips if t.is_loss]
+    if not wins or not losses:
+        return BreakEven(None, None, None)
+    winner = sum(wins, Decimal(0)) / len(wins)
+    loser = sum(losses, Decimal(0)) / len(losses)
+    return BreakEven(winner, loser, _trim(_round(loser / (winner + loser) * 100, "0.1")))
 
 
 def average_lots(trips: list[Trip]) -> AverageLots:
@@ -564,6 +575,82 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
         crosses_days=len(days) > 1, days=days,
         state=s.ResultState.COUNTED_FACT if best else s.ResultState.INSUFFICIENT_SAMPLE,
     )
+
+
+LOSS_SIZES_MINIMUM = 20
+"""Below this, "one in twenty" is not something the file can say."""
+
+
+@dataclass(frozen=True)
+class LossSizes:
+    """A trader's losses by size, in whole rupees. Describes them and suggests nothing."""
+
+    half: int
+    three_quarters: int
+    nine_tenths: int
+    one_in_twenty: int
+    biggest: int
+
+
+def loss_sizes(trips: list[Trip]) -> LossSizes | None:
+    """Read off the ranked losses. "Or less" rounds up, "more than" down, so both stay true."""
+    losses = sorted(-t.net for t in trips if t.is_loss)
+    if len(losses) < LOSS_SIZES_MINIMUM:
+        return None
+
+    def at(share: Decimal) -> Decimal:
+        return losses[ceil(share * len(losses)) - 1]
+
+    def up(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_CEILING))
+
+    def down(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_FLOOR))
+
+    return LossSizes(
+        half=up(at(Decimal("0.5"))),
+        three_quarters=up(at(Decimal("0.75"))),
+        nine_tenths=up(at(Decimal("0.9"))),
+        one_in_twenty=down(at(Decimal("0.95"))),
+        biggest=up(losses[-1]),
+    )
+
+
+def book_of(symbol: str) -> str:
+    """The book a trade belongs to. CRUDEOIL and CRUDEOILM are one book to a trader."""
+    return "crude" if symbol.startswith("CRUDE") else symbol
+
+
+@dataclass(frozen=True)
+class PremiumPaid:
+    """What a typical bought option cost in one book, and how much of it a result was."""
+
+    book: str
+    paid: Decimal
+    percent: int
+
+
+def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
+    """Medians per book, biggest book first. Recorded for reading, never a denominator.
+
+    Per book because a blend describes none of them. A book below the minimum is left out
+    rather than pooled: a handful of unrelated instruments has no typical trade.
+    """
+    books: dict[str, list[Trip]] = {}
+    for trip in trips:
+        if trip.is_option and trip.premium:
+            books.setdefault(book_of(trip.symbol), []).append(trip)
+    read = []
+    for book, options in sorted(books.items(), key=lambda kv: -len(kv[1])):
+        results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
+        if len(results) < LOSS_SIZES_MINIMUM:
+            continue
+        read.append(PremiumPaid(
+            book=book,
+            paid=median(t.premium for t in options),
+            percent=int(median(results).to_integral_value()),
+        ))
+    return read
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:

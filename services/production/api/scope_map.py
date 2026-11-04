@@ -171,9 +171,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key in ("hold", "clock"):
+    if key in ("hold", "strike", "clock"):
         return mx.same_day_trips(trips)
-    if key in ("strike", "risk"):
+    if key == "risk":
         return list(trips)
     if key in ("unread", "not-told"):
         return []
@@ -186,7 +186,7 @@ RISK_SOURCES = (
     ("Your declared budget", (s.RiskUnitSourceV1.DECLARED_BUDGET,)),
     ("Your stop", (s.RiskUnitSourceV1.DEFINED_STOP,)),
     ("Premium paid", (s.RiskUnitSourceV1.PREMIUM_PAID,)),
-    ("Nothing we could use", (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR)),
+    ("Stocks, ETFs and futures: no premium to measure against", (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR)),
     ("A spread's maximum loss", (s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,)),
     ("Uncapped: a sold option", (s.RiskUnitSourceV1.UNCAPPED,)),
 )
@@ -248,7 +248,7 @@ def trade(t: mx.Trip, number: int) -> dict:
         "qty": only_line.quantity if only_line else None,
         "entry_price": only_line.entry_price if only_line else None,
         "exit_price": only_line.exit_price if only_line else None,
-        "paid": t.paid,
+        "paid": t.premium,
         "result_percent": t.result_percent,
         "day": formatting.day(t.trading_day),
         "time_in": t.entry_ts.strftime("%H:%M"),

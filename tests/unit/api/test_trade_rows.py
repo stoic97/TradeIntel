@@ -103,8 +103,9 @@ def row_for(html: str, instrument: str) -> str:
     return next(a for a in articles(html) if a.startswith(instrument))
 
 
-def strike_list(client, query: str = "") -> str:  # noqa: F811
-    got = client.get(f"/mirror/fact/strike/trades{query}")
+def every_trade(client, query: str = "") -> str:  # noqa: F811
+    """The risk fact's list: every trade, holdings too, whichever way they are measured."""
+    got = client.get(f"/mirror/fact/risk/trades{query}")
     assert got.status_code == 200
     return got.text
 
@@ -113,7 +114,7 @@ def strike_list(client, query: str = "") -> str:  # noqa: F811
 
 
 def test_a_row_says_instrument_side_quantity_prices_and_rupees(uploaded):
-    row = row_for(strike_list(uploaded), "WIDGETOIL 5000 CE")
+    row = row_for(every_trade(uploaded), "WIDGETOIL 5000 CE")
     assert row.startswith("WIDGETOIL 5000 CE · Buy · Qty 100")
     assert "09:30 09:40" in row
     assert "10.00 → 12.50" in row
@@ -121,12 +122,12 @@ def test_a_row_says_instrument_side_quantity_prices_and_rupees(uploaded):
 
 
 def test_a_row_carries_the_day_with_or_without_its_year(uploaded):
-    row = row_for(strike_list(uploaded), "WIDGETOIL 5000 CE")
+    row = row_for(every_trade(uploaded), "WIDGETOIL 5000 CE")
     assert formatting.day("2026-11-19") in row
 
 
 def test_a_bought_option_shows_what_was_paid_and_the_result_against_it(uploaded):
-    page = strike_list(uploaded)
+    page = every_trade(uploaded)
     winner = row_for(page, "WIDGETOIL 5000 CE")
     assert "Paid ₹1,000" in winner and "+25.0% of premium" in winner
     loser = row_for(page, "WIDGETOIL 5000 PE")
@@ -134,14 +135,14 @@ def test_a_bought_option_shows_what_was_paid_and_the_result_against_it(uploaded)
 
 
 def test_a_sold_option_paid_no_premium(uploaded):
-    row = row_for(strike_list(uploaded), "WIDGETOIL 5200 CE")
+    row = row_for(every_trade(uploaded), "WIDGETOIL 5200 CE")
     assert row.startswith("WIDGETOIL 5200 CE · Sell · Qty 100")
     assert "20.00 → 25.00" in row
     assert "Paid" not in row and "premium" not in row
 
 
 def test_a_spread_is_one_row_with_its_legs(uploaded):
-    page = strike_list(uploaded)
+    page = every_trade(uploaded)
     assert len(articles(page)) == 6  # seven legs would be seven rows
     row = row_for(page, "WIDGETOIL · 2 legs")
     assert "+₹1,300" in row
@@ -151,7 +152,7 @@ def test_a_spread_is_one_row_with_its_legs(uploaded):
 
 
 def test_a_share_shows_side_quantity_and_prices_with_no_strike_or_premium(uploaded):
-    row = row_for(strike_list(uploaded), "Widget ETF")
+    row = row_for(every_trade(uploaded), "Widget ETF")
     assert row.startswith("Widget ETF · Buy · Qty 10")
     assert "100.00 → 110.00" in row
     assert "Paid" not in row
@@ -165,32 +166,31 @@ def test_a_row_with_no_detail_still_names_its_instrument():
 
 
 def test_the_internal_trade_number_is_not_on_the_page(uploaded):
-    page = strike_list(uploaded)
+    page = every_trade(uploaded)
     assert not re.search(r"Trade \d+", text(page))
 
 
 def test_the_unexplained_bar_is_gone(uploaded):
-    assert "trade__strip" not in strike_list(uploaded)
+    assert "trade__strip" not in every_trade(uploaded)
 
 
-def test_premium_is_recorded_and_never_a_denominator_for_a_stock():
+def test_a_share_is_named_by_its_symbol():
     line = mx.TradeLine(symbol="Widget ETF", segment="EQ", side="Buy", quantity=10,
                         entry_price=Decimal(100), exit_price=Decimal(110), net=Decimal(100))
-    assert line.paid is None
     assert line.instrument == "Widget ETF"
 
 
-def test_the_paid_and_percent_are_worked_from_price_and_quantity():
+def test_the_percent_is_worked_from_the_premium():
     line = mx.TradeLine(symbol="WIDGETOIL", segment="OPT", side="Buy", quantity=100,
                         entry_price=Decimal("10.00"), exit_price=Decimal("12.50"),
                         net=Decimal(250), strike=Decimal("5000.00"), option_type="CE")
     assert line.instrument == "WIDGETOIL 5000 CE"
-    assert line.paid == Decimal(1000)
-    trip = mx.Trip("t", "WIDGETOIL", "2026-11-19", OPENED,
-                   CLOSED, 600, Decimal(250), 1,
-                   s.RiskUnitSourceV1.PREMIUM_PAID, lines=(line,))
-    assert trip.paid == Decimal(1000)
+    trip = mx.Trip("t", "WIDGETOIL", "2026-11-19", OPENED, CLOSED, 600, Decimal(250), 1,
+                   s.RiskUnitSourceV1.PREMIUM_PAID, lines=(line,), premium=Decimal(1000))
     assert trip.result_percent == Decimal("25.0")
+    bare = mx.Trip("t", "WIDGETOIL", "2026-11-19", OPENED, CLOSED, 600, Decimal(250), 1,
+                   s.RiskUnitSourceV1.UNAVAILABLE, lines=(line,))
+    assert bare.result_percent is None
 
 
 # ---------- How the new figures are written ----------
@@ -266,9 +266,10 @@ def test_every_trade_behind_a_long_fact_is_reachable_through_the_link(client, en
         )
     )
     assert upload(client, content=tradebook(many)).status_code == 303
-    fact = client.get("/mirror/fact/strike").text
+    fact = client.get("/mirror/fact/risk").text
     assert '<article class="trade">' not in fact
-    assert len(articles(strike_list(client))) == S.INLINE_TRADES + 1 + 6
+    assert 'href="/mirror/fact/risk/trades"' in fact
+    assert len(articles(every_trade(client))) == S.INLINE_TRADES + 1 + 6
 
 
 # ---------- The list's route ----------
@@ -290,14 +291,14 @@ def test_the_list_is_signed_in_only(engine):  # noqa: F811
 
 
 def test_the_list_says_which_fact_it_belongs_to_and_goes_back_to_it(uploaded):
-    page = strike_list(uploaded)
+    page = every_trade(uploaded)
     assert "The trades behind this" in page
-    assert 'href="/mirror/fact/strike"' in page
-    assert "Strike rate" in page
+    assert 'href="/mirror/fact/risk"' in page
+    assert "Trades with a risk figure" in page
 
 
 def test_the_list_says_its_figures_are_gross_as_the_fact_page_does(uploaded):
-    assert "every rupee figure below is gross" in strike_list(uploaded)
+    assert "every rupee figure below is gross" in every_trade(uploaded)
 
 
 # ---------- The filters ----------
@@ -327,7 +328,7 @@ NAMES = ("5000 CE", "5000 PE", "5200 CE", "2 legs", "5400 CE", "ETF")
     ],
 )
 def test_each_filter_narrows_the_list(uploaded, query, want):
-    rows = articles(strike_list(uploaded, query))
+    rows = articles(every_trade(uploaded, query))
     if want is None:  # a book this history doesn't have is ignored, not an empty page
         assert len(rows) == 6
         return
@@ -337,7 +338,7 @@ def test_each_filter_narrows_the_list(uploaded, query, want):
 
 def test_a_sold_option_is_in_the_price_band_of_what_it_was_sold_at(uploaded):
     """Entry price is the price the trade was opened at, bought or sold."""
-    names = articles(strike_list(uploaded, "?price=under-50"))
+    names = articles(every_trade(uploaded, "?price=under-50"))
     assert any(n.startswith("WIDGETOIL 5200 CE") for n in names)
 
 
@@ -345,39 +346,39 @@ def test_a_share_is_in_no_entry_price_band(uploaded):
     """A share's price says nothing about an option's: the bands are for options."""
     for band in ("under-50", "50-100", "100-150"):  # the bands this history has
         assert not any(n.startswith("Widget ETF") for n in
-                       articles(strike_list(uploaded, f"?price={band}")))
+                       articles(every_trade(uploaded, f"?price={band}")))
 
 
 def test_a_spread_is_in_no_entry_price_band(uploaded):
     """Its legs have a price each; the position has none."""
     for band in ("under-50", "50-100", "100-150"):  # the bands this history has
-        assert not any("2 legs" in n for n in articles(strike_list(uploaded, f"?price={band}")))
+        assert not any("2 legs" in n for n in articles(every_trade(uploaded, f"?price={band}")))
 
 
 def test_an_unknown_filter_value_is_ignored_rather_than_refused(uploaded):
     for query in ("?hour=99", "?hour=noon", "?price=free", "?dte=-1", "?result=maybe", "?year=1"):
-        assert len(articles(strike_list(uploaded, query))) == 6
+        assert len(articles(every_trade(uploaded, query))) == 6
 
 
 def test_no_match_says_so_and_offers_the_way_back(uploaded):
-    page = strike_list(uploaded, "?year=2025&result=losers")
+    page = every_trade(uploaded, "?year=2025&result=losers")
     assert articles(page) == []
     assert "No trades match these filters." in page
-    assert 'href="/mirror/fact/strike/trades"' in page
+    assert 'href="/mirror/fact/risk/trades"' in page
 
 
 def test_the_count_says_how_many_of_how_many(uploaded):
-    assert "1 of 6 trades." in text(strike_list(uploaded, "?year=2025"))
-    assert "6 trades." in text(strike_list(uploaded))
+    assert "1 of 6 trades." in text(every_trade(uploaded, "?year=2025"))
+    assert "6 trades." in text(every_trade(uploaded))
 
 
 def test_the_form_keeps_what_was_chosen(uploaded):
-    page = strike_list(uploaded, "?result=losers")
+    page = every_trade(uploaded, "?result=losers")
     assert '<option value="losers" selected>Losers</option>' in page
 
 
 def test_the_form_offers_all_six_filters_when_each_has_a_choice(uploaded):
-    page = strike_list(uploaded)
+    page = every_trade(uploaded)
     for name in ("book", "result", "price", "dte", "hour", "year"):
         assert f'name="{name}"' in page
 
@@ -405,7 +406,7 @@ def test_a_link_can_arrive_with_a_filter_already_chosen():
 
 
 def test_a_holding_stays_out_of_the_same_day_lists(uploaded):
-    for key in ("hold", "clock"):
+    for key in ("hold", "strike", "clock"):
         page = uploaded.get(f"/mirror/fact/{key}/trades").text
         assert not any(a.startswith("Widget ETF") for a in articles(page)), key
 

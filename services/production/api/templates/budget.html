@@ -8,6 +8,7 @@
   <p class="label label--plain">Your account</p>
   <h1 class="title">What you risk</h1>
   <p class="lead">How much are you willing to lose on a single trade?</p>
+  {% if sizes is defined %}{% include "_loss_sizes.html" %}{% endif %}
   {%- if error %}
   <p class="field__error field__error--block" role="alert">{{ error }}</p>
   {%- endif %}

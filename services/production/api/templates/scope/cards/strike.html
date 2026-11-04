@@ -2,6 +2,8 @@
 {% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
   {%- if not f.state %}
   <span class="mirror mirror--card">Your strike rate was <span class="num">{{ strike.rate_percent }}</span>% — <span class="num">{{ strike.wins|count }}</span> winners against <span class="num">{{ strike.losses|count }}</span> losers.{% if strike.scratches %} <span class="num">{{ strike.scratches|count }}</span> trades finished level and are in neither count.{% endif %}</span>
+  {% if break_even.percent is not none %}<span class="mirror mirror--card">Your average winner was {{ break_even.average_winner|rupees(signed=false) }} and your average loser {{ break_even.average_loser|rupees(signed=false) }}. At those sizes, break-even is a strike rate of <span class="num">{{ break_even.percent }}</span>%.</span>{% endif %}
+  {% if f.held.count %}<span class="mirror mirror--card">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</span>{% endif %}
   <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Winners {{ strike.wins|count }}</span><span><span class="legend__swatch legend__swatch--faint"></span>Losers {{ strike.losses|count }}</span><span>Level {{ strike.scratches|count }}</span></span></span>
   {%- endif %}
 {% endcall %}
