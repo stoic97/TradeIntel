@@ -76,3 +76,10 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .home__book, .home__chapter { padding: var(--space-3) 0; border-top: 1px solid var(--color-hairline); }
 .home__book-head { display: flex; justify-content: space-between; gap: var(--space-3); }
 .home__chapter--read .label { color: var(--color-muted); }
+
+/* Home after sign-in: the verdict on the card, and why each day is worth a look. */
+.scope-card__verdict { display: block; margin-top: 10px; font-size: var(--font-size-title, 1.5rem); line-height: 1.25; }
+.scope-card__verdict .num { color: inherit; }
+.scope-card__split { display: grid; gap: var(--space-1); margin-top: var(--space-3); }
+.scope-card__split .num { color: inherit; }
+.latest__when .body-small { display: block; }

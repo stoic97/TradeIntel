@@ -97,7 +97,7 @@ def _readable(page: str) -> str:
 
 def _home_row(client) -> str:
     text = _readable(client.get("/").text)
-    return text[text.index("Latest Journals"):text.index("Upload new trades")]
+    return text[text.index("Days worth a look"):text.index("Upload new trades")]
 
 
 def test_one_upload_shows_each_trade_once(engine, client):
