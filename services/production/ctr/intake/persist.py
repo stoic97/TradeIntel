@@ -143,7 +143,8 @@ def write_plan(
         rows_excluded=plan.rows_excluded,
         fees_available=plan.fees_available,
         partial_fields=json.dumps(list(plan.missing_fields)),
-        trips_reconstructed=len(plan.trips),
+        # Trades as the record reads them: a spread's legs are one (TICKET-788).
+        trips_reconstructed=len(plan.positions),
         trips_refused=len(plan.skipped),
         density_default_unit=plan.density_default_unit,
         version_no=version_no,
