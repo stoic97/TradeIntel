@@ -139,7 +139,7 @@ GROUP = {
             "day": "07 Sep",
             "time_in": "09:20",
             "time_out": "09:50",
-            "held_minutes": 30,
+            "held_seconds": 1800,
             "net": -2000,
             "fill_minutes": [0, 5, 30],
             "fills": [
@@ -154,7 +154,7 @@ GROUP = {
             "day": "07 Sep",
             "time_in": "10:00",
             "time_out": "10:10",
-            "held_minutes": 10,
+            "held_seconds": 600,
             "net": 500,
             "fill_minutes": [0, 10],
             "fills": [
@@ -174,7 +174,7 @@ def as_the_kit_gives_it(group: dict) -> dict:
         "trades": [
             {
                 **t,
-                "held_minutes": F.count(t["held_minutes"]),
+                "held_minutes": F.minutes(t["held_seconds"]),
                 "net": F.rupees(t["net"]),
                 "net_tone": F.tone(t["net"]),
                 "strip": dial.strip(t["fill_minutes"]),

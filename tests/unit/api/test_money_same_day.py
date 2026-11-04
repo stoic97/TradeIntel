@@ -66,9 +66,10 @@ def test_every_held_position_is_listed_among_the_trades_behind_the_fact():
     assert len(ids) == 14  # five best and five worst, none shared, and four held
 
 
-def test_the_figure_counts_the_trades_listed():
+def test_the_figure_is_the_same_day_result_not_a_count():
+    """By hand in expected_held_past_day.json: the same-day trades come to +200."""
     figs = SF.facts(SF.record_context(HELD), IMP)
-    assert figs["money"]["figure"] == "14 trades"
+    assert figs["money"]["figure"] == "+₹200"
 
 
 def test_a_history_of_only_held_positions_draws_no_empty_table():

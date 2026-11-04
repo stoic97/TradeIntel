@@ -100,7 +100,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     share, h = CTX["share"], CTX["holding"]
     assert FIGS["worst-days"]["figure"] == formatting.rupees(CTX["worst_days"].sum)
     assert FIGS["share"]["figure"] == f"{share.share_percent}%"
-    assert FIGS["money"]["figure"] == "10 trades"
+    assert FIGS["money"]["figure"] == formatting.rupees(CTX["money_found"].same_day_net)
     assert FIGS["hold"]["figure"] == (
         f"{formatting.minutes(h.winners_median_seconds)} · "
         f"{formatting.minutes(h.losers_median_seconds)} min"
