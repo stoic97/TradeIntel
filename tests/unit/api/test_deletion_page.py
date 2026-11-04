@@ -121,3 +121,17 @@ def test_it_needs_signing_in(engine):
     anonymous = TestClient(create_app())
     assert anonymous.get("/account/delete",
                          follow_redirects=False).status_code in (302, 303)
+
+
+def test_the_account_page_links_to_delete_everything(client):
+    """[TICKET-802] The upload page promises deletion, and nothing led to this page."""
+    assert (
+        '<a class="settings-row" href="/account/delete"><span class="body">'
+        "Delete everything</span>"
+    ) in client.get("/account").text
+
+
+def test_the_way_to_delete_is_reachable_from_the_upload_page_promise(client):
+    """The promise and the way to keep it are one tap from the bottom nav apart."""
+    assert "You can delete it at any time." in client.get("/upload").text
+    assert "/account/delete" in client.get("/account").text
