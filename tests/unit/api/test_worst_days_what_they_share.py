@@ -169,7 +169,7 @@ def test_nothing_shared_leads_with_the_rupees():
              *_day("2025-03-05", "13:00", [-300], "C"), *_day("2025-03-06", "14:00", [-400], "D"),
              *_day("2025-03-07", "18:00", [-500], "E"), *QUIET]
     html = fact_page("worst-days", trips)
-    assert html.index("num--hero") < html.index("They don&#39;t share a book")
+    assert html.index("num--hero") < html.index("They don't share a book")
 
 
 def test_the_page_no_longer_draws_the_daily_bars_or_the_table():

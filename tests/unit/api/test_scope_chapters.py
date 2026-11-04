@@ -121,7 +121,7 @@ def test_every_fact_counts_the_trades_behind_it(key):
 
 
 def test_on_the_fixture_every_fact_is_counted():
-    assert {k: f["state"] for k, f in FIGS.items()} == dict.fromkeys(S.FACTS, "")
+    assert {k: f["state"] for k, f in FIGS.items()} == dict.fromkeys(S.FIGURES, "")
 
 
 # ---------- States: never hidden, never an all-clear ----------
