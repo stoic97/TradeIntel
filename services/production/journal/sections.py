@@ -20,6 +20,7 @@ float decides no trader-facing number (ctr_v1 6.5).
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -52,6 +53,10 @@ def own_facts(facts: dict[str, Any]) -> dict[str, Any]:
         for name, body in facts.items()
     }
 
+def _days_held(trip: Trip) -> int:
+    """Calendar days from the date it opened to the date it closed."""
+    return (trip.exit_ts.date() - date.fromisoformat(trip.trading_day)).days
+
 
 def build(
     period: Period,
@@ -81,7 +86,7 @@ def build(
 
     hours = sorted({t.entry_ts.hour for t in trips})
 
-    return {
+    facts: dict[str, Any] = {
         "period": {
             "unit": period.unit.value,
             "start": period.period_start,
@@ -97,7 +102,12 @@ def build(
             "scratches": scratches,
             "first_hour": hours[0] if hours else None,
             "last_hour": hours[-1] if hours else None,
-            "all_before_noon": bool(hours) and hours[-1] < 12,
+            # Exits count too: entry hours alone called a month-long position a morning
+            # trade (TICKET-800).
+            "all_before_noon": bool(trips) and all(
+                t.closed_same_day and t.entry_ts.hour < 12 and t.exit_ts.hour < 12
+                for t in trips
+            ),
         },
         "against_your_normal": {
             "trades_today": len(trips),
@@ -122,3 +132,15 @@ def build(
             "said_before": planned_sl_said_before,
         },
     }
+    # Only on a day with a held trade. A Journal gets a new version when its facts differ,
+    # so a key on every day would rewrite every Journal at the next upload.
+    held = [t for t in trips if not t.closed_same_day]
+    if held:
+        longest = max(held, key=_days_held)
+        facts["held"] = {
+            "count": len(held),
+            "opened": longest.trading_day,
+            "closed": longest.exit_ts.date().isoformat(),
+            "days": _days_held(longest),
+        }
+    return facts
