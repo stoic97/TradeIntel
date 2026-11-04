@@ -207,6 +207,9 @@ class Trip(Base, _InsertOnly):
     is a position of its own, which is every trip of an import made before Annex H."""
     option_type: Mapped[str | None] = mapped_column(String(2))
     strike: Mapped[Decimal | None] = mapped_column(DecimalText)
+    uncapped: Mapped[bool | None] = mapped_column(Boolean)
+    """Whether its position can lose without limit. Kept apart from risk_unit_source, which
+    says what it is measured against: a budget changes that, and does not cap the loss."""
     occurrence: Mapped[int] = mapped_column(Integer, default=1)
     """Which occurrence of an identical trip this is, within one import.
 

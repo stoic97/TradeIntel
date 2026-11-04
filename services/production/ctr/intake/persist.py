@@ -188,6 +188,7 @@ def write_plan(
                 position_id=position.position_id if multi_leg else None,
                 option_type=trip.option_type.value if trip.option_type else None,
                 strike=trip.strike,
+                uncapped=(position or trip).risk_unit_source.value == "UNCAPPED",
                 # The stored timestamp's own date. Correct while every profile is
                 # IST (MCX, NSE); for a non-IST instrument the trading day must come
                 # from the profile's timezone, as the plan already computes it for

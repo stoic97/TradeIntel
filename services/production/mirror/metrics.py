@@ -55,6 +55,7 @@ class Trip:
     risk_unit_source: s.RiskUnitSourceV1
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
+    uncapped: bool = False  # can lose without limit, whatever it is measured against
 
     @property
     def is_win(self) -> bool:

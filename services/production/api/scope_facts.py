@@ -250,6 +250,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
     out["risk"]["structure"] = c[s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS]
     out["risk"]["uncapped"] = c[s.RiskUnitSourceV1.UNCAPPED]
+    out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     hours = ctx["hours"]
     out["clock"].update(
         first_hour=f"{hours[0].hour:02d}" if hours else "",

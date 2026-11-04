@@ -193,7 +193,7 @@ def test_a_budget_measures_the_naked_sale_and_it_still_reads_uncapped(uploaded, 
     assert "· Uncapped" in text(uploaded.get("/mirror/fact/risk").text)
 
 
-def test_a_budget_leaves_the_plain_words_in_place(uploaded):  # noqa: F811
+def test_a_budget_leaves_the_plain_words_in_place(uploaded):
     declare_a_budget(uploaded)
     page = text(uploaded.get("/mirror/fact/risk").text)
     assert "1 trade was a sold option with no cap on its loss" in page

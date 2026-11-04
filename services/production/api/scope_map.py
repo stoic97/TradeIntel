@@ -234,5 +234,5 @@ def trade(t: mx.Trip, number: int) -> dict:
         "fill_minutes": [0, t.holding_seconds / 60],
         "fills": [],
         "legs": t.legs,
-        "uncapped": t.risk_unit_source is s.RiskUnitSourceV1.UNCAPPED,
+        "uncapped": t.uncapped,
     }

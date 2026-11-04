@@ -216,5 +216,6 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             risk_unit_source=_measured_against(first, trading_day, declarations),
             is_option=first.segment == "OPT",
             legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
+            uncapped=any(leg.uncapped for leg in legs),
         ))
     return trips, imp
