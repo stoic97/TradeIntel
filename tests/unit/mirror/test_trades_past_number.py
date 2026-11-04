@@ -365,7 +365,7 @@ def test_with_a_number_recorded_the_page_goes_on_to_the_record(client, engine):
 def test_the_budget_page_says_its_rupees_are_gross_when_the_file_has_no_charges(client, engine):
     add_history(engine)
     record(client)
-    assert "every rupee figure below is gross" in client.get("/budget").text
+    assert "so these losses are gross — before brokerage and taxes." in client.get("/budget").text
 
 
 def test_a_correction_on_the_same_date_replaces_the_number(client, engine):

@@ -18,6 +18,9 @@ the history he uploaded.
 
 Declarations are never edited. A new number is a new row, so October's trips keep
 October's -- the lookup is by the declaration in force at each trip's entry.
+
+Once there is a number, this page says how many of his trades lost more than it
+(TICKET-831). metrics.py decides that count and the risk fact reads the same function.
 """
 
 from __future__ import annotations
@@ -32,9 +35,11 @@ from sqlalchemy import select
 
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 
 router = APIRouter()
 
@@ -70,6 +75,30 @@ def _default_from(sess, trader: m.Trader) -> str:
     return loader.first_trading_day(sess, trader) or _today().isoformat()
 
 
+def _form_context(sess, trader: m.Trader) -> dict:
+    """What the page reads, and the count once there is a number and a file to count from.
+
+    A file the record cannot be read from leaves no count, not a broken form: the Mirror
+    says what is wrong with the file.
+    """
+    declarations = _history(sess, trader)
+    context = {
+        "declarations": declarations,
+        "today": _today().isoformat(),
+        "default_from": _default_from(sess, trader),
+        "past_number": None,
+        "imp": None,
+    }
+    if declarations:
+        try:
+            trips, imp = loader.load_for(sess, trader)
+        except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
+            return context
+        if trips:
+            context.update(past_number=mx.trades_past_number(trips), imp=imp)
+    return context
+
+
 @router.get("/budget", response_class=HTMLResponse)
 def budget_form(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -78,10 +107,7 @@ def budget_form(request: Request):
             return RedirectResponse("/login", status_code=303)
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
-        return page(request, "budget.html", title="What you risk",
-                    declarations=_history(sess, trader),
-                    today=_today().isoformat(),
-                    default_from=_default_from(sess, trader))
+        return page(request, "budget.html", title="What you risk", **_form_context(sess, trader))
 
 
 @router.post("/budget")
@@ -105,10 +131,7 @@ def budget_submit(
 
         def refuse(message: str) -> HTMLResponse:
             return page(request, "budget.html", status_code=400,
-                        title="What you risk", error=message,
-                        declarations=_history(sess, trader),
-                        today=_today().isoformat(),
-                        default_from=_default_from(sess, trader))
+                        title="What you risk", error=message, **_form_context(sess, trader))
 
         try:
             amount = Decimal(value)
@@ -152,6 +175,6 @@ def budget_submit(
             retrospective=effective < _today(),
         ))
         sess.commit()
-    # The one number comes straight after the reveal (TR-008). Recorded, the journey
-    # goes on to the Scope; its history stays on this page.
-    return RedirectResponse("/mirror", status_code=303)
+    # The one number comes straight after the reveal (TR-008). Recorded, it lands back
+    # here to show what it counts (TICKET-831), and the page links on to the Scope.
+    return RedirectResponse("/budget", status_code=303)
