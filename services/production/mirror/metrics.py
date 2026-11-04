@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from math import ceil
 from statistics import median
 from typing import Any
 
@@ -56,6 +57,7 @@ class Trip:
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
     uncapped: bool = False  # can lose without limit, whatever it is measured against
+    premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
 
     @property
     def is_win(self) -> bool:
@@ -490,6 +492,65 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
         length=len(best), trip_ids=[t.trip_id for t in best],
         crosses_days=len(days) > 1, days=days,
         state=s.ResultState.COUNTED_FACT if best else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+LOSS_SIZES_MINIMUM = 20
+"""Below this, "one in twenty" is not something the file can say."""
+
+
+@dataclass(frozen=True)
+class LossSizes:
+    """A trader's losses by size, in whole rupees. Describes them and suggests nothing."""
+
+    half: int
+    three_quarters: int
+    nine_tenths: int
+    one_in_twenty: int
+    biggest: int
+
+
+def loss_sizes(trips: list[Trip]) -> LossSizes | None:
+    """Read off the ranked losses. "Or less" rounds up, "more than" down, so both stay true."""
+    losses = sorted(-t.net for t in trips if t.is_loss)
+    if len(losses) < LOSS_SIZES_MINIMUM:
+        return None
+
+    def at(share: Decimal) -> Decimal:
+        return losses[ceil(share * len(losses)) - 1]
+
+    def up(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_CEILING))
+
+    def down(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_FLOOR))
+
+    return LossSizes(
+        half=up(at(Decimal("0.5"))),
+        three_quarters=up(at(Decimal("0.75"))),
+        nine_tenths=up(at(Decimal("0.9"))),
+        one_in_twenty=down(at(Decimal("0.95"))),
+        biggest=up(losses[-1]),
+    )
+
+
+@dataclass(frozen=True)
+class PremiumPaid:
+    """What a typical bought option cost, and how much of it a typical result was."""
+
+    paid: Decimal
+    percent: int
+
+
+def premium_paid(trips: list[Trip]) -> PremiumPaid | None:
+    """Medians, on bought options. Recorded for reading, never a denominator for a figure."""
+    options = [t for t in trips if t.is_option and t.premium]
+    results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
+    if len(results) < LOSS_SIZES_MINIMUM:
+        return None
+    return PremiumPaid(
+        paid=median(t.premium for t in options),
+        percent=int(median(results).to_integral_value()),
     )
 
 

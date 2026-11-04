@@ -62,6 +62,8 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
+        "loss_sizes": mx.loss_sizes(same_day),
+        "premium_paid": mx.premium_paid(same_day),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -252,6 +254,9 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
+    out["risk"]["sizes"] = ctx["loss_sizes"]
+    out["risk"]["premium"] = ctx["premium_paid"]
+    out["risk"]["no_budget"] = c[s.RiskUnitSourceV1.DECLARED_BUDGET] == 0
     out["risk"]["structure"] = c[s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS]
     out["risk"]["uncapped"] = c[s.RiskUnitSourceV1.UNCAPPED]
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it

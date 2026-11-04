@@ -89,18 +89,21 @@ def test_it_goes_on_to_the_last_fact():
     assert 'href="/mirror/fact/not-told"' in fact_page("risk", budget())
 
 
-def test_the_fact_page_uses_the_new_label():
-    page = readable(fact_page("risk", premium()))
+def test_the_table_uses_the_new_label():
+    """The table shows once something can be measured against. No stop or budget hides it."""
+    page = readable(fact_page("risk", budget()))
     assert LABEL in page and OLD_LABEL not in page
 
 
 def test_the_card_uses_the_new_label():
-    page = readable(chapter_page(4, premium()))
+    page = readable(chapter_page(4, budget()))
     assert LABEL in page and OLD_LABEL not in page
 
 
 def test_the_trade_group_uses_the_new_label():
-    assert OLD_LABEL not in readable(fact_page("risk", premium()))
+    """Where it shows on a file with no stop and no budget."""
+    page = readable(fact_page("risk", nothing()))
+    assert LABEL in page and OLD_LABEL not in page
 
 
 def test_the_budget_page_shows_the_guide(client, engine, monkeypatch):  # noqa: F811
