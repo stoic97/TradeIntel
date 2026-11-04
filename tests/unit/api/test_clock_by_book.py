@@ -98,6 +98,17 @@ def test_an_hour_in_two_books_stays_two_hours():
     assert (cell(OIL, 18).trips, cell(IDX, 18).trips) == (29, 29)
 
 
+def test_thirds_of_a_fill_add_back_to_the_rupee_they_came_from():
+    """A fill split across parcels is exact only to Decimal's precision. Three thirds of -100
+    sum to -99.99...9, and the whole-rupee cut would print a rupee less than the broker's."""
+    third = Decimal(-100) / 3
+    base = [t for t in TRIPS if t.symbol == "WIDGETOIL" and t.entry_ts.hour == 18][:3]
+    book = mx.clocks_by_book([replace(t, net=third) for t in base])[0]
+    assert book.hours[0].net == Decimal(-100)
+    assert book.net == Decimal(-100)
+    assert book.hours[0].per_trade == Decimal(-100) / 3
+
+
 def test_the_held_position_is_on_no_clock():
     assert sum(c.trips for c in CTX["clocks"]) == len(mx.same_day_trips(TRIPS)) == 197
     assert cell(IDX, 10).net == Decimal(3000)
@@ -245,7 +256,7 @@ def test_per_trade_shows_at_any_count_and_win_rate_does_not():
 
 def test_an_hidden_win_rate_is_a_dash_not_a_zero():
     page = fact_page("clock", TRIPS)
-    first = page.index("18:00")
+    first = page.index("18:00</a>")
     assert ">—<" in page[first : page.index("</tr>", first)]
 
 
