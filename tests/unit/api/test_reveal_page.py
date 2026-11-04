@@ -13,7 +13,7 @@ import pytest
 
 from services.production.api import scope_facts as SF
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import TRIPS, readable, trips_from
+from tests.unit.api.test_scope_chapters import IMP, TRIPS, readable, trips_from
 
 KIT = Path("docs/design/scope-kit/screens/12-reveal.html").read_text()
 CTX = SF.record_context(TRIPS)
@@ -54,6 +54,7 @@ def reveal(trips=TRIPS, guessed="[guess option 3, TR-009]") -> str:
             screen_class="screen--navy on-navy",
             body_class="reveal",
             guessed=guessed,
+            imp=IMP,
             view=SF.reveal_view(ctx),
             worst_href="/mirror/fact/worst-days?enter=lens",
             **ctx,

@@ -169,6 +169,7 @@ def journal_page(request: Request, journal_id: int):
             journal=journal, paragraphs=paragraphs, rows=rows, answers=answers,
             changed_ids=gen.changed_by_upload(sess, trader=trader),
             prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
+            uncounted=imp.trips_refused if imp else 0,
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=wtp.should_ask(sess, trader=trader), wtp_question=wtp.QUESTION,
         )
