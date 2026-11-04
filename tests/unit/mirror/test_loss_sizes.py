@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 from decimal import Decimal
+from types import SimpleNamespace
 
+from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 from tests.unit.api.test_scope_chapters import trips_from
 
@@ -38,28 +40,78 @@ def test_or_less_rounds_up_so_it_stays_true():
     assert mx.loss_sizes(trips).half == 101
 
 
-def _option(net, premium=1000):
-    return replace(trips_from([net])[0], is_option=True, premium=Decimal(premium))
+def _option(net, symbol="NIFTY", premium=1000):
+    return replace(trips_from([net])[0], symbol=symbol, is_option=True, premium=Decimal(premium))
+
+
+def _book(symbol, results, premium=1000):
+    """Results of 30, 40 and 50 on a premium of 1,000: the median share is 4%."""
+    return [_option(n, symbol, premium) for n in results * 4]
+
+
+NIFTY = _book("NIFTY", [30, -40, 50, -30, 40, -50])
 
 
 def test_a_typical_option_cost_and_its_share():
-    """Premium 1,000 each. Results of 30, 40 and 50 either way: the median share is 4%."""
-    trips = [_option(n) for n in [30, -40, 50, -30, 40, -50] * 4]
-    read = mx.premium_paid(trips)
-    assert (read.paid, read.percent) == (1000, 4)
+    read = mx.premium_by_book(NIFTY)
+    assert [(r.book, r.paid, r.percent) for r in read] == [("NIFTY", 1000, 4)]
+
+
+def test_each_book_is_read_on_its_own():
+    """A blend of 1,000 and 3,000 would describe neither book."""
+    crude = _book("CRUDEOIL", [60, -90, 120, -60, 90, -120], premium=3000)
+    read = {r.book: (r.paid, r.percent) for r in mx.premium_by_book([*NIFTY, *crude])}
+    assert read == {"NIFTY": (1000, 4), "crude": (3000, 3)}
+
+
+def test_the_crude_contracts_are_one_book():
+    trips = _book("CRUDEOIL", [30, -40]) + _book("CRUDEOILM", [50, -30]) + _book("CRUDEOIL", [40, -50])
+    assert [(r.book, r.percent) for r in mx.premium_by_book(trips)] == [("crude", 4)]
+
+
+def test_the_biggest_book_comes_first():
+    small = _option(40, "BANKNIFTY")
+    trips = [*[small] * 20, *NIFTY]
+    assert [r.book for r in mx.premium_by_book(trips)] == ["NIFTY", "BANKNIFTY"]
+
+
+def test_a_book_with_too_few_trades_is_left_out_and_not_pooled():
+    trips = [*NIFTY, *[_option(40, "SENSEX")] * 19, *[_option(40, "GOLDM")] * 19]
+    assert [r.book for r in mx.premium_by_book(trips)] == ["NIFTY"]
 
 
 def test_only_bought_options_with_a_premium_are_read():
-    options = [_option(n) for n in [30, -40, 50, -30, 40, -50] * 4]
-    shares = [replace(trips_from([500])[0], is_option=False)]
-    no_premium = [replace(trips_from([500])[0], is_option=True, premium=None)]
-    assert mx.premium_paid([*options, *shares, *no_premium]) == mx.premium_paid(options)
+    shares = [replace(trips_from([500])[0], is_option=False, symbol="NIFTY")]
+    no_premium = [replace(trips_from([500])[0], is_option=True, premium=None, symbol="NIFTY")]
+    assert mx.premium_by_book([*NIFTY, *shares, *no_premium]) == mx.premium_by_book(NIFTY)
 
 
 def test_a_level_trade_does_not_pull_the_share_down():
-    options = [_option(n) for n in [30, -40, 50, -30, 40, -50] * 4]
-    assert mx.premium_paid([*options, _option(0), _option(0)]).percent == 4
+    assert mx.premium_by_book([*NIFTY, _option(0), _option(0)])[0].percent == 4
 
 
-def test_too_few_options_say_nothing():
-    assert mx.premium_paid([_option(40)] * 19) is None
+def test_no_book_has_enough():
+    assert mx.premium_by_book([_option(40)] * 19) == []
+
+
+def _leg(segment="OPT", direction="LONG", price=10, quantity=65):
+    return SimpleNamespace(
+        segment=segment, direction=direction, entry_price=Decimal(price), quantity=quantity
+    )
+
+
+def test_one_bought_option_has_a_premium():
+    assert loader._premium([_leg()]) == Decimal(650)
+
+
+def test_a_sold_option_has_none():
+    assert loader._premium([_leg(direction="SHORT")]) is None
+
+
+def test_shares_have_none():
+    assert loader._premium([_leg(segment="EQ")]) is None
+
+
+def test_a_spread_has_none():
+    """Its cost is the two legs together, which isn't a premium paid."""
+    assert loader._premium([_leg(), _leg(direction="SHORT")]) is None

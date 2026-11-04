@@ -23,7 +23,7 @@ GUIDE = (
 )
 LABEL = "Stocks, ETFs and futures: no premium to measure against"
 OLD_LABEL = "Nothing we could use"
-PAID = "On a typical option trade you paid ₹1,000, and made or lost about 4% of it."
+PAID = "On a typical WIDGETOIL trade you paid ₹1,000, and made or lost about 4% of it."
 MEANT = "What you meant to risk is where you'd have exited, and that isn't in your file."
 
 
@@ -49,6 +49,21 @@ def budget():
 
 def test_it_says_what_an_option_cost():
     assert PAID in readable(fact_page("risk", nothing()))
+
+
+def test_each_book_gets_its_own_line():
+    nifty = [
+        replace(t, symbol="NIFTY", is_option=True, premium=Decimal(1000))
+        for t in trips_from([30, -40, 50, -30, 40, -50] * 5)
+    ]
+    crude = [
+        replace(t, symbol="CRUDEOIL", is_option=True, premium=Decimal(3000))
+        for t in trips_from([60, -90, 120, -60, 90, -120] * 4)
+    ]
+    page = readable(fact_page("risk", [*nifty, *crude]))
+    assert "On a typical NIFTY trade you paid ₹1,000, and made or lost about 4% of it." in page
+    assert "On a typical crude trade you paid ₹3,000, and made or lost about 3% of it." in page
+    assert page.index("typical NIFTY") < page.index("typical crude")
 
 
 def test_it_says_what_is_not_in_the_file():
@@ -78,6 +93,9 @@ def test_the_guide_suggests_no_number():
 
 def test_with_no_budget_it_offers_to_set_one():
     assert '<a class="link" href="/budget">Set your number</a>' in fact_page("risk", premium())
+    assert "Set your number: how much you're willing to lose on one trade." in readable(
+        fact_page("risk", premium())
+    )
 
 
 def test_with_a_budget_it_does_not():
