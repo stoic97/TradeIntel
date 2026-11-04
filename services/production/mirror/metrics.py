@@ -384,20 +384,6 @@ def held_past_day(trips: list[Trip]) -> HeldPastDay:
     return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
 
 
-def trade_book(trip: Trip) -> str:
-    """The book a trade belongs to, in a trader's own words: one definition (TICKET-822).
-
-    An option is its underlying's, with crude's two contracts as one. A share or an ETF is
-    in one book with the other shares and ETFs, held or not; a future is in Futures.
-    """
-    if trip.is_option:
-        book = book_of(trip.symbol)
-        return "Crude options" if book == "crude" else f"{book} options"
-    if trip.lines and trip.lines[0].segment == "EQ":
-        return "Stocks and ETFs"
-    return "Futures"
-
-
 def best_five(trips: list[Trip]) -> list[Trip]:
     """Highest net, descending. Ties: earlier entry first. No winsorising."""
     return sorted(trips, key=lambda t: (-t.net, t.entry_ts))[:5]
@@ -619,6 +605,20 @@ def loss_sizes(trips: list[Trip]) -> LossSizes | None:
 def book_of(symbol: str) -> str:
     """The book a trade belongs to. CRUDEOIL and CRUDEOILM are one book to a trader."""
     return "crude" if symbol.startswith("CRUDE") else symbol
+
+
+def trade_book(trip: Trip) -> str:
+    """The book a trade belongs to, in a trader's own words: one definition (TICKET-822).
+
+    An option is its underlying's, with crude's two contracts as one. A share or an ETF is
+    in one book with the other shares and ETFs, held or not; a future is in Futures.
+    """
+    if trip.is_option:
+        book = book_of(trip.symbol)
+        return "Crude options" if book == "crude" else f"{book} options"
+    if trip.lines and trip.lines[0].segment == "EQ":
+        return "Stocks and ETFs"
+    return "Futures"
 
 
 @dataclass(frozen=True)
