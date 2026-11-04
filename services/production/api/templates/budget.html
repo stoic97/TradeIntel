@@ -19,7 +19,7 @@
       <label class="choice"><input class="choice__input" type="radio" name="unit" value="PCT"><span class="body">per cent of my trading capital</span></label>
     </fieldset>
     <label class="field"><span class="field__label">Your trading capital, in rupees</span><input class="field__input field__input--mono" id="capital_amount" name="capital_amount" inputmode="decimal"><span class="field__hint">Only needed if you answered in per cent.</span></label>
-    <label class="field"><span class="field__label">Has that been your number for the whole history you uploaded? If it changed, from when?</span><input class="field__input field__input--mono" type="date" id="effective_from" name="effective_from" max="{{ today }}" value="{{ today }}" required><span class="field__hint">Trades before this date keep whatever number was in force then. Set an earlier date if this has been your number all along.</span></label>
+    <label class="field"><span class="field__label">Has that been your number for the whole history you uploaded? If it changed, from when?</span><input class="field__input field__input--mono" type="date" id="effective_from" name="effective_from" max="{{ today }}" value="{{ default_from }}" required><span class="field__hint">Trades before this date keep whatever number was in force then. Set an earlier date if this has been your number all along.</span></label>
     <div class="screen__actions">
       {{ button("Record it", block=true) }}
       {{ button("Next: what we can and cannot check on your history", href="/eligibility", kind="text") }}

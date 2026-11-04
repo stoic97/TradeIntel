@@ -34,6 +34,7 @@ from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.db import models as m
 from services.production.db.session import make_session
+from services.production.mirror import loader
 
 router = APIRouter()
 
@@ -60,6 +61,15 @@ def _history(sess, trader: m.Trader) -> list[m.RiskBudgetDeclaration]:
     ).all())
 
 
+def _default_from(sess, trader: m.Trader) -> str:
+    """Where the date starts: the first day he uploaded, today if there is none.
+
+    Starting at today would date the number after every trade in the history, so it
+    would apply to none of them and nothing would say so.
+    """
+    return loader.first_trading_day(sess, trader) or _today().isoformat()
+
+
 @router.get("/budget", response_class=HTMLResponse)
 def budget_form(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -70,7 +80,8 @@ def budget_form(request: Request):
             return RedirectResponse("/consent", status_code=303)
         return page(request, "budget.html", title="What you risk",
                     declarations=_history(sess, trader),
-                    today=_today().isoformat())
+                    today=_today().isoformat(),
+                    default_from=_default_from(sess, trader))
 
 
 @router.post("/budget")
@@ -96,7 +107,8 @@ def budget_submit(
             return page(request, "budget.html", status_code=400,
                         title="What you risk", error=message,
                         declarations=_history(sess, trader),
-                        today=_today().isoformat())
+                        today=_today().isoformat(),
+                        default_from=_default_from(sess, trader))
 
         try:
             amount = Decimal(value)
