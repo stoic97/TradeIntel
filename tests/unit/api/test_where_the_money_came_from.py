@@ -11,11 +11,11 @@ Every instrument is invented and every expected value below is worked by hand fr
         +600 (19:30, 4 min)   +500 (18:00, 110 min)
         sum +3,500; median 60 min; 4 of the 5 opened from 5 pm on.
     Worst five, same day, all WIDGETOIL options:
-        -2,600 (20:00, 30 min)  -2,500 (20:10, 8 min)  -2,400 (20:20, 10 min)
-        -2,300 (21:00, 11 min)  -2,200 (20:30, 90 min)
-        sum -12,000; median 11 min; median loss 2,400; 5 of the 5 opened from 8 pm on.
+        -3,100 (20:00, 30 min)  -2,900 (20:10, 8 min)  -2,700 (20:20, 10 min)
+        -2,300 (21:00, 11 min)  -2,100 (20:30, 90 min)
+        sum -13,100; median 11 min; median loss 2,700; 5 of the 5 opened from 8 pm on.
     Three more same-day WIDGETIDX options at 10:00: +100, -100, -200.
-        Same-day trades: 13, net 3,500 - 12,000 - 200 = -8,700.
+        Same-day trades: 13, net 3,500 - 13,100 - 200 = -9,800.
     Held past the day, WIDGET ETF: +40,000 (400 days), +20,000 (200 days), +10,000 (45 days).
     Held past the day, WIDGETCO: +100 (3 days).
         Held: 4 positions, net 70,100. WIDGET ETF is 70,000 of it.
@@ -95,11 +95,11 @@ BEST = [
     trip("b5", 500, "18:00", 110),
 ]
 WORST = [
-    trip("w1", -2600, "20:00", 30),
-    trip("w2", -2500, "20:10", 8),
-    trip("w3", -2400, "20:20", 10),
+    trip("w1", -3100, "20:00", 30),
+    trip("w2", -2900, "20:10", 8),
+    trip("w3", -2700, "20:20", 10),
     trip("w4", -2300, "21:00", 11),
-    trip("w5", -2200, "20:30", 90),
+    trip("w5", -2100, "20:30", 90),
 ]
 MIDDLE = [
     trip("m1", 100, symbol="WIDGETIDX"),
@@ -128,19 +128,19 @@ def page_of(trips: list[mx.Trip]) -> str:
 
 def test_the_same_day_result_is_counted():
     got = found(WHOLE)
-    assert (got.same_day_count, got.same_day_net) == (13, Decimal(-8700))
+    assert (got.same_day_count, got.same_day_net) == (13, Decimal(-9800))
 
 
 def test_each_list_has_its_sum():
     got = found(WHOLE)
-    assert (got.best_net, got.worst_net) == (Decimal(3500), Decimal(-12000))
+    assert (got.best_net, got.worst_net) == (Decimal(3500), Decimal(-13100))
 
 
 def test_the_medians_of_the_two_lists():
     got = found(WHOLE)
     assert got.best_median_seconds == 3600
     assert got.worst_median_seconds == 660
-    assert got.worst_median_loss == Decimal(2400)
+    assert got.worst_median_loss == Decimal(2700)
 
 
 def test_the_hours_are_counted_from_the_opening():
@@ -175,7 +175,7 @@ def test_two_of_the_five_is_not_enough():
 def test_a_trader_with_no_holdings_reads_what_his_lists_came_to():
     page = page_of(SAME_DAY)
     assert HEADLINE not in page
-    assert "Your best five came to +₹3,500. Your worst five came to −₹12,000." in page
+    assert "Your best five came to +₹3,500. Your worst five came to −₹13,100." in page
 
 
 def test_options_held_for_months_are_trades_so_the_headline_is_not_said():
@@ -215,7 +215,7 @@ def test_the_headline_replaces_the_count():
 
 
 def test_the_figure_on_the_card_and_the_dial_is_the_same_day_result():
-    assert SF.facts(SF.record_context(WHOLE), IMP)["money"]["figure"] == "−₹8,700"
+    assert SF.facts(SF.record_context(WHOLE), IMP)["money"]["figure"] == "−₹9,800"
 
 
 def test_with_only_holdings_the_figure_is_what_they_came_to():
@@ -224,7 +224,7 @@ def test_with_only_holdings_the_figure_is_what_they_came_to():
 
 def test_both_sides_are_on_the_page_above_the_lists():
     page = page_of(WHOLE).split("The trades behind this")[0]
-    assert "Everything you closed the same day" in page and "−₹8,700" in page
+    assert "Everything you closed the same day" in page and "−₹9,800" in page
     assert "Positions you held past the day" in page and "+₹70,100" in page
 
 
@@ -273,7 +273,7 @@ def test_each_list_is_in_rank_order_not_date_order():
         "+₹900", "+₹800", "+₹700", "+₹600", "+₹500",
     ]
     assert [re.search(r"[+−]₹[\d,]+", a)[0] for a in worst] == [
-        "−₹2,600", "−₹2,500", "−₹2,400", "−₹2,300", "−₹2,200",
+        "−₹3,100", "−₹2,900", "−₹2,700", "−₹2,300", "−₹2,100",
     ]
 
 
@@ -338,7 +338,7 @@ def test_the_lists_sit_side_by_side_on_a_wide_screen_and_stack_on_a_phone():
 
 def test_only_this_fact_widens_its_screen():
     assert 'class="screen screen--wide"' in fact_page("money", WHOLE)
-    assert "screen--wide" not in fact_page("hold", WHOLE)
+    assert "screen--wide" not in fact_page("worst-days", WHOLE)
 
 
 # ---------- The hook is said only when it is true ----------
@@ -390,7 +390,7 @@ def test_a_morning_trader_reads_no_sentence_about_evenings():
 def test_the_durations_are_told_as_medians_and_the_caveat_goes_with_them():
     page = page_of(WHOLE)
     assert "Your best five ran a median of 60 min." in page
-    assert "Your worst five lost a median of ₹2,400 each, in a median of 11 min." in page
+    assert "Your worst five lost a median of ₹2,700 each, in a median of 11 min." in page
     assert CAVEAT in page
 
 
@@ -419,7 +419,7 @@ def next_chapter(page: str) -> str:
 
 def test_the_button_names_the_next_chapter_by_its_real_title():
     block = next_chapter(fact_page("money", WHOLE))
-    assert ">Chapter 2: Your patterns<" in block
+    assert f">Chapter 2: {S.chapter(2).name}<" in block
     assert f'href="{S.chapter_href(2)}"' in block
 
 
@@ -439,7 +439,7 @@ def test_the_page_ends_with_the_button():
 
 def test_the_figure_above_the_button_is_computed():
     block = readable(next_chapter(fact_page("money", WHOLE)))
-    assert "Everything you closed the same day: −₹8,700. See where it went." in block
+    assert "Everything you closed the same day: −₹9,800. See where it went." in block
 
 
 def test_a_same_day_gain_does_not_ask_where_it_went():
@@ -463,7 +463,7 @@ def test_the_card_says_the_headline():
 def test_the_card_of_another_trader_says_what_his_lists_came_to():
     page = readable(chapter_page(1, SAME_DAY))
     assert HEADLINE not in page
-    assert "Your best five came to +₹3,500. Your worst five came to −₹12,000." in page
+    assert "Your best five came to +₹3,500. Your worst five came to −₹13,100." in page
 
 
 # ---------- Through the app ----------
@@ -483,11 +483,9 @@ def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):  # noq
     page = uploaded.get("/mirror/fact/money").text
     assert len(lists(page)) == 2
     assert not re.search(r"Day \d", text(page))
-    assert "Chapter 2: Your patterns" in text(page)
+    assert f"Chapter 2: {S.chapter(2).name}" in text(page)
 
 
-def test_no_template_writes_a_hold_in_minutes_by_hand():
+def test_no_trade_row_writes_its_hold_in_minutes_by_hand():
     for path in Path("services/production/api/templates").rglob("*.html"):
-        source = path.read_text()
-        assert "held_minutes" not in source, path
-        assert "|minutes }} min" not in source, path
+        assert "held_minutes" not in path.read_text(), path

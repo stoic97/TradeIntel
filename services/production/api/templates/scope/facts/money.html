@@ -36,7 +36,7 @@
 {% endblock %}
 {% block lineage %}
   <div class="next-chapter">
-    {% if f.found.same_day_count %}<p class="next-chapter__hook">Everything you closed the same day: {{ f.found.same_day_net|rupees }}.{% if f.found.same_day_net|tone == "loss" %} See where it went.{% endif %}</p>{% endif %}
+    {% if f.found.same_day_count %}<p class="next-chapter__hook">Everything you closed the same day: <span class="next-chapter__figure">{{ f.found.same_day_net|rupees }}</span>.{% if f.found.same_day_net|tone == "loss" %} See where it went.{% endif %}</p>{% endif %}
     {{ button("Chapter " ~ f.next.number ~ ": " ~ f.next.name, f.next.href, block=true) }}
   </div>
 {% endblock %}
