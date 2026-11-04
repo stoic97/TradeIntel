@@ -1,0 +1,5 @@
+{#- The trader's own losses by size, where the question is asked (TICKET-824). It describes
+    and suggests nothing: the number is theirs to choose. -#}
+{%- if sizes %}
+<p class="mirror">Half your losing trades lost {{ sizes.half|rupees(signed=false) }} or less. Three in four {{ sizes.three_quarters|rupees(signed=false) }} or less. Nine in ten {{ sizes.nine_tenths|rupees(signed=false) }} or less. One in twenty lost more than {{ sizes.one_in_twenty|rupees(signed=false) }}. Your biggest: {{ sizes.biggest|rupees(signed=false) }}.</p>
+{%- endif %}

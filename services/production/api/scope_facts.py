@@ -56,12 +56,15 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
         "two_losses": two_losses,
-        "strike": mx.strike_rate(trips),
+        "strike": mx.strike_rate(same_day),
+        "break_even": mx.break_even(same_day),
         "lots": mx.average_lots(trips),
         "holding": mx.holding_time(same_day),
         "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
+        "loss_sizes": mx.loss_sizes(same_day),
+        "premium_paid": mx.premium_by_book(same_day),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -250,8 +253,12 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     ]
     out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
+    out["strike"]["held"] = ctx["held_past_day"]
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
+    out["risk"]["sizes"] = ctx["loss_sizes"]
+    out["risk"]["premium"] = ctx["premium_paid"]
+    out["risk"]["no_budget"] = c[s.RiskUnitSourceV1.DECLARED_BUDGET] == 0
     out["risk"]["structure"] = c[s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS]
     out["risk"]["uncapped"] = c[s.RiskUnitSourceV1.UNCAPPED]
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
