@@ -127,7 +127,7 @@ class FiveWorstDays:
 
 
 @dataclass(frozen=True)
-class ShareOfTotal:
+class ShareOfLosses:
     five_day_sum: Decimal
     total: Decimal
     share_percent: Decimal | None
@@ -135,6 +135,9 @@ class ShareOfTotal:
     other_days_count: int
     other_days_net: Decimal
     state: s.ResultState
+    worst_day_count: int = 0
+    trading_day_count: int = 0
+    days_percent: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -254,39 +257,44 @@ def five_worst_days(trips: list[Trip]) -> FiveWorstDays:
     )
 
 
-def share_of_total(trips: list[Trip]) -> ShareOfTotal:
-    """A percentage only when 0% < share <= 100%; otherwise both figures, no ratio.
+def _whole_percent(part: Decimal, whole: Decimal) -> Decimal:
+    """A whole number, and never 0 for a part that is really there: "about 13%", not 12.87%."""
+    return max(Decimal(1), (part / whole * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
-    Appendix A is strict about this because the alternatives mislead. A -100 total
-    with -500 worst days would read '500% of your result', and a positive total with
-    negative worst days gives a negative percentage -- both arithmetically true and
-    both nonsense to read.
+
+def share_of_losses(trips: list[Trip]) -> ShareOfLosses:
+    """The five worst days' losses as a share of all losing days (definitions 1).
+
+    Never of the net result. Gains and losses cancel in a net, so it has no floor or
+    ceiling: the same five days could read 80%, 930% or a negative number, and a large
+    winning day would move a figure about losses. A history with no losing day has
+    nothing to measure, so it has no percentage and the pages give the rupees alone.
     """
     worst = five_worst_days(trips)
     if worst.state is not s.ResultState.COUNTED_FACT:
-        return ShareOfTotal(Decimal(0), Decimal(0), None, False, 0, Decimal(0),
-                            s.ResultState.INSUFFICIENT_SAMPLE)
+        return ShareOfLosses(Decimal(0), Decimal(0), None, False, 0, Decimal(0),
+                             s.ResultState.INSUFFICIENT_SAMPLE)
 
+    series = daily_series(trips)
     total = sum((t.net for t in trips), Decimal(0))
     worst_days = {d.trading_day for d in worst.days}
     other_trips = [t for t in trips if t.trading_day not in worst_days]
     other_days = {t.trading_day for t in other_trips}
     other_net = sum((t.net for t in other_trips), Decimal(0))
 
-    share = None
-    shown = False
-    if total != 0:
-        candidate = _round(worst.sum / total * 100)
-        if Decimal(0) < candidate <= Decimal(100):
-            share = candidate
-            shown = True
+    all_losses = sum((d.net for d in series if d.net < 0), Decimal(0))
+    worst_losses = sum((d.net for d in worst.days if d.net < 0), Decimal(0))
+    shown = all_losses < 0
 
-    return ShareOfTotal(
+    return ShareOfLosses(
         five_day_sum=worst.sum, total=total,
-        share_percent=_trim(share) if share is not None else None,
+        share_percent=_whole_percent(worst_losses, all_losses) if shown else None,
         shown_as_percentage=shown,
         other_days_count=len(other_days), other_days_net=other_net,
         state=s.ResultState.COUNTED_FACT,
+        worst_day_count=len(worst.days),
+        trading_day_count=len(series),
+        days_percent=_whole_percent(Decimal(len(worst.days)), Decimal(len(series))),
     )
 
 

@@ -50,7 +50,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
     rest = mx.complement(trips, two_losses.condition_trip_ids)
     return {
         "worst_days": mx.five_worst_days(trips),
-        "share": mx.share_of_total(trips),
+        "share": mx.share_of_losses(trips),
         "days": mx.day_counts(trips),
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
@@ -314,7 +314,10 @@ def home_view(figs: dict[str, dict], ctx: dict) -> dict:
         )
     share = ctx["share"]
     if share.shown_as_percentage:
-        centre = {"figure": f"{share.share_percent}%"}
+        centre = {
+            "figure": f"{share.share_percent}%",
+            "captionLines": ["of your losses", "in five days"],
+        }
     else:
         centre = {
             "figure": formatting.rupees(share.total),

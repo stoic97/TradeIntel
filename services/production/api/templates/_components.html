@@ -41,6 +41,11 @@
 
 {#- One plain line, never a box. Shown by the page only when the export has no charges
     column; the wording is the Mirror's own (handoff section 7). -#}
+{#- [TICKET-812] The share, its base rate: never of the net result (definitions 1). -#}
+{% macro share_sentence(share) -%}
+{{ share.worst_day_count }} of your {{ share.trading_day_count|count }} trading days (about {{ share.days_percent }}%) carried about <span class="num">{{ share.share_percent }}</span>% of your losses.
+{%- endmacro %}
+
 {% macro gross_line() -%}
 <p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
 {%- endmacro %}

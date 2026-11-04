@@ -1,9 +1,9 @@
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money, figure %}
+{% from "_components.html" import money, figure, share_sentence %}
 {% block head %}
     {%- if share.shown_as_percentage %}
     <div class="fact__figure"><span class="num num--hero">{{ share.share_percent }}%</span></div>
-    <p class="mirror">That is <span class="num">{{ share.share_percent }}</span>% of your result for the whole period, which was {{ money(share.total) }}.</p>
+    <p class="mirror">{{ share_sentence(share) }} Your result for the whole period was {{ money(share.total) }}.</p>
     {%- else %}
     <div class="fact__figure">{{ money(share.total, "hero") }}</div>
     <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
@@ -11,7 +11,7 @@
 {% endblock %}
 {% block body %}
   {%- if f.page_chart %}
-  {{ figure(1, "The five days within the whole period", f.page_chart) }}
+  {{ figure(1, "The five days within all your losing days", f.page_chart) }}
   {%- endif %}
   <p class="table-label">Table 1</p>
   <table class="table">

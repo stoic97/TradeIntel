@@ -32,12 +32,12 @@
     "sum": "-24000",
     "_tie_note": "09 Sep and 10 Sep are both -1000; the earlier date is listed first."
   },
-  "share_of_total": {
+  "share_of_losses": {
     "share_percent": "96",
     "shown_as_percentage": true,
     "other_days_count": 3,
     "other_days_net": "-1000",
-    "_regime": "0 < share <= 100, so a percentage is shown. Every day is negative, which is the only arrangement in which the five worst days are less than the whole."
+    "_regime": "Worst five -24000 over all losing days -25000 is 96%. Every day loses on this fixture, so losing days and the net happen to be equal; TICKET-812 measures against losing days."
   },
   "normal_day": {
     "trip_counts_by_day": [

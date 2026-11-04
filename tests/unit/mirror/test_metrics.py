@@ -46,9 +46,9 @@ def test_five_worst_days(trips, expected):
     assert result.sum == Decimal(want["sum"])
 
 
-def test_share_of_total(trips, expected):
-    result = mx.share_of_total(trips)
-    want = expected["share_of_total"]
+def test_share_of_losses(trips, expected):
+    result = mx.share_of_losses(trips)
+    want = expected["share_of_losses"]
     assert result.shown_as_percentage is want["shown_as_percentage"]
     assert str(result.share_percent) == want["share_percent"]
     assert result.other_days_count == want["other_days_count"]
@@ -153,7 +153,7 @@ def test_journal_unit_default(trips, expected):
 def test_every_metric_returns_a_result_state(trips):
     """Appendix A figures are counted facts; nothing here is a finding."""
     for result in (
-        mx.five_worst_days(trips), mx.share_of_total(trips), mx.day_counts(trips),
+        mx.five_worst_days(trips), mx.share_of_losses(trips), mx.day_counts(trips),
         mx.two_straight_losses(trips), mx.strike_rate(trips), mx.holding_time(trips),
     ):
         assert result.state in s.V1_EMITTABLE_STATES
