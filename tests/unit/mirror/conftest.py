@@ -14,6 +14,7 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
@@ -74,7 +75,7 @@ def client(engine):
                 fees_available=False, risk_unit_source=s_enums.RiskUnitSourceV1(t["risk_unit_source"])))
         sess.add(m.ConsentEvent(trader_id=trader.id,
                                 purpose=s_enums.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version="0-draft", granted=True,
+                                terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web", wording_shown="x" * 100))
         sess.commit()
 

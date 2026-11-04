@@ -27,17 +27,32 @@ from services.shared.schemas import scope_v1 as s
 router = APIRouter()
 
 
-def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
-    """The latest decision per purpose. Absent means never asked."""
+def _latest_events(sess, trader: m.Trader) -> dict[s.ConsentPurpose, m.ConsentEvent]:
     events = sess.scalars(
         select(m.ConsentEvent)
         .where(m.ConsentEvent.trader_id == trader.id)
         .order_by(m.ConsentEvent.id)
     ).all()
-    state: dict[s.ConsentPurpose, bool] = {}
-    for event in events:
-        state[event.purpose] = event.granted
-    return state
+    return {event.purpose: event for event in events}
+
+
+def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
+    """The latest decision per purpose. Absent means never asked.
+
+    A grant counts only against the text in force: he agreed to the words he was shown,
+    so a new version asks again, and every gate reads this one answer.
+    """
+    return {
+        purpose: event.granted and event.terms_version == cs.CURRENT.version
+        for purpose, event in _latest_events(sess, trader).items()
+    }
+
+
+def _grants_on_an_older_text(sess, trader: m.Trader) -> set[s.ConsentPurpose]:
+    return {
+        purpose for purpose, event in _latest_events(sess, trader).items()
+        if event.granted and event.terms_version != cs.CURRENT.version
+    }
 
 
 def has_diagnosis_consent(sess, trader: m.Trader) -> bool:
@@ -78,7 +93,8 @@ def consent_form(request: Request):
         if closed is not None:
             return closed
         return page(request, "consent.html", title="Before you upload",
-                    text=text, state=consent_state(sess, trader))
+                    text=text, state=consent_state(sess, trader),
+                    asked_again=bool(_grants_on_an_older_text(sess, trader)))
 
 
 @router.post("/consent")
@@ -103,14 +119,29 @@ def consent_submit(
             return page(
                 request, "consent.html", status_code=400, title="Before you upload",
                 text=text, state=consent_state(sess, trader),
+                asked_again=bool(_grants_on_an_older_text(sess, trader)),
                 error=("Without the first one there is nothing for Scope to do. "
                        "You can close this page and nothing is kept."),
             )
 
         chosen = {"diagnosis": True, "engine_testing": engine_testing is not None}
         now = datetime.now(UTC)
+        older = _grants_on_an_older_text(sess, trader)
         for purpose in text.purposes:
             if not chosen.get(purpose.key):
+                # Left empty, an old grant has to end here, or it stays the latest
+                # word on this purpose in his ledger.
+                if purpose.enum in older:
+                    sess.add(m.ConsentEvent(
+                        trader_id=trader.id,
+                        purpose=purpose.enum,
+                        scope="v1",
+                        terms_version=text.version,
+                        granted=False,
+                        at=now,
+                        method="web",
+                        wording_shown=f"[not renewed] {purpose.title}",
+                    ))
                 continue
             sess.add(m.ConsentEvent(
                 trader_id=trader.id,
@@ -123,7 +154,7 @@ def consent_submit(
                 wording_shown=cs.wording_for(purpose, text),
             ))
         sess.commit()
-    return RedirectResponse("/upload", status_code=303)
+    return RedirectResponse("/" if older else "/upload", status_code=303)
 
 
 @router.get("/settings/consent", response_class=HTMLResponse)

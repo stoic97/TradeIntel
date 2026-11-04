@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import formatting
 from services.production.api import scope_facts as SF
+from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
 from services.production.api.routes_journal import trips_of
 from services.production.db.session import make_session
@@ -39,6 +40,8 @@ def home(request: Request):
         trips, imp = loader.load_for(sess, trader)
         if not trips:
             return RedirectResponse(landing_for(sess, trader), status_code=303)
+        if not has_diagnosis_consent(sess, trader):
+            return RedirectResponse("/consent", status_code=303)
         latest = []
         for journal in gen.surface(sess, trader=trader).latest[:LATEST_ON_HOME]:
             covered = trips_of(sess, trader, journal)
