@@ -27,6 +27,10 @@ Gross is then ``sum(sell values) - sum(buy values)``, and the weighted-average p
 ride along for display only. Found by the golden fixture: ``risk_unit`` -- the premium
 paid, a figure a trader may see -- read 4595.4999... for a value known exactly.
 
+**Sold options are refused unless asked for.** Under ``ctr_v1`` a sold option has no R
+convention, so its trip is skipped. ``short_options=True`` builds it as a ``ctr_v2`` leg
+instead (Annex H); no other trip changes, ids included.
+
 **Nothing is forced.** A position still open when the history ends is reported as an
 open position, not closed at an invented price (Research Spec s4.2). A trip the schema
 refuses -- a short option, whose R convention is undecided -- is recorded with its
@@ -58,8 +62,12 @@ from services.shared.schemas.ctr_v1 import (
     Side,
     UnsupportedInV1,
 )
+from services.shared.schemas.ctr_v2 import RiskUnitSource as RiskUnitSourceV2
+from services.shared.schemas.ctr_v2 import RoundTrip as RoundTripV2
 
 _ZERO = Decimal(0)
+_SOURCE_OF = {RoundTrip: RiskUnitSource, RoundTripV2: RiskUnitSourceV2}
+"""Each schema takes its own enum, strictly."""
 
 
 @dataclass(frozen=True)
@@ -179,6 +187,7 @@ def _build_trip(
     direction: Direction,
     entry: _Leg,
     exit_: _Leg,
+    trip_type: type[RoundTrip] = RoundTrip,
 ) -> RoundTrip:
     """Assemble one trip. ``sample`` supplies the contract fields; both legs are closed."""
     assert entry.quantity == exit_.quantity, "legs must match before a trip is built"
@@ -207,7 +216,7 @@ def _build_trip(
         risk_unit = entry.value
         risk_unit_source = RiskUnitSource.PREMIUM_PAID
 
-    return RoundTrip(
+    return trip_type(
         trader_id=sample.trader_id,
         broker=sample.broker,
         exchange=sample.exchange,
@@ -225,7 +234,7 @@ def _build_trip(
         gross_pnl=gross,
         fees=_ZERO,  # no charges column in any adapter yet; fees_available says so
         risk_unit=risk_unit,
-        risk_unit_source=risk_unit_source,
+        risk_unit_source=_SOURCE_OF[trip_type][risk_unit_source.value],
         fill_ids=[*entry.fill_ids, *exit_.fill_ids],
     )
 
@@ -235,6 +244,7 @@ def _reconstruct_contract(
     trips: list[RoundTrip],
     skipped: list[SkippedTrip],
     opens: list[OpenPosition],
+    trip_type: type[RoundTrip] = RoundTrip,
 ) -> None:
     """Walk one contract's fills in time order, maintaining a FIFO lot queue."""
     sample = fills[0]
@@ -243,7 +253,7 @@ def _reconstruct_contract(
 
     def emit(direction: Direction, entry: _Leg, exit_: _Leg) -> None:
         try:
-            trips.append(_build_trip(sample, direction, entry, exit_))
+            trips.append(_build_trip(sample, direction, entry, exit_, trip_type))
         except UnsupportedInV1 as exc:
             skipped.append(
                 SkippedTrip(
@@ -314,7 +324,9 @@ def _reconstruct_contract(
         )
 
 
-def reconstruct(fills: Iterable[Fill], *, fees_available: bool = False) -> ReconstructionResult:
+def reconstruct(
+    fills: Iterable[Fill], *, fees_available: bool = False, short_options: bool = False
+) -> ReconstructionResult:
     """Turn fills into round trips, FIFO, per (trader, contract).
 
     Fills are sorted by timestamp before matching, so the caller need not rely on the
@@ -329,8 +341,9 @@ def reconstruct(fills: Iterable[Fill], *, fees_available: bool = False) -> Recon
     trips: list[RoundTrip] = []
     skipped: list[SkippedTrip] = []
     opens: list[OpenPosition] = []
+    trip_type = RoundTripV2 if short_options else RoundTrip
     for group in by_contract.values():
-        _reconstruct_contract(group, trips, skipped, opens)
+        _reconstruct_contract(group, trips, skipped, opens, trip_type)
 
     trips.sort(key=lambda t: (t.exit_ts, t.contract_key))
     opens.sort(key=lambda o: (o.opened_at, o.contract_key))

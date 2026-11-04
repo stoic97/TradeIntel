@@ -27,9 +27,9 @@ scope:
   accepted_trade_types:
     - futures
     - long_options                          # R = premium paid
-  not_yet_accepted:
-    - short_options                         # R convention undecided — Annex H, due week 4
-    - multi_leg_spreads
+    - short_options                         # Annex H draft 2, research seat minute 4 Nov 2026
+    - multi_leg_spreads                     # one LONG and one SHORT leg, ctr_v2; R = max loss
+  not_yet_accepted: []
   transfer_rule: machinery transfers; calibration is re-established per instrument family
 
 # ---------------------------------------------------------------- §4 Data
