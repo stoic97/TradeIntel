@@ -1,10 +1,10 @@
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money, figure %}
+{% from "_components.html" import money, figure, share_sentence %}
 {% block head %}
     <div class="fact__figure">{{ money(worst_days.sum, "hero") }}</div>
     <p class="mirror">Those five days came to {{ money(worst_days.sum) }}.</p>
     {%- if share.shown_as_percentage %}
-    <p class="mirror">That is <span class="num">{{ share.share_percent }}</span>% of your result for the whole period, which was {{ money(share.total) }}.</p>
+    <p class="mirror">{{ share_sentence(share) }} Your result for the whole period was {{ money(share.total) }}.</p>
     {%- else %}
     <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
     {%- endif %}
@@ -15,7 +15,7 @@
     <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst days</span><span><span class="legend__swatch legend__swatch--light"></span>Other days</span></div>
   {% endcall %}
   {%- if facts.share.page_chart %}
-  {% call figure(2, "The five days within the whole period", facts.share.page_chart) %}
+  {% call figure(2, "The five days within all your losing days", facts.share.page_chart) %}
     <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst days · {{ money(worst_days.sum) }}</span><span class="legend__end">Whole period · {{ money(share.total) }}</span></div>
   {% endcall %}
   {%- endif %}

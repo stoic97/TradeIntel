@@ -8,6 +8,7 @@
   <span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-dashed"/></svg>Not in your file</span>
   <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
   <span class="body">Your export has no stop column, and no budget is set. We do not estimate what is not in your file.</span>
+  {% if f.uncapped_trades %}<span class="body">{{ f.uncapped_trades|count }} {{ "trade was a sold option" if f.uncapped_trades == 1 else "trades were sold options" }} with no cap on {{ "its" if f.uncapped_trades == 1 else "their" }} loss, so {{ "it has" if f.uncapped_trades == 1 else "they have" }} no risk figure. {{ "Its" if f.uncapped_trades == 1 else "Their" }} rupees are counted.</span>{% endif %}
   <span class="story-card__foot"><span>What is missing, in full</span><span aria-hidden="true">›</span></span>
 </a>
 {%- else %}

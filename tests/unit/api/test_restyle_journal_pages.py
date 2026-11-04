@@ -106,7 +106,9 @@ SAID = {
 
 def render(case: str) -> str:
     name = case.split("#")[0]
-    return template_env().get_template(name).render(title="T", csrf_token="x", **CONTEXT[case])
+    return template_env().get_template(name).render(
+        title="T", csrf_token="x", changed_ids={3}, earlier_id=2, **CONTEXT[case]
+    )
 
 
 def words(html: str) -> str:
@@ -148,7 +150,7 @@ def test_a_journals_trade_result_is_written_by_the_rupees_filter():
     page = render("journal.html")
     assert '<span class="num num--label num--loss">−₹1,200</span>' in page
     route = Path("services/production/api/routes_journal.py").read_text()
-    assert '"net": t.net}' in route
+    assert '"net": t["net"]}' in route
 
 
 def test_the_journal_pages_are_on_the_journal_tab():
