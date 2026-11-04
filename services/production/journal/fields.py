@@ -18,6 +18,12 @@ still usable when it does.
 
 Edits are append-only for the same reason: the first answer is evidence too, and a
 changed stop tells you something a single current value cannot.
+
+A later upload that changes a day writes a new version of its Journal. Nothing is copied
+onto it, because a copy would claim to have been written then. A version reads its own
+answers and those of the versions before it. A trade's id is a hash of the trade, so an
+answer follows a trade only while the trade is the same; one about a trade that changed
+stays on the version that listed it.
 """
 
 from __future__ import annotations
@@ -59,12 +65,22 @@ def capture_phase(
     return s.CapturePhase.AFTER_CLOSE
 
 
+def _lineage(sess: Session, journal: m.Journal) -> list[int]:
+    """This version and the versions before it. Never the ones after."""
+    ids = [journal.id]
+    earlier = journal.supersedes
+    while earlier is not None:
+        ids.append(earlier)
+        earlier = sess.scalar(select(m.Journal.supersedes).where(m.Journal.id == earlier))
+    return ids
+
+
 def _latest(
     sess: Session, journal: m.Journal, field: str, trip_id: str | None
 ) -> m.JournalFieldEntry | None:
     return sess.scalars(
         select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id == journal.id,
+        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
                m.JournalFieldEntry.field == field,
                m.JournalFieldEntry.trip_id.is_(trip_id) if trip_id is None
                else m.JournalFieldEntry.trip_id == trip_id)
@@ -120,7 +136,7 @@ def history(
     """Every answer he has given to this field, oldest first."""
     return list(sess.scalars(
         select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id == journal.id,
+        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
                m.JournalFieldEntry.field == field,
                m.JournalFieldEntry.trip_id.is_(trip_id) if trip_id is None
                else m.JournalFieldEntry.trip_id == trip_id)
@@ -137,7 +153,7 @@ def trips_with_a_planned_stop(sess: Session, *, journal: m.Journal) -> set[str]:
     """
     rows = sess.scalars(
         select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id == journal.id,
+        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
                m.JournalFieldEntry.field == "planned_sl",
                m.JournalFieldEntry.trip_id.is_not(None))
     ).all()

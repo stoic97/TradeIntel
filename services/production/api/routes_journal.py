@@ -185,6 +185,7 @@ def journal_page(request: Request, journal_id: int):
             request, "journal.html", title=f"Your Journal, {journal.period_start}",
             journal=journal, paragraphs=paragraphs, rows=rows, answers=answers,
             changed_ids=gen.changed_by_upload(sess, trader=trader),
+            earlier_id=gen.earlier_with_other_trades(sess, journal),
             prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
             uncounted=imp.trips_refused if imp else 0,
             note=fields.current(sess, journal=journal, field="note", trip_id=None),

@@ -11,7 +11,7 @@
   <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
   {{ uncounted_line(uncounted) }}
   {%- if journal.id in changed_ids %}
-  <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. A later upload changed this period. The earlier version is kept.</p>
+  <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. A later upload changed this period. The <a class="link" href="/journals/{{ earlier_id }}">earlier version</a> is kept.</p>
   {%- endif %}
   <section class="journal__section">
     {%- for para in paragraphs %}
