@@ -27,6 +27,7 @@
 /* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
    kit draws the figure there. */
 .fact__title + .mirror { margin-top: var(--space-3); }
+.opening-figure { white-space: nowrap; }
 
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
