@@ -214,6 +214,7 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             lots=max(lots_for(leg.quantity or 1, profile_for(leg), quantity_unit,
                               on=date.fromisoformat(trading_day)) for leg in legs),
             risk_unit_source=_measured_against(first, trading_day, declarations),
+            is_option=first.segment == "OPT",
             legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
         ))
     return trips, imp
