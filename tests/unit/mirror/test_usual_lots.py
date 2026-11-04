@@ -7,12 +7,13 @@ into the average, and every ordinary day read as smaller than usual. Worked by h
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
 
 from services.production.api import scope_facts as SF
+from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import periods as pd
@@ -125,3 +126,27 @@ def test_a_history_of_only_shares_renders_the_chapter_three_fact():
     only_shares = [replace(t, is_option=False) for t in trips_from([100, -100, -100, -100, 50])]
     page = fact_page("down", only_shares)
     assert "None" not in page
+
+
+def lots(exchange: str, symbol: str, quantity: int, on: str) -> int:
+    profile = profiles.lookup(profiles.load_all(loader.PROFILE_DIR), exchange, symbol, "OPT")
+    return loader.lots_for(quantity, profile, "units", on=date.fromisoformat(on))
+
+
+def test_lot_sizes_listed_on_the_broker_today_do_not_refuse_the_record():
+    """Fyers' symbol master, 4 Nov 2026. A size missing here stops the whole Mirror."""
+    assert lots("NSE", "BANKNIFTY", 30, "2026-11-23") == 1
+    assert lots("BSE", "SENSEX", 25, "2027-01-05") == 1
+    assert lots("NSE", "HDFCBANK", 750, "2027-01-05") == 1
+
+
+def test_the_sizes_already_traded_still_read_the_same():
+    assert lots("NSE", "BANKNIFTY", 15, "2024-06-03") == 1
+    assert lots("NSE", "BANKNIFTY", 35, "2025-10-01") == 1
+    assert lots("BSE", "SENSEX", 40, "2026-11-05") == 2
+    assert lots("NSE", "HDFCBANK", 650, "2026-11-20") == 1
+    assert lots("NSE", "NIFTY", 65, "2026-11-20") == 1
+    assert lots("NSE", "NIFTY", 75, "2025-06-02") == 1
+    assert lots("NSE", "NIFTY", 25, "2024-08-01") == 1
+    assert lots("MCX", "CRUDEOIL", 200, "2026-11-05") == 2
+    assert lots("MCX", "CRUDEOILM", 60, "2026-11-05") == 6
