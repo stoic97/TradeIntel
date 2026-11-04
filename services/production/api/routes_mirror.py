@@ -18,6 +18,7 @@ from sqlalchemy import distinct, func, select
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
+from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.ctr.profiles import registry as profiles
@@ -173,7 +174,7 @@ def scope_fact(request: Request, key: str):
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
                 back_href=SM.chapter_href(chapter.number, fact=index + 1),
                 f=figs[key], facts=figs,
-                groups=SM.groups(key, context), imp=imp,
+                groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **unread, **ending, **context)
 
@@ -235,6 +236,25 @@ def report_feedback(request: Request, answer: str = Form(None), note: str = Form
         sess.commit()
     return RedirectResponse(f"{SM.fact_href('not-told', lens=False)}#report-check",
                             status_code=303)
+
+
+@router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)
+def scope_fact_trades(request: Request, key: str):
+    """Every trade behind a fact, with the filters the fact page has no room for. A fact
+    page links here when its list is long (TICKET-822), so nothing behind it is out of reach."""
+    if key not in TL.FACTS_WITH_TRADES:
+        return HTMLResponse("", status_code=404)
+    early, record = load_record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    with make_session(request.app.state.engine) as sess:
+        expiries = loader.expiries_for(sess, imp)
+    chapter, index = SM.chapter_of(key)
+    return page(request, "scope/trades.html", title=f"{SM.FACTS[key].title}: see all trades",
+                body_class="screen__body--fact", chapter=chapter, index=index,
+                fact=SM.FACTS[key], fact_href=SM.fact_href(key, lens=False), imp=imp,
+                listing=TL.listing(key, context, request.query_params, expiries))
 
 
 def _plain_refusal(reason: str) -> str:
