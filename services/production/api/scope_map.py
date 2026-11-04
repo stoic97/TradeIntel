@@ -175,6 +175,8 @@ RISK_SOURCES = (
     ("Your stop", (s.RiskUnitSourceV1.DEFINED_STOP,)),
     ("Premium paid", (s.RiskUnitSourceV1.PREMIUM_PAID,)),
     ("Nothing we could use", (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR)),
+    ("A spread's maximum loss", (s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,)),
+    ("Uncapped: a sold option", (s.RiskUnitSourceV1.UNCAPPED,)),
 )
 """As the Mirror's risk table names them; ATR is among "nothing we could use" there too."""
 
@@ -233,4 +235,6 @@ def trade(t: mx.Trip, number: int) -> dict:
         "net": t.net,
         "fill_minutes": [0, t.holding_seconds / 60],
         "fills": [],
+        "legs": t.legs,
+        "uncapped": t.uncapped,
     }

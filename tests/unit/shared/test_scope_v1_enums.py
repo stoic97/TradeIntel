@@ -72,13 +72,15 @@ def test_capture_phase_has_three():
     assert names(s.CapturePhase) == {"BEFORE_ENTRY", "DURING_TRADE", "AFTER_CLOSE"}
 
 
-def test_risk_unit_source_has_five_and_only_two_may_be_denominators_on_screen():
+def test_risk_unit_source_has_seven_and_only_two_may_be_denominators_on_screen():
     assert names(s.RiskUnitSourceV1) == {
         "DECLARED_BUDGET",
         "DEFINED_STOP",
         "PREMIUM_PAID",
         "INFERRED_ATR",
         "UNAVAILABLE",
+        "STRUCTURE_MAX_LOSS",  # Annex H: recorded, never a denominator
+        "UNCAPPED",
     }
     assert s.SHOWABLE_DENOMINATORS == {
         s.RiskUnitSourceV1.DECLARED_BUDGET,
