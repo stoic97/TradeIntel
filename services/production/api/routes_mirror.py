@@ -12,6 +12,8 @@ argument is that he should not have to.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
@@ -72,6 +74,10 @@ def enter_class(request: Request) -> str:
     return ENTER[enter].format(tap=tap)
 
 
+CHAPTER_SURFACE = "scope_chapter"
+"""Not one of /events' surfaces: the page can't claim a chapter was opened, only the route can."""
+
+
 @router.get("/mirror", response_class=HTMLResponse)
 def scope_home(request: Request):
     """Scope home (handoff 4, level 1): the four chapters on the dial, the five days'
@@ -81,10 +87,9 @@ def scope_home(request: Request):
     if early is not None:
         return early
     trips, imp, context = record
-    figs = SF.facts(context, imp)
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
-                view=SF.home_view(figs, context), imp=imp, trade_count=len(trips),
-                trading_day_count=len(context["days"].counts))
+                imp=imp, trade_count=len(trips), trading_day_count=len(context["days"].counts),
+                **SF.home_context(context, imp, _opened_chapters(request)))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -98,6 +103,7 @@ def scope_chapter(request: Request, n: int):
     if early is not None:
         return early
     _trips, imp, context = record
+    _mark_opened(request, chapter)
     figs = SF.facts(context, imp)
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
@@ -105,6 +111,29 @@ def scope_chapter(request: Request, n: int):
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
+
+
+def _opened_chapters(request: Request) -> frozenset[int]:
+    """The chapters this trader has opened, whichever upload he was reading."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        keys = set(sess.scalars(select(m.DwellEvent.key).where(
+            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE)))
+    return frozenset(c.number for c in SM.CHAPTERS if c.name in keys)
+
+
+def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
+    """Noted on the server, so "read" doesn't depend on a script running. One row a chapter;
+    the key is its name, because an event's key never holds a digit (routes_events)."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        seen = sess.scalar(select(m.DwellEvent.id).where(
+            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE,
+            m.DwellEvent.key == chapter.name).limit(1))
+        if seen is None:
+            sess.add(m.DwellEvent(trader_id=trader.id, surface=CHAPTER_SURFACE, key=chapter.name,
+                                  event="view", at=datetime.now(UTC), duration_ms=None))
+            sess.commit()
 
 
 def _feedback_context(request: Request, n: int) -> dict:

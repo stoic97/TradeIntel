@@ -298,7 +298,7 @@ def test_chapter_4_says_what_was_read():
 
 def test_a_chapter_with_too_few_trades_says_so():
     body = text(trips=[t("2026-01-05", 100), t("2026-01-06", 200)])
-    assert body.count("Not enough trades yet.") == 2  # no losers to hold against; no run of two losses
+    assert body.count("Not enough trades yet.") == 2  # fewer than five days; no losers. Zero occasions is a count, so chapter 3 says it
 
 
 def test_a_chapter_opened_shows_as_read_in_the_list():

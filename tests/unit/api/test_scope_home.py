@@ -5,16 +5,14 @@ Rendered through the app's templates with the Mirror's 40-trade fixture.
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
-from services.production.api import dial, formatting
+from services.production.api import dial
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, trips_from
+from tests.unit.api.test_scope_chapters import IMP, TRIPS
 
 CTX = SF.record_context(TRIPS)
 FIGS = SF.facts(CTX, IMP)

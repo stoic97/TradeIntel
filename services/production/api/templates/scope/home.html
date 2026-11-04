@@ -1,23 +1,59 @@
-{#- Scope home (handoff 4, level 1; kit screen 14): the dial in four equal chapters on
-    the navy stage, the five days' share in its white centre; below, on white, the
-    Mirror's opening line and the gross line. Replaces the long Mirror page. -#}
+{#- Scope home: the home of the verdict (Scope_Feedback section 10). The dial's centre is the
+    trader's result, its slices the ways in; below, what happened, by book, then what each
+    chapter found. Every line describes: a post-loss comparison waits on the shuffle test,
+    and a price-band finding on the research seat. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line, uncounted_line, lockup, chip %}
+{% from "_components.html" import dial, gross_line, uncounted_line, lockup, chip, money, button %}
 {% set nav = "scope" %}
+{% macro came(net, size) -%}
+{%- if net > 0 %}made {{ money(size, signed=false) }}{% elif net < 0 %}lost {{ money(size, signed=false) }}{% else %}came out level{% endif -%}
+{%- endmacro %}
+{% macro held(s) -%}
+{%- if s.held_days %}, held up to <span class="num">{{ s.held_days|count }}</span> day{{ "" if s.held_days == 1 else "s" }}{% endif -%}
+{%- endmacro %}
 {% block stage %}
 <header class="stage stage--home on-navy">
   <div class="stage__bar">{{ lockup() }}{{ chip("In development.", on_navy=true) }}</div>
   <div class="stage__dial">
   {{ dial(view) }}
   </div>
+  {%- if start %}
+  <div class="home__start">{{ button(start.label, href=start.href, kind="on-navy", block=true) }}</div>
+  {%- endif %}
 </header>
 {% endblock %}
 {% block content %}
   <p class="label">Counted from your file</p>
-  <h1 class="title fact__title">What your trades actually did.</h1>
-  <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>
-  <p class="body">What we read: <span class="num">{{ imp.rows_parsed|count }}</span> of <span class="num">{{ imp.rows_in|count }}</span> rows.{% include "scope/_refused.html" %}</p>
+  <h1 class="title fact__title">
+  {%- if verdict.options_trades %}Your option trades {{ came(verdict.options_net, verdict.options_size) }}.
+    {%- if verdict.others_trades %} {% if verdict.made_back %}{{ verdict.standout.symbol }}{{ held(verdict.standout) }}{% if verdict.standout.held_days %},{% endif %} made back {{ money(verdict.standout.net, signed=false) }} of it.{% else %}Your stock, ETF and futures trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif %}{% endif %}
+  {%- else %}Your trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif -%}
+  </h1>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+  <p class="label label--plain home__heading">Your books</p>
+  <ul class="home__books">
+    {%- for b in verdict.books %}
+    <li class="home__book"><span class="home__book-head"><span>{{ b.label }}</span> {{ money(b.net) }}</span> <span class="body-small"><span class="num">{{ b.trades|count }}</span> trade{{ "" if b.trades == 1 else "s" }}.
+      {%- if b.standout %} {{ b.standout.symbol }} made {{ money(b.standout.net, signed=false) }}{{ held(b.standout) }}.
+      {%- elif b.worst_day %} Worst day: {{ b.worst_day|day }}, {{ money(b.worst_net) }}.{% endif %}</span></li>
+    {%- endfor %}
+  </ul>
+  <p class="label label--plain home__heading">Four chapters</p>
+  <ol class="home__chapters">
+    {%- for c in chapters %}
+    <li class="home__chapter{% if c.opened %} home__chapter--read{% endif %}"><span class="label">{{ c.number }} · {{ c.name }}{% if c.opened %} · Read{% endif %}</span>
+      <p class="body">
+      {%- if c.state %}Not enough trades yet.
+      {%- elif c.number == 1 %}{% if best_was_held %}Your best trades weren't trades.{% else %}Your five worst days came to {{ money(worst_days.sum) }}.{% endif %}
+      {%- elif c.number == 2 %}Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.
+      {%- elif c.number == 3 %}On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss.
+      {%- else %}What we read: <span class="num">{{ imp.rows_parsed|count }}</span> of <span class="num">{{ imp.rows_in|count }}</span> rows.{% include "scope/_refused.html" %}
+      {%- endif %}</p>
+      {{ button("Open chapter " ~ c.number, href=c.href, kind="text") }}
+    </li>
+    {%- endfor %}
+  </ol>
+  <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>
   {{ uncounted_line(imp.trips_refused) }}
   <p class="label label--plain home__foot"><span>No buy or sell calls, ever.</span><span>4 chapters</span></p>
   {% include "scope/_lineage.html" %}

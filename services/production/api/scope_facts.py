@@ -218,9 +218,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
-    # Home's wedge is too narrow for "rows" at four-digit counts (TICKET-804), so home says
-    # the full figure under the dial instead.
-    out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
     held = mx.holding_series(mx.same_day_trips(trips))
     out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
@@ -297,40 +294,64 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     }
 
 
-LEADS = {1: "share", 2: "hold", 3: "down", 4: "unread"}
-"""The fact each chapter's Home slice leads with (the kit's design, 14 · Scope home):
-the share, the two holds, the occasions after two losses, the rows read."""
+def home_view(ctx: dict, *, gross: bool = False, opened: frozenset[int] = frozenset()) -> dict:
+    """Home's dial: the four chapters as ways in, the trader's result in the centre.
 
-
-def home_view(figs: dict[str, dict], ctx: dict) -> dict:
-    """Home's dial: the four chapters in equal slices, the five days' share in the centre.
-
-    When the share is not a percentage (Appendix A), the centre says the whole
-    period's result instead, in the Mirror's words, and slice 1 leads with it too.
+    A slice is too narrow for a finding, and a bare number on it says nothing, so each says
+    whether it has been read; the findings sit in the list under the dial.
     """
-    items = []
-    for c in S.CHAPTERS:
-        lead = figs[LEADS[c.number]]
-        items.append(
-            {
-                "name": c.name,
-                "figure": lead.get("hub_figure", lead["figure"]),
-                "state": lead["state"],
-                "href": S.chapter_href(c.number, from_home=True),
-            }
-        )
-    share = ctx["share"]
-    if share.shown_as_percentage:
-        centre = {
-            "figure": f"{share.share_percent}%",
-            "captionLines": ["of your losses", "in five days"],
+    items = [
+        {
+            "name": c.name,
+            "figure": "Read" if c.number in opened else "Open",
+            "opened": c.number in opened,
+            "href": S.chapter_href(c.number, from_home=True),
         }
-    else:
-        centre = {
-            "figure": formatting.rupees(share.total),
-            "captionLines": ["your result for", "the whole period"],
-        }
+        for c in S.CHAPTERS
+    ]
+    caption = ["your result,", "before charges"] if gross else ["your result for", "the whole period"]
+    centre = {"figure": formatting.rupees(ctx["share"].total), "captionLines": caption}
     return {"kind": "home", "items": items, "centre": centre}
+
+
+def _start(opened: frozenset[int]) -> dict | None:
+    """Where the button goes: chapter 1 at first, then the first chapter still unread."""
+    unread = [c.number for c in S.CHAPTERS if c.number not in opened]
+    if not unread:
+        return None
+    label = f"Next: chapter {unread[0]}" if opened else f"Start with chapter {unread[0]}"
+    return {"label": label, "href": S.chapter_href(unread[0], from_home=True)}
+
+
+def home_context(ctx: dict, imp, opened: frozenset[int] = frozenset()) -> dict:
+    """What Scope home shows: the verdict, the books, a finding per chapter, a way in."""
+    figs = facts(ctx, imp)
+    best = max(ctx["trips"], key=lambda t: t.net)
+    states = {
+        1: "not-enough" if len(ctx["worst_days"].days) < 5 else "",
+        2: figs["hold"]["state"],
+        3: figs["down"]["state"],
+        4: "",
+    }
+    return {
+        "view": home_view(ctx, gross=not imp.fees_available, opened=opened),
+        "verdict": mx.verdict(ctx["trips"]),
+        "chapters": [
+            {
+                "number": c.number,
+                "name": c.name,
+                "href": S.chapter_href(c.number, from_home=True),
+                "opened": c.number in opened,
+                "state": states[c.number],
+            }
+            for c in S.CHAPTERS
+        ],
+        "start": _start(opened),
+        "best_was_held": best.net > 0 and not best.closed_same_day,
+        "worst_days": ctx["worst_days"],
+        "holding": ctx["holding"],
+        "two_losses": ctx["two_losses"],
+    }
 
 
 REVEAL_C = 150  # the reveal's dial: 300 x 300, the outer ring at 149.5 (kit screen 12)
