@@ -73,13 +73,16 @@ def test_a_fact_page_has_its_path_and_no_bottom_nav(key):
 
 
 @pytest.mark.parametrize("key", TRADE_FACTS)
-def test_every_trade_behind_a_fact_is_listed_and_the_count_matches(key):
-    """Handoff 11: every trade, never a sample, and the count on the page is the fact's."""
+def test_every_trade_behind_a_fact_is_listed_or_a_link_away_and_the_count_matches(key):
+    """Handoff 11: every trade, never a sample. A long list is one link away [TICKET-822];
+    tests/unit/api/test_trade_rows.py follows the link through the app."""
     page = fact_page(key)
     behind = S.trades_behind(key, CTX)
-    assert page.count('<article class="trade">') == len(behind)
-    listed = [int(n) for n in re.findall(r'class="trade__label">Trade (\d+) ·', page)]
-    assert sorted(listed) == sorted(TRIPS.index(t) + 1 for t in behind)
+    if len(behind) > S.INLINE_TRADES:
+        assert page.count('<article class="trade">') == 0
+        assert f'href="{S.see_all_href(key)}"' in page
+    else:
+        assert page.count('<article class="trade">') == len(behind)
     caption = re.search(r'<p class="evidence__caption">(.*?)</p>', page, re.DOTALL)[1]
     assert readable(caption).endswith(f"{len(behind)} trades.")
 
@@ -103,7 +106,7 @@ def test_the_worst_days_table_says_each_day_against_the_normal_day_as_the_mirror
 
 
 def test_the_strike_rate_page_lists_winners_losers_and_level_apart():
-    page = fact_page("strike")
+    page = fact_page("strike", trips=trips_from([100, -50, 0]))
     for title in ("Winners", "Losers"):
         assert f'<span class="trades__day">{title}</span>' in page
 
