@@ -66,6 +66,19 @@ def test_the_total_does_not_move():
     assert len(result.round_trips) == 3
 
 
+def test_a_day_that_sells_first_and_nets_flat_keeps_to_itself():
+    """Held share from day 0. Day 1 sells 6 at 110, buys 6 at 105: a short day of +30, and
+    the held share is untouched until it is sold at 130 on day 2 for +30."""
+    result = reconstruct([
+        eq(Side.BUY, 1, 100, 0, D),
+        eq(Side.SELL, 3, 110, DAY, I),
+        eq(Side.SELL, 3, 110, DAY + 30, I),
+        eq(Side.BUY, 6, 105, DAY + 60, I),
+        eq(Side.SELL, 1, 130, 2 * DAY, D),
+    ])
+    assert shape(result) == [(0, 2, 1, Decimal(30)), (1, 1, 6, Decimal(30))]
+
+
 def test_with_no_lot_from_that_day_it_closes_the_older_one():
     """A genuine carry: nothing bought today, so the intraday sell has to reach back."""
     result = reconstruct([eq(Side.BUY, 5, 100, 0, M), eq(Side.SELL, 5, 110, DAY, I)])
