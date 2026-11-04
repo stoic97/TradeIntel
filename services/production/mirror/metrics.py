@@ -58,6 +58,15 @@ class Trip:
     def is_scratch(self) -> bool:
         return self.net == 0
 
+    @property
+    def closed_same_day(self) -> bool:
+        """Closed on the date it was opened, in the instrument's zone.
+
+        trading_day is the entry's date in that zone and the loader gives exit_ts in the
+        same zone (definitions 1), so the two compare without a clock of their own.
+        """
+        return self.exit_ts.date().isoformat() == self.trading_day
+
 
 def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
     """Build trips from fixture or database rows, in entry order."""
@@ -287,6 +296,24 @@ def day_counts(trips: list[Trip]) -> DayCounts:
         busiest_vs_normal=_round(Decimal(busiest_trips) / normal),
         state=s.ResultState.COUNTED_FACT,
     )
+
+
+@dataclass(frozen=True)
+class HeldPastDay:
+    """Positions closed on a later date than they were opened, winners and losers alike."""
+
+    trips: list[Trip]
+    count: int
+    net: Decimal
+
+
+def same_day_trips(trips: list[Trip]) -> list[Trip]:
+    return [t for t in trips if t.closed_same_day]
+
+
+def held_past_day(trips: list[Trip]) -> HeldPastDay:
+    held = [t for t in trips if not t.closed_same_day]
+    return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
 
 
 def best_five(trips: list[Trip]) -> list[Trip]:
