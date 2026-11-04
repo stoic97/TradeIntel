@@ -19,13 +19,18 @@ believing he had added something.
 from __future__ import annotations
 
 import hashlib
+from datetime import date
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 
 from services.production.accounts.file_store import FileStore
-from services.production.api.routes_consent import has_diagnosis_consent
+from services.production.api.routes_consent import (
+    has_diagnosis_consent,
+    trader_today,
+    upload_page,
+)
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import duplicates as dup
@@ -61,6 +66,7 @@ async def upload_file(
     request: Request,
     file: UploadFile = File(...),  # noqa: B008 - FastAPI declares uploads this way
     csrf_token: str = Form(None),
+    export_date: str = Form(None),
 ):
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
@@ -72,14 +78,23 @@ async def upload_file(
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
 
+        if export_date:
+            try:
+                downloaded = date.fromisoformat(export_date)
+            except ValueError:
+                return upload_page(request, status_code=400, error="That is not a date.")
+            if downloaded > trader_today():
+                return upload_page(request, status_code=400,
+                                   error="That date is in the future. Put the day you "
+                                         "downloaded this file.")
+
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:
             megabytes = k.MAX_UPLOAD_BYTES // (1024 * 1024)
-            return page(request, "upload.html", status_code=400,
-                        title="Upload your tradebook",
-                        error=f"That file is larger than {megabytes} MB. Every "
-                              "tradebook we have seen is far smaller — if yours is "
-                              "genuinely this big, tell us and we will raise it.")
+            return upload_page(request, status_code=400,
+                               error=f"That file is larger than {megabytes} MB. Every "
+                                     "tradebook we have seen is far smaller — if yours is "
+                                     "genuinely this big, tell us and we will raise it.")
 
         digest = hashlib.sha256(content).hexdigest()
         already = sess.scalars(
@@ -87,11 +102,10 @@ async def upload_file(
                                     m.RawFile.sha256 == digest)
         ).first()
         if already is not None:
-            return page(request, "upload.html", status_code=400,
-                        title="Upload your tradebook",
-                        error="You have already uploaded this exact file. Nothing "
-                              "was added. If you meant to send a newer export, "
-                              "download it again from your broker.")
+            return upload_page(request, status_code=400,
+                               error="You have already uploaded this exact file. Nothing "
+                                     "was added. If you meant to send a newer export, "
+                                     "download it again from your broker.")
 
         stored = _store(request).put(content)
         text = content.decode("utf-8-sig", errors="replace")
@@ -111,6 +125,8 @@ async def upload_file(
                     source_account="A",
                     code_version=_code_version(request),
                     existing_days=existing,
+                    export_date=export_date or None,
+                    export_date_source="trader" if export_date else None,
                 ),
                 production=request.app.state.settings.production,
             )
@@ -217,6 +233,8 @@ def confirm_duplicates(request: Request, import_id: int,
                 context=pl.ImportContext(
                     trader_id=str(trader.id), source_account="A",
                     code_version=_code_version(request), existing_days=existing,
+                    export_date=imp.export_date,
+                    export_date_source=imp.export_date_source,
                 ),
                 production=request.app.state.settings.production,
             )
