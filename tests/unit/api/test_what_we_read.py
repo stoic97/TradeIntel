@@ -21,9 +21,8 @@ def _imp(**changes) -> SimpleNamespace:
     return SimpleNamespace(**{**vars(IMP), **changes})
 
 
-def _hub_view(imp=IMP) -> dict:
-    ctx = SF.record_context(TRIPS)
-    return SF.home_view(SF.facts(ctx, imp), ctx)
+def _hub_view() -> dict:
+    return SF.home_view(SF.record_context(TRIPS))
 
 
 def test_the_hub_slice_is_named_for_what_was_read():
@@ -32,8 +31,9 @@ def test_the_hub_slice_is_named_for_what_was_read():
 
 def test_the_hub_slice_figure_stays_short_enough_for_its_wedge():
     """Seen in a browser: at four-digit rows the tail "of N rows" fits at no figure size, so
-    the dial's layout gives up and the white centre covers its end."""
-    assert _hub_view()["items"][3]["figure"] == "40 of 40"
+    the dial's layout gives up and the white centre covers its end. A slice now says only
+    Open or Read, and the count sits under the dial."""
+    assert _hub_view()["items"][3]["figure"] == "Open"
 
 
 def test_the_hub_page_says_it_in_full_under_the_dial():
@@ -46,7 +46,6 @@ def test_the_drawn_dial_no_longer_says_could_not_read():
 
 
 def test_rows_are_grouped_and_a_partial_read_shows_the_gap():
-    assert _hub_view(_imp(rows_in=1240, rows_parsed=1236))["items"][3]["figure"] == "1,236 of 1,240"
     page = readable(home_page(imp=_imp(rows_in=1240, rows_parsed=1236)))
     assert "What we read: 1,236 of 1,240 rows." in page
 

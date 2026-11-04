@@ -85,7 +85,7 @@ def test_scope_home_renders(client):
 def test_the_chapters_appear_on_home_in_the_order_the_prd_fixes(client):
     body = client.get("/mirror").text
     links = re.findall(r'href="/mirror/chapter/(\d)\?', body)
-    assert links == ["1", "2", "3", "4"]
+    assert list(dict.fromkeys(links)) == ["1", "2", "3", "4"], "the dial, then the list and button"
 
 
 def test_every_fact_is_two_taps_from_home(client):
