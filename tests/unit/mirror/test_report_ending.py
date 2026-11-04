@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy import select
 
 from services.production.api import cli
+from services.production.api import scope_facts as SF
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import metrics as mx
@@ -71,22 +72,6 @@ def test_no_held_gain_outside_options_means_nothing_is_set_against_it():
 
 def test_a_history_with_no_options_has_no_option_result():
     assert mx.option_result([trip(40, option=False)]) is None
-
-
-def test_the_loss_guide_reads_same_day_losers_at_half_and_nine_in_ten():
-    losses = [trip(-100 * i, name=str(i)) for i in range(1, 11)]
-    held = trip(-5000, name="held", held_days=3)
-    guide = mx.loss_size_guide([*losses, held, trip(800, name="up")])
-    assert (guide.half, guide.nine_in_ten) == (Decimal(500), Decimal(900))
-
-
-def test_the_loss_guide_rounds_up_so_or_less_stays_true():
-    guide = mx.loss_size_guide([trip(-100.25, name=str(i)) for i in range(10)])
-    assert (guide.half, guide.nine_in_ten) == (Decimal(101), Decimal(101))
-
-
-def test_too_few_losers_for_nine_in_ten_is_no_guide():
-    assert mx.loss_size_guide([trip(-100 * i, name=str(i)) for i in range(1, 10)]) is None
 
 
 # ---------- The page ----------
@@ -158,16 +143,42 @@ def test_the_honest_line_stays(client):
             "we have not earned.") in text_of(client.get(PAGE).text)
 
 
-def test_three_next_steps_with_your_number_first(client):
+def test_the_steps_are_a_day_a_page_and_a_journal(client):
+    """Ruling on TICKET-825, 4 Nov: three things to look at, never three things to do."""
     steps = section(client.get(PAGE).text, "steps")
-    assert len(re.findall(r'class="step[ "]', steps)) == 3
-    first, second, third = re.findall(r'<a class="(?:step|ending__open)[^>]*href="([^"]+)"', steps)
-    assert (first, second) == ("/budget", "/upload")
-    assert third.startswith("/journals")
-    assert 'class="step step--primary" href="/budget"' in steps
-    said = text_of(steps)
-    assert "Set your number" in said
-    assert "Upload your next month. We'll show what changed since this file." in said
+    assert "Where to look next" in text_of(steps)
+    links = re.findall(r'<a class="step" href="([^"]+)"', steps)
+    assert len(links) == 3
+    assert links[0].startswith("/mirror/fact/run")
+    assert links[1].startswith("/mirror/fact/worst-days")
+    assert links[2].startswith("/journals")
+
+
+def test_no_step_reads_as_advice(client):
+    said = text_of(section(client.get(PAGE).text, "steps")).lower()
+    for word in ("try", "avoid", "set", "stop", "consider", "upload", "should", "can do"):
+        assert not re.search(rf"\b{word}\b", said), word
+
+
+def test_no_step_sends_him_to_do_something(client):
+    steps = section(client.get(PAGE).text, "steps")
+    assert 'href="/budget"' not in steps and 'href="/upload"' not in steps
+
+
+def test_each_step_says_what_is_there_with_its_number(client):
+    said = text_of(section(client.get(PAGE).text, "steps"))
+    day = r"\d{2} \w{3}(?: \d{4})?"
+    assert re.search(rf"Your {day} — ?\s*\d+ losses in a row", said), said
+    assert re.search(r"Your five worst days — [−+]?₹[\d,]+", said), said
+    assert re.search(rf"Your journal for {day} — one of your five worst days:\s+\d+ trades?, "
+                     r"[−+]?₹[\d,]+", said), said
+
+
+@pytest.mark.parametrize(("minutes", "written"), [
+    (45, "45 minutes"), (1, "1 minute"), (60, "1 hour"), (119, "2 hours"),
+])
+def test_a_run_is_timed_in_plain_words(minutes, written):
+    assert SF.span_words(minutes) == written
 
 
 def test_there_is_a_way_back_to_the_report(client):
@@ -188,20 +199,16 @@ def _journals(engine, **versions) -> None:
         sess.commit()
 
 
-def test_the_journal_step_names_the_flagged_days_and_opens_on_them(client, engine):
+def test_the_journal_step_opens_on_the_flagged_day(client, engine):
     _journals(engine)
     steps = section(client.get(PAGE).text, "steps")
-    said = text_of(steps)
-    assert re.search(r"Start with \d{2} \w{3}(?: \d{4})? \( ?\d+ losses in a row\) and "
-                     r"\d{2} \w{3}(?: \d{4})? \(one of your five worst days\)\.", said), said
-    opened = re.findall(r'href="(/journals/\d+)"', steps)
-    assert len(opened) == 2 and len(set(opened)) == 2
+    opened = re.findall(r'href="/journals/(\d+)"', steps)
+    assert len(opened) == 1
     with make_session(engine) as sess:
-        for href in opened:
-            assert sess.get(m.Journal, int(href.rsplit("/", 1)[1])).period_start
+        assert sess.get(m.Journal, int(opened[0])).period_start
 
 
-def test_a_flagged_day_opens_on_its_latest_version(client, engine):
+def test_the_flagged_day_opens_on_its_latest_version(client, engine):
     _journals(engine, top=2)
     with make_session(engine) as sess:
         latest = {j.id for j in sess.scalars(select(m.Journal).where(m.Journal.version_no == 2))}
@@ -209,7 +216,7 @@ def test_a_flagged_day_opens_on_its_latest_version(client, engine):
     assert opened and {int(i) for i in opened} <= latest
 
 
-def test_with_no_journal_for_those_days_the_step_opens_the_list(client):
+def test_with_no_journal_for_that_day_the_step_opens_the_list(client):
     steps = section(client.get(PAGE).text, "steps")
     assert 'href="/journals"' in steps and not re.search(r'href="/journals/\d+"', steps)
 
