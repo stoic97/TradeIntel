@@ -200,5 +200,6 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             lots=lots_for(row.quantity or 1, profile_for(row), quantity_unit,
                           on=date.fromisoformat(trading_day)),
             risk_unit_source=_measured_against(row, trading_day, declarations),
+            is_option=row.segment == "OPT",
         ))
     return trips, imp

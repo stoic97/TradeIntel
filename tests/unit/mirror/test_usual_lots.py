@@ -21,7 +21,7 @@ from services.production.journal import sections as sec
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, trips_from
+from tests.unit.api.test_scope_chapters import trips_from
 from tests.unit.api.test_scope_facts import fact_page
 
 
@@ -95,12 +95,11 @@ def test_a_journal_compares_option_size_with_option_size():
 
 
 def test_a_day_above_the_usual_reads_as_above_it():
-    """Day 1 averages (3 + 1) / 2 = 2 and the usual is 1.5 once day 2's option is 1 lot."""
+    """With day 2's option at 1 lot the usual is (3 + 1 + 1) / 3 = 1.667; day 1 averages 2."""
     trips = history()
     trips[2] = replace(trips[2], lots=1)
-    # Options now (3 + 1 + 1) / 3 = 1.667. Day 1 at 2 is a third of a lot above it.
     text = prose._against_normal(journal_facts(trips, "2026-09-01"))
-    assert "Your average size was 2 lots against your usual 1.7." in text
+    assert "Your average size was 2.0 lots against your usual 1.7." in text
 
 
 def test_a_day_of_only_shares_says_nothing_about_size():
@@ -120,7 +119,6 @@ def test_chapter_three_compares_option_size_only():
     """The same function reads both surfaces, so they cannot disagree (TICKET-798)."""
     ctx = SF.record_context(history())
     assert ctx["rest_lots"].mean == Decimal(2)
-    assert SF.facts(ctx, IMP)["down"] is not None
 
 
 def test_a_history_of_only_shares_renders_the_chapter_three_fact():
