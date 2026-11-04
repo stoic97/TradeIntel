@@ -17,7 +17,7 @@ printed as ₹0 is not coloured as a loss.
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 MINUS = "\u2212"
 RUPEE = "\u20b9"
@@ -77,6 +77,11 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+def lots(value) -> str:
+    """Average lots to one decimal, as the Journal says them: 1.7, not 1.667."""
+    return str(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
+
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
@@ -88,4 +93,4 @@ def day(iso_date: str) -> str:
 
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day)
+    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
