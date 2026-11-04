@@ -9,6 +9,7 @@ is history, not his record, and showing both would double-count a re-upload.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -17,10 +18,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.production.accounts import risk_budget as rb
+from services.production.ctr.adapters import dhan_tradebook
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
-from services.production.mirror.metrics import Leg, Trip
+from services.production.mirror.metrics import Leg, TradeLine, Trip
 from services.shared.schemas import scope_v1 as s
 
 PROFILE_DIR = Path(__file__).resolve().parents[1] / "ctr" / "profiles"
@@ -32,6 +34,13 @@ class UnknownAdapter(Exception):
 
 class MisdeclaredQuantityUnit(Exception):
     """A quantity that cannot be whole lots under the declared unit."""
+
+
+def _number_in_force(
+    trading_day: str, declarations: list[m.RiskBudgetDeclaration]
+) -> Decimal | None:
+    """His number on this day in rupees, a percentage converted; none before its date."""
+    return rb.rupees(rb.in_force(declarations, trading_day))
 
 
 def _measured_against(
@@ -49,7 +58,7 @@ def _measured_against(
     PRD 5.5 puts the declared budget first in the hierarchy, so it wins here too,
     over a stop and over the premium.
     """
-    if rb.rupees(rb.in_force(declarations, trading_day)) is not None:
+    if _number_in_force(trading_day, declarations) is not None:
         return s.RiskUnitSourceV1.DECLARED_BUDGET
     return row.risk_unit_source
 
@@ -103,6 +112,56 @@ def lots_for(
 def _leg_label(leg: m.Trip) -> str:
     side = "Bought" if leg.direction == "LONG" else "Sold"
     return f"{side} {leg.strike:f} {leg.option_type}"
+
+
+def _line(leg: m.Trip) -> TradeLine:
+    return TradeLine(
+        symbol=leg.symbol,
+        segment=leg.segment,
+        side="Buy" if leg.direction == "LONG" else "Sell",
+        quantity=leg.quantity,
+        entry_price=leg.entry_price,
+        exit_price=leg.exit_price,
+        net=leg.net,
+        strike=leg.strike,
+        option_type=leg.option_type,
+        entry_ts=leg.entry_ts,
+    )
+
+
+def expiry_key(line: TradeLine) -> tuple:
+    """What ties a leg to the fill that opened it: the contract's name and that instant."""
+    return (line.symbol, line.strike, line.option_type, line.entry_ts)
+
+
+def expiries_for(sess: Session, imp: m.Import) -> dict[tuple, date | None]:
+    """Each opening fill's expiry, read from the rows the import kept (TICKET-822).
+
+    A trip row does not store its expiry and trip rows are insert-only, so a column would
+    leave every import already made without one. The raw row has it, for every import, so
+    this reads it there and needs no migration. Only the trade list asks: a fact page
+    does not read the expiry, and parsing a whole file on each page would be waste.
+
+    The same contract at the same instant under two expiries cannot be told apart, so it
+    has no expiry here rather than a guessed one.
+    """
+    if imp.adapter_id != dhan_tradebook.FORMAT_ID:
+        return {}
+    raw = sess.scalars(
+        select(m.ImportRow.raw_text).where(m.ImportRow.import_id == imp.id,
+                                           m.ImportRow.status == "PARSED")
+        .order_by(m.ImportRow.row_no)
+    ).all()
+    header = ",".join(dhan_tradebook.HEADER)
+    parsed = dhan_tradebook.parse([header, *raw], trader_id="expiry", raw_hash="0" * 64)  # read, not kept
+    expiries: dict[tuple, date | None] = {}
+    for fill in parsed.fills:
+        if fill.expiry is None:
+            continue
+        kind = fill.option_type.value if fill.option_type else None
+        key = (fill.symbol, fill.strike, kind, fill.ts)
+        expiries[key] = fill.expiry if expiries.get(key, fill.expiry) == fill.expiry else None
+    return expiries
 
 
 def current_import(sess: Session, trader: m.Trader) -> m.Import | None:
@@ -227,7 +286,11 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             risk_unit_source=_measured_against(first, trading_day, declarations),
             is_option=first.segment == "OPT",
             legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
+            lines=tuple(_line(leg) for leg in legs),
             uncapped=any(leg.uncapped for leg in legs),
             premium=_premium(legs),
         ))
-    return trips, imp
+    # Read off each trip's own day, so it holds for whatever trips were built above.
+    return [
+        replace(t, number_in_force=_number_in_force(t.trading_day, declarations)) for t in trips
+    ], imp
