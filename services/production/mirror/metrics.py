@@ -398,6 +398,25 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
+def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
+    """May a page state a direction for trades after two straight losses? Not today.
+
+    TICKET-832 lets that sentence show only if the research library's shuffle test (B2)
+    passes on the trader's file. There is no such test to call. Research has the null
+    written down (N-B in prereg/framework_v1.yaml, and its measured inflation in
+    engine/evidence.py) but no function that runs it, and library/b2.py is a Bayesian M1
+    fit. Production may not import research either (methodology Rule 5), and the server
+    installs without the research group. Writing a statistic here would redefine research's
+    test, so this answers False and the page says "No difference we can stand behind."
+    beside the same numbers.
+
+    What turns it on: research exposes a callable test where production may use it
+    (services/shared), and this returns whether it passed on these trips. Nothing else
+    needs to change; the sentence is written, and tested with this patched open.
+    """
+    return False
+
+
 def subset(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:
     """The named trips, in their original order. For comparing a group to the rest."""
     wanted = set(trip_ids)
