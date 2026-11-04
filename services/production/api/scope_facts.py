@@ -32,7 +32,6 @@ CARD_H = {
     "clock": 84,
     "busy": 84,
 }
-NO_BREAK = " "
 NOT_TOLD = 4
 """What we have not told you: the four things its first sentence names - a cause, a
 score, a cost, a change. Counted from the sentence, which is the Mirror's own."""
@@ -312,7 +311,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     if not out["down"]["state"]:
         out["down"]["dial_figure"] = _trades_word(ctx["two_losses"].condition)
     if not out["busiest"]["state"]:
-        on_day = out["busiest"]["busiest_date"].replace(" ", NO_BREAK)
+        on_day = out["busiest"]["busiest_date"].replace(" ", chr(0xA0))
         out["busiest"]["dial_figure"] = f"{_trades_word(ctx['days'].busiest_trips)}, {on_day}"
     two_losses = ctx["two_losses"]
     out["down"]["post_loss_sentence"] = (
