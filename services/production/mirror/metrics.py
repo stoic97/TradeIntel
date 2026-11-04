@@ -41,6 +41,38 @@ class Leg:
 
 
 @dataclass(frozen=True)
+class TradeLine:
+    """One leg as the broker's file has it: what a trader knows his trade by (TICKET-822)."""
+
+    symbol: str
+    segment: str  # EQ, FUT or OPT
+    side: str  # "Buy" or "Sell": how it was opened
+    quantity: int | None
+    entry_price: Decimal | None
+    exit_price: Decimal | None
+    net: Decimal
+    strike: Decimal | None = None
+    option_type: str | None = None
+    entry_ts: datetime | None = None
+
+    @property
+    def instrument(self) -> str:
+        """As the trader knows it: WIDGETOIL 5000 CE. A leg stored before Annex H has no strike."""
+        if self.strike is None or not self.option_type:
+            return self.symbol
+        return f"{self.symbol} {self.strike.normalize():f} {self.option_type}"
+
+    @property
+    def paid(self) -> Decimal | None:
+        """Price x quantity on a bought option. A sold option took money in; a share has none."""
+        if self.segment != "OPT" or self.side != "Buy":
+            return None
+        if not self.entry_price or not self.quantity:
+            return None
+        return self.entry_price * self.quantity
+
+
+@dataclass(frozen=True)
 class Trip:
     """One decision as the Mirror sees it: a round trip, or a position of several legs."""
 
@@ -55,6 +87,7 @@ class Trip:
     risk_unit_source: s.RiskUnitSourceV1
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
+    lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
 
     @property
@@ -77,6 +110,25 @@ class Trip:
         same zone (definitions 1), so the two compare without a clock of their own.
         """
         return self.exit_ts.date().isoformat() == self.trading_day
+
+    @property
+    def instrument(self) -> str:
+        """The trade's name on a row. A position of several legs is named by its underlying."""
+        if len(self.lines) == 1:
+            return self.lines[0].instrument
+        return f"{self.symbol} · {len(self.lines)} legs" if self.lines else self.symbol
+
+    @property
+    def paid(self) -> Decimal | None:
+        """What one bought option cost, shown as what was paid and never used as R (feedback
+        12). A spread's cost is not a premium, so a position of several legs has none."""
+        return self.lines[0].paid if len(self.lines) == 1 else None
+
+    @property
+    def result_percent(self) -> Decimal | None:
+        """The result as a share of what was paid, to one decimal."""
+        paid = self.paid
+        return _round(self.net / paid * 100, "0.1") if paid else None
 
 
 def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
@@ -334,6 +386,19 @@ def same_day_trips(trips: list[Trip]) -> list[Trip]:
 def held_past_day(trips: list[Trip]) -> HeldPastDay:
     held = [t for t in trips if not t.closed_same_day]
     return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
+
+
+def trade_book(trip: Trip) -> str:
+    """The book a trade belongs to, in a trader's own words: one definition (TICKET-822).
+
+    An option is its underlying's, with crude's two contracts as one. A share or an ETF is
+    in one book with the other shares and ETFs, held or not; a future is in Futures.
+    """
+    if trip.is_option:
+        return "Crude options" if trip.symbol.startswith("CRUDE") else f"{trip.symbol} options"
+    if trip.lines and trip.lines[0].segment == "EQ":
+        return "Stocks and ETFs"
+    return "Futures"
 
 
 def best_five(trips: list[Trip]) -> list[Trip]:

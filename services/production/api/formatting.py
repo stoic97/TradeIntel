@@ -61,6 +61,18 @@ def rupees(value, signed: bool = True, exact: bool = False) -> str:
     return written
 
 
+def rupees_on_a_trade(value) -> str:
+    """As rupees, but a real amount under a rupee keeps its paise.
+
+    On one trade, a win of 96 paise cut to ₹0 reads as a winner that made nothing. Totals
+    and averages keep the whole-rupee cut.
+    """
+    paise = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if _whole(value) != 0 or not paise:
+        return rupees(value)
+    return f"{MINUS if paise < 0 else '+'}{RUPEE}{abs(paise)}"
+
+
 def tone(value) -> str:
     """The kit's class suffix for a signed rupee figure: num--loss, num--gain, num--plain."""
     n = _whole(value)
@@ -82,6 +94,22 @@ def lots(value) -> str:
     return str(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
+def price(value) -> str:
+    """A traded price with its paise, as the broker's file writes it: 2,345.50. Not rupees
+    with a sign: a price is an amount, and the paise are the point of it."""
+    cut = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    whole, _, paise = f"{abs(cut):f}".partition(".")
+    return f"{indian_grouping(int(whole))}.{paise}"
+
+
+def signed_percent(value) -> str:
+    """A result against what was paid, to one decimal, signed as a result is: +3.9%, −4.5%."""
+    cut = Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    if not cut:
+        return "0.0%"
+    return f"{MINUS if cut < 0 else '+'}{abs(cut)}%"
+
+
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
@@ -93,4 +121,5 @@ def day(iso_date: str) -> str:
 
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
+    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
+    env.filters.update(price=price, signed_percent=signed_percent)

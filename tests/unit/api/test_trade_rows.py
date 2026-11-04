@@ -343,14 +343,14 @@ def test_a_sold_option_is_in_the_price_band_of_what_it_was_sold_at(uploaded):
 
 def test_a_share_is_in_no_entry_price_band(uploaded):
     """A share's price says nothing about an option's: the bands are for options."""
-    for band in ("under-50", "50-100", "100-150", "150-250", "250-plus"):
+    for band in ("under-50", "50-100", "100-150"):  # the bands this history has
         assert not any(n.startswith("Widget ETF") for n in
                        articles(strike_list(uploaded, f"?price={band}")))
 
 
 def test_a_spread_is_in_no_entry_price_band(uploaded):
     """Its legs have a price each; the position has none."""
-    for band in ("under-50", "50-100", "100-150", "150-250", "250-plus"):
+    for band in ("under-50", "50-100", "100-150"):  # the bands this history has
         assert not any("2 legs" in n for n in articles(strike_list(uploaded, f"?price={band}")))
 
 
@@ -423,9 +423,9 @@ def test_a_holding_is_reachable_where_the_fact_counts_it(uploaded):
     [
         ("CRUDEOIL", "OPT", "Crude options"),
         ("CRUDEOILM", "OPT", "Crude options"),
-        ("NIFTY", "OPT", "NIFTY options"),
+        ("WIDGETOIL", "OPT", "WIDGETOIL options"),
         ("Widget ETF", "EQ", "Stocks and ETFs"),
-        ("NIFTY", "FUT", "Futures"),
+        ("WIDGETOIL", "FUT", "Futures"),
     ],
 )
 def test_one_definition_of_a_book(symbol, segment, want):

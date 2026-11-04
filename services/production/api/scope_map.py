@@ -137,7 +137,19 @@ def fact_href(key: str, *, lens: bool = True) -> str:
     return _with(f"/mirror/fact/{key}", enter="lens" if lens else None)
 
 
+def see_all_href(key: str, **filters) -> str:
+    """Every trade behind a fact, on its own page, with any filter already chosen
+    (trade_list.FILTERS names them): the clock can link to one hour, chapter 3 to one book."""
+    return _with(f"/mirror/fact/{key}/trades", **filters)
+
+
 # ---------- The trades behind each fact ----------
+
+INLINE_TRADES = 30
+"""The longest list a fact page draws. Past this it links to the list instead (TICKET-822).
+
+Long enough for a losing run, the best and worst five, and a busy day, which the tickets
+after this one read on the page itself; short enough to keep a fact page a page."""
 
 
 def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
@@ -181,14 +193,15 @@ RISK_SOURCES = (
 """As the Mirror's risk table names them; ATR is among "nothing we could use" there too."""
 
 
-def groups(key: str, ctx: dict) -> list[dict]:
+def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]:
     """The trades behind a fact, grouped as the fact reads them, for the trades macro.
 
     By how a trade ended for the two facts about outcomes, by the hour it was opened
     for the clock, by what it was measured against for risk; by trading day for the
-    rest. A group with no trades is left out.
+    rest. A group with no trades is left out. `only` narrows it to these of them, as the
+    trade list's filters do.
     """
-    shown = trades_behind(key, ctx)
+    shown = trades_behind(key, ctx) if only is None else only
     numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
     if key in ("hold", "strike"):
         parts = [(title, [t for t in shown if getattr(t, flag)]) for title, flag in OUTCOMES]
@@ -221,13 +234,22 @@ def groups(key: str, ctx: dict) -> list[dict]:
 def trade(t: mx.Trip, number: int) -> dict:
     """One trade as the trades macro draws it.
 
-    The fills under it (B5) are not kept yet (handoff D4), so the strip is drawn from
-    the first fill to the last - in and out - and the fills table is left off.
+    The fills under it (B5) are not kept yet (handoff D4), so the fills table is left off.
+    `number` is the trade's place in his record: it identifies a row for code and is not
+    drawn, because it means nothing to him (TICKET-822). A position of several legs has
+    its side, size and prices on each leg, and no premium.
     """
     held_minutes = t.holding_seconds // 60
+    only_line = t.lines[0] if len(t.lines) == 1 else None
     return {
         "number": number,
-        "instrument": t.symbol,
+        "instrument": t.instrument,
+        "side": only_line.side if only_line else None,
+        "qty": only_line.quantity if only_line else None,
+        "entry_price": only_line.entry_price if only_line else None,
+        "exit_price": only_line.exit_price if only_line else None,
+        "paid": t.paid,
+        "result_percent": t.result_percent,
         "day": formatting.day(t.trading_day),
         "time_in": t.entry_ts.strftime("%H:%M"),
         "time_out": t.exit_ts.strftime("%H:%M"),
@@ -235,6 +257,15 @@ def trade(t: mx.Trip, number: int) -> dict:
         "net": t.net,
         "fill_minutes": [0, t.holding_seconds / 60],
         "fills": [],
-        "legs": t.legs,
+        "legs": [
+            {
+                "label": leg.label,
+                "net": leg.net,
+                "qty": line.quantity,
+                "entry_price": line.entry_price,
+                "exit_price": line.exit_price,
+            }
+            for leg, line in zip(t.legs, t.lines, strict=False)
+        ],
         "uncapped": t.uncapped,
     }

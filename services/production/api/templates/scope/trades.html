@@ -1,0 +1,32 @@
+{#- Every trade behind a fact, with filters (TICKET-822): the page a fact's "See all trades"
+    opens. The lens and the path go back to the fact. A GET form, so a choice is a link
+    anyone can keep, and it needs no script. No dwell key: dwell is keyed by fact page. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import path, gross_line, uncounted_line, trades, button %}
+{% block stage %}
+{{ path(chapter.facts|length, index, fact.title, fact_href, "See all trades") }}
+{% endblock %}
+{% block content %}
+  <section class="evidence evidence--page" aria-labelledby="evidence-title">
+    <h1 class="heading" id="evidence-title">The trades behind this</h1>
+    {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+    {{ uncounted_line(imp.trips_refused) }}
+    {%- if listing.filters %}
+    <form class="trade-filters" method="get">
+      {%- for filter in listing.filters %}
+      <label class="field"><span class="field__label">{{ filter.label }}</span><select class="field__input" name="{{ filter.name }}"><option value="">All</option>{% for c in filter.choices %}<option value="{{ c.value }}"{% if c.selected %} selected{% endif %}>{{ c.label }}</option>{% endfor %}</select></label>
+      {%- endfor %}
+      <div class="trade-filters__go">{{ button("Show trades", kind="secondary", block=true) }}</div>
+    </form>
+    {%- endif %}
+    <p class="evidence__caption">{% if listing.filtered %}<span class="num">{{ listing.shown|count }}</span> of <span class="num">{{ listing.total|count }}</span>{% else %}<span class="num">{{ listing.total|count }}</span>{% endif %} {{ "trade" if listing.total == 1 else "trades" }}.</p>
+    {%- if listing.filtered %}
+    <p class="trade-filters__clear"><a href="{{ listing.clear_href }}">Clear filters</a></p>
+    {%- endif %}
+    {%- if listing.shown %}
+    {{ trades(listing.groups) }}
+    {%- else %}
+    <p class="body">No trades match these filters.</p>
+    {%- endif %}
+  </section>
+{% endblock %}
