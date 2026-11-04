@@ -12,6 +12,7 @@
     <dt>Rows set aside</dt><dd>{{ imp.rows_excluded|count }}</dd><dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
     <dt>Trades refused</dt><dd>{{ imp.trips_refused|count }}</dd><dt>Charges in the file</dt><dd class="facts-list__note">{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd>
   </dl>
+  {% include "scope/_refused.html" %}
 {% endblock %}
 {#- Rows, not trades: "What we could not read" lists what was set aside and why.
     A refused trade is kept with its reason but not yet with the rows it came from
