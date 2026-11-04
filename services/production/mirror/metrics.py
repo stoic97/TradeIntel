@@ -45,6 +45,7 @@ class Trip:
     net: Decimal
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
+    is_option: bool = True  # size is counted in lots on options only (TICKET-797)
 
     @property
     def is_win(self) -> bool:
@@ -81,6 +82,7 @@ def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
             net=Decimal(str(row["net"])),
             lots=int(row["lots"]),
             risk_unit_source=s.RiskUnitSourceV1(row["risk_unit_source"]),
+            is_option=row.get("segment", "OPT") == "OPT",
         )
         for row in rows
     ]
@@ -395,12 +397,14 @@ def strike_rate(trips: list[Trip]) -> StrikeRate:
 
 
 def average_lots(trips: list[Trip]) -> AverageLots:
-    if not trips:
+    """Mean lots on option trades only. A share's "lot" is one share, not a size."""
+    options = [t for t in trips if t.is_option]
+    if not options:
         return AverageLots(0, None, s.ResultState.INSUFFICIENT_SAMPLE)
-    total = sum(t.lots for t in trips)
+    total = sum(t.lots for t in options)
     return AverageLots(
         total_lots=total,
-        mean=_trim(_round(Decimal(total) / Decimal(len(trips)), "0.001")),
+        mean=_trim(_round(Decimal(total) / Decimal(len(options)), "0.001")),
         state=s.ResultState.COUNTED_FACT,
     )
 

@@ -1,10 +1,10 @@
 # BSE SENSEX index options. # Contract facts: CHECK AGAINST THE EXCHANGE before merge.
 exchange: BSE
 symbol: SENSEX
-version: "1"
-contract_multiplier: "20"
+version: "2"
+contract_multiplier: "25"
 tick_size: "0.05"
-currency_per_point: "20"
+currency_per_point: "25"
 currency: INR
 timezone: Asia/Kolkata
 session_start: "09:15"
@@ -12,4 +12,5 @@ session_end: "15:30"
 expiry_rule: from_instrument_name
 lot_sizes:
   - {units: "10", from: "2000-01-01", until: "2024-12-31"}
-  - {units: "20", from: "2024-11-20"}                          # SEBI min contract value, 20 Nov 2024
+  - {units: "25", from: "2026-10-01"}                          # ~ Jan 2027 expiry on: Fyers symbol master, 4 Nov 2026; start is a safe earlier bound
+  - {units: "20", from: "2024-11-20", until: "2026-12-31"}     # expiries to 31 Dec 2026: Fyers symbol master, 4 Nov 2026
