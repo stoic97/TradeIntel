@@ -281,10 +281,10 @@ def _reconstruct_contract(
     isolated = _flat_intraday_days(fills)
     taken = {id(f) for day in isolated for f in day}
     for day in isolated:
-        _walk(day, trips, skipped, opens)
+        _walk(day, trips, skipped, opens, trip_type)
     rest = [f for f in fills if id(f) not in taken]
     if rest:
-        _walk(rest, trips, skipped, opens)
+        _walk(rest, trips, skipped, opens, trip_type)
 
 
 def _walk(
@@ -292,6 +292,7 @@ def _walk(
     trips: list[RoundTrip],
     skipped: list[SkippedTrip],
     opens: list[OpenPosition],
+    trip_type: type[RoundTrip],
 ) -> None:
     """Walk these fills in time order, maintaining a FIFO lot queue."""
     sample = fills[0]
