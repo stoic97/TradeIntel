@@ -98,7 +98,7 @@ def test_every_fact_is_two_taps_from_home(client):
 
 def test_the_headline_figures_are_the_fixture_figures(client):
     pages = every_page(client)
-    assert "96%" in pages["/mirror"], "share of total, in Home's centre"
+    assert "96%" in pages["/mirror/fact/share"], "share of total"
     assert "24,000" in pages["/mirror/fact/worst-days"], "five worst days"
     assert "15.8%" in pages["/mirror/fact/strike"], "strike rate"
     assert "3.0" in pages["/mirror/fact/hold"], "holding ratio"
