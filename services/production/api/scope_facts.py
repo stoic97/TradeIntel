@@ -233,8 +233,10 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     # the full figure under the dial instead.
     out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
+    options = mx.option_result(trips)
     out["not-told"].update(
-        options=mx.option_result(trips),
+        options=options,
+        options_amount=abs(options.net) if options else None,  # the sentence says lost or made
         loss_guide=mx.loss_size_guide(trips),
         flagged=_flagged_days(ctx, out),
     )

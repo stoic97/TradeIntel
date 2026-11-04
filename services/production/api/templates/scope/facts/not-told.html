@@ -14,7 +14,7 @@
     <h2 class="heading" id="ending-found">What your file showed</h2>
     <ol class="ending__list">
       {%- if f.options %}
-      <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options.net|abs, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ f.options.held_gain_days|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
+      <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options_amount, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ f.options.held_gain_days|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
       {%- elif not facts["worst-days"].state %}
       <li class="mirror">Your five worst days came to {{ money(worst_days.sum) }}.</li>
       {%- endif %}
