@@ -131,7 +131,8 @@ def test_the_account_page_links_to_delete_everything(client):
     ) in client.get("/account").text
 
 
-def test_the_way_to_delete_is_reachable_from_the_upload_page_promise(client):
-    """The promise and the way to keep it are one tap from the bottom nav apart."""
-    assert "You can delete it at any time." in client.get("/upload").text
-    assert "/account/delete" in client.get("/account").text
+def test_the_upload_page_says_where_to_delete_everything(client):
+    """[TICKET-802] Amended gate: the promise line says where the control is."""
+    page = client.get("/upload").text
+    assert "You can delete everything at any time from your Account page." in page
+    assert "You can delete it at any time." not in page
