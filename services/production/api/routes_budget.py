@@ -66,6 +66,24 @@ def _history(sess, trader: m.Trader) -> list[m.RiskBudgetDeclaration]:
     ).all())
 
 
+def _past_number(sess, trader: m.Trader) -> dict:
+    """The count, once there is a number and a file to count from, and that file's import.
+
+    A file the record cannot be read from leaves no count, not a broken form: the Mirror
+    says what is wrong with the file.
+    """
+    nothing = {"past_number": None, "imp": None}
+    if not _history(sess, trader):
+        return nothing
+    try:
+        trips, imp = loader.load_for(sess, trader)
+    except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
+        return nothing
+    if not trips:
+        return nothing
+    return {"past_number": mx.trades_past_number(trips), "imp": imp}
+
+
 def _default_from(sess, trader: m.Trader) -> str:
     """Where the date starts: the first day he uploaded, today if there is none.
 
@@ -73,30 +91,6 @@ def _default_from(sess, trader: m.Trader) -> str:
     would apply to none of them and nothing would say so.
     """
     return loader.first_trading_day(sess, trader) or _today().isoformat()
-
-
-def _form_context(sess, trader: m.Trader) -> dict:
-    """What the page reads, and the count once there is a number and a file to count from.
-
-    A file the record cannot be read from leaves no count, not a broken form: the Mirror
-    says what is wrong with the file.
-    """
-    declarations = _history(sess, trader)
-    context = {
-        "declarations": declarations,
-        "today": _today().isoformat(),
-        "default_from": _default_from(sess, trader),
-        "past_number": None,
-        "imp": None,
-    }
-    if declarations:
-        try:
-            trips, imp = loader.load_for(sess, trader)
-        except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
-            return context
-        if trips:
-            context.update(past_number=mx.trades_past_number(trips), imp=imp)
-    return context
 
 
 @router.get("/budget", response_class=HTMLResponse)
@@ -107,7 +101,11 @@ def budget_form(request: Request):
             return RedirectResponse("/login", status_code=303)
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
-        return page(request, "budget.html", title="What you risk", **_form_context(sess, trader))
+        return page(request, "budget.html", title="What you risk",
+                    **_past_number(sess, trader),
+                    declarations=_history(sess, trader),
+                    today=_today().isoformat(),
+                    default_from=_default_from(sess, trader))
 
 
 @router.post("/budget")
@@ -131,7 +129,11 @@ def budget_submit(
 
         def refuse(message: str) -> HTMLResponse:
             return page(request, "budget.html", status_code=400,
-                        title="What you risk", error=message, **_form_context(sess, trader))
+                        title="What you risk", error=message,
+                        **_past_number(sess, trader),
+                        declarations=_history(sess, trader),
+                        today=_today().isoformat(),
+                        default_from=_default_from(sess, trader))
 
         try:
             amount = Decimal(value)

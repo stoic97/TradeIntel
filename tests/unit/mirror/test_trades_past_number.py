@@ -66,11 +66,11 @@ def trip(name, opened, closed, net, number) -> mx.Trip:
     """A ten-minute trade, opened at 10:00 IST on the day and closed on its closing day."""
     entry = datetime.fromisoformat(f"2026-{opened}T10:00:00+05:30")
     exit_ = datetime.fromisoformat(f"2026-{closed}T10:10:00+05:30")
-    source = s.RiskUnitSourceV1.UNAVAILABLE if name == UNCAPPED else s.RiskUnitSourceV1.PREMIUM_PAID
+    source = s.RiskUnitSourceV1.UNCAPPED if name == UNCAPPED else s.RiskUnitSourceV1.PREMIUM_PAID
     return mx.Trip(
         trip_id=name, symbol="WIDGETOIL", trading_day=entry.date().isoformat(), entry_ts=entry,
         exit_ts=exit_, holding_seconds=int((exit_ - entry).total_seconds()), net=Decimal(net),
-        lots=1, risk_unit_source=source, number_in_force=number,
+        lots=1, risk_unit_source=source, number_in_force=number, uncapped=name == UNCAPPED,
     )
 
 
@@ -125,7 +125,7 @@ def test_each_trade_is_measured_against_the_number_in_force_that_day():
     assert "g" not in ids
 
 
-def test_a_trade_with_no_risk_figure_counts_when_its_rupees_are_past_the_number():
+def test_an_uncapped_sold_option_counts_when_its_rupees_are_past_the_number():
     """Annex H section 6: a declared budget outranks a risk figure. The count reads rupees."""
     assert "l" in mx.trades_past_number(trips()).trip_ids
 
@@ -161,7 +161,7 @@ def add_history(engine, rows=HISTORY, exchange="MCX") -> None:
         sess.flush()
         for name, opened, closed, net, _number in rows:
             source = (
-                s.RiskUnitSourceV1.UNAVAILABLE if name == UNCAPPED
+                s.RiskUnitSourceV1.UNCAPPED if name == UNCAPPED
                 else s.RiskUnitSourceV1.PREMIUM_PAID
             )
             sess.add(m.Trip(
@@ -172,7 +172,7 @@ def add_history(engine, rows=HISTORY, exchange="MCX") -> None:
                 exit_ts=datetime.fromisoformat(f"2026-{closed}T10:10:00+05:30"),
                 quantity=100, entry_price=Decimal(100), exit_price=Decimal(100),
                 gross=Decimal(net), fees=Decimal(0), net=Decimal(net), fees_available=False,
-                risk_unit_source=source,
+                risk_unit_source=source, uncapped=name == UNCAPPED,
             ))
         sess.commit()
 
