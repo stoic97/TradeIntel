@@ -69,8 +69,10 @@ def test_a_run_in_a_mixed_book_reads_true():
 
 
 def test_a_book_with_a_common_name_reads_in_lower_case():
-    trips = [trip("a", DAY, "09:00:00", "09:10:00", -100, symbol="CRUDEOIL")]
-    assert "1 loss, in 10 minutes: 03 Mar 2026, crude options, −₹100." in page_of(trips)
+    assert SF._book_words("Stocks and ETFs") == "stocks and ETFs"
+    assert SF._book_words("WIDGETOIL options") == "WIDGETOIL options"
+    trips = [trip("a", DAY, "09:00:00", "09:10:00", -100, segment="FUT")]
+    assert "1 loss, in 10 minutes: 03 Mar 2026, futures, −₹100." in page_of(trips)
 
 
 def test_a_span_some_way_off_a_whole_hour_says_about():
