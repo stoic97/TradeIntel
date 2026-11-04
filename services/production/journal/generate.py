@@ -156,6 +156,16 @@ def changed_by_upload(sess: Session, *, trader: m.Trader) -> set[int]:
     return changed
 
 
+def earlier_with_other_trades(sess: Session, journal: m.Journal) -> int | None:
+    """The nearest earlier version listing different trades: where their answers are."""
+    earlier = sess.get(m.Journal, journal.supersedes) if journal.supersedes else None
+    while earlier is not None:
+        if earlier.trip_ids != journal.trip_ids:
+            return earlier.id
+        earlier = sess.get(m.Journal, earlier.supersedes) if earlier.supersedes else None
+    return None
+
+
 def surface(sess: Session, *, trader: m.Trader) -> Surface:
     """The latest five, newest first, and the count waiting in the catch-up list."""
     current = sorted(_current_versions(sess, trader),
