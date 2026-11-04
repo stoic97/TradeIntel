@@ -31,3 +31,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
+
+/* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
+.import__days { margin-top: var(--space-4); }
+.import__days > summary { cursor: pointer; }

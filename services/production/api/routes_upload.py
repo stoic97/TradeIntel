@@ -193,9 +193,14 @@ def import_review(request: Request, import_id: int):
         # A first upload has nothing to compare against: every day is new, so the page
         # lists them plainly. Decided here rather than summed in the template (T7).
         first_upload = sum(d.rows_before for d in days) == 0
+        changed_days = [] if first_upload else [
+            d.trading_day for d in days if d.diff is not s.DayDiff.IDENTICAL
+        ]
+        shrunk_days = [d.trading_day for d in days if d.day_shrank]
         return page(request, "import_review.html", title="What we read",
                     imp=imp, groups=groups, excluded=excluded, rejected=rejected,
-                    days=days, first_upload=first_upload)
+                    days=days, first_upload=first_upload, changed_days=changed_days,
+                    shrunk_days=shrunk_days)
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")

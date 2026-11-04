@@ -131,7 +131,7 @@ def test_it_says_what_it_said_before(case):
 def test_the_import_check_does_not_add_up_its_days():
     """It summed rows_before to tell a first upload; the route says so now."""
     source = (TEMPLATES / "import_review.html").read_text()
-    assert "sum" not in source and "first_upload" in source
+    assert "|sum" not in source and "first_upload" in source  # <summary> is not a sum
     route = Path("services/production/api/routes_upload.py").read_text()
     assert "first_upload = sum(d.rows_before for d in days) == 0" in route
 

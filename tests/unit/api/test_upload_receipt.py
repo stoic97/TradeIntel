@@ -13,6 +13,7 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from tests.unit.api.templating import template_env
 from tests.unit.api.test_restyle_journal_pages import CONTEXT, day
+from tests.unit.api.test_scope_chapters import readable
 from tests.unit.api.test_upload import _two_days, client, engine, upload  # noqa: F401
 
 MORE = (
@@ -47,7 +48,7 @@ def test_the_toggle_says_how_many_days(client, engine):  # noqa: F811
     page = latest_page(client, engine)
     with make_session(engine) as sess:
         days = len(sess.scalars(select(m.TradingDayVersion)).all())
-    assert f"Show all {days} days" in page
+    assert f"Show all {days} days" in readable(page)
 
 
 def test_a_first_upload_claims_no_change(client, engine):  # noqa: F811
@@ -58,8 +59,7 @@ def test_a_first_upload_claims_no_change(client, engine):  # noqa: F811
 def test_a_later_upload_says_what_changed(client, engine):  # noqa: F811
     upload(client, content=_two_days())
     upload(client, content=_two_days() + MORE)
-    page = " ".join(latest_page(client, engine).split())
-    assert "Since your last upload, 1 day changed: 15 Oct" in page
+    assert "Since your last upload, 1 day changed: 15 Oct" in readable(latest_page(client, engine))
 
 
 def test_what_changed_shows_before_the_toggle(client, engine):  # noqa: F811
@@ -83,7 +83,7 @@ def test_many_changes_are_counted_not_all_listed():
     page = later(
         changed_days=[f"2026-09-0{i}" for i in range(1, 6)], shrunk_days=[]
     )
-    assert "5 days changed: 01 Sep, 02 Sep, 03 Sep and 2 more." in page
+    assert "5 days changed: 01 Sep, 02 Sep, 03 Sep and 2 more." in readable(page)
 
 
 def test_a_day_that_lost_rows_is_never_behind_the_toggle():
