@@ -84,7 +84,7 @@ def test_a_note_is_still_on_the_day_after_a_later_upload(session, trader):  # no
     assert [j.id for j in day(session, "2026-09-01")] == [journal.id]
     current = gen._current_versions(session, trader)
     shown = next(j for j in current if j.period_start == "2026-09-01")
-    assert fl.current(session, journal=shown, field="note", trip_id=None) == "my own words"
+    assert fl.current(session, journal=shown, field="note", trip_id=None).value == "my own words"
 
 
 def test_a_journal_read_stays_read_after_a_later_upload(session, trader):  # noqa: F811

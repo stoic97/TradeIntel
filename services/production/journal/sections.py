@@ -32,6 +32,27 @@ def _net(trips: tuple[Trip, ...] | list[Trip]) -> Decimal:
     return sum((t.net for t in trips), Decimal(0))
 
 
+# What a Journal stores that isn't about its own period: read against the whole history, or
+# against answers given since. One new trade anywhere moves the first on every day, and neither
+# is a change to this day, so neither decides whether a new version is written.
+NOT_THIS_PERIOD = {
+    "against_your_normal": {"your_normal_day", "lots_usually"},
+    "after_two_straight_losses": {"days_it_happened", "your_trading_days"},
+    "planned_sl": {"losing_trades_without_one", "said_before"},
+}
+
+
+def own_facts(facts: dict[str, Any]) -> dict[str, Any]:
+    """The stored facts about this period alone."""
+    return {
+        name: (
+            {k: v for k, v in body.items() if k not in NOT_THIS_PERIOD[name]}
+            if name in NOT_THIS_PERIOD else body
+        )
+        for name, body in facts.items()
+    }
+
+
 def build(
     period: Period,
     *,

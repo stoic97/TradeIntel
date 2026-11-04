@@ -10,7 +10,9 @@ next upload makes untrue.
 leaves the old one readable, because he may have read it. But an upload that changes
 NOTHING writes nothing -- without that, every re-upload doubles his history and the
 promise that old versions are kept becomes unusable noise. Sameness is decided by
-comparing the facts, which is why the facts are stored rather than the prose.
+comparing the facts about that period (``sections.own_facts``), which is why the facts
+are stored rather than the prose. A new version also starts unread and with no answers,
+so writing one for a day that did not change costs him what he wrote on it.
 
 **Latest five, with a catch-up list.** A backfill generates every Journal and
 surfaces five. The PRD's own words: a developer who renders sixty entries has built
@@ -105,7 +107,9 @@ def generate(
         serialised = json.dumps(facts, sort_keys=True)
 
         previous = _existing(sess, trader, period)
-        if previous is not None and previous.sections == serialised:
+        if previous is not None and (
+            sec.own_facts(json.loads(previous.sections)) == sec.own_facts(facts)
+        ):
             # Nothing about this period changed. Writing a version anyway would
             # double his history on every re-upload and bury the versions that
             # genuinely differ.
@@ -127,6 +131,29 @@ def generate(
         sess.flush()
         written.append(journal)
     return written
+
+
+def changed_by_upload(sess: Session, *, trader: m.Trader) -> set[int]:
+    """The Journals whose trades differ from an earlier version of the same period.
+
+    What may say "a later upload changed this period". Being a later version is not enough:
+    versions are also stored with the same trades, so the version number alone would claim a
+    change the upload page says did not happen.
+    """
+    rows = sess.execute(
+        select(m.Journal.id, m.Journal.supersedes, m.Journal.trip_ids)
+        .where(m.Journal.trader_id == trader.id)
+    ).all()
+    by_id = {row.id: row for row in rows}
+    changed: set[int] = set()
+    for row in rows:
+        earlier = by_id.get(row.supersedes)
+        while earlier is not None:
+            if earlier.trip_ids != row.trip_ids:
+                changed.add(row.id)
+                break
+            earlier = by_id.get(earlier.supersedes)
+    return changed
 
 
 def surface(sess: Session, *, trader: m.Trader) -> Surface:
