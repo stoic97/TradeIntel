@@ -72,12 +72,6 @@ def count(value) -> str:
     return indian_grouping(_whole(value))
 
 
-def signed_count(value) -> str:
-    """A count that went up or down: +2, \u22121. Written with its sign, unlike count."""
-    n = _whole(value)
-    return (MINUS if n < 0 else "+" if n > 0 else "") + count(n)
-
-
 def minutes(seconds) -> str:
     """Whole minutes from seconds, cut as the templates' (seconds / 60)|int cut them."""
     return count(_whole(Decimal(str(seconds)) / 60))
@@ -100,4 +94,3 @@ def day(iso_date: str) -> str:
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
     env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
-    env.filters.update(signed_count=signed_count)

@@ -11,7 +11,7 @@
 <span class="account__change">
 {%- if change.days -%}
   {%- if change.rows -%}
-    {{ change.rows|signed_count }} {{ "row" if change.one_row else "rows" }},{{ " " }}
+    {{ change.rows_sign }}{{ change.rows_size|count }} {{ "row" if change.rows_size == 1 else "rows" }},{{ " " }}
   {%- endif -%}
   {{ change.days|length|count }} {{ "day" if change.days|length == 1 else "days" }} changed (
   {%- for trading_day in change.days_named -%}

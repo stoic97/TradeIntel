@@ -99,8 +99,13 @@ class UploadChange:
     days: tuple[str, ...]
 
     @property
-    def one_row(self) -> bool:
-        return abs(self.rows) == 1
+    def rows_sign(self) -> str:
+        """The true minus (U+2212), as every signed figure on a page has it."""
+        return "+" if self.rows > 0 else "−" if self.rows < 0 else ""
+
+    @property
+    def rows_size(self) -> int:
+        return abs(self.rows)
 
     @property
     def days_named(self) -> tuple[str, ...]:
