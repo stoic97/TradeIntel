@@ -5,6 +5,7 @@
     {% include "scope/_risk_read.html" %}
 {% endblock %}
 {% block body %}
+  {% include "scope/_past_number.html" %}
   {{ figure(1, "Every trade, by what it was measured against", f.page_chart) }}
   {% include "scope/_risk_table.html" %}
 {% endblock %}
