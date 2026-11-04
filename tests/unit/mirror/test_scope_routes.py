@@ -78,8 +78,8 @@ def test_an_unknown_fact_is_not_found(client):
 def test_a_fact_lists_every_trade_behind_it_from_the_database(client):
     """The fixture's 40 trades, through the loader: every one a link from the strike-rate page
     [TICKET-822]."""
-    assert 'href="/mirror/fact/strike/trades"' in client.get("/mirror/fact/strike").text
-    assert client.get("/mirror/fact/strike/trades").text.count('<article class="trade">') == 40
+    assert 'href="/mirror/fact/math/trades"' in client.get("/mirror/fact/math").text
+    assert client.get("/mirror/fact/math/trades").text.count('<article class="trade">') == 40
 
 
 def test_what_we_could_not_read_reads_the_import_rows(client):
