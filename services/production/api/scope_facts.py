@@ -219,6 +219,12 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         last=out["worst-days"]["last_day"],
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
+    two_losses = ctx["two_losses"]
+    out["down"]["post_loss_sentence"] = (
+        mx.post_loss_sentence_may_show(trips)
+        and two_losses.condition_mean is not None
+        and two_losses.comparison_mean is not None
+    )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     # Home's wedge is too narrow for "rows" at four-digit counts (TICKET-804), so home says
     # the full figure under the dial instead.

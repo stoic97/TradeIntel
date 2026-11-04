@@ -1,6 +1,8 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import money %}
+{% from "scope/_opening.html" import down_sentence %}
 {% block head %}
+    <p class="mirror">{{ down_sentence(f, two_losses) }}</p>
     <div class="fact__figure"><span class="num num--hero">{{ two_losses.population|count }}</span></div>
     <p class="mirror">On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss. On <span class="num">{{ two_losses.condition|count }}</span> of those, the two most recent had both lost.</p>
 {% endblock %}

@@ -1,0 +1,15 @@
+{#- The sentence each chapter-3 page opens with, one wording for its fact page and its card.
+    After two straight losses: the figures are two_straight_losses' own means, said only
+    when f.post_loss_sentence allows it (metrics.post_loss_sentence_may_show). -#}
+{% from "_components.html" import money %}
+{% macro down_sentence(f, two_losses) -%}
+{%- if f.post_loss_sentence -%}
+After two straight losses, your next trades averaged <span class="opening-figure">{{ money(two_losses.condition_mean, exact=true) }}</span>. Your other trades while down averaged <span class="opening-figure">{{ money(two_losses.comparison_mean, exact=true) }}</span>.
+{%- else -%}
+No difference we can stand behind.
+{%- endif -%}
+{%- endmacro %}
+
+{% macro busiest_sentence(days) -%}
+Your busiest day had <span class="num">{{ days.busiest_trips|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ days.normal_day }}</span> on your normal day.
+{%- endmacro %}

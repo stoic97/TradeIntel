@@ -61,7 +61,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         3,
         "Your behaviour",
         (
-            Fact("down", "Trading on while already down", "down"),
+            Fact("down", "After two straight losses", "down"),
             Fact("busiest", "Your busiest day", "busy"),
         ),
         feedback=True,
