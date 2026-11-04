@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -177,6 +177,7 @@ def scope_fact(request: Request, key: str):
     chapter, index = SM.chapter_of(key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
+    ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
                 enter_class=enter_class(request), body_class="screen__body--fact",
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
@@ -184,7 +185,66 @@ def scope_fact(request: Request, key: str):
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **unread, **context)
+                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **context)
+
+
+def _ending(request: Request, imp, fact: dict) -> dict:
+    """What the report's last page reads from beyond the record (TICKET-825)."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        worst = fact["flagged"]["worst"]
+        # Ascending, so the latest version of a day is the one left in the map.
+        opens = {} if worst is None else dict(sess.execute(
+            select(m.Journal.period_start, m.Journal.id)
+            .where(m.Journal.trader_id == trader.id, m.Journal.unit == s_enums.JournalUnit.DAY,
+                   m.Journal.period_start == worst["iso"])
+            .order_by(m.Journal.version_no)
+        ).all())
+        earlier = sess.scalars(
+            select(m.Import).join(m.Trip, m.Trip.import_id == m.Import.id)
+            .where(m.Import.trader_id == trader.id, m.Import.id < imp.id)
+            .order_by(m.Import.id.desc()).limit(1)
+        ).first()
+        return {
+            "journal_href": f"/journals/{opens[worst['iso']]}"
+            if worst and worst["iso"] in opens else "/journals",
+            "changed": earlier and {
+                "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
+                "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
+            },
+            "answered": FB.report_answer(sess, trader, imp.id) is not None,
+            "answers": FB.ANSWERS,
+            "note_limit": FB.NOTE_LIMIT,
+        }
+
+
+def _trading_days(sess, import_id: int) -> int:
+    return sess.scalar(
+        select(func.count(distinct(m.Trip.trading_day))).where(m.Trip.import_id == import_id)
+    )
+
+
+@router.post("/mirror/feedback", response_class=HTMLResponse)
+def report_feedback(request: Request, answer: str = Form(None), note: str = Form(None),
+                    csrf_token: str = Form(None)):
+    """The whole report: one answer and an optional note, on the report's last page."""
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        imp = loader.current_import(sess, trader)
+        if imp is None:
+            return HTMLResponse("", status_code=404)
+        try:
+            FB.record_report_answer(sess, trader=trader, import_id=imp.id,
+                                    answer=answer or "", note=note)
+        except FB.NotAsked:
+            return HTMLResponse("", status_code=400)
+        sess.commit()
+    return RedirectResponse(f"{SM.fact_href('not-told', lens=False)}#report-check",
+                            status_code=303)
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)
