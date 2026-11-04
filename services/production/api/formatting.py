@@ -89,6 +89,30 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+SECONDS_A_DAY = 24 * 60 * 60
+DAYS_A_MONTH = 30
+
+
+def _units(n: int, unit: str) -> str:
+    return f"{count(n)} {unit}{'' if n == 1 else 's'}"
+
+
+def hold(seconds) -> str:
+    """How long a position was open, the one way every page writes it (TICKET-818).
+
+    Under a day it is whole minutes, as a day trader counts them: 375 min. From a day it is
+    days, and from 30 days months and days: 29 days, 1 month, 13 months 10 days. A month is
+    30 days, so the same seconds read the same whichever dates they fell on, and each unit
+    is cut down as every figure here is: a hold of 1 day 23 hours is 1 day.
+    """
+    whole_days = _whole(Decimal(str(seconds)) / SECONDS_A_DAY)
+    if whole_days < 1:
+        return f"{minutes(seconds)} min"
+    months, days = divmod(whole_days, DAYS_A_MONTH)
+    parts = ([_units(months, "month")] if months else []) + ([_units(days, "day")] if days else [])
+    return " ".join(parts)
+
+
 def lots(value) -> str:
     """Average lots to one decimal, as the Journal says them: 1.7, not 1.667."""
     return str(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
@@ -122,5 +146,5 @@ def day(iso_date: str) -> str:
 
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
+    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, hold=hold, day=day, lots=lots)
     env.filters.update(price=price, signed_percent=signed_percent)

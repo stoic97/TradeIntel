@@ -55,6 +55,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
+        "money_found": mx.money_found(trips),
         "two_losses": two_losses,
         "strike": mx.strike_rate(same_day),
         "break_even": mx.break_even(same_day),
@@ -163,7 +164,10 @@ def _figure(key: str, ctx: dict, imp) -> str:
             return f"{share.share_percent}%"
         return formatting.rupees(share.total)  # the second state leads with the whole result
     if key == "money":
-        return f"{formatting.count(len(S.trades_behind('money', ctx)))} trades"
+        found = ctx["money_found"]
+        return formatting.rupees(
+            found.same_day_net if found.same_day_count else ctx["held_past_day"].net
+        )
     if key == "hold":
         h = ctx["holding"]
         w, lo = (
@@ -244,15 +248,21 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for d in ctx["worst_days"].days
     ]
-    out["money"]["pairs"] = [
-        {
-            "best": b,
-            "worst": w,
-            "best_day": formatting.day(b.trading_day),
-            "worst_day": formatting.day(w.trading_day),
-        }
-        for b, w in zip(ctx["best"], ctx["worst"], strict=False)
-    ]
+    money_chapter, _ = S.chapter_of("money")
+    next_chapter = S.chapter(money_chapter.number + 1)
+    out["money"].update(
+        found=ctx["money_found"],
+        best_rows=S.ranked(ctx["best"], ctx),
+        worst_rows=S.ranked(ctx["worst"], ctx),
+        held_groups=[]
+        if out["money"]["see_all"]
+        else S.groups("money", ctx, only=ctx["held_past_day"].trips),
+        next={
+            "number": next_chapter.number,
+            "name": next_chapter.name,
+            "href": S.chapter_href(next_chapter.number),
+        },
+    )
     out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     out["strike"]["held"] = ctx["held_past_day"]

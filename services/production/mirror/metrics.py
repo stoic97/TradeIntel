@@ -15,6 +15,7 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
@@ -392,6 +393,121 @@ def best_five(trips: list[Trip]) -> list[Trip]:
 def worst_five(trips: list[Trip]) -> list[Trip]:
     """Lowest net, ascending. Ties: earlier entry first."""
     return sorted(trips, key=lambda t: (t.net, t.entry_ts))[:5]
+
+
+HOLDING_AT_LEAST_SECONDS = 30 * 24 * 60 * 60
+"""A stock or ETF held this long is a holding, not a trade, for the money fact's headline.
+
+An option held overnight or a share held for a week is still a trade to the person who
+placed it, and "your best trades weren't trades" would be false of him.
+"""
+MOST_OF_FIVE = 3
+FIVE = 5
+EVENING_FROM_HOUR = 17  # the equity markets have shut; only the commodity evening is open
+LATE_EVENING_FROM_HOUR = 20
+
+
+@dataclass(frozen=True)
+class TopHolding:
+    """The one instrument that made most of what was held past the day."""
+
+    instrument: str
+    net: Decimal
+    longest_seconds: int
+
+
+@dataclass(frozen=True)
+class MoneyFound:
+    """What the best and worst lists found, so a sentence is said only when it is true.
+
+    best_were_holdings: most of the five biggest results in the whole file are winning stocks
+    or ETFs held a month or more. same_place: both lists are full, share no trade and sit in
+    one book. evening_told: most of each list opened in the evening; worst_late then says how
+    many of the worst opened later still. durations_told: the best five all made money and the
+    worst five all lost it, so "ran" and "lost" are true of every row; the medians are None
+    otherwise. Describes what happened; says nothing about what to do.
+    """
+
+    same_day_count: int
+    same_day_net: Decimal
+    best_net: Decimal
+    worst_net: Decimal
+    holdings_in_best: int
+    best_were_holdings: bool
+    same_place: str | None
+    best_books: tuple[tuple[str, int], ...]
+    worst_books: tuple[tuple[str, int], ...]
+    best_evening: int
+    worst_evening: int
+    worst_late: int
+    evening_told: bool
+    worst_mostly_late: bool
+    durations_told: bool
+    best_median_seconds: int | None
+    worst_median_seconds: int | None
+    worst_median_loss: Decimal | None
+    top_holding: TopHolding | None
+
+
+def _is_holding(t: Trip) -> bool:
+    return (
+        not t.closed_same_day
+        and t.is_win
+        and trade_book(t) == "Stocks and ETFs"
+        and t.holding_seconds >= HOLDING_AT_LEAST_SECONDS
+    )
+
+
+def _books(trips: list[Trip]) -> tuple[tuple[str, int], ...]:
+    return tuple(Counter(trade_book(t) for t in trips).most_common())
+
+
+def _top_holding(held: HeldPastDay) -> TopHolding | None:
+    """The instrument that made more than half of a positive total, and no more than all of it."""
+    if held.net <= 0:
+        return None
+    by_instrument: dict[str, list[Trip]] = {}
+    for t in held.trips:
+        by_instrument.setdefault(t.instrument, []).append(t)
+    name, trips = max(by_instrument.items(), key=lambda kv: sum(t.net for t in kv[1]))
+    net = sum((t.net for t in trips), Decimal(0))
+    if net * 2 <= held.net or net > held.net:
+        return None
+    return TopHolding(name, net, max(t.holding_seconds for t in trips))
+
+
+def money_found(trips: list[Trip]) -> MoneyFound:
+    same_day = same_day_trips(trips)
+    best, worst = best_five(same_day), worst_five(same_day)
+    full = len(best) == FIVE and len(worst) == FIVE
+    apart = {t.trip_id for t in best}.isdisjoint(t.trip_id for t in worst)
+    books = {trade_book(t) for t in best + worst}
+    holdings = sum(_is_holding(t) for t in best_five(trips))
+    best_evening = sum(t.entry_ts.hour >= EVENING_FROM_HOUR for t in best)
+    worst_evening = sum(t.entry_ts.hour >= EVENING_FROM_HOUR for t in worst)
+    worst_late = sum(t.entry_ts.hour >= LATE_EVENING_FROM_HOUR for t in worst)
+    durations = full and all(t.is_win for t in best) and all(t.is_loss for t in worst)
+    return MoneyFound(
+        same_day_count=len(same_day),
+        same_day_net=sum((t.net for t in same_day), Decimal(0)),
+        best_net=sum((t.net for t in best), Decimal(0)),
+        worst_net=sum((t.net for t in worst), Decimal(0)),
+        holdings_in_best=holdings,
+        best_were_holdings=bool(same_day) and holdings >= MOST_OF_FIVE,
+        same_place=books.pop() if full and apart and len(books) == 1 else None,
+        best_books=_books(best),
+        worst_books=_books(worst),
+        best_evening=best_evening,
+        worst_evening=worst_evening,
+        worst_late=worst_late,
+        evening_told=full and best_evening >= MOST_OF_FIVE and worst_evening >= MOST_OF_FIVE,
+        worst_mostly_late=worst_late >= MOST_OF_FIVE,
+        durations_told=durations,
+        best_median_seconds=median(t.holding_seconds for t in best) if durations else None,
+        worst_median_seconds=median(t.holding_seconds for t in worst) if durations else None,
+        worst_median_loss=median(-t.net for t in worst) if durations else None,
+        top_holding=_top_holding(held_past_day(trips)),
+    )
 
 
 def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:

@@ -1,17 +1,42 @@
 {% extends "scope/fact.html" %}
+{% from "_components.html" import money, ranked_trades, trades, button %}
+{% set screen_class = "screen--wide" %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    <p class="money-headline">{% include "scope/_money_headline.html" %}</p>
+    <div class="money-split">
+      {% if f.found.same_day_count %}<div class="money-split__side"><p class="money-split__label">Everything you closed the same day</p>{{ money(f.found.same_day_net, "medium") }}<p class="money-split__label"><span class="num">{{ f.found.same_day_count|count }}</span> trade{{ "" if f.found.same_day_count == 1 else "s" }}</p></div>{% endif %}
+      {% if f.held.count %}<div class="money-split__side"><p class="money-split__label">Positions you held past the day</p>{{ money(f.held.net, "medium") }}<p class="money-split__label"><span class="num">{{ f.held.count|count }}</span> position{{ "" if f.held.count == 1 else "s" }}</p></div>{% endif %}
+    </div>
+    {% if f.found.best_were_holdings %}<p class="mirror mirror--card table-note">Of the five biggest gains in your file, {{ f.found.holdings_in_best }} were stocks or ETFs held for a month or more.</p>{% endif %}
 {% endblock %}
-{% block body %}
-  {% if f.pairs %}
-  <p class="table-label">Table 1</p>
-  <table class="table">
-    <thead><tr><th>Best five</th><th class="table__num">(net)</th><th>Worst five</th><th class="table__num">(net)</th></tr></thead>
-    <tbody>
-      {% for pair in f.pairs %}<tr><td>{{ pair.best_day }}</td><td class="table__num num--{{ pair.best.net|tone }}">{{ pair.best.net|rupees }}</td><td>{{ pair.worst_day }}</td><td class="table__num num--{{ pair.worst.net|tone }}">{{ pair.worst.net|rupees }}</td></tr>{% endfor %}
-    </tbody>
-  </table><p class="mirror mirror--card table-note">Ties are listed with the earlier trade first. Nothing is trimmed or capped.</p>
-  {% endif %}
-  {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.pairs %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ f.held.count }} position{{ "" if f.held.count == 1 else "s" }}, net {{ f.held.net|rupees }}.</p>{% endif %}
+{% block evidence %}
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The trades behind this</h2>
+    <p class="evidence__caption">Your best five and worst five, by result. <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    {% if f.found.same_day_count %}
+    <div class="ranked-lists">
+    {{ ranked_trades("Best five", f.best_rows) }}
+    {{ ranked_trades("Worst five", f.worst_rows) }}
+    </div>
+    <p class="mirror mirror--card table-note">Ties are listed with the earlier trade first. Nothing is trimmed or capped.</p>
+    <div class="money-hook">
+      {% if f.found.same_place %}<p class="money-hook__lead">Your best and worst trades are in the same place.</p>
+      <p class="mirror mirror--card">All 10 are in one book: {{ f.found.same_place }}.</p>
+      {% else %}<p class="mirror mirror--card">Best five: {% for book, n in f.found.best_books %}{{ n }} in {{ book }}{{ ", " if not loop.last }}{% endfor %}.</p>
+      <p class="mirror mirror--card">Worst five: {% for book, n in f.found.worst_books %}{{ n }} in {{ book }}{{ ", " if not loop.last }}{% endfor %}.</p>
+      {% endif %}
+      {% if f.found.evening_told %}<p class="mirror mirror--card">{{ f.found.best_evening }} of the 5 best were opened from 5 pm on, and {% if f.found.worst_mostly_late %}{{ f.found.worst_late }} of the 5 worst from 8 pm on{% else %}{{ f.found.worst_evening }} of the 5 worst from 5 pm on{% endif %}.</p>{% endif %}
+      {% if f.found.durations_told %}<p class="mirror mirror--card">Your best five ran a median of {{ f.found.best_median_seconds|hold }}. Your worst five lost a median of {{ f.found.worst_median_loss|rupees(signed=false) }} each, in a median of {{ f.found.worst_median_seconds|hold }}.</p>
+      <p class="mirror mirror--card table-note">This describes what happened, not advice to hold longer. A trade can lose fast simply by being wrong from the start.</p>{% endif %}
+    </div>
+    {% endif %}
+    {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ f.held.count }} position{{ "" if f.held.count == 1 else "s" }}, net {{ f.held.net|rupees }}.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ f.found.top_holding.net|rupees }} of it, the longest held {{ f.found.top_holding.longest_seconds|hold }}.{% endif %}</p>{% endif %}
+    {% if f.see_all %}<p class="evidence__see-all">{{ button("See all trades", f.see_all, "secondary") }}</p>{% else %}{{ trades(f.held_groups) }}{% endif %}
+  </section>
 {% endblock %}
-{% block caption %}Your best five and worst five, by result.{% endblock %}
+{% block lineage %}
+  <div class="next-chapter">
+    {% if f.found.same_day_count %}<p class="next-chapter__hook">Everything you closed the same day: {{ f.found.same_day_net|rupees }}.{% if f.found.same_day_net|tone == "loss" %} See where it went.{% endif %}</p>{% endif %}
+    {{ button("Chapter " ~ f.next.number ~ ": " ~ f.next.name, f.next.href, block=true) }}
+  </div>
+{% endblock %}

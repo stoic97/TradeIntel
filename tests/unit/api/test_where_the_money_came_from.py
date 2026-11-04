@@ -245,6 +245,11 @@ def test_no_instrument_is_named_when_none_made_most_of_what_was_held():
     assert "of it, the longest held" not in page_of(SAME_DAY + spread_out)
 
 
+def test_no_instrument_is_named_when_it_made_more_than_the_whole():
+    trips = [*SAME_DAY, share("x1", 100, 40), share("x2", -50, 40, "WIDGETPIPE")]
+    assert found(trips).top_holding is None
+
+
 def test_no_instrument_is_named_when_holdings_lost_overall():
     assert found([*SAME_DAY, share("x1", -100, 40)]).top_holding is None
 
@@ -351,8 +356,8 @@ def test_a_list_in_two_books_is_not_the_same_place_and_is_told_as_counted():
     assert found(trips).same_place is None
     page = page_of(trips)
     assert HOOK not in page
-    assert "Best five: 4 WIDGETOIL options, 1 WIDGETIDX options." in page
-    assert "Worst five: 5 WIDGETOIL options." in page
+    assert "Best five: 4 in WIDGETOIL options, 1 in WIDGETIDX options." in page
+    assert "Worst five: 5 in WIDGETOIL options." in page
 
 
 def test_a_trade_in_both_lists_is_not_ten_trades():

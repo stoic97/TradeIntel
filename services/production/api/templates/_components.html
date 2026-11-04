@@ -131,14 +131,14 @@
 
 {#- One trade, named as the trader knows it: the instrument, buy or sell, the quantity; its
     day, in, out, held and result; the prices, and on a bought option what was paid and the
-    result against it. trade: instrument, day, time_in, time_out, held_minutes, net (the
+    result against it. trade: instrument, day, time_in, time_out, held_seconds, net (the
     value), and side, qty, entry_price, exit_price, paid, result_percent, legs where the
     row has them. A position is one row with its legs under it (Annex H). fills: time, side,
     qty, price as written, row; not kept yet (B5, handoff D4), so with none it is left off. -#}
-{% macro trade(t) -%}
+{% macro trade(t, rank=none) -%}
 <article class="trade">
-      <div class="trade__label">{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ t.qty|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
-      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees_on_a_trade }}</span></div>
+      <div class="trade__label">{% if rank %}<span class="trade__rank">{{ rank }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ t.qty|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
+      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_seconds|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
       <div class="trade__prices">{{ t.entry_price|price }} → {{ t.exit_price|price }}{% if t.get("paid") %} · Paid {{ t.paid|rupees(signed=false) }} · {{ t.result_percent|signed_percent }} of premium{% endif %}</div>
       {%- endif %}
@@ -154,6 +154,15 @@
       </table>
       {%- endif %}
     </article>
+{%- endmacro %}
+
+{#- One ranked list on the money fact: its rows in rank order, not grouped (TICKET-818). -#}
+{% macro ranked_trades(title, rows) -%}
+<section class="ranked-list">
+      <h3 class="ranked-list__title">{{ title }}</h3>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+      <ol class="ranked">{% for t in rows %}<li>{{ trade(t, rank=loop.index) }}</li>{% endfor %}</ol>
+    </section>
 {%- endmacro %}
 
 {#- Every trade behind a fact, grouped by day - never a sample. group: title, trade_count,
