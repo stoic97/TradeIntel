@@ -73,13 +73,41 @@ def _heading(facts: dict[str, Any]) -> str:
     return f"{start.strftime('%-d %B')} to {end.strftime('%-d %B %Y')}"
 
 
+def _date(iso: str) -> str:
+    # Not strftime's %-d: it does not exist on Windows.
+    day = date.fromisoformat(iso)
+    return f"{day.day} {day.strftime('%B %Y')}"
+
+
+def _later(days: int) -> str:
+    return "the next day" if days == 1 else f"{days} days later"
+
+
+def _held_span(held: dict[str, Any]) -> str:
+    return (f"opened on {_date(held['opened'])}, closed on {_date(held['closed'])}, "
+            f"{_later(held['days'])}")
+
+
+def _held_sentence(held: dict[str, Any]) -> str:
+    """Held trades on a day with other trades. Facts stored before this have no held key."""
+    if held["count"] == 1:
+        return f" One was held past the day: {_held_span(held)}."
+    return (f" {_count(held['count'])} were held past the day. The longest opened on "
+            f"{_date(held['opened'])} and closed on {_date(held['closed'])}, "
+            f"{_later(held['days'])}.")
+
+
 def _what_happened(facts: dict[str, Any]) -> str:
     trades = facts["trades"]
     count = trades["count"]
     net = _rupees(trades["net"])
+    held = facts.get("held")
+    only_trade_held = bool(held) and count == 1
 
     when = ""
-    if trades["first_hour"] is not None:
+    if only_trade_held:
+        when = f", held past the day: {_held_span(held)}"
+    elif trades["first_hour"] is not None:
         if trades["all_before_noon"]:
             when = ", all before noon"
         elif trades["first_hour"] != trades["last_hour"]:
@@ -106,7 +134,8 @@ def _what_happened(facts: dict[str, Any]) -> str:
             outcome = " " + ", ".join(parts).capitalize() + "."
 
     word = "trade" if count == 1 else "trades"
-    return f"{_count(count)} {word}{when}. Net {net}.{outcome}"
+    extra = _held_sentence(held) if held and not only_trade_held else ""
+    return f"{_count(count)} {word}{when}. Net {net}.{outcome}{extra}"
 
 
 def _the_behaviour(facts: dict[str, Any]) -> str:

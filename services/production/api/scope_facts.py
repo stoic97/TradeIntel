@@ -58,7 +58,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "two_losses": two_losses,
         "strike": mx.strike_rate(trips),
         "lots": mx.average_lots(trips),
-        "holding": mx.holding_time(trips),
+        "holding": mx.holding_time(same_day),
         "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
@@ -179,7 +179,7 @@ def _figure(key: str, ctx: dict, imp) -> str:
     if key == "busiest":
         return f"{ctx['days'].busiest_vs_normal}×"
     if key == "unread":
-        return f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
+        return f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows"
     if key == "risk":
         return f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))}"
     return str(NOT_TOLD)
@@ -215,10 +215,12 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
+    # Home's wedge is too narrow for "rows" at four-digit counts (TICKET-804), so home says
+    # the full figure under the dial instead.
+    out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
-    held = mx.holding_series(trips)
-    drawn = mx.holding_series(mx.same_day_trips(trips))
-    out["hold"]["max_seconds"] = max([*drawn.winners_seconds, *drawn.losers_seconds, 0])
+    held = mx.holding_series(mx.same_day_trips(trips))
+    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["hold"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
     for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px
@@ -305,7 +307,7 @@ def home_view(figs: dict[str, dict], ctx: dict) -> dict:
         items.append(
             {
                 "name": c.name,
-                "figure": lead["figure"],
+                "figure": lead.get("hub_figure", lead["figure"]),
                 "state": lead["state"],
                 "href": S.chapter_href(c.number, from_home=True),
             }

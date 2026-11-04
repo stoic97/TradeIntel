@@ -16,6 +16,7 @@
   <p class="label">Counted from your file</p>
   <h1 class="title fact__title">What your trades actually did.</h1>
   <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>
+  <p class="body">What we read: <span class="num">{{ imp.rows_parsed|count }}</span> of <span class="num">{{ imp.rows_in|count }}</span> rows.{% include "scope/_refused.html" %}</p>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   {{ uncounted_line(imp.trips_refused) }}
   <p class="label label--plain home__foot"><span>No buy or sell calls, ever.</span><span>4 chapters</span></p>
