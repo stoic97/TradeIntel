@@ -99,6 +99,7 @@ def a_trader(sess, login_id: str, store: FileStore, content: bytes) -> m.Trader:
                                      given_at=datetime.now(UTC)))
     sess.add(m.GuessAnswer(trader_id=trader.id, answer="unknown", labels_version="t",
                            import_id=imp.id, answered_at=datetime.now(UTC)))
+    sess.add(m.WtpAsked(trader_id=trader.id, journal_id=journal.id, asked_at=datetime.now(UTC)))
     sess.add(m.LeavingCardShown(trader_id=trader.id, copy_version="t",
                                 shown_at=datetime.now(UTC)))
     sess.add(m.LeavingCardAnswer(trader_id=trader.id, outcome="answered",
