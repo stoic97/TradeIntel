@@ -26,7 +26,7 @@ SKIP_PARTS = {"__pycache__", "fixtures", "prereg"}
 # Numbers that are allowed to be in the code, and why. A value is allowed
 # everywhere it appears; the reason is for whoever reads this next.
 ALLOWED: dict[int, str] = {
-    1000: "sampler draws and warmup; and a dwell cap written as 1000 * 60 * 30",
+    1000: "sampler draws and warmup; a dwell cap written as 1000 * 60 * 30; a round line for a big loss",
     1024: "bytes in a kibibyte, in the upload size cap",
     1224: "histories in the synthetic corpus; generated here, from no one",
     3000: "trips per run in a synthetic sweep",

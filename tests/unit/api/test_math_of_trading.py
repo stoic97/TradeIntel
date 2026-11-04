@@ -315,12 +315,17 @@ def row_of(page: str, label: str) -> str:
     return found[0]
 
 
+def cells(html: str) -> str:
+    """A table as a reader reads it: its cells apart, a figure under a figure on one line."""
+    return readable(re.sub(r'</t[dh]>|<span class="math__under"', lambda m: f" {m[0]}", html))
+
+
 def test_the_fact_has_its_new_name(text):
     assert "The math of your trading" in text
 
 
 def test_a_book_row_shows_the_win_rate_and_both_ways_to_break_even(page):
-    row = readable(row_of(page, "WIDGET options"))
+    row = cells(row_of(page, "WIDGET options"))
     for figure in ("60", "45%", "45.3%", "₹94", "+₹1"):
         assert figure in row, row
 
@@ -334,7 +339,7 @@ def test_both_ways_are_said_in_words(text):
 def test_averages_and_medians_sit_side_by_side_per_year(page):
     table = re.search(r'data-table="sizes".*?</table>', page, re.DOTALL)[0]
     assert "Average" in table and "Typical (median)" in table and "Open" in table
-    year_one = readable(table)
+    year_one = cells(table)
     assert "2025 Winners ₹85 ₹40 15 min" in year_one
     assert "2025 Losers ₹100 ₹40 5 min" in year_one
     assert "2026 Winners ₹100 ₹100 10 min" in year_one
@@ -342,7 +347,7 @@ def test_averages_and_medians_sit_side_by_side_per_year(page):
 
 
 def test_the_year_table_gives_each_years_math(page):
-    table = readable(re.search(r'data-table="years".*?</table>', page, re.DOTALL)[0])
+    table = cells(re.search(r'data-table="years".*?</table>', page, re.DOTALL)[0])
     assert "2025 30 40% 54.1% ₹150 +₹65" in table
     assert "2026 30 50% 33.3% ₹50 −₹50" in table
 
@@ -364,10 +369,19 @@ def test_the_biggest_losers_are_a_secondary_line_with_their_caveat():
     page = fact_page("math", YEAR_ONE)
     text = readable(page)
     assert "1 trade (3%) lost more than ₹1,000, 63% of this book's losses." in text
-    assert "a median 2 lots, the other losers a median 2 lots" in text
-    assert "open a median 30 min against 5 min" in text
+    assert "It was 2 lots, the other losers a median 2 lots." in text
+    assert "It was open 30 min, the other losers a median 5 min." in text
     assert "Part of this is arithmetic" in text
     assert re.search(r'<p class="[^"]*math__secondary[^"]*">[^\n]*Part of this is arithmetic', page)
+
+
+def test_more_than_one_big_loser_reads_in_the_plural_and_one_lot_in_the_singular():
+    """Winners 100 x 20. Losers 50 x 8 at 2 min, and 2,000 x 2 at 40 and 60 min: median 50."""
+    nets = [100] * 20 + [-50] * 8 + [-2000] * 2
+    text = readable(fact_page("math", make(nets, [10] * 20 + [2] * 8 + [40, 60], lots=1)))
+    assert "2 trades (7%) lost more than ₹1,000 each, 91% of this book's losses." in text
+    assert "They were a median 1 lot, the other losers a median 1 lot." in text
+    assert "They were open a median 50 min, the other losers a median 2 min." in text
 
 
 def test_the_top_winners_line_gives_the_number_and_no_verdict():

@@ -1,4 +1,4 @@
-"""The Mirror, told as the Scope: Home, four chapters, twelve facts (handoff 4, 5).
+"""The Mirror, told as the Scope: Home, four chapters, eleven facts (handoff 4, 5).
 
 The pages format; they compute nothing. Every figure comes from
 services/production/mirror/metrics.py, through scope_facts.record_context, so there is
@@ -155,10 +155,19 @@ def chapter_feedback(request: Request, n: int, answer: str = Form(None),
     return RedirectResponse(f"{SM.chapter_href(n)}#feedback", status_code=303)
 
 
+def _moved(request: Request, key: str, rest: str = "") -> RedirectResponse:
+    """A fact that merged into another: same page below it, same query. No record is read,
+    so the page it lands on is the one that asks for a login."""
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(f"/mirror/fact/{SM.MOVED_FACTS[key]}{rest}{query}", status_code=301)
+
+
 @router.get("/mirror/fact/{key}", response_class=HTMLResponse)
 def scope_fact(request: Request, key: str):
     """A fact (handoff 4, level 3): the lens and path, the Mirror's sentences and
     figures, then every trade behind it."""
+    if key in SM.MOVED_FACTS:
+        return _moved(request, key)
     if key not in SM.FACTS:
         return HTMLResponse("", status_code=404)
     early, record = load_record(request)
@@ -182,6 +191,8 @@ def scope_fact(request: Request, key: str):
 def scope_fact_trades(request: Request, key: str):
     """Every trade behind a fact, with the filters the fact page has no room for. A fact
     page links here when its list is long (TICKET-822), so nothing behind it is out of reach."""
+    if key in SM.MOVED_FACTS:
+        return _moved(request, key, "/trades")
     if key not in TL.FACTS_WITH_TRADES:
         return HTMLResponse("", status_code=404)
     early, record = load_record(request)

@@ -172,8 +172,8 @@ def test_the_dial_has_a_slice_per_fact_in_slice_order(n):
 def test_a_slice_in_a_state_is_marked_and_draws_no_mini_chart():
     figs = SF.facts(SF.record_context(trips_from([100, 200, 300, 50])), IMP)
     svg = str(dial.scope_dial(SF.chapter_view(2, figs)))
-    assert svg.count("scope__slice--not-enough") == 2  # hold and run
-    assert svg.count('class="scope__mini') == 2  # strike and clock
+    assert svg.count("scope__slice--not-enough") == 2  # the math and the run
+    assert svg.count('class="scope__mini') == 1  # the clock
 
 
 # ---------- The page ----------
