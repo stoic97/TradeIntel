@@ -41,8 +41,18 @@
 
 {#- One plain line, never a box. Shown by the page only when the export has no charges
     column; the wording is the Mirror's own (handoff section 7). -#}
+{#- [TICKET-812] The share, its base rate: never of the net result (definitions 1). -#}
+{% macro share_sentence(share) -%}
+{{ share.worst_day_count }} of your {{ share.trading_day_count|count }} trading days (about {{ share.days_percent }}%) carried about <span class="num">{{ share.share_percent }}</span>% of your losses.
+{%- endmacro %}
+
 {% macro gross_line() -%}
 <p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
+{%- endmacro %}
+
+{#- [TICKET-811] Interim, until sold options are counted (TICKET-810). Goes when n is 0. -#}
+{% macro uncounted_line(n) -%}
+{%- if n %}<p class="gross-line">{{ n }} sold-option trade{{ " is" if n == 1 else "s are" }} not yet counted — totals will change when {{ "it is" if n == 1 else "they are" }}.</p>{% endif -%}
 {%- endmacro %}
 
 {#- Result states (handoff section 4): never hidden, never an all-clear, and told apart
@@ -126,9 +136,14 @@
 {% macro trade(t) -%}
 {%- set s = scope_strip(t.fill_minutes) -%}
 <article class="trade">
-      <div class="trade__label">Trade {{ t.number }} · {{ t.instrument }}</div>
+      <div class="trade__label">Trade {{ t.number }} · {{ t.instrument }}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees }}</span></div>
       <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ s.axis }}"/><path class="strip__tick" d="{{ s.ticks }}"/><path class="strip__dot" d="{{ s.dots }}"/><path class="strip__bar" d="{{ s.bar }}"/></svg>
+      {%- if t.get("legs") %}
+      <table class="fills">
+        <tbody>{% for leg in t.legs %}<tr><td>{{ leg.label }}</td><td class="table__num num--{{ leg.net|tone }}">{{ leg.net|rupees }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {%- endif %}
       {%- if t.fills %}
       <table class="fills">
         <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>

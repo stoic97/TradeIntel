@@ -50,7 +50,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
     rest = mx.complement(trips, two_losses.condition_trip_ids)
     return {
         "worst_days": mx.five_worst_days(trips),
-        "share": mx.share_of_total(trips),
+        "share": mx.share_of_losses(trips),
         "days": mx.day_counts(trips),
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
@@ -58,8 +58,8 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "two_losses": two_losses,
         "strike": mx.strike_rate(trips),
         "lots": mx.average_lots(trips),
-        "holding": mx.holding_time(trips),
-        "hours": mx.result_by_hour(trips),
+        "holding": mx.holding_time(same_day),
+        "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
         "trips": trips,
@@ -115,11 +115,14 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_read(imp.rows_parsed, imp.rows_in, w, h, mini)
     if kind == "risk":
         c = ctx["risk"].counts
-        nothing = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
+        # The kit's chart has four bands. A spread's maximum loss is recorded and never
+        # divided by, as the premium is; an uncapped position has nothing to measure.
+        nothing = (c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
+                   + c[s.RiskUnitSourceV1.UNCAPPED])
         return G.chart_risk(
             c[s.RiskUnitSourceV1.DECLARED_BUDGET],
             c[s.RiskUnitSourceV1.DEFINED_STOP],
-            c[s.RiskUnitSourceV1.PREMIUM_PAID],
+            c[s.RiskUnitSourceV1.PREMIUM_PAID] + c[s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS],
             nothing,
             w,
             h,
@@ -129,6 +132,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 
 
 def _state(key: str, ctx: dict) -> str:
+    if key == "clock" and not ctx["hours"]:
+        return "not-enough"  # every trade was held past its day
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -174,7 +179,7 @@ def _figure(key: str, ctx: dict, imp) -> str:
     if key == "busiest":
         return f"{ctx['days'].busiest_vs_normal}×"
     if key == "unread":
-        return f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
+        return f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows"
     if key == "risk":
         return f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))}"
     return str(NOT_TOLD)
@@ -210,10 +215,12 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
+    # Home's wedge is too narrow for "rows" at four-digit counts (TICKET-804), so home says
+    # the full figure under the dial instead.
+    out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
-    held = mx.holding_series(trips)
-    drawn = mx.holding_series(mx.same_day_trips(trips))
-    out["hold"]["max_seconds"] = max([*drawn.winners_seconds, *drawn.losers_seconds, 0])
+    held = mx.holding_series(mx.same_day_trips(trips))
+    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["hold"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
     for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px
@@ -245,7 +252,11 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
+    out["risk"]["structure"] = c[s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS]
+    out["risk"]["uncapped"] = c[s.RiskUnitSourceV1.UNCAPPED]
+    out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     hours = ctx["hours"]
+    out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(
         first_hour=f"{hours[0].hour:02d}" if hours else "",
         last_hour=f"{hours[-1].hour:02d}" if hours else "",
@@ -296,14 +307,17 @@ def home_view(figs: dict[str, dict], ctx: dict) -> dict:
         items.append(
             {
                 "name": c.name,
-                "figure": lead["figure"],
+                "figure": lead.get("hub_figure", lead["figure"]),
                 "state": lead["state"],
                 "href": S.chapter_href(c.number, from_home=True),
             }
         )
     share = ctx["share"]
     if share.shown_as_percentage:
-        centre = {"figure": f"{share.share_percent}%"}
+        centre = {
+            "figure": f"{share.share_percent}%",
+            "captionLines": ["of your losses", "in five days"],
+        }
     else:
         centre = {
             "figure": formatting.rupees(share.total),

@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from services.production.accounts import deletion
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.accounts.file_store import FileStore
 from services.production.api.app import create_app
 from services.production.db import models as m
@@ -56,7 +57,7 @@ def client(engine, store):
                            uploaded_at=datetime.now(UTC)))
         sess.add(m.ConsentEvent(trader_id=trader.id,
                                 purpose=s.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version="0-draft", granted=True,
+                                terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web",
                                 wording_shown="x" * 100))
         sess.commit()
@@ -121,3 +122,18 @@ def test_it_needs_signing_in(engine):
     anonymous = TestClient(create_app())
     assert anonymous.get("/account/delete",
                          follow_redirects=False).status_code in (302, 303)
+
+
+def test_the_account_page_links_to_delete_everything(client):
+    """[TICKET-802] The upload page promises deletion, and nothing led to this page."""
+    assert (
+        '<a class="settings-row" href="/account/delete"><span class="body">'
+        "Delete everything</span>"
+    ) in client.get("/account").text
+
+
+def test_the_upload_page_says_where_to_delete_everything(client):
+    """[TICKET-802] Amended gate: the promise line says where the control is."""
+    page = client.get("/upload").text
+    assert "You can delete everything at any time from your Account page." in page
+    assert "You can delete it at any time." not in page

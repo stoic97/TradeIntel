@@ -41,7 +41,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Where your results came from",
         (
             Fact("worst-days", "Your worst trading days", "worst"),
-            Fact("share", "Share of your result", "share"),
+            Fact("share", "Share of your losses", "share"),
             Fact("money", "Where the money came from", "money"),
         ),
         feedback=True,
@@ -68,9 +68,9 @@ CHAPTERS: tuple[Chapter, ...] = (
     ),
     Chapter(
         4,
-        "What we couldn't read",
+        "What we read",
         (
-            Fact("unread", "What we could not read", "read"),
+            Fact("unread", "What we read", "read"),
             Fact("risk", "Trades with a risk figure", "risk"),
             Fact("not-told", "What we have not told you", "notold"),
         ),
@@ -159,7 +159,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key in ("hold", "strike", "clock", "risk"):
+    if key in ("hold", "clock"):
+        return mx.same_day_trips(trips)
+    if key in ("strike", "risk"):
         return list(trips)
     if key in ("unread", "not-told"):
         return []
@@ -173,6 +175,8 @@ RISK_SOURCES = (
     ("Your stop", (s.RiskUnitSourceV1.DEFINED_STOP,)),
     ("Premium paid", (s.RiskUnitSourceV1.PREMIUM_PAID,)),
     ("Nothing we could use", (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR)),
+    ("A spread's maximum loss", (s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,)),
+    ("Uncapped: a sold option", (s.RiskUnitSourceV1.UNCAPPED,)),
 )
 """As the Mirror's risk table names them; ATR is among "nothing we could use" there too."""
 
@@ -231,4 +235,6 @@ def trade(t: mx.Trip, number: int) -> dict:
         "net": t.net,
         "fill_minutes": [0, t.holding_seconds / 60],
         "fills": [],
+        "legs": t.legs,
+        "uncapped": t.uncapped,
     }

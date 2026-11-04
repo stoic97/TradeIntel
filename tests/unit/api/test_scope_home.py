@@ -38,20 +38,20 @@ def test_each_chapter_leads_with_its_lead_facts_figure():
     view = SF.home_view(FIGS, CTX)
     assert [i["figure"] for i in view["items"]] == [
         FIGS["share"]["figure"], FIGS["hold"]["figure"], FIGS["down"]["figure"],
-        FIGS["unread"]["figure"]]
+        FIGS["unread"]["hub_figure"]]
 
 
 def test_the_centre_is_the_five_days_share():
     view = SF.home_view(FIGS, CTX)
-    assert view["centre"] == {"figure": f"{CTX['share'].share_percent}%"}
+    assert view["centre"]["figure"] == f"{CTX['share'].share_percent}%"
     svg = str(dial.scope_dial(view))
     assert f">{CTX['share'].share_percent}%</tspan>" in svg
-    assert ">of your result</tspan>" in svg and ">in five days</tspan>" in svg
+    assert ">of your losses</tspan>" in svg and ">in five days</tspan>" in svg
 
 
 def test_when_the_share_is_not_a_percentage_the_centre_says_the_whole_result():
     """Handoff 7's second state: no percentage, and no 'in five days' beside it."""
-    ctx = SF.record_context(trips_from([-100, -50, -20, -10, -5, 900]))
+    ctx = SF.record_context(trips_from([10, 20, 30, 40, 50, 60]))
     view = SF.home_view(SF.facts(ctx, IMP), ctx)
     assert view["centre"]["figure"] == formatting.rupees(ctx["share"].total)
     svg = str(dial.scope_dial(view))

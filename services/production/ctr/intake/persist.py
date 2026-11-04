@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 from services.production.accounts import risk_budget as rb
 from services.production.ctr.intake.pipeline import ImportPlan
 from services.production.db import models as m
+from services.shared.positions import Position
 from services.shared.schemas import scope_v1 as s
 from services.shared.schemas.ctr_v1 import RiskUnitSource as CtrRiskSource
 from services.shared.schemas.ctr_v1 import RoundTrip
@@ -50,11 +51,14 @@ def existing_days(sess: Session, *, trader: m.Trader, source_account: str) -> di
 
 
 def _risk_unit_for(
-    trip: RoundTrip,
+    trip: RoundTrip | Position,
     trading_day: str,
     declarations: list[m.RiskBudgetDeclaration],
 ) -> tuple[s.RiskUnitSourceV1, Decimal | None, int | None]:
-    """PRD 5.5's hierarchy: declared budget, then a recorded stop, then the premium.
+    """PRD 5.5's hierarchy: declared budget, then a recorded stop, then premium or structure.
+
+    A leg of a position is written with the position's figure, so each leg's row says
+    what the whole position is measured against (Annex H section 6).
 
     Only the first two may ever be a denominator on a v1 screen. The premium is the
     most an option could have lost rather than what was at risk, so it is recorded
@@ -70,8 +74,13 @@ def _risk_unit_for(
     if amount is not None and declaration is not None:
         return s.RiskUnitSourceV1.DECLARED_BUDGET, amount, declaration.id
 
-    if trip.risk_unit_source is CtrRiskSource.RECORDED_STOP and trip.risk_unit:
+    source = trip.risk_unit_source.value
+    if source == CtrRiskSource.RECORDED_STOP.value and trip.risk_unit:
         return s.RiskUnitSourceV1.DEFINED_STOP, trip.risk_unit, None
+    if source == "UNCAPPED":
+        return s.RiskUnitSourceV1.UNCAPPED, None, None
+    if source == "STRUCTURE_MAX_LOSS":
+        return s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, trip.risk_unit, None
     if trip.risk_unit is not None:
         return s.RiskUnitSourceV1.PREMIUM_PAID, trip.risk_unit, None
     return s.RiskUnitSourceV1.UNAVAILABLE, None, None
@@ -134,7 +143,8 @@ def write_plan(
         rows_excluded=plan.rows_excluded,
         fees_available=plan.fees_available,
         partial_fields=json.dumps(list(plan.missing_fields)),
-        trips_reconstructed=len(plan.trips),
+        # Trades as the record reads them: a spread's legs are one (TICKET-788).
+        trips_reconstructed=len(plan.positions),
         trips_refused=len(plan.skipped),
         density_default_unit=plan.density_default_unit,
         version_no=version_no,
@@ -164,15 +174,22 @@ def write_plan(
         .order_by(m.RiskBudgetDeclaration.effective_from)
     ).all())
 
+    position_of = {id(leg): pos for pos in plan.positions for leg in pos.legs}
     seen_trip_ids: dict[str, int] = {}
     for trip in plan.trips:
         occurrence = seen_trip_ids.get(trip.trip_id, 0) + 1
         seen_trip_ids[trip.trip_id] = occurrence
+        position = position_of.get(id(trip))
+        multi_leg = position is not None and len(position.legs) > 1
         sess.add(
             m.Trip(
                 import_id=imp.id,
                 trip_id=trip.trip_id,
                 occurrence=occurrence,
+                position_id=position.position_id if multi_leg else None,
+                option_type=trip.option_type.value if trip.option_type else None,
+                strike=trip.strike,
+                uncapped=(position or trip).risk_unit_source.value == "UNCAPPED",
                 # The stored timestamp's own date. Correct while every profile is
                 # IST (MCX, NSE); for a non-IST instrument the trading day must come
                 # from the profile's timezone, as the plan already computes it for
@@ -195,8 +212,8 @@ def write_plan(
                 ctr_risk_source=trip.risk_unit_source.value,
                 **dict(zip(
                     ("risk_unit_source", "risk_unit_value", "risk_budget_ref"),
-                    _risk_unit_for(trip, trip.entry_ts.date().isoformat(),
-                                   declarations),
+                    _risk_unit_for(position if multi_leg else trip,
+                                   trip.entry_ts.date().isoformat(), declarations),
                     strict=True,
                 )),
             )

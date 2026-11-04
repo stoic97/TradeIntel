@@ -15,6 +15,15 @@ a trip as flat-to-flat; the conservation assertion below caught it on the first 
 When a closing fill is larger than the position, the position flips and the excess
 opens a new one in the other direction.
 
+**An intraday day keeps to itself** (TICKET-789). Plain FIFO lets a share held from an
+earlier day take the first intraday sell, and every later pairing shifts by a unit, so
+one day's loss lands on an earlier day. So when a contract's INTRADAY fills net flat on a
+day, they pair only with each other. When they do not, an intraday order really is
+closing or opening a held position, so the books cannot simply be split by product: an
+intraday close takes that day's lots first and reaches back only when none are left. Any
+other close, and a file with no product column, is plain FIFO. Only the pairing changes:
+the same units are matched, so a total does not move.
+
 **Values are apportioned, never prices.** A broker reports an exact total per fill and
 a rounded average price. Deriving the price and multiplying it back loses the exactness
 the broker handed us: a 30-unit fill totalling 4595.50 has a per-unit price of
@@ -26,6 +35,10 @@ contributes its value untouched, and the slices always sum to the broker's figur
 Gross is then ``sum(sell values) - sum(buy values)``, and the weighted-average prices
 ride along for display only. Found by the golden fixture: ``risk_unit`` -- the premium
 paid, a figure a trader may see -- read 4595.4999... for a value known exactly.
+
+**Sold options are refused unless asked for.** Under ``ctr_v1`` a sold option has no R
+convention, so its trip is skipped. ``short_options=True`` builds it as a ``ctr_v2`` leg
+instead (Annex H); no other trip changes, ids included.
 
 **Nothing is forced.** A position still open when the history ends is reported as an
 open position, not closed at an invented price (Research Spec s4.2). A trip the schema
@@ -58,8 +71,12 @@ from services.shared.schemas.ctr_v1 import (
     Side,
     UnsupportedInV1,
 )
+from services.shared.schemas.ctr_v2 import RiskUnitSource as RiskUnitSourceV2
+from services.shared.schemas.ctr_v2 import RoundTrip as RoundTripV2
 
 _ZERO = Decimal(0)
+_SOURCE_OF = {RoundTrip: RiskUnitSource, RoundTripV2: RiskUnitSourceV2}
+"""Each schema takes its own enum, strictly."""
 
 
 @dataclass(frozen=True)
@@ -179,6 +196,7 @@ def _build_trip(
     direction: Direction,
     entry: _Leg,
     exit_: _Leg,
+    trip_type: type[RoundTrip] = RoundTrip,
 ) -> RoundTrip:
     """Assemble one trip. ``sample`` supplies the contract fields; both legs are closed."""
     assert entry.quantity == exit_.quantity, "legs must match before a trip is built"
@@ -207,7 +225,7 @@ def _build_trip(
         risk_unit = entry.value
         risk_unit_source = RiskUnitSource.PREMIUM_PAID
 
-    return RoundTrip(
+    return trip_type(
         trader_id=sample.trader_id,
         broker=sample.broker,
         exchange=sample.exchange,
@@ -225,9 +243,31 @@ def _build_trip(
         gross_pnl=gross,
         fees=_ZERO,  # no charges column in any adapter yet; fees_available says so
         risk_unit=risk_unit,
-        risk_unit_source=risk_unit_source,
+        risk_unit_source=_SOURCE_OF[trip_type][risk_unit_source.value],
         fill_ids=[*entry.fill_ids, *exit_.fill_ids],
     )
+
+
+def _next_lot(lots: list[_Lot], closing: Fill) -> int:
+    """Which open lot this fill closes next: oldest, or oldest from today if intraday."""
+    if closing.product == "INTRADAY":
+        today = closing.ts.date()
+        for i, lot in enumerate(lots):
+            if lot.ts.date() == today:
+                return i
+    return 0
+
+
+def _flat_intraday_days(fills: list[Fill]) -> list[list[Fill]]:
+    """Each day's INTRADAY fills, for the days on which they net to nothing."""
+    days: dict[object, list[Fill]] = defaultdict(list)
+    for f in fills:
+        if f.product == "INTRADAY":
+            days[f.ts.date()].append(f)
+    return [
+        day for day in days.values()
+        if sum(f.quantity if f.side is Side.BUY else -f.quantity for f in day) == 0
+    ]
 
 
 def _reconstruct_contract(
@@ -235,15 +275,33 @@ def _reconstruct_contract(
     trips: list[RoundTrip],
     skipped: list[SkippedTrip],
     opens: list[OpenPosition],
+    trip_type: type[RoundTrip] = RoundTrip,
 ) -> None:
-    """Walk one contract's fills in time order, maintaining a FIFO lot queue."""
+    """Walk one contract's fills: each self-contained intraday day, then the rest."""
+    isolated = _flat_intraday_days(fills)
+    taken = {id(f) for day in isolated for f in day}
+    for day in isolated:
+        _walk(day, trips, skipped, opens, trip_type)
+    rest = [f for f in fills if id(f) not in taken]
+    if rest:
+        _walk(rest, trips, skipped, opens, trip_type)
+
+
+def _walk(
+    fills: list[Fill],
+    trips: list[RoundTrip],
+    skipped: list[SkippedTrip],
+    opens: list[OpenPosition],
+    trip_type: type[RoundTrip],
+) -> None:
+    """Walk these fills in time order, maintaining a FIFO lot queue."""
     sample = fills[0]
     lots: list[_Lot] = []
     position: Direction | None = None
 
     def emit(direction: Direction, entry: _Leg, exit_: _Leg) -> None:
         try:
-            trips.append(_build_trip(sample, direction, entry, exit_))
+            trips.append(_build_trip(sample, direction, entry, exit_, trip_type))
         except UnsupportedInV1 as exc:
             skipped.append(
                 SkippedTrip(
@@ -274,14 +332,15 @@ def _reconstruct_contract(
         # Opposite side: close lots oldest-first, then emit one trip for what matched.
         entry, exit_ = _Leg(), _Leg()
         while remaining and lots:
-            lot = lots[0]
+            index = _next_lot(lots, f)
+            lot = lots[index]
             take = min(remaining, lot.quantity)
             entry.add(take, lot.value.take(take), lot.ts, lot.fill_id)
             exit_.add(take, share.take(take), f.ts, f.fill_id)
             lot.quantity -= take
             remaining -= take
             if lot.quantity == 0:
-                lots.pop(0)
+                lots.pop(index)
 
         if entry.quantity:
             assert position is not None
@@ -314,7 +373,9 @@ def _reconstruct_contract(
         )
 
 
-def reconstruct(fills: Iterable[Fill], *, fees_available: bool = False) -> ReconstructionResult:
+def reconstruct(
+    fills: Iterable[Fill], *, fees_available: bool = False, short_options: bool = False
+) -> ReconstructionResult:
     """Turn fills into round trips, FIFO, per (trader, contract).
 
     Fills are sorted by timestamp before matching, so the caller need not rely on the
@@ -329,8 +390,9 @@ def reconstruct(fills: Iterable[Fill], *, fees_available: bool = False) -> Recon
     trips: list[RoundTrip] = []
     skipped: list[SkippedTrip] = []
     opens: list[OpenPosition] = []
+    trip_type = RoundTripV2 if short_options else RoundTrip
     for group in by_contract.values():
-        _reconstruct_contract(group, trips, skipped, opens)
+        _reconstruct_contract(group, trips, skipped, opens, trip_type)
 
     trips.sort(key=lambda t: (t.exit_ts, t.contract_key))
     opens.sort(key=lambda o: (o.opened_at, o.contract_key))

@@ -20,7 +20,7 @@ from services.production.accounts import risk_budget as rb
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
-from services.production.mirror.metrics import Trip
+from services.production.mirror.metrics import Leg, Trip
 from services.shared.schemas import scope_v1 as s
 
 PROFILE_DIR = Path(__file__).resolve().parents[1] / "ctr" / "profiles"
@@ -98,6 +98,11 @@ def lots_for(
         f"{f' on {on}' if on else ''} ({sizes}) -- not a position anyone can "
         "hold, so either the declared quantity unit or the profile's lot history is wrong"
     )
+
+
+def _leg_label(leg: m.Trip) -> str:
+    side = "Bought" if leg.direction == "LONG" else "Sold"
+    return f"{side} {leg.strike:f} {leg.option_type}"
 
 
 def current_import(sess: Session, trader: m.Trader) -> m.Import | None:
@@ -185,21 +190,32 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
 
     declarations = rb.for_trader(sess, trader)
 
-    trips = []
+    # A position is one decision, so the record reads it as one trade: its legs added up,
+    # first in to last out (Annex H section 3). Rows arrive in entry order.
+    positions: dict[object, list[m.Trip]] = {}
     for row in rows:
-        zone = zone_for(row)
-        trading_day = row.entry_ts.astimezone(zone).date().isoformat()
+        positions.setdefault(row.position_id or row.id, []).append(row)
+
+    trips = []
+    for legs in positions.values():
+        first = legs[0]
+        zone = zone_for(first)
+        trading_day = first.entry_ts.astimezone(zone).date().isoformat()
+        entry_ts = min(leg.entry_ts for leg in legs)
+        exit_ts = max(leg.exit_ts for leg in legs)
         trips.append(Trip(
-            trip_id=row.trip_id,
-            symbol=row.symbol,
+            trip_id=first.position_id or first.trip_id,
+            symbol=first.symbol,
             trading_day=trading_day,
-            entry_ts=row.entry_ts.astimezone(zone),
-            exit_ts=row.exit_ts.astimezone(zone),
-            holding_seconds=int((row.exit_ts - row.entry_ts).total_seconds()),
-            net=row.net,
-            lots=lots_for(row.quantity or 1, profile_for(row), quantity_unit,
-                          on=date.fromisoformat(trading_day)),
-            risk_unit_source=_measured_against(row, trading_day, declarations),
-            is_option=row.segment == "OPT",
+            entry_ts=entry_ts.astimezone(zone),
+            exit_ts=exit_ts.astimezone(zone),
+            holding_seconds=int((exit_ts - entry_ts).total_seconds()),
+            net=sum((leg.net for leg in legs), Decimal(0)),
+            lots=max(lots_for(leg.quantity or 1, profile_for(leg), quantity_unit,
+                              on=date.fromisoformat(trading_day)) for leg in legs),
+            risk_unit_source=_measured_against(first, trading_day, declarations),
+            is_option=first.segment == "OPT",
+            legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
+            uncapped=any(leg.uncapped for leg in legs),
         ))
     return trips, imp

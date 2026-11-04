@@ -3,7 +3,7 @@
     when the share is not a percentage, the whole period's result in the Mirror's
     words, as Scope home's centre says it. No tab is current: home is none of the three. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import lockup %}
+{% from "_components.html" import lockup, uncounted_line %}
 {% set nav = "home" %}
 {% block content %}
   <div class="stage__bar stage__bar--record">{{ lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
@@ -11,13 +11,14 @@
     <span class="label label--soft">Your Scope · Import {{ imp.id }} · {{ imported }}</span>
     {%- if share.shown_as_percentage %}
     <span class="num num--hero scope-card__figure">{{ share.share_percent }}%</span>
-    <span class="body scope-card__caption">of your result in five days</span>
+    <span class="body scope-card__caption">of your losses in five days</span>
     {%- else %}
     <span class="num num--hero scope-card__figure">{{ share.total|rupees }}</span>
     <span class="body scope-card__caption">your result for the whole period</span>
     {%- endif %}
     <span class="scope-card__foot"><span>Open the Scope</span><span aria-hidden="true">›</span></span>
   </a>
+  {{ uncounted_line(imp.trips_refused) }}
   {%- if latest %}
   <section class="latest">
     <div class="latest__head"><h2 class="card-title">Latest Journals</h2><a class="link link--back" href="/journals">All days</a></div>

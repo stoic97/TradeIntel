@@ -110,7 +110,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["clock"]["figure"] == f"{len(CTX['hours'])} hours"
     assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
-    assert FIGS["unread"]["figure"] == "40 of 40"
+    assert FIGS["unread"]["figure"] == "40 of 40 rows"
     assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40"
     assert FIGS["not-told"]["figure"] == "4"
 
@@ -141,8 +141,8 @@ def test_no_stop_and_no_budget_is_not_in_the_file():
 
 
 def test_a_share_that_is_not_a_percentage_leads_with_the_whole_result_and_draws_no_bar():
-    """A positive result with losing worst days: 'a percentage' would be nonsense (App. A)."""
-    trips = trips_from([-100, -50, -20, -10, -5, 900])  # worst five lose, the whole wins
+    """No losing day means no losses to take a share of (definitions 1)."""
+    trips = trips_from([10, 20, 30, 40, 50, 60])
     ctx = SF.record_context(trips)
     assert not ctx["share"].shown_as_percentage
     figs = SF.facts(ctx, IMP)
@@ -150,7 +150,7 @@ def test_a_share_that_is_not_a_percentage_leads_with_the_whole_result_and_draws_
     assert figs["share"]["chart"] is None and figs["share"]["mini"] is None
     page = chapter_page(1, trips)
     assert "Your result for the whole period was" in page
-    assert "% of your result" not in page
+    assert "% of your losses" not in page
 
 
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
@@ -224,7 +224,6 @@ def test_the_honest_close_carries_the_lineage():
 SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell them
     1: [
         "Those five days came to",
-        "of your result for the whole period, which was",
         "Your best five and worst five, by result.",
         "Ties are listed with the earlier trade first. Nothing is trimmed or capped.",
     ],

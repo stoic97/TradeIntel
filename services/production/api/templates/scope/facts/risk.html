@@ -7,4 +7,5 @@
   {{ figure(1, "Every trade, by what it was measured against", f.page_chart) }}
   {% include "scope/_risk_table.html" %}
 {% endblock %}
+{% block gross %}{{ super() }}{% if f.uncapped_trades %}<p class="body">{{ f.uncapped_trades|count }} {{ "trade was a sold option" if f.uncapped_trades == 1 else "trades were sold options" }} with no cap on {{ "its" if f.uncapped_trades == 1 else "their" }} loss, so {{ "it has" if f.uncapped_trades == 1 else "they have" }} no risk figure. {{ "Its" if f.uncapped_trades == 1 else "Their" }} rupees are counted.</p>{% endif %}{% endblock %}
 {% block caption %}Every trade, by what it was measured against.{% endblock %}

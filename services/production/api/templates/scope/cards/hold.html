@@ -6,6 +6,6 @@
   {%- if not f.state %}
   <span class="mirror mirror--card">Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.{% if holding.ratio %} That is a ratio of <span class="num">{{ holding.ratio }}</span>.{% endif %}</span>
   <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>0 min</span><span>minutes open</span><span>{{ f.max_seconds|minutes }} min</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink legend__swatch--dot"></span>Winners</span><span><span class="legend__swatch legend__swatch--faint legend__swatch--dot"></span>Losers</span><span>| median</span></span></span>
-  {% if f.held.count %}<span class="mirror mirror--card">The chart shows trades you closed the day you opened them. {{ f.held.count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} in the figures but not drawn.</span>{% endif %}
+  {% if f.held.count %}<span class="mirror mirror--card">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</span>{% endif %}
   {%- endif %}
 {% endcall %}

@@ -25,6 +25,7 @@ from services.production.ctr.intake import day_versions as dv
 from services.production.ctr.intake import duplicates as dup
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
+from services.shared.positions import Position, group_positions
 from services.shared.schemas import scope_v1 as s
 from services.shared.schemas.ctr_v1 import Fill, RoundTrip
 
@@ -73,6 +74,7 @@ class ImportPlan:
     missing_fields: tuple[str, ...] = ()
     instruments_without_profile: tuple[str, ...] = ()
     trips: tuple[RoundTrip, ...] = ()
+    positions: tuple[Position, ...] = ()
     open_positions: int = 0
     skipped: tuple[str, ...] = ()
     day_diffs: tuple[dv.DayDiffResult, ...] = ()
@@ -212,7 +214,7 @@ def plan_import(
         )
 
     fills: list[Fill] = parsed.fills
-    result = rc.reconstruct(fills, fees_available=parsed.fees_available)
+    result = rc.reconstruct(fills, fees_available=parsed.fees_available, short_options=True)
 
     profile_map = profiles.load_all(PROFILE_DIR)
     resolved = {
@@ -271,6 +273,7 @@ def plan_import(
         missing_fields=tuple(missing_fields),
         instruments_without_profile=tuple(unprofiled),
         trips=tuple(result.round_trips),
+        positions=tuple(group_positions(result.round_trips)),
         open_positions=len(result.open_positions),
         skipped=tuple(sk.reason for sk in result.skipped),
         day_diffs=tuple(day_diffs),
