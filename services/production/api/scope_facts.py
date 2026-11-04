@@ -182,6 +182,23 @@ def _figure(key: str, ctx: dict, imp) -> str:
     return str(NOT_TOLD)
 
 
+def _flagged_days(ctx: dict, figs: dict) -> list[dict]:
+    """The days the report's ending sends a trader to: where the longest losing run
+    began, and the worst of the five worst days that is not that day."""
+    flagged: list[dict] = []
+    if not figs["run"]["state"] and ctx["run"].days:
+        day = ctx["run"].days[0]
+        flagged.append({"kind": "run", "iso": day, "day": formatting.day(day),
+                        "losses": ctx["run"].length})
+    if not figs["worst-days"]["state"]:
+        for d in ctx["worst_days"].days:
+            if d.trading_day not in {f["iso"] for f in flagged}:
+                flagged.append({"kind": "worst", "iso": d.trading_day,
+                                "day": formatting.day(d.trading_day)})
+                break
+    return flagged
+
+
 def facts(ctx: dict, imp) -> dict[str, dict]:
     """Every fact's figure, state, card chart, mini chart and the counts its card needs."""
     trips = ctx["trips"]
@@ -216,6 +233,11 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     # the full figure under the dial instead.
     out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
+    out["not-told"].update(
+        options=mx.option_result(trips),
+        loss_guide=mx.loss_size_guide(trips),
+        flagged=_flagged_days(ctx, out),
+    )
     held = mx.holding_series(mx.same_day_trips(trips))
     out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["hold"]["held"] = ctx["held_past_day"]

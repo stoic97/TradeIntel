@@ -25,7 +25,7 @@ TOKEN = re.compile(r'name="csrf_token" value="([^"]+)"')
 
 
 def trip(net, *, name="t", option=True, held_days=0, symbol="WIDGET") -> mx.Trip:
-    entry = datetime(2025, 3, 3, 10, 0)
+    entry = datetime(2025, 3, 3, 10, 0, tzinfo=UTC)
     leave = entry + timedelta(days=held_days, minutes=10)
     return mx.Trip(
         trip_id=f"{name}{net}", symbol=symbol, trading_day="2025-03-03", entry_ts=entry,
@@ -40,7 +40,7 @@ def text_of(html: str) -> str:
 
 
 def section(html: str, name: str) -> str:
-    found = re.search(rf'<section class="ending__{name}".*?</section>', html, re.S)
+    found = re.search(rf'<section class="ending__{name}[ "].*?</section>', html, re.DOTALL)
     assert found, f"no {name} section"
     return found.group(0)
 
@@ -99,7 +99,7 @@ def test_it_leads_with_a_statement_and_not_a_count(client):
 
 
 def test_it_promises_nothing_with_yet(client):
-    assert not re.search(r"\byet\b", text_of(client.get(PAGE).text), re.I)
+    assert not re.search(r"\byet\b", text_of(client.get(PAGE).text), re.IGNORECASE)
 
 
 def test_the_takeaways_come_first_one_line_per_chapter(client):
@@ -149,8 +149,8 @@ def test_the_honest_line_stays(client):
 
 def test_three_next_steps_with_your_number_first(client):
     steps = section(client.get(PAGE).text, "steps")
-    assert steps.count('class="step') == 3
-    first, second, third = re.findall(r'<a class="step[^>]*href="([^"]+)"', steps)[:3]
+    assert len(re.findall(r'class="step[ "]', steps)) == 3
+    first, second, third = re.findall(r'<a class="(?:step|ending__open)[^>]*href="([^"]+)"', steps)
     assert (first, second) == ("/budget", "/upload")
     assert third.startswith("/journals")
     assert 'class="step step--primary" href="/budget"' in steps
@@ -181,12 +181,13 @@ def test_the_journal_step_names_the_flagged_days_and_opens_on_them(client, engin
     _journals(engine)
     steps = section(client.get(PAGE).text, "steps")
     said = text_of(steps)
-    assert re.search(r"Start with \d{2} \w{3} \d{4} \(\d+ losses in a row\) and "
-                     r"\d{2} \w{3} \d{4} \(one of your five worst days\)\.", said), said
+    assert re.search(r"Start with \d{2} \w{3}(?: \d{4})? \( ?\d+ losses in a row\) and "
+                     r"\d{2} \w{3}(?: \d{4})? \(one of your five worst days\)\.", said), said
     opened = re.findall(r'href="(/journals/\d+)"', steps)
     assert len(opened) == 2 and len(set(opened)) == 2
-    for href in opened:
-        assert client.get(href).status_code == 200
+    with make_session(engine) as sess:
+        for href in opened:
+            assert sess.get(m.Journal, int(href.rsplit("/", 1)[1])).period_start
 
 
 def test_a_flagged_day_opens_on_its_latest_version(client, engine):

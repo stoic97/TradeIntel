@@ -1,12 +1,85 @@
-{#- What we have not told you: the Mirror's section 6.7, word for word. It names a
-    cause and a cost only to say the product does neither (test_no_claims exempts it
-    by name, from here down). -#}
+{#- What we have not told you: the report's last page (TICKET-825). What the report found,
+    the Mirror's section 6.7 as a table of what it doesn't do and why, three next steps, a
+    way back, and one question about the whole report. It names a cause and a cost only to
+    say the product does neither (test_no_claims exempts it by name, from here down). -#}
 {% extends "scope/fact.html" %}
+{% from "_components.html" import money %}
+{% block fact_title %}This report counts. It doesn't judge.{% endblock %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
-    <p class="mirror">Nothing above names a cause. Nothing scores you, against yourself or anyone else. Nothing estimates what a habit cost you. Nothing recommends a change.</p>
-    <p class="mirror">These are counts from your own file, and that is all they are. The checks that could say more need work we have not finished and evidence we have not earned.</p>
+    <p class="lead">Here is what your file showed, what this report doesn't do, and what you can do next.</p>
 {% endblock %}
 {% block gross %}{% endblock %}
+{% block body %}
+  <section class="ending__found" aria-labelledby="ending-found">
+    <h2 class="heading" id="ending-found">What your file showed</h2>
+    <ol class="ending__list">
+      {%- if f.options %}
+      <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options.net, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ f.options.held_gain_days|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
+      {%- elif not facts["worst-days"].state %}
+      <li class="mirror">Your five worst days came to {{ money(worst_days.sum) }}.</li>
+      {%- endif %}
+      {%- if not facts["run"].state %}
+      <li class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ facts["run"].day_count|count }}</span> days{% endif %}.</li>
+      {%- endif %}
+      {%- if not facts["busiest"].state %}
+      <li class="mirror">Your normal day is <span class="num">{{ days.normal_day }}</span> trades. Your busiest was <span class="num">{{ facts["busiest"].busiest_date }}</span>, at <span class="num">{{ days.busiest_trips|count }}</span>.</li>
+      {%- endif %}
+    </ol>
+  </section>
+
+  <section class="ending__table" aria-labelledby="ending-table">
+    <h2 class="heading" id="ending-table">What this report doesn't do</h2>
+    <table class="table">
+      <thead><tr><th>It doesn't</th><th>Why not</th><th>What it does instead</th></tr></thead>
+      <tbody>
+        <tr><td>Name a cause</td><td>Your file has your trades, not what the market was doing.</td><td>Shows where and when the results came from.</td></tr>
+        <tr><td>Score you</td><td>Scope doesn't grade traders, against anyone or against yourself.</td><td>Counts your trades against <a href="/budget">a number you choose</a>.</td></tr>
+        <tr><td>Estimate what a habit cost you</td><td>That needs a fair "what you'd have done instead", which a file of fills can't give.</td><td>Shows what each group of trades actually made or lost.</td></tr>
+        <tr><td>Recommend a change</td><td>Counts, not advice. No buy or sell calls, ever.</td><td>Leaves the decision with you.</td></tr>
+      </tbody>
+    </table>
+    <p class="mirror mirror--card">These are counts from your own file, and that is all they are. The checks that could say more need work we have not finished and evidence we have not earned.</p>
+  </section>
+
+  {%- if ending.changed %}
+  <section class="ending__changed" aria-labelledby="ending-changed">
+    <h2 class="heading" id="ending-changed">What changed since your last file</h2>
+    <p class="body">Trades: <span class="num">{{ ending.changed.trades[0]|count }}</span> in this file, <span class="num">{{ ending.changed.trades[1]|count }}</span> in your last file.</p>
+    <p class="body">Trading days: <span class="num">{{ ending.changed.days[0]|count }}</span> in this file, <span class="num">{{ ending.changed.days[1]|count }}</span> in your last file.</p>
+  </section>
+  {%- endif %}
+
+  <section class="ending__steps" aria-labelledby="ending-steps">
+    <h2 class="heading" id="ending-steps">What you can do next</h2>
+    <a class="step step--primary" href="/budget"><strong>Set your number</strong>
+      <span class="ending__step-note">How much you're willing to lose on one trade.{% if f.loss_guide %} Half your losing trades lost {{ f.loss_guide.half|rupees(signed=false) }} or less. Nine in ten lost {{ f.loss_guide.nine_in_ten|rupees(signed=false) }} or less.{% endif %}</span></a>
+    <a class="step" href="/upload"><strong>Upload your next month.</strong> We'll show what changed since this file.</a>
+    {%- if ending.flagged %}
+    <div class="step ending__days"><a class="ending__open" href="/journals"><strong>Open your journal</strong></a>
+      <span class="ending__step-note">Start with {% for d in ending.flagged %}{% if not loop.first %} and {% endif %}{% if d.href %}<a href="{{ d.href }}">{{ d.day }}</a>{% else %}{{ d.day }}{% endif %} ({% if d.kind == "run" %}<span class="num">{{ d.losses|count }}</span> losses in a row{% else %}one of your five worst days{% endif %}){% endfor %}.</span></div>
+    {%- else %}
+    <div class="step"><a class="ending__open" href="/journals"><strong>Open your journal</strong></a></div>
+    {%- endif %}
+  </section>
+
+  <section class="ending__check feedback" id="report-check" aria-label="Does this match your trading?">
+    <h2 class="feedback__question">Does this match your trading?</h2>
+    {%- if ending.answered %}
+    <p class="feedback__done" role="status">Recorded. Thank you.</p>
+    {%- else %}
+    <form method="post" action="/mirror/feedback">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="field"><span class="field__label">What did we get wrong?</span>
+        <textarea class="field__input" name="note" maxlength="{{ ending.note_limit }}"></textarea></label>
+      <p class="body-small">We use this only to check and fix your report.</p>
+      <div class="feedback__options">
+        {%- for value, label in ending.answers.items() %}<button class="btn btn--pill-small" type="submit" name="answer" value="{{ value }}">{{ label }}</button>{% endfor -%}
+      </div>
+    </form>
+    {%- endif %}
+  </section>
+
+  <a class="ending__back" href="/mirror">Back to your report</a>
+{% endblock %}
 {% block evidence %}{% endblock %}
 {% block lineage %}{% include "scope/_lineage.html" %}{% endblock %}
