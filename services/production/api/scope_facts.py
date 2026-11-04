@@ -185,19 +185,31 @@ def _figure(key: str, ctx: dict, imp) -> str:
     return str(NOT_TOLD)
 
 
-def _flagged_days(ctx: dict, figs: dict) -> list[dict]:
-    """The days the report's ending sends a trader to: where the longest losing run
-    began, and the worst of the five worst days that is not that day."""
-    flagged: list[dict] = []
-    if not figs["run"]["state"] and ctx["run"].days:
-        day = ctx["run"].days[0]
-        flagged.append({"kind": "run", "iso": day, "day": formatting.day(day),
-                        "losses": ctx["run"].length})
+def span_words(minutes: int) -> str:
+    """How long a run took, as a sentence says it: minutes under the hour, then hours."""
+    if minutes < 60:
+        return f"{minutes} minute{'' if minutes == 1 else 's'}"
+    hours = round(minutes / 60)
+    return f"{hours} hour{'' if hours == 1 else 's'}"
+
+
+def _flagged_days(ctx: dict, figs: dict) -> dict:
+    """The two days the report's ending points at (ruling on TICKET-825): where the longest
+    losing run began, and the worst of the five worst days that is not that day."""
+    flagged: dict = {"run": None, "worst": None}
+    run = ctx["run"]
+    if not figs["run"]["state"] and run.days:
+        shown = mx.subset(ctx["trips"], run.trip_ids)
+        minutes = (max(t.exit_ts for t in shown) - min(t.entry_ts for t in shown)).seconds // 60
+        flagged["run"] = {
+            "iso": run.days[0], "day": formatting.day(run.days[0]), "losses": run.length,
+            "day_count": len(run.days), "span": None if run.crosses_days else span_words(minutes),
+        }
     if not figs["worst-days"]["state"]:
         for d in ctx["worst_days"].days:
-            if d.trading_day not in {f["iso"] for f in flagged}:
-                flagged.append({"kind": "worst", "iso": d.trading_day,
-                                "day": formatting.day(d.trading_day)})
+            if not flagged["run"] or d.trading_day != flagged["run"]["iso"]:
+                flagged["worst"] = {"iso": d.trading_day, "day": formatting.day(d.trading_day),
+                                    "trades": d.trips, "net": d.net}
                 break
     return flagged
 
@@ -240,7 +252,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["not-told"].update(
         options=options,
         options_amount=abs(options.net) if options else None,  # the sentence says lost or made
-        loss_guide=mx.loss_size_guide(trips),
         flagged=_flagged_days(ctx, out),
     )
     held = mx.holding_series(mx.same_day_trips(trips))

@@ -1,12 +1,12 @@
 {#- What we have not told you: the report's last page (TICKET-825). What the report found,
-    the Mirror's section 6.7 as a table of what it doesn't do and why, three next steps, a
+    the Mirror's section 6.7 as a table of what it doesn't do and why, three places to look (a day, a page, a journal), a
     way back, and one question about the whole report. It names a cause and a cost only to
     say the product does neither (test_no_claims exempts it by name, from here down). -#}
 {% extends "scope/fact.html" %}
 {% from "_components.html" import money %}
 {% block fact_title %}This report counts. It doesn't judge.{% endblock %}
 {% block head %}
-    <p class="lead">Here is what your file showed, what this report doesn't do, and what you can do next.</p>
+    <p class="lead">Here is what your file showed, what this report doesn't do, and where to look next.</p>
 {% endblock %}
 {% block gross %}{% endblock %}
 {% block body %}
@@ -50,15 +50,17 @@
   {%- endif %}
 
   <section class="ending__steps" aria-labelledby="ending-steps">
-    <h2 class="heading" id="ending-steps">What you can do next</h2>
-    <a class="step step--primary" href="/budget"><strong>Set your number</strong>
-      <span class="ending__step-note">How much you're willing to lose on one trade.{% if f.loss_guide %} Half your losing trades lost {{ f.loss_guide.half|rupees(signed=false) }} or less. Nine in ten lost {{ f.loss_guide.nine_in_ten|rupees(signed=false) }} or less.{% endif %}</span></a>
-    <a class="step" href="/upload"><strong>Upload your next month.</strong> We'll show what changed since this file.</a>
-    {%- if ending.flagged %}
-    <div class="step ending__days"><a class="ending__open" href="/journals"><strong>Open your journal</strong></a>
-      <span class="ending__step-note">Start with {% for d in ending.flagged %}{% if not loop.first %} and {% endif %}{% if d.href %}<a href="{{ d.href }}">{{ d.day }}</a>{% else %}{{ d.day }}{% endif %} ({% if d.kind == "run" %}<span class="num">{{ d.losses|count }}</span> losses in a row{% else %}one of your five worst days{% endif %}){% endfor %}.</span></div>
+    <h2 class="heading" id="ending-steps">Where to look next</h2>
+    {%- if f.flagged.run %}
+    <a class="step" href="{{ facts["run"].href }}">Your {{ f.flagged.run.day }} — <span class="num">{{ f.flagged.run.losses|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ f.flagged.run.day_count|count }}</span> days{% endif %}.</a>
+    {%- endif %}
+    {%- if not facts["worst-days"].state %}
+    <a class="step" href="{{ facts["worst-days"].href }}">Your five worst days — {{ money(worst_days.sum) }}.</a>
+    {%- endif %}
+    {%- if f.flagged.worst %}
+    <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your five worst days: <span class="num">{{ f.flagged.worst.trades|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
     {%- else %}
-    <div class="step"><a class="ending__open" href="/journals"><strong>Open your journal</strong></a></div>
+    <a class="step" href="{{ ending.journal_href }}">Your journals.</a>
     {%- endif %}
   </section>
 

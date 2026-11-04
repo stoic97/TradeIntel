@@ -15,10 +15,9 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from statistics import median
 from typing import Any
 
@@ -359,32 +358,6 @@ def option_result(trips: list[Trip]) -> OptionResult | None:
         net=sum((t.net for t in options), Decimal(0)), count=len(options),
         held_gain=gain, held_gain_days=days,
     )
-
-
-LOSS_GUIDE_MINIMUM = 10
-"""Fewer losers than this and "nine in ten" is not a thing a count can say."""
-
-
-@dataclass(frozen=True)
-class LossSizeGuide:
-    half: Decimal
-    nine_in_ten: Decimal
-
-
-def loss_size_guide(trips: list[Trip]) -> LossSizeGuide | None:
-    """How big same-day losers were, at the half and the nine-in-ten mark.
-
-    Nearest rank, whole rupees rounded up, so "or less" holds for that many trades.
-    Describes what happened; it suggests no number.
-    """
-    losses = sorted(-t.net for t in same_day_trips(trips) if t.is_loss)
-    if len(losses) < LOSS_GUIDE_MINIMUM:
-        return None
-
-    def mark(tenths: int) -> Decimal:
-        return losses[math.ceil(len(losses) * tenths / 10) - 1].to_integral_value(ROUND_CEILING)
-
-    return LossSizeGuide(half=mark(5), nine_in_ten=mark(9))
 
 
 def best_five(trips: list[Trip]) -> list[Trip]:

@@ -20,7 +20,7 @@ from tests.unit.api.test_scope_chapters import IMP, TRIPS, readable, trips_from
 UNREAD = {"excluded": [(3, "A header row repeated mid-file")], "rejected": [], "refused": []}
 
 
-ENDING = {"flagged": [], "changed": None, "answered": False, "answers": {}, "note_limit": 2000}
+ENDING = {"journal_href": "/journals", "changed": None, "answered": False, "answers": {}, "note_limit": 2000}
 
 
 def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:

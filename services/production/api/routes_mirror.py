@@ -182,12 +182,12 @@ def _ending(request: Request, imp, fact: dict) -> dict:
     """What the report's last page reads from beyond the record (TICKET-825)."""
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
-        days = [d["iso"] for d in fact["flagged"]]
+        worst = fact["flagged"]["worst"]
         # Ascending, so the latest version of a day is the one left in the map.
-        opens = dict(sess.execute(
+        opens = {} if worst is None else dict(sess.execute(
             select(m.Journal.period_start, m.Journal.id)
             .where(m.Journal.trader_id == trader.id, m.Journal.unit == s_enums.JournalUnit.DAY,
-                   m.Journal.period_start.in_(days))
+                   m.Journal.period_start == worst["iso"])
             .order_by(m.Journal.version_no)
         ).all())
         earlier = sess.scalars(
@@ -196,8 +196,8 @@ def _ending(request: Request, imp, fact: dict) -> dict:
             .order_by(m.Import.id.desc()).limit(1)
         ).first()
         return {
-            "flagged": [{**d, "href": f"/journals/{opens[d['iso']]}" if d["iso"] in opens
-                         else None} for d in fact["flagged"]],
+            "journal_href": f"/journals/{opens[worst['iso']]}"
+            if worst and worst["iso"] in opens else "/journals",
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
