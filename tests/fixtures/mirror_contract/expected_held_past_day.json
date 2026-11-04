@@ -1,0 +1,8 @@
+{
+  "_note": "Written by hand from held_past_day.json, never from program output. Same-day: 100-200+300-400+500-600+50+600-100-50 = 200. Held past the day: 9000+50000-700-800 = 57500.",
+  "same_day_trip_count": 10,
+  "best_five_trades": ["h12", "h07", "h04", "h01", "h10"],
+  "worst_five_trades": ["h08", "h05", "h02", "h13", "h14"],
+  "held_past_day": {"trip_ids": ["h03", "h06", "h09", "h11"], "count": 4, "net": "57500"},
+  "whole_history_net": "57700"
+}

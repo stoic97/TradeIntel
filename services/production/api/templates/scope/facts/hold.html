@@ -9,6 +9,7 @@
     <div class="figure__axis"><span>0 min</span><span>minutes open, one dot per trade</span><span>{{ f.max_seconds|minutes }} min</span></div>
     <div class="legend"><span><span class="legend__swatch legend__swatch--ink legend__swatch--dot"></span>Winners</span><span><span class="legend__swatch legend__swatch--faint legend__swatch--dot"></span>Losers</span><span>| median</span></div>
   {% endcall %}
+  {% if f.held.count %}<p class="mirror mirror--card table-note">The chart shows trades you closed the day you opened them. {{ f.held.count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} in the figures but not drawn.</p>{% endif %}
   <p class="table-label">Table 1</p>
   <table class="table">
     <thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Median open</th></tr></thead>
