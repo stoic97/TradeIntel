@@ -88,13 +88,36 @@ TRIPS: list[tuple[str, str, str, int, int, int, str]] = [
 ]
 
 
+HELD_PAST_DAY_TRIPS: list[tuple[str, str, str, int, int, int, str]] = [
+    # Ten trades closed the day they opened: net +200.
+    ("h01", "2026-09-01", "09:30", 30, 100, 1, "premium_paid"),
+    ("h02", "2026-09-01", "10:00", 30, -200, 1, "premium_paid"),
+    ("h04", "2026-09-02", "09:30", 20, 300, 1, "premium_paid"),
+    ("h05", "2026-09-02", "10:00", 20, -400, 1, "premium_paid"),
+    ("h07", "2026-09-03", "09:30", 10, 500, 1, "premium_paid"),
+    ("h08", "2026-09-03", "10:00", 10, -600, 1, "premium_paid"),
+    ("h10", "2026-09-04", "09:15", 375, 50, 1, "premium_paid"),  # open to close, same day
+    ("h12", "2026-09-07", "09:30", 10, 600, 1, "premium_paid"),
+    ("h13", "2026-09-07", "10:00", 10, -100, 1, "premium_paid"),
+    ("h14", "2026-09-07", "10:30", 10, -50, 1, "premium_paid"),
+    # Four held past the day: net +57,500. The biggest win and the biggest loss of the
+    # whole history are here, so a best or worst five that reads them is caught.
+    ("h03", "2026-09-01", "15:00", 1440, 9000, 1, "premium_paid"),  # to the next day
+    ("h06", "2026-09-02", "14:00", 525600, 50000, 1, "premium_paid"),  # a year
+    ("h09", "2026-09-03", "23:50", 20, -700, 1, "premium_paid"),  # twenty minutes, past midnight
+    ("h11", "2026-09-04", "10:00", 2880, -800, 1, "premium_paid"),  # a held loss
+]
+"""Same-day trades and positions held past the day, kept apart on "Where the money came
+from". Answers in expected_held_past_day.json, by hand."""
+
+
 LOT = 100
 """Units in one lot of the synthetic instrument, from MCX_WIDGETOIL.yaml."""
 
 
-def build() -> list[dict]:
+def build(table=TRIPS) -> list[dict]:
     out = []
-    for trip_id, day, entry, minutes, net, lots, source in TRIPS:
+    for trip_id, day, entry, minutes, net, lots, source in table:
         entry_ts = datetime.fromisoformat(f"{day}T{entry}:00").replace(tzinfo=IST)
         exit_ts = entry_ts + timedelta(minutes=minutes)
         out.append({
@@ -126,6 +149,9 @@ def main() -> None:
     assert total == -25000, f"day totals must sum to -25000, got {total}"
     (HERE / "main.json").write_text(json.dumps(trips, indent=2) + "\n")
     print(f"wrote main.json: {len(trips)} trips, net {total}")
+    held = build(HELD_PAST_DAY_TRIPS)
+    (HERE / "held_past_day.json").write_text(json.dumps(held, indent=2) + "\n")
+    print(f"wrote held_past_day.json: {len(held)} trips")
 
 
 if __name__ == "__main__":
