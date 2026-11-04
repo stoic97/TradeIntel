@@ -140,7 +140,9 @@ def mirror_sentences() -> list[str]:
 
 
 INLINE = r"span|strong|em|a|b|i|br|sup|sub"
-DATE = re.compile(r"\[N\]-\[N\]-\[N\]|\[N\] (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b")
+DATE = re.compile(
+    r"\[N\]-\[N\]-\[N\]|\[N\] (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b(?: \[N\])?"
+)
 
 
 def page_text(html: str) -> str:
@@ -148,7 +150,7 @@ def page_text(html: str) -> str:
 
     Inline tags join their text to the words around them; every other tag is a
     break. A date reads [DATE] whichever way it is written - the long page printed
-    2026-09-07, the Scope prints 07 Sep as the kit does - so a sentence is not a
+    2026-09-07, the Scope prints 07 Sep 2026 - so a sentence is not a
     different sentence because a date's writing changed.
     """
     html = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.DOTALL)
