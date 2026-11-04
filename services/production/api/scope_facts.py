@@ -90,7 +90,7 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
             [_f(t.net) for t in ctx["best"]], [_f(t.net) for t in ctx["worst"]], w, h
         )
     if kind == "hold":
-        held = mx.holding_series(trips)
+        held = mx.holding_series(mx.same_day_trips(trips))  # one holding would blank the axis
         wins = [x / 60 for x in held.winners_seconds]
         losses = [x / 60 for x in held.losers_seconds]
         return G.chart_hold(wins, losses, max([*wins, *losses, 1]), w, h, mini)
@@ -212,7 +212,9 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
     held = mx.holding_series(trips)
-    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
+    drawn = mx.holding_series(mx.same_day_trips(trips))
+    out["hold"]["max_seconds"] = max([*drawn.winners_seconds, *drawn.losers_seconds, 0])
+    out["hold"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
     for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px
         out[key]["page_chart"] = (
