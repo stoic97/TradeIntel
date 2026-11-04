@@ -58,7 +58,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "two_losses": two_losses,
         "strike": mx.strike_rate(trips),
         "lots": mx.average_lots(trips),
-        "holding": mx.holding_time(trips),
+        "holding": mx.holding_time(same_day),
         "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
@@ -213,9 +213,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
-    held = mx.holding_series(trips)
-    drawn = mx.holding_series(mx.same_day_trips(trips))
-    out["hold"]["max_seconds"] = max([*drawn.winners_seconds, *drawn.losers_seconds, 0])
+    held = mx.holding_series(mx.same_day_trips(trips))
+    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["hold"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
     for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px

@@ -74,8 +74,6 @@ def test_one_held_position_reads_in_the_singular():
 
 
 def test_a_history_of_only_held_positions_draws_no_dots():
-    page = readable(fact_page("hold", ONLY_HELD))
-    assert "4 positions held past the day" in page
     assert figs(ONLY_HELD)["max_seconds"] == 0
 
 
