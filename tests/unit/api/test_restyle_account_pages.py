@@ -38,7 +38,7 @@ CONTEXT = {
 
 SAID = {
     "account.html": (
-        "Your account Ravi Signed in as ravi. Your uploads When What we read 08 Sep 2026 1,240 rows, 40 trades Open 08 Sep 2026 not a tradebook Open Upload a tradebook Your settings What you agreed to Sign out"
+        "Your account Ravi Signed in as ravi. Your uploads When What we read 08 Sep 2026 1,240 rows, 40 trades Open 08 Sep 2026 not a tradebook Open Upload a tradebook Your settings What you risk What you agreed to Sign out"
     ),
     "delete_confirm.html": (
         "Your data Delete everything Tick the box to confirm. This removes the file you uploaded, every trade we rebuilt from it, every Journal written from those trades, your risk figures, and the record of which lines you opened. It removes your account with them, so you will not be able to sign in again. Backups hold yesterday's copy, and they roll off within 30 days. After that your data is gone from those too. What we keep Two rows: that this account agreed to what we do with a tradebook, and that it asked to be deleted and was. No name, no trades, no figure worked out from them. What deleting cannot undo Your file and everything built from it can be removed at any time. What cannot be undone is that looking at your data informed decisions we have already made about the engine. This is the same as any research partnership, and we say so plainly. I have read this and I want everything deleted. Delete everything Back to your account — nothing has been deleted yet."

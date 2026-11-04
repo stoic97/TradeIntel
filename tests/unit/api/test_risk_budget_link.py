@@ -35,7 +35,7 @@ def test_it_says_why_premium_paid_is_not_a_risk_figure():
 
 
 def test_with_a_budget_there_is_no_link_to_set_one():
-    assert 'href="/budget"' not in fact_page("risk", BUDGET)
+    assert LINK not in fact_page("risk", BUDGET)
 
 
 def test_with_a_budget_the_premium_line_is_said_once():
