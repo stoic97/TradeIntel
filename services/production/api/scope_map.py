@@ -159,9 +159,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key == "strike":
+    if key in ("strike", "clock"):
         return mx.same_day_trips(trips)
-    if key in ("hold", "clock", "risk"):
+    if key in ("hold", "risk"):
         return list(trips)
     if key in ("unread", "not-told"):
         return []

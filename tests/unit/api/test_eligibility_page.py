@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
@@ -80,7 +81,7 @@ def client(engine):
                 risk_unit_source=s.RiskUnitSourceV1(row["risk_unit_source"])))
         sess.add(m.ConsentEvent(trader_id=trader.id,
                                 purpose=s.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version="0-draft", granted=True,
+                                terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web",
                                 wording_shown="x" * 100))
         sess.commit()
@@ -144,7 +145,7 @@ def test_a_trader_with_no_import_is_sent_to_upload(engine):
         sess.flush()
         sess.add(m.ConsentEvent(trader_id=trader.id,
                                 purpose=s.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version="0-draft", granted=True,
+                                terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web",
                                 wording_shown="x" * 100))
         sess.commit()
