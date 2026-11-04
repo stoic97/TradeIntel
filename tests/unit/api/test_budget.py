@@ -183,3 +183,8 @@ def test_the_budget_needs_consent(engine):
                            "password": "a-long-enough-password",
                            "csrf_token": csrf}, follow_redirects=False)
     assert c.get("/budget", follow_redirects=False).status_code in (302, 303)
+
+
+def test_with_no_history_uploaded_the_date_starts_at_today(client):
+    today = _today().isoformat()
+    assert f'value="{today}"' in client.get("/budget").text

@@ -117,6 +117,24 @@ def current_import(sess: Session, trader: m.Trader) -> m.Import | None:
     ).first()
 
 
+def first_trading_day(sess: Session, trader: m.Trader) -> str | None:
+    """The first day of his current history, in that instrument's zone.
+
+    None with nothing uploaded, or when the first trade's instrument has no profile:
+    the Mirror refuses and says why, and this caller only needs a starting date.
+    """
+    imp = current_import(sess, trader)
+    if imp is None:
+        return None
+    row = sess.scalars(
+        select(m.Trip).where(m.Trip.import_id == imp.id).order_by(m.Trip.entry_ts).limit(1)
+    ).first()
+    profile = profiles.lookup(profiles.load_all(PROFILE_DIR), row.exchange, row.symbol, row.segment)
+    if profile is None:
+        return None
+    return row.entry_ts.astimezone(profile.timezone()).date().isoformat()
+
+
 def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | None]:
     """His trips and the import that produced them, for the lineage stamp."""
     imp = current_import(sess, trader)
