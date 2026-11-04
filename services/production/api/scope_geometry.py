@@ -872,6 +872,64 @@ def chart_run(
     return _chart(w, h, m)
 
 
+TIMELINE_INSET = 8
+
+
+def chart_run_timeline(
+    start_x: float,
+    points: list,
+    band: tuple,
+    breaks: list,
+    hours: list,
+    w: float,
+    h: float,
+) -> dict:
+    """A run as a running result over time; each trade a marker where it closed.
+
+    Not the kit's and not in CHARTS, which are held to the JavaScript byte for byte: this
+    one is the Scope's own (TICKET-820), written the same way, as paths by role. An x is a
+    share of the width (0 to 1); a point is x, y (the running result in rupees), kind ("call",
+    "put" or "plain") and size (0 to 1 on an option, None without one). band is the run, breaks
+    are where a night is left out, hours are ticks on the axis.
+    """
+    ys = [p["y"] for p in points]
+    top, bottom = max([0, *ys]), min([0, *ys])
+    drop = (top - bottom) or 1
+    inner_w, inner_h = w - 2 * TIMELINE_INSET, h - 2 * TIMELINE_INSET
+
+    def x_at(share: float) -> float:
+        return TIMELINE_INSET + share * inner_w
+
+    def y_at(value: float) -> float:
+        return TIMELINE_INSET + (top - value) / drop * inner_h
+
+    line = f"M{fmt(x_at(start_x))} {fmt(y_at(0))}"
+    marks = {"call": "", "put": "", "plain": ""}
+    for p in points:
+        x, y = x_at(p["x"]), y_at(p["y"])
+        line += f"L{fmt(x)} {fmt(y)}"
+        if p["kind"] == "plain":
+            marks["plain"] += _r2(x - 2.5, y - 2.5, 5, 5)
+        else:
+            size = 0.5 if p["size"] is None else p["size"]
+            marks[p["kind"]] += circle(x, y, 2.5 + 3 * size)
+    axis = f"M0 {fmt(y_at(0))}H{js_str(w)}"
+    axis += "".join(f"M{fmt(x_at(x))} {fmt(h - 4)}V{js_str(h)}" for x in hours)
+    return _chart(
+        w,
+        h,
+        {
+            "band": _r2(x_at(band[0]), 0, (band[1] - band[0]) * inner_w, h),
+            "axis": axis,
+            "dash": "".join(f"M{fmt(x_at(x))} 0V{js_str(h)}" for x in breaks),
+            "stroke": line,
+            "faint": marks["plain"],
+            "ink": marks["call"],
+            "put": marks["put"],
+        },
+    )
+
+
 def chart_clock(hour_net: list, few_hours: list, w: float, h: float) -> dict:
     """Net (gross) by the hour a trade was opened; hours with few trades hatched."""
     n = len(hour_net)

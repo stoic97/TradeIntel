@@ -200,9 +200,9 @@ def test_each_day_of_a_run_is_named_by_its_date_alone():
         trip("a", "2026-03-04", "15:00:00", "15:10:00", -100),
         trip("b", "2026-03-05", "09:00:00", "09:10:00", -100),
     ]
-    page = page_of(trips)
-    assert "04 Mar 2026 1 trade" in page and "05 Mar 2026 1 trade" in page
-    assert "Day " not in page
+    html = fact_page("run", trips=trips)
+    assert re.findall(r'<span class="trades__day">(.*?)</span>', html) == ["04 Mar 2026", "05 Mar 2026"]
+    assert "Day " not in readable(html)
 
 
 def test_a_row_shows_the_gap_as_minutes_and_seconds():

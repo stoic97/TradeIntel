@@ -41,6 +41,25 @@
    width comes out of the two clock columns, so the result column stays as wide as it was. */
 .trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
 
+/* The losing run's timeline (TICKET-820), the Scope's own chart: a put is a hollow marker
+   and a call a filled one, so they read apart without colour, and the run is a quiet band.
+   The headline is a sentence, so its rupees take the title's font; a figure never breaks
+   between its minus and its rupee sign, on a phone least of all. */
+.fact__title .num { font: inherit; }
+.fact__title .num, .run__range .num, .run__lines .num, .run__after .num, .run__next .num, .mirror--card .num { white-space: nowrap; }
+.chart__band { fill: var(--color-hairline); fill-opacity: .35; }
+.chart__put { fill: var(--color-page); stroke: var(--color-ink); stroke-width: 1.25; }
+.legend__swatch--put { background: none; box-shadow: inset 0 0 0 1.25px var(--color-ink); }
+.legend__swatch--band { background: var(--color-hairline); opacity: .6; }
+.run__range { margin-top: var(--space-2); }
+.run__lines { margin-top: var(--space-6); }
+.run__lines .body-small + .body-small { margin-top: var(--space-2); }
+.trade__gap { font-size: 12px; line-height: 18px; color: var(--color-faint); }
+.run__after, .run__next { margin-top: var(--space-6); }
+.run__after .trades { margin-top: var(--space-3); }
+.run__after .mirror { margin-top: var(--space-4); }
+.run__next .btn { margin-top: var(--space-4); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */

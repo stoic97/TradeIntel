@@ -213,31 +213,46 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
             (title, [t for t in shown if t.risk_unit_source in sources])
             for title, sources in RISK_SOURCES
         ]
+    elif key == "run":  # a run's days are named by their dates: "Day 1" says nothing (TICKET-820)
+        parts = [
+            (formatting.day(d), [t for t in shown if t.trading_day == d])
+            for d in sorted({t.trading_day for t in shown})
+        ]
     else:
         days = sorted({t.trading_day for t in shown})
         parts = [
             (f"Day {i} · {formatting.day(d)}", [t for t in shown if t.trading_day == d])
             for i, d in enumerate(days, start=1)
         ]
+    gaps = mx.run_story(ctx["trips"], ctx["run"].trip_ids).gaps if key == "run" and shown else {}
     return [
         {
             "title": title,
             "trade_count": len(trips),
             "net": sum(t.net for t in trips),
-            "trades": [trade(t, numbers[t.trip_id]) for t in trips],
+            "trades": [trade(t, numbers[t.trip_id], gaps.get(t.trip_id)) for t in trips],
         }
         for title, trips in parts
         if trips
     ]
 
 
-def trade(t: mx.Trip, number: int) -> dict:
+def gap_words(seconds: int | None) -> str | None:
+    """A row's gap since the last trade's exit, as minutes:seconds (TICKET-820)."""
+    if seconds is None:
+        return None
+    if seconds < 0:
+        return "Opened before the last trade closed"
+    return f"Back in after {formatting.minutes_seconds(seconds)}"
+
+
+def trade(t: mx.Trip, number: int, gap: int | None = None) -> dict:
     """One trade as the trades macro draws it.
 
     The fills under it (B5) are not kept yet (handoff D4), so the fills table is left off.
     `number` is the trade's place in his record: it identifies a row for code and is not
     drawn, because it means nothing to him (TICKET-822). A position of several legs has
-    its side, size and prices on each leg, and no premium.
+    its side, size and prices on each leg, and no premium. `gap` is on a run's rows only.
     """
     held_minutes = t.holding_seconds // 60
     only_line = t.lines[0] if len(t.lines) == 1 else None
@@ -268,4 +283,5 @@ def trade(t: mx.Trip, number: int) -> dict:
             for leg, line in zip(t.legs, t.lines, strict=False)
         ],
         "uncapped": t.uncapped,
+        "gap": gap_words(gap),
     }
