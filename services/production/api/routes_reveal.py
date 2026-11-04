@@ -97,7 +97,7 @@ def reveal(request: Request):
     early, record = load_record(request)
     if early is not None:
         return early
-    _trips, _imp, context = record
+    _trips, imp, context = record
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         guessed = GU.answer_of(sess, trader)
@@ -108,6 +108,7 @@ def reveal(request: Request):
         request,
         "reveal.html",
         title="Your five worst days",
+        imp=imp,
         screen_class="screen--navy on-navy",
         body_class="reveal",
         guessed=guessed_label,

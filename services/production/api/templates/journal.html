@@ -3,12 +3,13 @@
     stop on the chart) change what is asked, so the app's own questions stay as they
     are; its demo bar's link becomes the plain link back. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import money %}
+{% from "_components.html" import money, uncounted_line %}
 {% set nav = "journal" %}
 {% block content %}
   <p class="label label--plain">Journal</p>
   <h1 class="title num-title">{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
   <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
+  {{ uncounted_line(uncounted) }}
   {%- if journal.version_no > 1 %}
   <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. A later upload changed this period. The earlier version is kept.</p>
   {%- endif %}
