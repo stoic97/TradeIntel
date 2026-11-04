@@ -119,8 +119,9 @@ def test_the_card_uses_the_new_label():
 
 
 def test_the_trade_group_uses_the_new_label():
-    """Where it shows on a file with no stop and no budget."""
-    page = readable(fact_page("risk", nothing()))
+    """Where it shows on a file with no stop and no budget. A short list, so its groups are on
+    the fact page; a long one has them behind "See all trades" (TICKET-822)."""
+    page = readable(fact_page("risk", nothing()[:3]))
     assert LABEL in page and OLD_LABEL not in page
 
 

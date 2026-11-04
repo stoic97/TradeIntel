@@ -12,6 +12,23 @@
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
 
+/* A trade row names the trade (TICKET-822). The kit's label is a faint caption over a trade
+   number; here it is what the trader recognises his trade by, so it reads as text. The
+   prices sit under the row, and wrap rather than push a phone sideways. */
+.trade__label { font-size: 12px; color: var(--color-ink); overflow-wrap: anywhere; }
+.trade__prices { margin-top: 1px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.trade__legs td { white-space: normal; }
+.trade__legs .trade__leg-detail { padding-top: 0; font-size: 11px; color: var(--color-faint); }
+
+/* "See all trades", and the filters on the page it opens (TICKET-822). A select takes the
+   kit's input; two to a row on a phone, and min-width lets a long book name shrink. */
+.evidence__see-all { margin-top: var(--space-4); }
+.evidence--page { margin-top: 0; border-top: 0; padding-top: 0; }
+.trade-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-3); }
+.trade-filters .field__input { width: 100%; min-width: 0; }
+.trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
+.trade-filters__clear { margin-top: var(--space-3); }
+
 /* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
    so the reading state is the request itself: htmx puts .htmx-request on #upload
    while it is in flight (hx-indicator), and the form gives way to "Reading your file"
@@ -32,6 +49,22 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 /* Sign out on the Account page (D6); the kit draws no place for it. */
 .account__sign-out { margin-top: var(--space-4); }
 .consent__draft { margin-top: var(--space-6); }
+
+/* The report's ending (TICKET-825); the kit draws no such page. */
+.ending__found, .ending__table, .ending__changed, .ending__steps, .ending__check { margin-top: var(--space-6); }
+.ending__list { margin: var(--space-2) 0 0; padding-left: 20px; display: grid; gap: var(--space-2); }
+.ending__grid { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
+.ending__grid th, .ending__grid td { padding: var(--space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-hairline); }
+.ending__grid + .mirror { margin-top: var(--space-4); }
+.ending__steps .step { display: block; margin-top: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-hairline); border-radius: 10px; color: inherit; text-decoration: none; }
+.ending__check textarea { width: 100%; min-height: 70px; margin-top: var(--space-3); }
+.ending__back { display: inline-block; margin-top: var(--space-6); }
+@media (max-width: 520px) {
+  .ending__grid thead { display: none; }
+  .ending__grid tr, .ending__grid td { display: block; padding-inline: 0; border-bottom: 0; }
+  .ending__grid td:first-child { font-weight: 600; padding-bottom: 0; }
+  .ending__grid tr { padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-hairline); }
+}
 
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
