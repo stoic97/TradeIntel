@@ -347,6 +347,30 @@ def held_past_day(trips: list[Trip]) -> HeldPastDay:
     return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
 
 
+@dataclass(frozen=True)
+class OptionResult:
+    """What the option trades came to, and the largest held gain outside them."""
+
+    net: Decimal
+    count: int
+    held_gain: Trip | None
+    held_gain_days: int | None
+
+
+def option_result(trips: list[Trip]) -> OptionResult | None:
+    """Options only; None when there are none. Stated side by side, never netted."""
+    options = [t for t in trips if t.is_option]
+    if not options:
+        return None
+    gains = [t for t in trips if not t.is_option and not t.closed_same_day and t.is_win]
+    gain = max(gains, key=lambda t: t.net, default=None)
+    days = (gain.exit_ts.date() - gain.entry_ts.date()).days if gain else None
+    return OptionResult(
+        net=sum((t.net for t in options), Decimal(0)), count=len(options),
+        held_gain=gain, held_gain_days=days,
+    )
+
+
 def best_five(trips: list[Trip]) -> list[Trip]:
     """Highest net, descending. Ties: earlier entry first. No winsorising."""
     return sorted(trips, key=lambda t: (-t.net, t.entry_ts))[:5]

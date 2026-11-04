@@ -1,7 +1,7 @@
 """charges: the broker's own charges file, kept apart from the trips
 
-Revision ID: 0006_charges
-Revises: 0005
+Revision ID: 0007
+Revises: 0006
 Create Date: 2026-11-05 00:30:00.000000
 """
 from __future__ import annotations
@@ -11,8 +11,8 @@ from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0006_charges'
-down_revision = '0005'
+revision = '0007'
+down_revision = '0006'
 branch_labels = None
 depends_on = None
 
