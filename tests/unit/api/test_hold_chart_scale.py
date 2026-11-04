@@ -4,9 +4,7 @@ One position held for months put every intraday trade at zero on the axis. Expec
 values are worked by hand from held_past_day.json:
   same-day winners, minutes in entry order: 30, 20, 10, 375, 10
   same-day losers: 30, 20, 10, 10, 10
-  whole history winners add 1440 and 525600, losers add 20 and 2880, so
-  sorted winners 10, 10, 20, 30, 375, 1440, 525600 have a median of 30,
-  sorted losers 10, 10, 10, 20, 20, 30, 2880 have a median of 20.
+The figures follow the same rule since TICKET-792: see test_chapter_two_same_day.py.
 """
 
 from __future__ import annotations
@@ -27,8 +25,8 @@ HELD = mx.load_trips(
 ONLY_HELD = [t for t in HELD if t.trip_id in {"h03", "h06", "h09", "h11"}]
 WINS, LOSSES = [30, 20, 10, 375, 10], [30, 20, 10, 10, 10]
 NOTE = (
-    "The chart shows trades you closed the day you opened them. "
-    "4 positions held past the day are in the figures but not drawn."
+    "These are trades you closed the day you opened them. "
+    "4 positions held past the day are not counted here."
 )
 
 
@@ -70,7 +68,7 @@ def test_the_card_says_what_is_not_drawn():
 
 def test_one_held_position_reads_in_the_singular():
     one = [t for t in HELD if t.trip_id not in {"h03", "h09", "h11"}]
-    assert "1 position held past the day is in the figures but not drawn." in readable(
+    assert "1 position held past the day is not counted here." in readable(
         fact_page("hold", one)
     )
 
@@ -81,18 +79,10 @@ def test_a_history_of_only_held_positions_draws_no_dots():
     assert figs(ONLY_HELD)["max_seconds"] == 0
 
 
-def test_the_figures_still_read_the_whole_history():
-    """The Mirror's sentence and table keep every trade. Only the drawing narrows."""
-    f, ctx = figs(), SF.record_context(HELD)
-    assert (f["winner_count"], f["loser_count"]) == (7, 7)
-    assert ctx["holding"].winners_median_seconds == 30 * 60
-    assert ctx["holding"].losers_median_seconds == 20 * 60
-
-
 def test_with_nothing_held_the_chart_and_page_do_not_change():
     held = mx.holding_series(TRIPS)
     wins = [x / 60 for x in held.winners_seconds]
     losses = [x / 60 for x in held.losers_seconds]
     top = max([*wins, *losses, 1])
     assert figs(TRIPS)["page_chart"] == G.chart_hold(wins, losses, top, SF.PAGE_W, SF.PAGE_H, False)
-    assert "not drawn" not in readable(fact_page("hold", TRIPS))
+    assert "held past the day" not in readable(fact_page("hold", TRIPS))
