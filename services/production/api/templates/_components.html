@@ -50,6 +50,11 @@
 <p class="gross-line">Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file.</p>
 {%- endmacro %}
 
+{#- [TICKET-811] Interim, until sold options are counted (TICKET-810). Goes when n is 0. -#}
+{% macro uncounted_line(n) -%}
+{%- if n %}<p class="gross-line">{{ n }} sold-option trade{{ " is" if n == 1 else "s are" }} not yet counted — totals will change when {{ "it is" if n == 1 else "they are" }}.</p>{% endif -%}
+{%- endmacro %}
+
 {#- Result states (handoff section 4): never hidden, never an all-clear, and told apart
     by shape as well as colour - a hatched marker for not enough trades, a dashed one for
     not in the file. The tag is written in sentence case; the kit's CSS sets it in

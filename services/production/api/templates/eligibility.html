@@ -26,6 +26,7 @@
     <p class="body">None of them, on this history.</p>
     {%- endif %}
   </section>
+  {%- if result.short %}
   <section class="import__section">
     <h2 class="card-title">Not enough history yet</h2>
     <table class="table"><thead><tr><th>Check</th><th>Why not</th></tr></thead>
@@ -35,6 +36,8 @@
       {%- endfor %}
       </tbody></table>
   </section>
+  {%- endif %}
+  {%- if result.waiting %}
   <section class="import__section">
     <h2 class="card-title">Waiting on something that is not your trades</h2>
     <table class="table"><thead><tr><th>Check</th><th>What is missing</th></tr></thead>
@@ -44,6 +47,7 @@
       {%- endfor %}
       </tbody></table>
   </section>
+  {%- endif %}
   {%- if result.undetermined %}
   <section class="import__section">
     <h2 class="card-title">We cannot tell from here</h2>

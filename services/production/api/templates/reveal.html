@@ -4,7 +4,7 @@
     slice and no figure, and the Mirror's other sentence. "Show me those days" opens
     the worst-days fact with the lens; "Continue" goes on to the one number. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import money, button, share_sentence %}
+{% from "_components.html" import money, button, share_sentence, uncounted_line %}
 {% block content %}
   {%- if guessed %}
   <p class="body-small body-small--soft">You guessed: {{ guessed }}.</p>
@@ -26,6 +26,7 @@
       <circle class="scope__centre-ring" cx="150" cy="150" r="61"/>
     </svg>
   </div>
+  {{ uncounted_line(imp.trips_refused) }}
   {%- if share.shown_as_percentage %}
   <p class="mirror mirror--card">{{ share_sentence(share) }}</p>
   <p class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
