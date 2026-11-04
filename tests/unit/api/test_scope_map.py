@@ -176,7 +176,7 @@ def test_a_trade_is_drawn_from_its_entry_to_its_exit():
     t = TRIPS[0]  # 09:30 to 10:00 on 01 Sep
     got = S.trade(t, 1)
     assert (got["day"], got["time_in"], got["time_out"], got["held_minutes"]) == (
-        "01 Sep",
+        "01 Sep 2026",
         "09:30",
         "10:00",
         30,
@@ -191,6 +191,6 @@ def test_a_trade_without_fills_has_no_fills_table():
     assert "fills" not in html
 
 
-def test_a_day_is_written_as_the_kit_writes_it():
-    assert formatting.day("2026-09-07") == "07 Sep"
-    assert formatting.day("2026-12-31") == "31 Dec"
+def test_a_day_is_written_with_its_year():
+    assert formatting.day("2026-09-07") == "07 Sep 2026"
+    assert formatting.day("2026-12-31") == "31 Dec 2026"

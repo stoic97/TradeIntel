@@ -20,6 +20,10 @@
 #upload.htmx-request .upload__idle { display: none; }
 #upload.htmx-request .upload__reading { display: block; }
 
+/* A trade's date carries its year (TICKET-808). The kit's columns are drawn for 07 Sep; the
+   width comes out of the two clock columns, so the result column stays as wide as it was. */
+.trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
