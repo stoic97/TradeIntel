@@ -18,6 +18,9 @@ the history he uploaded.
 
 Declarations are never edited. A new number is a new row, so October's trips keep
 October's -- the lookup is by the declaration in force at each trip's entry.
+
+Once there is a number, this page says how many of his trades lost more than it
+(TICKET-831). metrics.py decides that count and the risk fact reads the same function.
 """
 
 from __future__ import annotations
@@ -63,6 +66,24 @@ def _history(sess, trader: m.Trader) -> list[m.RiskBudgetDeclaration]:
     ).all())
 
 
+def _past_number(sess, trader: m.Trader) -> dict:
+    """The count, once there is a number and a file to count from, and that file's import.
+
+    A file the record cannot be read from leaves no count, not a broken form: the Mirror
+    says what is wrong with the file.
+    """
+    nothing = {"past_number": None, "imp": None}
+    if not _history(sess, trader):
+        return nothing
+    try:
+        trips, imp = loader.load_for(sess, trader)
+    except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
+        return nothing
+    if not trips:
+        return nothing
+    return {"past_number": mx.trades_past_number(trips), "imp": imp}
+
+
 def _default_from(sess, trader: m.Trader) -> str:
     """Where the date starts: the first day he uploaded, today if there is none.
 
@@ -90,6 +111,7 @@ def budget_form(request: Request):
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
         return page(request, "budget.html", title="What you risk",
+                    **_past_number(sess, trader),
                     declarations=_history(sess, trader),
                     today=_today().isoformat(),
                     default_from=_default_from(sess, trader),
@@ -118,6 +140,7 @@ def budget_submit(
         def refuse(message: str) -> HTMLResponse:
             return page(request, "budget.html", status_code=400,
                         title="What you risk", error=message,
+                        **_past_number(sess, trader),
                         declarations=_history(sess, trader),
                         today=_today().isoformat(),
                         default_from=_default_from(sess, trader),
@@ -165,6 +188,6 @@ def budget_submit(
             retrospective=effective < _today(),
         ))
         sess.commit()
-    # The one number comes straight after the reveal (TR-008). Recorded, the journey
-    # goes on to the Scope; its history stays on this page.
-    return RedirectResponse("/mirror", status_code=303)
+    # The one number comes straight after the reveal (TR-008). Recorded, it lands back
+    # here to show what it counts (TICKET-831), and the page links on to the Scope.
+    return RedirectResponse("/budget", status_code=303)

@@ -54,6 +54,7 @@ class Trip:
     net: Decimal
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
+    number_in_force: Decimal | None = None  # his number that day, in rupees (TICKET-831)
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
     uncapped: bool = False  # can lose without limit, whatever it is measured against
@@ -227,6 +228,18 @@ class LosingRun:
 class RiskFigureCounts:
     counts: dict[s.RiskUnitSourceV1, int]
     showable: int
+    state: s.ResultState
+
+
+@dataclass(frozen=True)
+class TradesPastNumber:
+    """Same-day trades that lost more than the number in force the day they were opened."""
+
+    count: int
+    trip_ids: list[str]
+    measured: int  # same-day trades with a number in force
+    before_number: int  # same-day trades with none in force yet
+    held_past_day: int  # positions left out, as every same-day figure leaves them out
     state: s.ResultState
 
 
@@ -639,6 +652,27 @@ def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
     return RiskFigureCounts(
         counts=counts, showable=showable,
         state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
+    """How many trades lost more than his number. The one place this count is decided.
+
+    A count, not a score: he chose the number. "More than" is strict, so a loss exactly
+    equal to the number, in paise, is not counted. It reads rupees and never
+    risk_unit_source, so a sold option with no risk figure counts the same as any other
+    trade (Annex H section 6).
+    """
+    same_day = same_day_trips(trips)
+    measured = [t for t in same_day if t.number_in_force is not None]
+    past = [t for t in measured if _round(-t.net) > t.number_in_force]
+    return TradesPastNumber(
+        count=len(past),
+        trip_ids=[t.trip_id for t in past],
+        measured=len(measured),
+        before_number=len(same_day) - len(measured),
+        held_past_day=len(trips) - len(same_day),
+        state=s.ResultState.COUNTED_FACT if measured else s.ResultState.INSUFFICIENT_SAMPLE,
     )
 
 

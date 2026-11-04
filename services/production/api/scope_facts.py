@@ -55,6 +55,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
+        "past_number": mx.trades_past_number(trips),
         "two_losses": two_losses,
         "strike": mx.strike_rate(same_day),
         "break_even": mx.break_even(same_day),
