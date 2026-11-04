@@ -68,9 +68,9 @@ CHAPTERS: tuple[Chapter, ...] = (
     ),
     Chapter(
         4,
-        "What we couldn't read",
+        "What we read",
         (
-            Fact("unread", "What we could not read", "read"),
+            Fact("unread", "What we read", "read"),
             Fact("risk", "Trades with a risk figure", "risk"),
             Fact("not-told", "What we have not told you", "notold"),
         ),

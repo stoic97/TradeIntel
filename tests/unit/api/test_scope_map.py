@@ -34,7 +34,7 @@ def test_the_chapters_and_facts_are_the_handoffs():
         (1, "Where your results came from", ["worst-days", "share", "money"]),
         (2, "Your patterns", ["hold", "strike", "run", "clock"]),
         (3, "Your behaviour", ["down", "busiest"]),
-        (4, "What we couldn't read", ["unread", "risk", "not-told"]),
+        (4, "What we read", ["unread", "risk", "not-told"]),
     ]
     assert [c.feedback for c in S.CHAPTERS] == [True, True, True, False]  # 4 is the honest close
 
