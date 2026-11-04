@@ -68,9 +68,9 @@ CHAPTERS: tuple[Chapter, ...] = (
     ),
     Chapter(
         4,
-        "What we couldn't read",
+        "What we read",
         (
-            Fact("unread", "What we could not read", "read"),
+            Fact("unread", "What we read", "read"),
             Fact("risk", "Trades with a risk figure", "risk"),
             Fact("not-told", "What we have not told you", "notold"),
         ),
@@ -159,9 +159,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key in ("strike", "clock"):
+    if key in ("hold", "strike", "clock"):
         return mx.same_day_trips(trips)
-    if key in ("hold", "risk"):
+    if key == "risk":
         return list(trips)
     if key in ("unread", "not-told"):
         return []

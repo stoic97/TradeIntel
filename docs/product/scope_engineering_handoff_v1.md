@@ -61,7 +61,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | 1 | Where your results came from | Your worst trading days · Share of your result · Where the money came from | `worst-days` · `share` · `money` |
 | 2 | Your patterns | How long you hold · Strike rate · Longest losing run · The clock | `hold` · `strike` · `run` · `clock` |
 | 3 | Your behaviour | Trading on while already down · Your busiest day | `down` · `busiest` |
-| 4 | What we couldn't read | What we could not read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
+| 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
 
 Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question.
 
