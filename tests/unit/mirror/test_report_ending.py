@@ -112,6 +112,12 @@ def test_the_takeaways_come_first_one_line_per_chapter(client):
     assert page.index("ending__found") < page.index("ending__table")
 
 
+def test_a_loss_is_said_once_not_as_lost_minus(client):
+    found = text_of(section(client.get(PAGE).text, "found"))
+    assert "Your option trades lost ₹" in found or "Your option trades made ₹" in found
+    assert "lost −" not in found
+
+
 def test_no_line_that_waits_on_the_research_seat_ships(client):
     found = text_of(section(client.get(PAGE).text, "found"))
     for line in ("options you bought", "5 and 7 pm", "crude", "Right after two losses",
