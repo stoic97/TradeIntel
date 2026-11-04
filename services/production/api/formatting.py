@@ -110,6 +110,20 @@ def signed_percent(value) -> str:
     return f"{MINUS if cut < 0 else '+'}{abs(cut)}%"
 
 
+def time_of_day(when) -> str:
+    """A clock time as a sentence says it: 9:17 am, 2:51 pm, 12:05 pm."""
+    return f"{when.hour % 12 or 12}:{when.minute:02d} {'am' if when.hour < 12 else 'pm'}"
+
+
+def minutes_in_words(seconds: int, *, about: bool = True) -> str:
+    """A hold in a sentence, to the nearest minute: about 3 minutes. Never about 0 minutes."""
+    if seconds < 30:
+        return "under a minute"
+    whole = (seconds + 30) // 60
+    words = f"{count(whole)} {'minute' if whole == 1 else 'minutes'}"
+    return f"about {words}" if about else words
+
+
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 

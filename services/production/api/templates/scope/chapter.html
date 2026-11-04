@@ -3,6 +3,7 @@
     Every sentence is the Mirror's own, word for word (test_wording_reference.py). -#}
 {% extends "layout.html" %}
 {% from "_components.html" import dial, gross_line, uncounted_line %}
+{% from "scope/_next.html" import chapter_four %}
 {% set nav = "scope" %}
 {% block stage %}
 <header class="stage on-navy" aria-label="The Scope">
@@ -22,6 +23,9 @@
   </div>
   {%- if chapter.feedback %}
   {% include "scope/_feedback.html" %}
+  {%- endif %}
+  {%- if chapter.number == 3 %}
+  {{ chapter_four(facts["busiest"].chapter_four) }}
   {%- endif %}
   {%- if chapter.number == 4 %}
   {% include "scope/_lineage.html" %}

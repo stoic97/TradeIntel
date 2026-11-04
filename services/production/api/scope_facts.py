@@ -32,6 +32,7 @@ CARD_H = {
     "clock": 84,
     "busy": 84,
 }
+NO_BREAK = " "
 NOT_TOLD = 4
 """What we have not told you: the four things its first sentence names - a cause, a
 score, a cost, a change. Counted from the sentence, which is the Mirror's own."""
@@ -188,6 +189,56 @@ def _figure(key: str, ctx: dict, imp) -> str:
     return str(NOT_TOLD)
 
 
+def _busiest_story(ctx: dict) -> dict | None:
+    """The busiest day as its page tells it: metrics counted it, this words the parts."""
+    if not ctx["days"].busiest_day:
+        return None
+    st = mx.busiest_day_story(ctx["trips"], ctx["days"].busiest_day)
+    drawn = [(t.side, _f(t.net)) for t in st.strip]
+    what = f"{st.book} trade" if st.strip_is_the_book else "option trade"
+    spread_holds = st.median_hold_seconds is not None and not st.holds_alike
+    return {
+        "day": formatting.day(st.day),
+        "trades": st.trades,
+        "net": st.net,
+        "book": st.book,
+        "book_trades": st.book_trades,
+        "book_net": st.book_net,
+        "strike": f"{st.strike.normalize():f}" if st.strike is not None else None,
+        "strikes": st.strikes,
+        "lots": st.lots,
+        "lots_low": st.lots_low,
+        "lots_high": st.lots_high,
+        "switches": st.switches,
+        "one_side": {"CE": "calls", "PE": "puts"}.get(st.one_side),
+        "only_positions": st.only_positions,
+        "started": formatting.time_of_day(st.started) if st.started else "",
+        "ended": formatting.time_of_day(st.ended) if st.ended else "",
+        "holding_each": formatting.minutes_in_words(st.median_hold_seconds) if st.holds_alike else None,
+        "median_hold": formatting.minutes_in_words(st.median_hold_seconds) if spread_holds else None,
+        "longest_hold": formatting.minutes_in_words(st.longest_hold_seconds, about=False) if spread_holds else None,
+        "held_past_day": st.held_past_day,
+        "strip": G.chart_call_put(drawn, PAGE_W, PAGE_H) if drawn else None,
+        "strip_caption": f"The {len(drawn)} {what}{'' if len(drawn) == 1 else 's'} that day, in order.",
+        "strip_has_positions": any(t.side == "both" for t in st.strip),
+    }
+
+
+def _trades_word(n: int) -> str:
+    return f"{formatting.count(n)} {'trade' if n == 1 else 'trades'}"
+
+
+def _chapter_four(ctx: dict) -> dict:
+    """The way out of chapter 3, by chapter 4's own title. The number is mentioned only while
+    chapter 4 still offers to take it (its risk fact, with no declared budget)."""
+    c = S.chapter(4)
+    return {
+        "label": f"Chapter {c.number}: {c.name}",
+        "href": S.chapter_href(c.number),
+        "names_the_number": ctx["risk"].counts[s.RiskUnitSourceV1.DECLARED_BUDGET] == 0,
+    }
+
+
 def facts(ctx: dict, imp) -> dict[str, dict]:
     """Every fact's figure, state, card chart, mini chart and the counts its card needs."""
     trips = ctx["trips"]
@@ -219,6 +270,20 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         last=out["worst-days"]["last_day"],
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
+    out["busiest"]["story"] = _busiest_story(ctx)
+    out["busiest"]["chapter_four"] = out["down"]["chapter_four"] = _chapter_four(ctx)
+    out["down"]["next"] = {
+        "label": f"Next: {S.FACTS['busiest'].title}",
+        "href": S.fact_href("busiest"),
+    }
+    # The chapter's dial says findings (TICKET-827); home's slice and the card keep their figure.
+    # After two straight losses is a count: a page may state no direction until research can
+    # test one (post_loss_sentence_may_show). A date holds together when its slice stacks.
+    if not out["down"]["state"]:
+        out["down"]["dial_figure"] = _trades_word(ctx["two_losses"].condition)
+    if not out["busiest"]["state"]:
+        on_day = out["busiest"]["busiest_date"].replace(" ", NO_BREAK)
+        out["busiest"]["dial_figure"] = f"{_trades_word(ctx['days'].busiest_trips)}, {on_day}"
     two_losses = ctx["two_losses"]
     out["down"]["post_loss_sentence"] = (
         mx.post_loss_sentence_may_show(trips)
@@ -287,7 +352,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         fig = figs[f.key]
         item = {
             "name": f.title,
-            "figure": fig["figure"],
+            "figure": fig.get("dial_figure", fig["figure"]),
             "href": fig["href"],
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,

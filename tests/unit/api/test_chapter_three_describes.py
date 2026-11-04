@@ -142,7 +142,7 @@ def test_open_the_page_opens_with_the_means_from_the_shared_definition(page, rea
 def test_open_a_minus_sign_stays_with_its_figure():
     """Found at 390 px on the card: the minus ended one line and the rupees began the next."""
     page = fact_page("down", DOWN)
-    assert page.count('<span class="opening-figure">') == 2
+    assert page.count('<span class="opening-figure">') == 4  # this sentence's, and the page's own
     css = Path("services/production/api/static/css/app.css").read_text()
     assert ".opening-figure { white-space: nowrap; }" in css
 

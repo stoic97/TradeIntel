@@ -14,6 +14,7 @@ import pytest
 from services.production.api import formatting
 from services.production.mirror import metrics as mx
 from tests.unit.api.test_chapter_three_describes import CLOSED, TITLE, card_of, head_of
+from tests.unit.api.test_scope_chapters import readable
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
 TL = mx.two_straight_losses(TRIPS)
@@ -46,7 +47,7 @@ def test_the_served_chapter_ends_with_the_way_into_chapter_four(client):
 def test_the_served_busiest_page_tells_the_day_and_goes_on(client):
     page = client.get("/mirror/fact/busiest").text
     day = formatting.day(mx.day_counts(TRIPS).busiest_day)
-    assert f"{day}: {mx.day_counts(TRIPS).busiest_trips} trades." in " ".join(page.split())
+    assert f"{day}: {mx.day_counts(TRIPS).busiest_trips} trades." in readable(page)
     assert 'href="/mirror/chapter/4"' in page
 
 

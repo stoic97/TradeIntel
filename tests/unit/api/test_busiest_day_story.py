@@ -90,6 +90,20 @@ def test_the_page_opens_with_the_story_straight_under_the_title():
     assert readable(found[1]).startswith("02 Sep 2026: 6 trades.")
 
 
+def test_a_minus_and_a_clock_time_stay_on_one_line():
+    """Found at 390 px on the real file: a minus ended one line and its rupees began the next,
+    and a time split from its am or pm."""
+    page = fact_page("busiest", DAY)
+    assert page.count('<span class="opening-figure">') == 4  # two times, two results
+    assert fact_page("down", DOWN).count('<span class="opening-figure">') == 2
+
+
+def test_the_story_is_three_short_paragraphs_on_a_phone():
+    """Found at 390 px: as one paragraph it ran to a whole screen."""
+    head = fact_page("busiest", DAY).split("</h1>")[1].split('<figure class="figure">')[0]
+    assert head.count('<p class="mirror">') == 3
+
+
 def test_the_metric_counts_what_the_docstring_counts():
     story = mx.busiest_day_story(DAY, "2026-09-02")
     assert (story.trades, story.net) == (6, Decimal(780))
@@ -369,7 +383,7 @@ def test_the_down_page_says_what_it_counts_and_gives_both_averages_with_no_compa
     """DOWN (test_chapter_three_describes): 4 qualify, 2 right after two losses in a row
     averaging +137.5, the other 2 averaging -100.5."""
     page = readable(fact_page("down", DOWN))
-    assert ("These are the 4 trades you opened when two earlier trades that day had already closed at a loss. "
+    assert ("These are the 4 trades you opened once at least two earlier trades that day had closed. "
             "2 came right after two losses in a row, and averaged +₹137.5. "
             "The other 2 came when the two most recent had not both lost, and averaged −₹100.5.") in page
     for word in ("better", "worse", "more than", "less than", "higher", "lower"):
@@ -384,9 +398,19 @@ def test_the_down_page_with_nothing_on_the_other_side_gives_one_average():
     assert "The other" not in page
 
 
-def test_the_down_page_with_nothing_counted_says_so():
+def test_the_down_page_says_who_counts_as_the_shared_definition_counts():
+    """-100 then +50 then +60, +70: the last two each have two earlier trades closed, one of
+    them a win. They qualify (b2_condition reads closed trades, not losses), and neither came
+    right after two losses."""
     page = readable(fact_page("down", one_day([-100, 50, 60, 70])))
-    assert "No trade you opened had two earlier trades that day already closed at a loss." in page
+    assert "These are the 2 trades you opened once at least two earlier trades" in page
+    assert "None came right after two losses in a row." in page
+    assert "The other 2 came when the two most recent had not both lost, and averaged +₹65." in page
+
+
+def test_the_down_page_with_nothing_counted_says_so():
+    page = readable(fact_page("down", one_day([-100, 50])))
+    assert "No trade you opened had two earlier trades that day already closed." in page
     assert "averaged" not in page
 
 
