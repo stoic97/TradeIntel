@@ -70,7 +70,7 @@ def build(path: Path, display_name: str) -> Path:
     raw = path.read_bytes()
     digest = hashlib.sha256(raw).hexdigest()
     res = parse(path, trader_id="T01", raw_hash=digest)
-    recon = reconstruct(res.fills, fees_available=res.fees_available)
+    recon = reconstruct(res.fills, fees_available=res.fees_available, short_options=True)
     trips = sorted(recon.round_trips, key=lambda t: t.entry_ts)
     if not trips:
         raise SystemExit("no round trips reconstructed")

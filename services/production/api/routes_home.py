@@ -15,7 +15,7 @@ from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
-from services.production.api.routes_journal import trips_of
+from services.production.api.routes_journal import trades_of, trips_of
 from services.production.db.session import make_session
 from services.production.journal import generate as gen
 from services.production.mirror import loader
@@ -49,7 +49,7 @@ def home(request: Request):
                 {
                     "id": journal.id,
                     "period": _period(journal),
-                    "trades": len(covered),
+                    "trades": len(trades_of(covered)),
                     "net": sum(t.net for t in covered),
                 }
             )
