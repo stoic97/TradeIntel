@@ -1,4 +1,4 @@
-"""The count on the line is the count of trades the upload set aside [TICKET-811]."""
+"""What the upload set aside, now that sold options are counted [TICKET-811, TICKET-810]."""
 
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ def with_a_sold_option() -> bytes:
     return _two_days() + sold.encode()
 
 
-def test_one_sold_option_reads_in_the_singular_from_the_upload(client, engine):  # noqa: F811
+def test_a_sold_option_is_counted_so_the_line_does_not_show(client, engine):  # noqa: F811
+    """[TICKET-810] ended what TICKET-811's line was waiting for."""
     upload(client, content=with_a_sold_option())
     with make_session(engine) as sess:
-        assert len(sess.scalars(select(m.SkippedTrip)).all()) == 1
-        assert sess.scalars(select(m.Import)).one().trips_refused == 1
-    page = " ".join(client.get("/mirror").text.split())
-    assert "1 sold-option trade is not yet counted — totals will change when it is." in page
+        assert sess.scalars(select(m.SkippedTrip)).all() == []
+        assert sess.scalars(select(m.Import)).one().trips_refused == 0
+    assert "not yet counted" not in " ".join(client.get("/mirror").text.split())

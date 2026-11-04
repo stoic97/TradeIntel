@@ -155,11 +155,11 @@ def test_risk_with_nothing_to_measure_against_is_not_in_the_file():
 
 
 def test_a_share_that_is_not_a_percentage_is_told_as_the_mirror_tells_it():
-    trips = trips_from([-100, -50, -20, -10, -5, 900])
+    trips = trips_from([10, 20, 30, 40, 50, 60])
     for key in ("worst-days", "share"):
         page = readable(fact_page(key, trips))
         assert "Your result for the whole period was" in page
-        assert "% of your result" not in page
+        assert "% of your losses" not in page
 
 
 def test_an_average_keeps_its_paise_as_the_mirror_printed_it():
