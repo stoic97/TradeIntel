@@ -182,25 +182,18 @@ BUSY = (one_day([10, 10, 10, 10], "2026-09-01") + one_day([10], "2026-09-02")
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
-@pytest.mark.parametrize(
-    ("page", "read"),
-    [
-        (lambda: fact_page("busiest", BUSY), head_of),
-        (lambda: chapter_page(3, BUSY), lambda p: card_of(p, 2)),
-    ],
-    ids=["fact page", "card"],
-)
-def test_the_busiest_day_opens_with_what_its_chart_shows(page, read, opened, monkeypatch):
+def test_the_busiest_card_opens_with_what_its_chart_shows(opened, monkeypatch):
+    """The card has the chart. The fact page opens with the day's story (test_busiest_day_story)."""
     if opened:
         monkeypatch.setattr(mx, "post_loss_sentence_may_show", lambda trips: True)
-    title, sentence = read(page())
+    title, sentence = card_of(chapter_page(3, BUSY), 2)
     assert title == "Your busiest day"
     assert sentence == "Your busiest day had 4 trades, against 2 on your normal day."
 
 
 def test_a_busiest_day_of_one_trade_is_one_trade():
     days = one_day([10], "2026-09-01") + one_day([10], "2026-09-02")
-    _, sentence = head_of(fact_page("busiest", days))
+    _, sentence = card_of(chapter_page(3, days), 2)
     assert sentence == "Your busiest day had 1 trade, against 1 on your normal day."
 
 
@@ -211,9 +204,10 @@ def test_a_busiest_day_of_one_trade_is_one_trade():
         ("busiest", "Your busiest was"),
     ],
 )
-def test_the_mirrors_own_sentence_still_follows(key, line):
+def test_the_mirrors_own_sentence_still_follows_on_the_card(key, line):
+    """On the card. The fact page no longer repeats it (test_busiest_day_story)."""
     trips = DOWN if key == "down" else BUSY
-    assert line in readable(fact_page(key, trips))
+    assert line in readable(chapter_page(3, trips))
 
 
 # ---------- A fact in a state says none of this ----------
