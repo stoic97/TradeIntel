@@ -1,15 +1,15 @@
 """report feedback (TICKET-825)
 
-Revision ID: 0005_report_feedback
-Revises: 0004
+Revision ID: 0006
+Revises: 0005
 """
 import sqlalchemy as sa
 from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0005_report_feedback'
-down_revision = '0004'
+revision = '0006'
+down_revision = '0005'
 branch_labels = None
 depends_on = None
 
