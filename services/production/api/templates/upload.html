@@ -25,6 +25,7 @@
     <form class="upload" method="post" action="/upload" enctype="multipart/form-data" hx-post="/upload" hx-encoding="multipart/form-data" hx-target="body" hx-indicator="#upload">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" id="file" name="file" accept=".csv,.txt" required></label>
+      <label class="field"><span class="field__label">When did you download this file?</span><input class="field__input field__input--mono" type="date" id="export_date" name="export_date" max="{{ today }}" value="{{ today }}" required><span class="field__hint">Your last trading day gets its Journal only if you downloaded the file after that day.</span></label>
       {{ button("Upload") }}
     </form>
     <p class="body-small upload__note">Nothing is shown to anyone else. You can delete it at any time.</p>

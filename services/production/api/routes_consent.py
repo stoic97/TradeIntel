@@ -12,7 +12,8 @@ shown at each point.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -38,6 +39,18 @@ def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
     for event in events:
         state[event.purpose] = event.granted
     return state
+
+
+def trader_today() -> date:
+    """Today where the trader is, so an upload just after midnight IST is not yesterday."""
+    return datetime.now(ZoneInfo("Asia/Kolkata")).date()
+
+
+def upload_page(request: Request, status_code: int = 200, error: str | None = None):
+    """The upload form, with its download date starting at today (definitions 1)."""
+    return page(request, "upload.html", status_code=status_code,
+                title="Upload your tradebook", error=error,
+                today=trader_today().isoformat())
 
 
 def has_diagnosis_consent(sess, trader: m.Trader) -> bool:
@@ -176,4 +189,4 @@ def upload_placeholder(request: Request):
             return RedirectResponse("/login", status_code=303)
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
-        return page(request, "upload.html", title="Upload your tradebook")
+        return upload_page(request)
