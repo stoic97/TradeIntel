@@ -68,13 +68,29 @@ def _times(n: int, one: str, many: str) -> str:
     return f"{n} {one if n == 1 else many}"
 
 
+def _climbed_while_losing(climb: list[dict]) -> bool:
+    """Size never fell on the way to the top, and every trade before the top lost.
+
+    Without this, 1, 2, 1, 5, 7 lots reads "from 1 lot to 7 after 1 loss": each word true, and
+    the sentence says one jump that never happened.
+    """
+    sizes = [t["lots"] for t in climb if t["lots"] is not None]
+    return sizes == sorted(sizes) and all(t["net"] < 0 for t in climb[:-1])
+
+
 def size_line(day: str, trades: list[dict], usual: Decimal | None) -> str | None:
-    """Going bigger after losing, on this day, as a fact. None if that isn't what happened."""
+    """Going bigger after losing, on this day, as a fact. None if that isn't what happened.
+
+    Says nothing rather than something loose: a day with no line loses little, and a line that
+    misremembers the day costs the trader's trust in every other figure.
+    """
     up = _size_up(trades)
     if up is None or usual is None:
         return None
     began = next(t["lots"] for t in trades if t["lots"] is not None)
     rose_at = next(i for i, t in enumerate(trades) if t["lots"] is not None and t["lots"] > began)
+    if not _climbed_while_losing(trades[rose_at:up + 1]):
+        return None
 
     losses = 0
     for trade in reversed(trades[:rose_at]):
