@@ -41,7 +41,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Where your results came from",
         (
             Fact("worst-days", "Your worst trading days", "worst"),
-            Fact("share", "Share of your result", "share"),
+            Fact("share", "Share of your losses", "share"),
             Fact("money", "Where the money came from", "money"),
         ),
         feedback=True,

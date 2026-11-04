@@ -29,6 +29,8 @@ from tests.unit.mirror.wording import (
 
 RETIRED = {
     "Your record": "the long page's title; Scope home's title is the kit's new one (D9)",
+    "That is [N] of your result for the whole period, which was [N].":
+        "a share of the net result, which has no floor or ceiling (TICKET-812)",
 }
 """Mirror lines the Scope does not say, each with why. Nothing else may go."""
 
@@ -114,35 +116,13 @@ def test_a_retired_line_is_really_gone(client):
         assert line not in everything, line
 
 
-def test_the_sentence_for_a_share_that_is_not_a_percentage_is_kept_too(client, engine):
-    """One large winning trade on a new day turns the fixture trader's total positive.
+def test_the_sentence_for_a_share_that_is_not_a_percentage_is_kept_too():
+    """With no losing day there is no share of losses, so the pages take the other
+    sentence. Rendered from a made-up history: every day on the fixture loses."""
+    from tests.unit.api.test_scope_chapters import trips_from
+    from tests.unit.api.test_scope_facts import fact_page
 
-    A positive total against negative worst days gives a negative share, which
-    Appendix A never shows as a percentage, so the pages take the other sentence.
-    """
-    from datetime import datetime
-    from decimal import Decimal
-
-    from sqlalchemy import select
-
-    from services.production.db import models as m
-    from services.production.db.session import make_session
-    from services.shared.schemas import scope_v1 as s_enums
-
-    with make_session(engine) as sess:
-        imp = sess.scalars(select(m.Import)).one()
-        sess.add(m.Trip(
-            import_id=imp.id, trip_id="t41", trading_day="2026-09-11",
-            exchange="MCX", symbol="WIDGETOIL", segment="OPT", direction="LONG",
-            entry_ts=datetime.fromisoformat("2026-09-11T09:30:00+05:30"),
-            exit_ts=datetime.fromisoformat("2026-09-11T10:00:00+05:30"),
-            quantity=100, entry_price=Decimal(100), exit_price=Decimal(100),
-            gross=Decimal(100000), fees=Decimal(0), net=Decimal(100000),
-            fees_available=False,
-            risk_unit_source=s_enums.RiskUnitSourceV1("declared_budget")))
-        sess.commit()
-
-    worst = page_text(client.get("/mirror/fact/worst-days").text)
+    worst = page_text(fact_page("worst-days", trips_from([10, 20, 30, 40, 50, 60])))
     for sentence in sentences(SHARE_NOT_A_PERCENTAGE):
-        assert sentence in worst, sentence
-    assert "of your result for the whole period, which was" not in worst
+        assert sentence in figures_out(worst), sentence
+

@@ -40,7 +40,7 @@ def test_the_slice_runs_from_twelve_to_the_share():
 
 
 def test_a_share_that_is_not_a_percentage_draws_no_slice():
-    view = SF.reveal_view(SF.record_context(trips_from([-100, -50, -20, -10, -5, 900])))
+    view = SF.reveal_view(SF.record_context(trips_from([10, 20, 30, 40, 50, 60])))
     assert not view["shown"] and "slice_length" not in view
 
 
@@ -84,15 +84,16 @@ def test_the_reveal_is_the_kits_navy_page():
 def test_the_reveal_tells_the_mirrors_sentences():
     text = readable(reveal())
     assert "Those five days came to" in text
-    assert "of your result for the whole period, which was" in text
+    assert "of your losses." in text
+    assert "Your result for the whole period was" in text
 
 
 def test_the_second_state_has_no_slice_and_the_mirrors_other_sentence():
-    page = reveal(trips_from([-100, -50, -20, -10, -5, 900]))
+    page = reveal(trips_from([10, 20, 30, 40, 50, 60]))
     assert "reveal__slice" not in page and "reveal__figure" not in page
     assert '<circle class="reveal__disc reveal__disc--empty"' in page
     text = readable(page)
-    assert "Your result for the whole period was" in text and "% of your result" not in text
+    assert "Your result for the whole period was" in text and "% of your losses" not in text
 
 
 def test_without_a_guess_the_reveal_says_nothing_about_one():
