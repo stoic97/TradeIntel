@@ -25,7 +25,7 @@ def test_home_opens_the_scope_from_its_headline(client):
     assert '<a class="scope-card on-navy" href="/mirror">' in body
     assert '<span class="num num--hero scope-card__figure">96%</span>' in body
     assert "of your losses in five days" in body
-    assert re.search(r"Your Scope · Import \d+ · \d\d \w{3}</span>", body)
+    assert re.search(r"Your Scope · Import \d+ · \d\d \w{3} \d{4}</span>", body)
     assert "Open the Scope" in body
 
 
