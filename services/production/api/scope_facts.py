@@ -59,7 +59,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "strike": mx.strike_rate(trips),
         "lots": mx.average_lots(trips),
         "holding": mx.holding_time(trips),
-        "hours": mx.result_by_hour(trips),
+        "hours": mx.result_by_hour(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
         "trips": trips,
@@ -132,6 +132,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 
 
 def _state(key: str, ctx: dict) -> str:
+    if key == "clock" and not ctx["hours"]:
+        return "not-enough"  # every trade was held past its day
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -252,6 +254,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["uncapped"] = c[s.RiskUnitSourceV1.UNCAPPED]
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     hours = ctx["hours"]
+    out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(
         first_hour=f"{hours[0].hour:02d}" if hours else "",
         last_hour=f"{hours[-1].hour:02d}" if hours else "",

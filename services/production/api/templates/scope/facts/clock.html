@@ -2,6 +2,9 @@
 {% from "_components.html" import figure %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    {%- if f.held.count %}
+    <p class="mirror">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
+    {%- endif %}
 {% endblock %}
 {% block body %}
   {% call figure(1, "Net (gross) by the hour you opened", f.page_chart) %}

@@ -2,7 +2,7 @@
     the chapter's facts on the navy stage, then one story card per fact, in slice order.
     Every sentence is the Mirror's own, word for word (test_wording_reference.py). -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line %}
+{% from "_components.html" import dial, gross_line, uncounted_line %}
 {% set nav = "scope" %}
 {% block stage %}
 <header class="stage on-navy" aria-label="The Scope">
@@ -14,6 +14,7 @@
   <h1 class="title fact__title">{{ chapter.name }}</h1>
   <p class="body">{{ chapter.facts|length }} facts, counted from your file.</p>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+  {{ uncounted_line(imp.trips_refused) }}
   <div class="story-list">
   {%- for fact in chapter.facts %}
     {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
