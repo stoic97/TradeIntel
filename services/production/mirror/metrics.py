@@ -579,6 +579,87 @@ def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
     return read
 
 
+@dataclass(frozen=True)
+class WorstDayRow:
+    trading_day: str
+    books: tuple[str, ...]
+    trades: int
+    net: Decimal
+
+
+@dataclass(frozen=True)
+class WorstDayStory:
+    """How the worst day went, from its first trade."""
+
+    trading_day: str
+    first_net: Decimal
+    later: int
+    net: Decimal
+
+    @property
+    def first_size(self) -> Decimal:
+        return abs(self.first_net)
+
+    @property
+    def down(self) -> Decimal:
+        return -self.net
+
+
+@dataclass(frozen=True)
+class FiveDaysRead:
+    """What the five worst days were and what they share. Counts from the file, no cause."""
+
+    rows: tuple[WorstDayRow, ...]
+    first_lost_days: int
+    lost_after_first: Decimal
+    shared_book: str | None
+    past_nine: int
+    story: WorstDayStory | None
+
+
+def _day_book(trip: Trip) -> str:
+    return book_of(trip.symbol) if trip.is_option else "equity"
+
+
+def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
+    """The five worst days named, with what the record says they have in common.
+
+    A day counts as "first trade lost, and more lost after it" only if the rest of the day also
+    lost, so a day that recovered isn't described as carrying on losing.
+    """
+    worst = five_worst_days(trips).days
+    if not worst:
+        return None
+    by_day = _by_day(trips)
+    rows, lost_days, lost_after = [], 0, Decimal(0)
+    for day in worst:
+        ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
+        rows.append(WorstDayRow(
+            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+        ))
+        rest = sum((t.net for t in ordered[1:]), Decimal(0))
+        if ordered[0].is_loss and rest < 0:
+            lost_days += 1
+            lost_after += -rest
+    shared = set(rows[0].books).intersection(*(r.books for r in rows))
+    worst_first = sorted(by_day[worst[0].trading_day], key=lambda t: t.entry_ts)
+    story = None
+    if len(worst_first) > 1 and worst[0].net < 0:
+        story = WorstDayStory(
+            worst[0].trading_day, worst_first[0].net, len(worst_first) - 1, worst[0].net,
+        )
+    return FiveDaysRead(
+        rows=tuple(rows),
+        first_lost_days=lost_days,
+        lost_after_first=lost_after,
+        shared_book=next((b for b in rows[0].books if b in shared), None),
+        past_nine=sum(
+            any(t.entry_ts.hour >= 21 for t in by_day[day.trading_day]) for day in worst
+        ),
+        story=story,
+    )
+
+
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
     """How many trips have a risk unit, by source.
 

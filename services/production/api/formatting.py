@@ -91,6 +91,13 @@ def day(iso_date: str) -> str:
     return f"{dom} {MONTHS[int(month) - 1]}"
 
 
+def day_with_year(iso_date: str) -> str:
+    """A trading day with its year, for a list that can span years: 05 Jan 2026."""
+    year, month, dom = iso_date.split("-")
+    return f"{dom} {MONTHS[int(month) - 1]} {year}"
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
+    env.filters.update(rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots,
+                       day_with_year=day_with_year)

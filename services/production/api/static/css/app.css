@@ -31,3 +31,8 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
+
+/* The five days on the reveal (TICKET-816); the kit's reveal doesn't list them. */
+.reveal__title { margin-top: var(--space-4); }
+.reveal__days { list-style: none; margin: var(--space-6) 0 0; padding: 0; }
+.reveal__day { display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-2); align-items: baseline; padding: var(--space-2) 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
