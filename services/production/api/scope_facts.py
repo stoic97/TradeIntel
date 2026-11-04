@@ -56,7 +56,8 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
         "two_losses": two_losses,
-        "strike": mx.strike_rate(trips),
+        "strike": mx.strike_rate(same_day),
+        "break_even": mx.break_even(same_day),
         "lots": mx.average_lots(trips),
         "holding": mx.holding_time(same_day),
         "hours": mx.result_by_hour(same_day),
@@ -253,6 +254,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     ]
     out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
+    out["strike"]["held"] = ctx["held_past_day"]
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
     out["risk"]["sizes"] = ctx["loss_sizes"]
