@@ -15,6 +15,13 @@ a trip as flat-to-flat; the conservation assertion below caught it on the first 
 When a closing fill is larger than the position, the position flips and the excess
 opens a new one in the other direction.
 
+**An intraday close takes that day's lots first** (TICKET-789). Plain FIFO lets a share
+held from an earlier day take the first intraday sell, and every later pairing shifts by
+a unit, so one day's loss lands on an earlier day. With no lot left from that day it
+reaches back: an intraday order really can close a held position, so the books are not
+split by product. Any other close, and a file with no product column, is plain FIFO. Only
+the pairing changes: the same units are matched, so a total does not move.
+
 **Values are apportioned, never prices.** A broker reports an exact total per fill and
 a rounded average price. Deriving the price and multiplying it back loses the exactness
 the broker handed us: a 30-unit fill totalling 4595.50 has a per-unit price of
@@ -230,6 +237,16 @@ def _build_trip(
     )
 
 
+def _next_lot(lots: list[_Lot], closing: Fill) -> int:
+    """Which open lot this fill closes next: oldest, or oldest from today if intraday."""
+    if closing.product == "INTRADAY":
+        today = closing.ts.date()
+        for i, lot in enumerate(lots):
+            if lot.ts.date() == today:
+                return i
+    return 0
+
+
 def _reconstruct_contract(
     fills: list[Fill],
     trips: list[RoundTrip],
@@ -274,14 +291,15 @@ def _reconstruct_contract(
         # Opposite side: close lots oldest-first, then emit one trip for what matched.
         entry, exit_ = _Leg(), _Leg()
         while remaining and lots:
-            lot = lots[0]
+            index = _next_lot(lots, f)
+            lot = lots[index]
             take = min(remaining, lot.quantity)
             entry.add(take, lot.value.take(take), lot.ts, lot.fill_id)
             exit_.add(take, share.take(take), f.ts, f.fill_id)
             lot.quantity -= take
             remaining -= take
             if lot.quantity == 0:
-                lots.pop(0)
+                lots.pop(index)
 
         if entry.quantity:
             assert position is not None
