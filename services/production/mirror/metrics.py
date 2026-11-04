@@ -534,12 +534,13 @@ def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
     """How many trades lost more than his number. The one place this count is decided.
 
     A count, not a score: he chose the number. "More than" is strict, so a loss exactly
-    equal to the number is not counted. It reads rupees and never risk_unit_source, so a
-    sold option with no risk figure counts the same as any other trade (Annex H section 6).
+    equal to the number, in paise, is not counted. It reads rupees and never
+    risk_unit_source, so a sold option with no risk figure counts the same as any other
+    trade (Annex H section 6).
     """
     same_day = same_day_trips(trips)
     measured = [t for t in same_day if t.number_in_force is not None]
-    past = [t for t in measured if -t.net > t.number_in_force]
+    past = [t for t in measured if _round(-t.net) > t.number_in_force]
     return TradesPastNumber(
         count=len(past),
         trip_ids=[t.trip_id for t in past],

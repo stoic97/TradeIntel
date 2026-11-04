@@ -10,10 +10,9 @@
   {%- if past_number %}
   {% include "scope/_past_number.html" %}
   {%- if not past_number.measured %}
-  <p class="mirror mirror--card">No same-day trade in your file is on or after your number's date.</p>
-  {%- endif %}
-  {%- if not imp.fees_available %}
-  <p class="mirror mirror--card table-note">Your export has no charges column, so these losses are gross — before brokerage and taxes.</p>
+  <p class="mirror table-note">No same-day trade in your file is on or after your number's date.</p>
+  {%- elif not imp.fees_available %}
+  <p class="gross-line">Your export has no charges column, so these losses are gross — before brokerage and taxes.</p>
   {%- endif %}
   {{ uncounted_line(imp.trips_refused) }}
   {%- endif %}

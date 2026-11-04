@@ -3,6 +3,6 @@
     and the risk fact both print it from here, and with nothing measured nothing shows. -#}
 {%- set p = past_number -%}
 {%- if p and p.measured %}
-<p class="mirror"><span class="num">{{ p.count|count }}</span> {{ "trade" if p.count == 1 else "trades" }} lost more than your number.</p>
-<p class="mirror mirror--card table-note">Same-day trades only: {{ p.measured|count }} of them, each against the number in force the day it was opened.{% if p.before_number %} {{ p.before_number|count }} same-day {{ "trade" if p.before_number == 1 else "trades" }} before your number's date {{ "is" if p.before_number == 1 else "are" }} not measured.{% endif %}{% if p.held_past_day %} {{ p.held_past_day|count }} position{{ " held past the day is" if p.held_past_day == 1 else "s held past the day are" }} not counted here.{% endif %}</p>
+<p class="mirror table-note"><span class="num">{{ p.count|count }}</span> {{ "trade" if p.count == 1 else "trades" }} lost more than your number.</p>
+<p class="gross-line">Same-day trades only: {{ p.measured|count }} of them, each against the number in force the day it was opened.{% if p.before_number %} {{ p.before_number|count }} same-day {{ "trade" if p.before_number == 1 else "trades" }} before your number's date {{ "is" if p.before_number == 1 else "are" }} not measured.{% endif %}{% if p.held_past_day %} {{ p.held_past_day|count }} position{{ " held past the day is" if p.held_past_day == 1 else "s held past the day are" }} not counted here.{% endif %}</p>
 {%- endif %}

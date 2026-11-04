@@ -102,6 +102,12 @@ def test_a_paisa_past_the_number_is_more_than_it():
     assert "d" in mx.trades_past_number(trips()).trip_ids
 
 
+def test_apportioning_dust_does_not_tip_a_loss_past_the_number():
+    """Fill values split across parcels leave long decimals. A loss is compared in paise."""
+    dust = trips([("x", "09-03", "09-03", "-500.00000000000000000001", OLD)])
+    assert mx.trades_past_number(dust).count == 0
+
+
 def test_a_trade_before_the_numbers_date_is_not_measured():
     assert "a" not in mx.trades_past_number(trips()).trip_ids
 
