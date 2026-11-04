@@ -177,6 +177,33 @@ def test_a_declared_budget_still_outranks_a_structure(uploaded, engine):  # noqa
     assert spread(engine).risk_unit_source is s.RiskUnitSourceV1.DECLARED_BUDGET
 
 
+def declare_a_budget(client):  # noqa: F811
+    page = client.get("/budget").text
+    client.post("/budget", data={"value": "3000", "unit": "INR", "effective_from": "2026-10-01",
+                                 "csrf_token": CSRF.search(page).group(1)})
+
+
+def test_a_budget_measures_the_naked_sale_and_it_still_reads_uncapped(uploaded, engine):  # noqa: F811
+    """A budget outranks a risk figure (Annex H section 6). Uncapped is not a figure: the
+    position can still lose without limit, so the label stays (the ticket's gate)."""
+    declare_a_budget(uploaded)
+    naked = next(t for t in loaded(engine) if t.net == Decimal(-500))
+    assert naked.risk_unit_source is s.RiskUnitSourceV1.DECLARED_BUDGET
+    assert naked.uncapped is True
+    assert "· Uncapped" in text(uploaded.get("/mirror/fact/risk").text)
+
+
+def test_a_budget_leaves_the_plain_words_in_place(uploaded):  # noqa: F811
+    declare_a_budget(uploaded)
+    page = text(uploaded.get("/mirror/fact/risk").text)
+    assert "1 trade was a sold option with no cap on its loss" in page
+
+
+def test_a_capped_spread_never_reads_uncapped_under_a_budget(uploaded, engine):  # noqa: F811
+    declare_a_budget(uploaded)
+    assert spread(engine).uncapped is False
+
+
 def journal_for(engine, day: str) -> int:  # noqa: F811
     with make_session(engine) as sess:
         return sess.scalars(select(m.Journal.id).where(m.Journal.period_start == day)).one()
