@@ -14,6 +14,7 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
@@ -31,8 +32,11 @@ def engine():
 
 
 @pytest.fixture()
-def client(engine):
-    """A trader with the contract fixture loaded as his history."""
+def client(engine, request):
+    """A trader with the contract fixture loaded as his history.
+
+    A test module sets TRIPS_REFUSED to read that history with trades set aside.
+    """
     import json
     from datetime import UTC, datetime
     from pathlib import Path
@@ -56,6 +60,7 @@ def client(engine):
                        rows_in=40, rows_parsed=40,
                        rows_excluded=0, fees_available=False, version_no=1,
                        trips_reconstructed=40,
+                       trips_refused=getattr(request.module, "TRIPS_REFUSED", 0),
                        density_default_unit="day", created_at=datetime.now(UTC))
         sess.add(imp)
         sess.flush()
@@ -74,7 +79,7 @@ def client(engine):
                 fees_available=False, risk_unit_source=s_enums.RiskUnitSourceV1(t["risk_unit_source"])))
         sess.add(m.ConsentEvent(trader_id=trader.id,
                                 purpose=s_enums.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version="0-draft", granted=True,
+                                terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web", wording_shown="x" * 100))
         sess.commit()
 

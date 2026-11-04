@@ -15,6 +15,15 @@ a trip as flat-to-flat; the conservation assertion below caught it on the first 
 When a closing fill is larger than the position, the position flips and the excess
 opens a new one in the other direction.
 
+**An intraday day keeps to itself** (TICKET-789). Plain FIFO lets a share held from an
+earlier day take the first intraday sell, and every later pairing shifts by a unit, so
+one day's loss lands on an earlier day. So when a contract's INTRADAY fills net flat on a
+day, they pair only with each other. When they do not, an intraday order really is
+closing or opening a held position, so the books cannot simply be split by product: an
+intraday close takes that day's lots first and reaches back only when none are left. Any
+other close, and a file with no product column, is plain FIFO. Only the pairing changes:
+the same units are matched, so a total does not move.
+
 **Values are apportioned, never prices.** A broker reports an exact total per fill and
 a rounded average price. Deriving the price and multiplying it back loses the exactness
 the broker handed us: a 30-unit fill totalling 4595.50 has a per-unit price of
@@ -230,13 +239,51 @@ def _build_trip(
     )
 
 
+def _next_lot(lots: list[_Lot], closing: Fill) -> int:
+    """Which open lot this fill closes next: oldest, or oldest from today if intraday."""
+    if closing.product == "INTRADAY":
+        today = closing.ts.date()
+        for i, lot in enumerate(lots):
+            if lot.ts.date() == today:
+                return i
+    return 0
+
+
+def _flat_intraday_days(fills: list[Fill]) -> list[list[Fill]]:
+    """Each day's INTRADAY fills, for the days on which they net to nothing."""
+    days: dict[object, list[Fill]] = defaultdict(list)
+    for f in fills:
+        if f.product == "INTRADAY":
+            days[f.ts.date()].append(f)
+    return [
+        day for day in days.values()
+        if sum(f.quantity if f.side is Side.BUY else -f.quantity for f in day) == 0
+    ]
+
+
 def _reconstruct_contract(
     fills: list[Fill],
     trips: list[RoundTrip],
     skipped: list[SkippedTrip],
     opens: list[OpenPosition],
 ) -> None:
-    """Walk one contract's fills in time order, maintaining a FIFO lot queue."""
+    """Walk one contract's fills: each self-contained intraday day, then the rest."""
+    isolated = _flat_intraday_days(fills)
+    taken = {id(f) for day in isolated for f in day}
+    for day in isolated:
+        _walk(day, trips, skipped, opens)
+    rest = [f for f in fills if id(f) not in taken]
+    if rest:
+        _walk(rest, trips, skipped, opens)
+
+
+def _walk(
+    fills: list[Fill],
+    trips: list[RoundTrip],
+    skipped: list[SkippedTrip],
+    opens: list[OpenPosition],
+) -> None:
+    """Walk these fills in time order, maintaining a FIFO lot queue."""
     sample = fills[0]
     lots: list[_Lot] = []
     position: Direction | None = None
@@ -274,14 +321,15 @@ def _reconstruct_contract(
         # Opposite side: close lots oldest-first, then emit one trip for what matched.
         entry, exit_ = _Leg(), _Leg()
         while remaining and lots:
-            lot = lots[0]
+            index = _next_lot(lots, f)
+            lot = lots[index]
             take = min(remaining, lot.quantity)
             entry.add(take, lot.value.take(take), lot.ts, lot.fill_id)
             exit_.add(take, share.take(take), f.ts, f.fill_id)
             lot.quantity -= take
             remaining -= take
             if lot.quantity == 0:
-                lots.pop(0)
+                lots.pop(index)
 
         if entry.quantity:
             assert position is not None

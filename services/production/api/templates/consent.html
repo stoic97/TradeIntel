@@ -6,6 +6,9 @@
 {% block content %}
   <p class="label label--plain">Your data</p>
   <h1 class="title">Before you upload</h1>
+  {%- if asked_again %}
+  <p class="body">We have changed this text since you last agreed, so we are asking again.</p>
+  {%- endif %}
   <p class="body consent__intro">A tradebook is among the most sensitive files you own. Here is exactly what happens to it. The same promises are made in plainer words on <a class="link" href="https://plusev.in/scope/data">plusev.in</a>; if the two ever disagree, this page is the one you agreed to, and we want to hear about it.</p>
   {%- if error %}
   <p class="field__error field__error--block" role="alert">{{ error }}</p>
