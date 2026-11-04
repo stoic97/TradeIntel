@@ -144,6 +144,11 @@ def test_the_four_statements_are_a_table(client, row):
     assert table.count("<tr") == 5  # the header and the four
 
 
+def test_the_table_does_not_use_the_kits_figure_table(client):
+    """The kit's .table is monospace and never wraps: this one ran 675 px wide on a phone."""
+    assert 'class="table"' not in section(client.get(PAGE).text, "table")
+
+
 def test_the_number_you_choose_links_to_the_budget(client):
     assert 'href="/budget"' in section(client.get(PAGE).text, "table")
 
