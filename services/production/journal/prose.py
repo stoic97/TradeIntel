@@ -160,7 +160,8 @@ def _against_normal(facts: dict[str, Any]) -> str:
     # Within a tenth of a lot is not a change in size, whatever the raw averages
     # say. "1.0 against your usual 1.1" invites him to read a difference that is an
     # artefact of two round numbers and an odd lot.
-    if abs(lots_today - lots_usually) >= Decimal("0.2"):
+    # A day with no option trade has no size to compare (TICKET-797).
+    if lots_today > 0 and abs(lots_today - lots_usually) >= Decimal("0.2"):
         sentence += (
             f" Your average size was {today_lots} "
             f"{_plural(Decimal(today_lots), 'lot')} against your usual {usual_lots}."
