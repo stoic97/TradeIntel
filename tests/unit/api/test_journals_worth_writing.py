@@ -415,6 +415,16 @@ def test_one_loss_reads_in_the_singular():
         "On 11 Feb 2025 you went from 1 lot to 2 after 1 loss. Your usual is about 1.1.")
 
 
+def test_a_size_that_fell_back_on_the_way_up_says_nothing():
+    """1, 2, 1, 3 as "from 1 lot to 3 after 1 loss" reads as one jump. It wasn't."""
+    assert _line([_t(-1), _t(-1, 2), _t(-1), _t(-1, 3)]) is None
+
+
+def test_a_win_on_the_way_up_says_nothing():
+    """The line says size kept rising while losing. A win in the climb breaks that."""
+    assert _line([_t(-1), _t(5, 2), _t(-1, 3)]) is None
+
+
 def test_a_rise_after_a_win_says_nothing():
     """The line is about going bigger after losing. A rise after a win isn't that."""
     assert _line([_t(5), _t(-1, 2), _t(5)]) is None
