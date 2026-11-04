@@ -196,13 +196,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     for key, fact in S.FACTS.items():
         state = _state(key, ctx)
         kind = fact.chart
+        behind = len(S.trades_behind(key, ctx))
         out[key] = {
             "key": key,
             "title": fact.title,
             "state": state,
             "figure": "—" if state else _figure(key, ctx, imp),
             "href": S.fact_href(key),
-            "trade_count": len(S.trades_behind(key, ctx)),
+            "trade_count": behind,
+            "see_all": S.see_all_href(key) if behind > S.INLINE_TRADES else None,
             "chart": None
             if state or kind not in CARD_H
             else _chart(kind, ctx, imp, CARD_W, CARD_H[kind], False),

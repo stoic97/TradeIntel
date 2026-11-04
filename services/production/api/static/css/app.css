@@ -12,6 +12,23 @@
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
 
+/* A trade row names the trade (TICKET-822). The kit's label is a faint caption over a trade
+   number; here it is what the trader recognises his trade by, so it reads as text. The
+   prices sit under the row, and wrap rather than push a phone sideways. */
+.trade__label { font-size: 12px; color: var(--color-ink); overflow-wrap: anywhere; }
+.trade__prices { margin-top: 1px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.trade__legs td { white-space: normal; }
+.trade__legs .trade__leg-detail { padding-top: 0; font-size: 11px; color: var(--color-faint); }
+
+/* "See all trades", and the filters on the page it opens (TICKET-822). A select takes the
+   kit's input; two to a row on a phone, and min-width lets a long book name shrink. */
+.evidence__see-all { margin-top: var(--space-4); }
+.evidence--page { margin-top: 0; border-top: 0; padding-top: 0; }
+.trade-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-3); }
+.trade-filters .field__input { width: 100%; min-width: 0; }
+.trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
+.trade-filters__clear { margin-top: var(--space-3); }
+
 /* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
    so the reading state is the request itself: htmx puts .htmx-request on #upload
    while it is in flight (hx-indicator), and the form gives way to "Reading your file"
