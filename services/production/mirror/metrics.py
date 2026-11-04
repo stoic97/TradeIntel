@@ -534,24 +534,41 @@ def loss_sizes(trips: list[Trip]) -> LossSizes | None:
     )
 
 
+def book_of(symbol: str) -> str:
+    """The book a trade belongs to. CRUDEOIL and CRUDEOILM are one book to a trader."""
+    return "crude" if symbol.startswith("CRUDE") else symbol
+
+
 @dataclass(frozen=True)
 class PremiumPaid:
-    """What a typical bought option cost, and how much of it a typical result was."""
+    """What a typical bought option cost in one book, and how much of it a result was."""
 
+    book: str
     paid: Decimal
     percent: int
 
 
-def premium_paid(trips: list[Trip]) -> PremiumPaid | None:
-    """Medians, on bought options. Recorded for reading, never a denominator for a figure."""
-    options = [t for t in trips if t.is_option and t.premium]
-    results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
-    if len(results) < LOSS_SIZES_MINIMUM:
-        return None
-    return PremiumPaid(
-        paid=median(t.premium for t in options),
-        percent=int(median(results).to_integral_value()),
-    )
+def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
+    """Medians per book, biggest book first. Recorded for reading, never a denominator.
+
+    Per book because a blend describes none of them. A book below the minimum is left out
+    rather than pooled: a handful of unrelated instruments has no typical trade.
+    """
+    books: dict[str, list[Trip]] = {}
+    for trip in trips:
+        if trip.is_option and trip.premium:
+            books.setdefault(book_of(trip.symbol), []).append(trip)
+    read = []
+    for book, options in sorted(books.items(), key=lambda kv: -len(kv[1])):
+        results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
+        if len(results) < LOSS_SIZES_MINIMUM:
+            continue
+        read.append(PremiumPaid(
+            book=book,
+            paid=median(t.premium for t in options),
+            percent=int(median(results).to_integral_value()),
+        ))
+    return read
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:

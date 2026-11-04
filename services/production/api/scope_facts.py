@@ -63,7 +63,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
         "loss_sizes": mx.loss_sizes(same_day),
-        "premium_paid": mx.premium_paid(same_day),
+        "premium_paid": mx.premium_by_book(same_day),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),

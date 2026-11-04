@@ -1,6 +1,10 @@
-{#- What the file does say about risk, in either state of the fact (TICKET-824). -#}
+{#- What the file does say about risk, in either state of the fact (TICKET-824): per book,
+    since a blend would describe none of them. -#}
 {%- if f.premium %}
-<p class="mirror">On a typical option trade you paid {{ f.premium.paid|rupees(signed=false) }}, and made or lost about {{ f.premium.percent }}% of it.{% if f.state %} What you meant to risk is where you'd have exited, and that isn't in your file.{% endif %}</p>
+<p class="mirror">{% for read in f.premium %}On a typical {{ read.book }} trade you paid {{ read.paid|rupees(signed=false) }}, and made or lost about {{ read.percent }}% of it. {% endfor %}{% if f.state %}What you meant to risk is where you'd have exited, and that isn't in your file.{% endif %}</p>
 {%- endif %}
 {% with sizes = f.sizes %}{% include "_loss_sizes.html" %}{% endwith %}
-<p class="body-small">{% if f.no_budget %}<a class="link" href="/budget">Set your number</a> · {% endif %}<a class="link" href="/mirror/fact/not-told">Next: what we have not told you</a></p>
+{%- if f.no_budget %}
+<p class="mirror"><a class="link" href="/budget">Set your number</a>: how much you're willing to lose on one trade.</p>
+{%- endif %}
+<p class="body-small"><a class="link" href="/mirror/fact/not-told">Next: what we have not told you</a></p>
