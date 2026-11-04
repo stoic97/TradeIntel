@@ -119,12 +119,12 @@ def test_the_spread_is_its_legs_added_up(uploaded, engine):  # noqa: F811
     ]
 
 
-def test_the_spreads_day_reads_as_the_trader_reads_it(uploaded):  # noqa: F811
+def test_the_spreads_day_reads_as_the_trader_reads_it(uploaded):
     page = text(uploaded.get("/mirror/fact/worst-days").text)
-    assert "1,300" in page or "+₹1,500" in page
+    assert "+₹1,500" in page
 
 
-def test_a_spread_is_one_trade_with_its_legs_shown(uploaded):  # noqa: F811
+def test_a_spread_is_one_trade_with_its_legs_shown(uploaded):
     """Section 3 of the feedback: a spread is shown as one position with its legs."""
     page = text(uploaded.get("/mirror/fact/money").text)
     assert "+₹1,300" in page
@@ -155,14 +155,17 @@ def test_neither_is_ever_a_denominator():
     assert s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS not in s.SHOWABLE_DENOMINATORS
 
 
-def test_the_risk_fact_counts_them_on_their_own_rows(uploaded):  # noqa: F811
+def test_the_risk_fact_counts_them_on_their_own_rows(uploaded):
     page = text(uploaded.get("/mirror/fact/risk").text)
     assert "A spread's maximum loss 1" in page
     assert "Uncapped: a sold option 1" in page
 
 
-def test_chapter_four_says_it_in_plain_words(uploaded):  # noqa: F811
-    page = text(uploaded.get("/mirror/fact/risk").text)
+@pytest.mark.parametrize("path", ["/mirror/fact/risk", "/mirror/chapter/4"])
+def test_chapter_four_says_it_in_plain_words(uploaded, path):
+    """Annex H section 6. With no stop and no budget this fact is in its not-in-file state,
+    which hides the table, so the sentence has to live outside it."""
+    page = text(uploaded.get(path).text)
     assert "1 trade was a sold option with no cap on its loss, so it has no risk figure." in page
     assert "Its rupees are counted." in page
 
@@ -199,7 +202,7 @@ def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
     assert response.status_code in (200, 303)
 
 
-def test_home_counts_the_spread_as_one_trade(uploaded):  # noqa: F811
+def test_home_counts_the_spread_as_one_trade(uploaded):
     page = text(uploaded.get("/").text)
-    assert "2 trades" in page or "2 trade" in page
+    assert "2 trades" in page
     assert "+₹1,500" in page

@@ -33,8 +33,16 @@ would make the remaining ones look more solid than they are.
 
 
 @dataclass(frozen=True)
+class Leg:
+    """One leg of a position, as a trader reads it: "Bought 5000 CE" and its result."""
+
+    label: str
+    net: Decimal
+
+
+@dataclass(frozen=True)
 class Trip:
-    """One reconstructed round trip, as the Mirror sees it."""
+    """One decision as the Mirror sees it: a round trip, or a position of several legs."""
 
     trip_id: str
     symbol: str  # the instrument, as the broker's file names it (B1: trade records)
@@ -45,6 +53,7 @@ class Trip:
     net: Decimal
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
+    legs: tuple[Leg, ...] = ()  # empty for a single leg
 
     @property
     def is_win(self) -> bool:

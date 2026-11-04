@@ -23,10 +23,11 @@ the day's shape; the prompts only need to say which trade.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
@@ -76,9 +77,22 @@ def trips_of(sess, trader: m.Trader, journal: m.Journal) -> list[m.Trip]:
         return []
     found = sess.scalars(
         select(m.Trip).join(m.Import, m.Trip.import_id == m.Import.id)
-        .where(m.Import.trader_id == trader.id, m.Trip.trip_id.in_(ids))
+        .where(m.Import.trader_id == trader.id,
+               or_(m.Trip.trip_id.in_(ids), m.Trip.position_id.in_(ids)))
     ).all()
     return sorted(found, key=lambda t: t.entry_ts)
+
+
+def trades_of(rows: list[m.Trip]) -> list[dict]:
+    """Those rows as a trader reads them: a position's legs are one trade, added up."""
+    trades: dict[object, dict] = {}
+    for row in rows:
+        key = (row.import_id, row.position_id) if row.position_id else row.id
+        trade = trades.setdefault(
+            key, {"trip_id": row.position_id or row.trip_id, "net": Decimal(0)}
+        )
+        trade["net"] += row.net
+    return list(trades.values())
 
 
 @router.get("/journals", response_class=HTMLResponse)
@@ -150,17 +164,18 @@ def journal_page(request: Request, journal_id: int):
         ]
         trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
+        trades = trades_of(trips)
         rows = [
-            {"trip_id": t.trip_id, "label": f"Trade {n}", "net": t.net}  # the page writes it
-            for n, t in enumerate(trips, start=1)
+            {"trip_id": t["trip_id"], "label": f"Trade {n}", "net": t["net"]}  # the page writes it
+            for n, t in enumerate(trades, start=1)
         ]
         answers = {
-            t.trip_id: {
+            t["trip_id"]: {
                 name: fields.current(sess, journal=journal, field=name,
-                                     trip_id=t.trip_id)
+                                     trip_id=t["trip_id"])
                 for name, _ in PER_TRIP_PROMPTS
             }
-            for t in trips
+            for t in trades
         }
         return page(
             request, "journal.html", title=f"Your Journal, {journal.period_start}",
@@ -221,7 +236,8 @@ def journal_field(
         if trip_id is not None:
             trip = sess.scalars(
                 select(m.Trip).join(m.Import, m.Trip.import_id == m.Import.id)
-                .where(m.Import.trader_id == trader.id, m.Trip.trip_id == trip_id)
+                .where(m.Import.trader_id == trader.id,
+                       or_(m.Trip.trip_id == trip_id, m.Trip.position_id == trip_id))
             ).first()
             if trip is None:
                 raise HTTPException(status_code=404)

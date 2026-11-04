@@ -202,6 +202,11 @@ class Trip(Base, _InsertOnly):
     risk_budget_ref: Mapped[int | None] = mapped_column(
         ForeignKey("risk_budget_declaration.id")
     )
+    position_id: Mapped[str | None] = mapped_column(String(64))
+    """The position this leg is part of, when it has more than one leg (Annex H). Null
+    is a position of its own, which is every trip of an import made before Annex H."""
+    option_type: Mapped[str | None] = mapped_column(String(2))
+    strike: Mapped[Decimal | None] = mapped_column(DecimalText)
     occurrence: Mapped[int] = mapped_column(Integer, default=1)
     """Which occurrence of an identical trip this is, within one import.
 

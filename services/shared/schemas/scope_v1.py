@@ -117,6 +117,8 @@ class RiskUnitSourceV1(_Vocabulary):
     PREMIUM_PAID = "premium_paid"
     INFERRED_ATR = "inferred_atr"
     UNAVAILABLE = "unavailable"
+    STRUCTURE_MAX_LOSS = "structure_max_loss"  # a spread's most it can lose (Annex H)
+    UNCAPPED = "uncapped"  # net short in an option type: the money counts, no R
 
 
 SHOWABLE_DENOMINATORS = frozenset(
