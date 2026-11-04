@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 from dataclasses import replace
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -135,6 +136,15 @@ def test_open_the_page_opens_with_the_means_from_the_shared_definition(page, rea
     assert title == TITLE
     assert sentence == BETTER
     assert CLOSED not in readable(page())
+
+
+@pytest.mark.usefixtures("gate_open")
+def test_open_a_minus_sign_stays_with_its_figure():
+    """Found at 390 px on the card: the minus ended one line and the rupees began the next."""
+    page = fact_page("down", DOWN)
+    assert page.count('<span class="opening-figure">') == 2
+    css = Path("services/production/api/static/css/app.css").read_text()
+    assert ".opening-figure { white-space: nowrap; }" in css
 
 
 @pytest.mark.usefixtures("gate_open")
