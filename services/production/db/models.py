@@ -366,6 +366,19 @@ class DwellEvent(Base, _InsertOnly):
     duration_ms: Mapped[int | None] = mapped_column(Integer)
 
 
+class ChargeStatement(Base, _InsertOnly):
+    """A second file, the broker's own charges by day (TICKET-828). Kept apart from the
+    trips: ``trip.fees`` and ``fees_available`` go on saying what the tradebook said."""
+
+    __tablename__ = "charge_statement"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    raw_file_id: Mapped[int] = mapped_column(ForeignKey("raw_file.id"))
+    reader: Mapped[str] = mapped_column(String(64))
+    days: Mapped[str] = mapped_column(Text)  # JSON: trading day -> amount, as a string
+    uploaded_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RuleDeclaration(Base, _InsertOnly):
     """Captured, unused in v1. Collecting from day one is free (PRD 9)."""
 

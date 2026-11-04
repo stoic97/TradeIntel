@@ -44,7 +44,7 @@ REPORT = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/4", "/mirror/fact/str
 
 
 def words(html: str) -> str:
-    html = re.sub(r"<(script|style|svg)\b.*?</\1>", " ", html, flags=re.S)
+    html = re.sub(r"<(script|style|svg)\b.*?</\1>", " ", html, flags=re.DOTALL)
     html = re.sub(r"</?(span|a)\b[^>]*>", "", html)  # inline: no gap in the sentence
     return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
@@ -67,7 +67,7 @@ def step(engine) -> str:  # noqa: F811
 
 def post_file(client, engine, content: bytes, name="charges.csv"):  # noqa: F811
     url = step(engine)
-    csrf = CSRF.search(client.get(url).text).group(1)
+    csrf = CSRF.search(client.get("/upload").text).group(1)  # the closed step has no form
     return client.post(url, files={"file": (name, content, "text/csv")},
                        data={"csrf_token": csrf}, follow_redirects=False)
 
@@ -170,7 +170,8 @@ def test_a_file_for_some_days_says_how_many_it_covers(client, engine):  # noqa: 
     """-300 - 50.50 = -350.50, and it does not read as his whole net."""
     post_file(client, engine, PART)
     page = words(client.get("/mirror").text)
-    assert "Less charges from your broker's file: ₹50, for 1 of your 2 trading days." in page
+    # Not "trading days": home counts days a trade opened, and one screen has one count.
+    assert "Less charges from your broker's file: ₹50, for 1 of the 2 days in your upload." in page
     assert "Net of those: −₹350." in page
     assert "Net:" not in page
 
@@ -191,7 +192,7 @@ def test_a_file_that_shares_no_day_with_the_upload_is_refused(client, engine):  
 def test_a_later_file_replaces_a_day_and_the_first_stays_on_record(client, engine):  # noqa: F811
     post_file(client, engine, PART)
     post_file(client, engine, b"Date,Total Charges\n2020-03-02,20.00\n")
-    assert "₹20, for 1 of your 2" in words(client.get("/mirror").text)
+    assert "₹20, for 1 of the 2" in words(client.get("/mirror").text)
     with make_session(engine) as sess:
         assert len(sess.scalars(select(m.ChargeStatement)).all()) == 2
 

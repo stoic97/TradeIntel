@@ -127,7 +127,8 @@ def delete_trader(
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent, m.RawFile):
+                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent,
+                  m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
     # His invite is his: leaving the row would point at an account that is gone,
@@ -184,7 +185,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     so the drill checks the same list twice rather than two different ones.
     """
     found: list[str] = []
-    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
+    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
                   m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):

@@ -1,0 +1,29 @@
+{#- The optional second step after an upload (TICKET-828): his result as the tradebook
+    gives it, then a file from his broker. Skipping it leaves every page as it was. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import button, money %}
+{% block content %}
+  <p class="label label--plain">Your upload · optional</p>
+  <h1 class="title">Add charges</h1>
+  <dl class="facts-list">
+    <dt>Your result, from your file</dt><dd>{{ money(gross) }}</dd>
+  </dl>
+  {%- if charges %}
+  {% include "scope/_charges_line.html" %}
+  {%- else %}
+  <p class="gross-line">Before charges. If your broker gives you a file of what you were charged, add it here and those charges come off this result.</p>
+  {%- endif %}
+  {%- if error %}
+  <p class="field__error field__error--block" role="alert">{{ error }}</p>
+  {%- endif %}
+  {%- if file_open %}
+  <form method="post" action="/imports/{{ imp.id }}/charges" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="field"><span class="field__label">A file from your broker</span><input class="field__input" type="file" name="file" required><span class="field__hint">We take the amounts as your file states them, and work none of them out.</span></label>
+    <div class="screen__actions">{{ button("Upload it", block=true) }}</div>
+  </form>
+  {%- else %}
+  <p class="body-small">A file from your broker is not open yet: we have not checked which one to ask for.</p>
+  {%- endif %}
+  <div class="screen__actions">{{ button("See your record" if charges else "Skip this step", href="/guess", kind="text") }}</div>
+{% endblock %}
