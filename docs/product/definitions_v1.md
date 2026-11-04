@@ -13,6 +13,7 @@ Three things count the same behaviour — the Mirror, the Journal and the resear
 - A day is **complete** when the upload contains a later trading day, or the export date is after that day. (PRD §7.2.) **(closed here)** The export date comes from the file when the adapter can read one; otherwise the trader states it on the upload form, pre-filled with the upload date, and the import records which source it came from. An upload whose export date is unknown and whose last day has no later day leaves that last day incomplete until a later upload.
 
 **Concentration (TICKET-812).** The five worst days are measured against **gross losses**: the sum of the losing days among the five, over the sum of all losing days. **Net result is never a denominator.** A net has no floor or ceiling, because gains and losses cancel in it. Shown beside the base rate (those days among all trading days) and the rupees, as whole percentages ("about 13%"), and never rounded down to 0. A history with no losing day has no percentage. Owed to PRD Appendix A, which is not in this repo.
+**Size (TICKET-797).** Average size is in lots, on option trades only, at the lot size in force for that instrument on that day. Share quantities are not lots. A day with no option trade has no size to compare.
 
 ## 2. "Two straight losses" is the research library's B2 condition — one function
 
