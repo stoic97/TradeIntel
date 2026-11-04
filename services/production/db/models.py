@@ -282,6 +282,17 @@ class WtpAnswer(Base, _InsertOnly):
     asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class WtpAsked(Base, _InsertOnly):
+    """Which Journal the willingness-to-pay question was put on. It is asked there and nowhere
+    else: this row is the "asked once" flag, written when the question is first drawn."""
+
+    __tablename__ = "wtp_asked"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
+    asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class ChapterFeedback(Base, _InsertOnly):
     """B4: "Does this match your trading?" under chapters 1-3 (handoff 9).
 

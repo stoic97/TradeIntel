@@ -112,7 +112,7 @@ def _readable(html: str) -> str:
 
 
 def _outside_the_rest(html: str) -> str:
-    return re.sub(r"<details.*?</details>", "", html, flags=re.S)
+    return re.sub(r"<details.*?</details>", "", html, flags=re.DOTALL)
 
 
 def _trade_heads(html: str) -> list[str]:
@@ -148,8 +148,7 @@ def test_the_fixture_is_the_history_worked_above(engine, client):
 def test_the_list_leads_with_the_five_days(engine, client):
     html = client.get("/journals").text
     assert "Start with these 5 days" in _readable(html)
-    days = [d for d in _listed_days(engine, html)]
-    assert days == START_WITH, "run, busiest, then worst days in order, five in all"
+    assert _listed_days(engine, html) == START_WITH, "run, busiest, then worst days in order, five in all"
 
 
 def test_each_day_on_the_list_says_why_it_is_there(client):
@@ -199,7 +198,7 @@ def test_a_run_across_two_days_is_named_on_both_but_only_its_first_leads():
     trips = [_trip("2025-02-03", "10:00", -1), _trip("2025-02-03", "11:00", -1),
              _trip("2025-02-04", "10:00", -1), _trip("2025-02-05", "10:00", 9)]
     flags = worth.flags_by_day(trips)
-    assert list(flags)[0] == "2025-02-03"
+    assert next(iter(flags)) == "2025-02-03"
     labels = [f.label for f in flags["2025-02-04"]]
     assert "Part of your longest losing run: 3 in a row" in labels
 
@@ -344,7 +343,7 @@ def _t(net, lots=1):
 
 
 def _asked(trades):
-    from services.production.journal import asking
+    from services.production.api import asking
 
     return [(a.index, a.why) for a in asking.trades_to_ask(trades)]
 
@@ -399,7 +398,7 @@ def test_a_share_trade_has_no_size_to_go_up():
 
 
 def _line(trades, usual="1.074"):
-    from services.production.journal import asking
+    from services.production.api import asking
 
     return asking.size_line("2025-02-11", trades, Decimal(usual))
 
@@ -426,6 +425,6 @@ def test_a_flat_day_says_nothing():
 
 
 def test_no_usual_size_says_nothing():
-    from services.production.journal import asking
+    from services.production.api import asking
 
     assert asking.size_line("2025-02-11", [_t(-1), _t(-1, 2)], None) is None
