@@ -237,6 +237,13 @@ def report_feedback(request: Request, answer: str = Form(None), note: str = Form
                             status_code=303)
 
 
+def _plain_refusal(reason: str) -> str:
+    """Why a stored trade was refused, for a trader. New uploads refuse no sold option."""
+    if "short option" in reason:
+        return "A sold option. Scope did not count these when this file was read."
+    return "Scope could not count this trade when this file was read."
+
+
 def _unread(request: Request, imp) -> dict:
     """The rows behind "What we could not read": every row set aside or not read,
     each with its reason, and every trade refused - as the import review lists them."""
@@ -253,5 +260,5 @@ def _unread(request: Request, imp) -> dict:
         return {
             "excluded": [(r.row_no, r.reason) for r in rows if r.status == "EXCLUDED"],
             "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
-            "refused": [t.reason for t in refused],
+            "refused": [_plain_refusal(t.reason) for t in refused],
         }

@@ -140,6 +140,17 @@ def first_trading_day(sess: Session, trader: m.Trader) -> str | None:
     return row.entry_ts.astimezone(profile.timezone()).date().isoformat()
 
 
+def _premium(legs: list[m.Trip]) -> Decimal | None:
+    """What one bought option cost. A spread's cost isn't a premium, a sold option took money
+    in, and shares have none, so only a single bought option has one."""
+    if len(legs) != 1:
+        return None
+    row = legs[0]
+    if row.segment != "OPT" or row.direction != "LONG" or not row.entry_price or not row.quantity:
+        return None
+    return row.entry_price * row.quantity
+
+
 def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | None]:
     """His trips and the import that produced them, for the lineage stamp."""
     imp = current_import(sess, trader)
@@ -217,5 +228,6 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             is_option=first.segment == "OPT",
             legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
             uncapped=any(leg.uncapped for leg in legs),
+            premium=_premium(legs),
         ))
     return trips, imp

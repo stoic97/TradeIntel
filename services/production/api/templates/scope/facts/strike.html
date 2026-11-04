@@ -6,6 +6,12 @@
     {%- if strike.scratches %}
     <p class="mirror"><span class="num">{{ strike.scratches|count }}</span> trades finished level and are in neither count.</p>
     {%- endif %}
+    {%- if break_even.percent is not none %}
+    <p class="mirror">Your average winner was {{ break_even.average_winner|rupees(signed=false) }} and your average loser {{ break_even.average_loser|rupees(signed=false) }}. At those sizes, break-even is a strike rate of <span class="num">{{ break_even.percent }}</span>%.</p>
+    {%- endif %}
+    {%- if f.held.count %}
+    <p class="mirror">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
+    {%- endif %}
 {% endblock %}
 {% block body %}
   {% call figure(1, "Every trade, by how it ended", f.page_chart) %}

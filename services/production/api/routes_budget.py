@@ -32,9 +32,11 @@ from sqlalchemy import select
 
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 
 router = APIRouter()
 
@@ -70,6 +72,15 @@ def _default_from(sess, trader: m.Trader) -> str:
     return loader.first_trading_day(sess, trader) or _today().isoformat()
 
 
+def _loss_sizes(sess, trader: m.Trader):
+    """The trader's losses by size, or nothing if there is no history to read yet."""
+    try:
+        trips, _ = loader.load_for(sess, trader)
+    except profiles.UnknownInstrument:
+        return None
+    return mx.loss_sizes(mx.same_day_trips(trips))
+
+
 @router.get("/budget", response_class=HTMLResponse)
 def budget_form(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -81,7 +92,8 @@ def budget_form(request: Request):
         return page(request, "budget.html", title="What you risk",
                     declarations=_history(sess, trader),
                     today=_today().isoformat(),
-                    default_from=_default_from(sess, trader))
+                    default_from=_default_from(sess, trader),
+                    sizes=_loss_sizes(sess, trader))
 
 
 @router.post("/budget")
@@ -108,7 +120,8 @@ def budget_submit(
                         title="What you risk", error=message,
                         declarations=_history(sess, trader),
                         today=_today().isoformat(),
-                        default_from=_default_from(sess, trader))
+                        default_from=_default_from(sess, trader),
+                    sizes=_loss_sizes(sess, trader))
 
         try:
             amount = Decimal(value)
