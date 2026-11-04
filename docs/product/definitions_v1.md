@@ -12,6 +12,8 @@ Three things count the same behaviour — the Mirror, the Journal and the resear
 - A round trip is **same-day** when its exit falls on the same calendar date as its entry, both read in the instrument profile's timezone; otherwise it is **held past the day**, whatever its size or result. "Where the money came from" ranks its best and worst five from same-day trips and states held positions on their own line; no other fact splits on this. **(closed here)** Pending the research seat's sign-off (TICKET-791). It is measured from the reconstructed trip, so it does not read the broker's order type.
 - A day is **complete** when the upload contains a later trading day, or the export date is after that day. (PRD §7.2.) **(closed here)** The export date comes from the file when the adapter can read one; otherwise the trader states it on the upload form, pre-filled with the upload date, and the import records which source it came from. An upload whose export date is unknown and whose last day has no later day leaves that last day incomplete until a later upload.
 
+**Pairing intraday fills (TICKET-789).** When a contract's INTRADAY fills net flat on a day, they pair only with each other. Otherwise an intraday close takes that day's lots first and reaches back only when none are left, because such an order really is closing a held position. A pair that crosses days therefore always involves a DELIVERY or MARGIN fill. Every other close is FIFO.
+
 ## 2. "Two straight losses" is the research library's B2 condition — one function
 
 Verbatim from `services/research/library/b2.py`, which is the pre-registered definition:
