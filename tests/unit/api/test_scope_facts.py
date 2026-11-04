@@ -20,6 +20,9 @@ from tests.unit.api.test_scope_chapters import IMP, TRIPS, readable, trips_from
 UNREAD = {"excluded": [(3, "A header row repeated mid-file")], "rejected": [], "refused": []}
 
 
+ENDING = {"journal_href": "/journals", "changed": None, "answered": False, "answers": {}, "note_limit": 2000}
+
+
 def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:
     """What routes_mirror.scope_fact renders, without the app."""
     ctx = SF.record_context(trips)
@@ -43,6 +46,7 @@ def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:
             trading_day_count=len(ctx["days"].counts),
             sources=s.RiskUnitSourceV1,
             **(unread if key == "unread" else {}),
+            **({"ending": ENDING} if key == "not-told" else {}),
             **ctx,
         )
     )
@@ -132,7 +136,7 @@ def test_what_we_could_not_read_lists_rejected_rows_and_refused_trades_when_ther
 def test_what_we_have_not_told_you_has_no_trades_and_carries_the_lineage():
     page = fact_page("not-told")
     assert "The trades behind this" not in page
-    assert "Nothing recommends a change." in page
+    assert "Recommend a change" in page
     assert "Computed from import 7" in page
 
 

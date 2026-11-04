@@ -13,7 +13,7 @@
 {% block content %}
   <div class="fact__head" data-dwell-line="{{ fact.key }}">
     <p class="fact__chapter">CHAPTER {{ chapter.number }} · FACT {{ number }} OF {{ chapter.facts|length }}</p>
-    <h1 class="title fact__title">{{ fact.title }}</h1>
+    <h1 class="title fact__title">{% block fact_title %}{{ fact.title }}{% endblock %}</h1>
     {% if f.state %}{% include "scope/_state.html" %}{% else %}{% block head %}{% endblock %}{% endif %}
     {% block gross %}{% if not imp.fees_available %}{{ gross_line() }}{% endif %}{% endblock %}
     {{ uncounted_line(imp.trips_refused) }}

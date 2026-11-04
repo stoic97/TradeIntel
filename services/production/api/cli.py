@@ -28,7 +28,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from services.production.accounts.file_store import FileStore
 from services.production.ctr.intake import persist
@@ -242,6 +242,29 @@ def cmd_import(args: argparse.Namespace) -> None:
         _print_review(sess, imp)
 
 
+def cmd_wrong_reports(args: argparse.Namespace) -> None:
+    """What traders said is wrong, for whoever checks reconstruction (TICKET-825).
+
+    v1 has no email (ADR-007), so this is the route: Wrong answers, and any answer
+    with a note. Reading a trader's words is logged, as the other admin actions are.
+    """
+    engine = make_engine(args.db)
+    with make_session(engine) as sess:
+        found = sess.execute(
+            select(m.ReportFeedback, m.Trader.login_id)
+            .join(m.Trader, m.Trader.id == m.ReportFeedback.trader_id)
+            .where(or_(m.ReportFeedback.answer == "wrong", m.ReportFeedback.note.is_not(None)))
+            .order_by(m.ReportFeedback.id)
+        ).all()
+        for row, login_id in found:
+            about = row.trading_day or "whole report"
+            note = " ".join((row.note or "(no note)").split())
+            print(f"{row.answered_at:%Y-%m-%d}  {login_id}  import {row.import_id}  "
+                  f"{about}  {row.answer}  {note}")
+        _log(sess, os.environ.get("USER", "admin"), "wrong_reports", None)
+        sess.commit()
+
+
 def cmd_review(args: argparse.Namespace) -> None:
     engine = make_engine(args.db)
     with make_session(engine) as sess:
@@ -332,6 +355,8 @@ def main(argv: list[str] | None = None) -> None:
     review = sub.add_parser("review")
     review.add_argument("--import-id", type=int, required=True)
     review.set_defaults(func=cmd_review)
+
+    sub.add_parser("wrong-reports").set_defaults(func=cmd_wrong_reports)
 
     args = parser.parse_args(argv)
     args.func(args)
