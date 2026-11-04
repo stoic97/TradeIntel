@@ -257,7 +257,7 @@ SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell the
         "Your declared budget",
         "Your stop",
         "Premium paid",
-        "Nothing we could use",
+        "Stocks, ETFs and futures: no premium to measure against",
         "no — recorded, never divided by",
         "Premium paid is the most you could have lost on an option, not what you had at risk,",
         "so it is counted here and used nowhere else.",
