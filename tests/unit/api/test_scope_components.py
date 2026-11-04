@@ -192,6 +192,10 @@ def as_the_kit_gives_it(group: dict) -> dict:
 )
 def test_every_trade_is_listed_as_the_kit_lists_it(screen):
     fragment = TRADES.search((SCREENS / f"{screen}.html").read_text())[0]
+    # The two places the row leaves the kit [TICKET-822]: the internal trade number is off
+    # the label, and the unexplained bar is gone. Everything else stays the kit's.
+    fragment = fragment.replace("Trade {{ trade.number }} · ", "")
+    fragment = re.sub(r'\s*<svg class="trade__strip".*?</svg>', "", fragment, flags=re.DOTALL)
     want = kit(fragment, trade_groups=[as_the_kit_gives_it(GROUP)])
     got = ours('{% from "_components.html" import trades %}{{ trades(groups) }}', groups=[GROUP])
     assert same(got) == same(want)

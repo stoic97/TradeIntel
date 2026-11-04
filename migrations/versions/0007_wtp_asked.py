@@ -1,7 +1,7 @@
 """wtp_asked: which Journal the willingness-to-pay question was put on (TICKET-826)
 
-Revision ID: 0006_wtp_asked
-Revises: 0005
+Revision ID: 0007_wtp_asked
+Revises: 0006
 Create Date: 2026-11-05 01:00:00.000000
 """
 from __future__ import annotations
@@ -11,8 +11,8 @@ from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0006_wtp_asked'
-down_revision = '0005'
+revision = '0007_wtp_asked'
+down_revision = '0006'
 branch_labels = None
 depends_on = None
 

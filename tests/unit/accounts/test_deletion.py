@@ -97,6 +97,9 @@ def a_trader(sess, login_id: str, store: FileStore, content: bytes) -> m.Trader:
     sess.flush()
     sess.add(m.ChapterFeedbackReason(feedback_id=feedback.id, reason="wrong_facts",
                                      given_at=datetime.now(UTC)))
+    sess.add(m.ReportFeedback(trader_id=trader.id, import_id=imp.id, trading_day="",
+                              answer="wrong", note="his own words",
+                              answered_at=datetime.now(UTC)))
     sess.add(m.GuessAnswer(trader_id=trader.id, answer="unknown", labels_version="t",
                            import_id=imp.id, answered_at=datetime.now(UTC)))
     sess.add(m.WtpAsked(trader_id=trader.id, journal_id=journal.id, asked_at=datetime.now(UTC)))

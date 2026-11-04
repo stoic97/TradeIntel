@@ -323,6 +323,25 @@ class ChapterFeedbackReason(Base, _InsertOnly):
     given_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class ReportFeedback(Base, _InsertOnly):
+    """TICKET-825: "Does this match your trading?" about a whole report, with a note.
+
+    One route for what a trader says is wrong: trading_day is empty for the whole
+    report and is there for TICKET-817's "Is this day wrong?". One answer per report,
+    so a new upload, being a new report, asks again.
+    """
+
+    __tablename__ = "report_feedback"
+    __table_args__ = (UniqueConstraint("trader_id", "import_id", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trading_day: Mapped[str] = mapped_column(String(10), default="")
+    answer: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str | None] = mapped_column(Text)
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class GuessAnswer(Base, _InsertOnly):
     """B6: the trader's guess, before the reveal shows him his five worst days.
 

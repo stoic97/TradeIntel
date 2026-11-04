@@ -55,6 +55,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
+        "past_number": mx.trades_past_number(trips),
         "two_losses": two_losses,
         "strike": mx.strike_rate(same_day),
         "break_even": mx.break_even(same_day),
@@ -188,6 +189,35 @@ def _figure(key: str, ctx: dict, imp) -> str:
     return str(NOT_TOLD)
 
 
+def span_words(minutes: int) -> str:
+    """How long a run took, as a sentence says it: minutes under the hour, then hours."""
+    if minutes < 60:
+        return f"{minutes} minute{'' if minutes == 1 else 's'}"
+    hours = round(minutes / 60)
+    return f"{hours} hour{'' if hours == 1 else 's'}"
+
+
+def _flagged_days(ctx: dict, figs: dict) -> dict:
+    """The two days the report's ending points at (ruling on TICKET-825): where the longest
+    losing run began, and the worst of the five worst days that is not that day."""
+    flagged: dict = {"run": None, "worst": None}
+    run = ctx["run"]
+    if not figs["run"]["state"] and run.days:
+        shown = mx.subset(ctx["trips"], run.trip_ids)
+        minutes = (max(t.exit_ts for t in shown) - min(t.entry_ts for t in shown)).seconds // 60
+        flagged["run"] = {
+            "iso": run.days[0], "day": formatting.day(run.days[0]), "losses": run.length,
+            "day_count": len(run.days), "span": None if run.crosses_days else span_words(minutes),
+        }
+    if not figs["worst-days"]["state"]:
+        for d in ctx["worst_days"].days:
+            if not flagged["run"] or d.trading_day != flagged["run"]["iso"]:
+                flagged["worst"] = {"iso": d.trading_day, "day": formatting.day(d.trading_day),
+                                    "trades": d.trips, "net": d.net}
+                break
+    return flagged
+
+
 def facts(ctx: dict, imp) -> dict[str, dict]:
     """Every fact's figure, state, card chart, mini chart and the counts its card needs."""
     trips = ctx["trips"]
@@ -196,13 +226,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     for key, fact in S.FACTS.items():
         state = _state(key, ctx)
         kind = fact.chart
+        behind = len(S.trades_behind(key, ctx))
         out[key] = {
             "key": key,
             "title": fact.title,
             "state": state,
             "figure": "—" if state else _figure(key, ctx, imp),
             "href": S.fact_href(key),
-            "trade_count": len(S.trades_behind(key, ctx)),
+            "trade_count": behind,
+            "see_all": S.see_all_href(key) if behind > S.INLINE_TRADES else None,
             "chart": None
             if state or kind not in CARD_H
             else _chart(kind, ctx, imp, CARD_W, CARD_H[kind], False),
@@ -222,6 +254,12 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     # the full figure under the dial instead.
     out["unread"]["hub_figure"] = f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)}"
     out["money"]["held"] = ctx["held_past_day"]
+    options = mx.option_result(trips)
+    out["not-told"].update(
+        options=options,
+        options_amount=abs(options.net) if options else None,  # the sentence says lost or made
+        flagged=_flagged_days(ctx, out),
+    )
     held = mx.holding_series(mx.same_day_trips(trips))
     out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
     out["hold"]["held"] = ctx["held_past_day"]
