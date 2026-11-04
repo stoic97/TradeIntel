@@ -32,8 +32,11 @@ def engine():
 
 
 @pytest.fixture()
-def client(engine):
-    """A trader with the contract fixture loaded as his history."""
+def client(engine, request):
+    """A trader with the contract fixture loaded as his history.
+
+    A test module sets TRIPS_REFUSED to read that history with trades set aside.
+    """
     import json
     from datetime import UTC, datetime
     from pathlib import Path
@@ -57,6 +60,7 @@ def client(engine):
                        rows_in=40, rows_parsed=40,
                        rows_excluded=0, fees_available=False, version_no=1,
                        trips_reconstructed=40,
+                       trips_refused=getattr(request.module, "TRIPS_REFUSED", 0),
                        density_default_unit="day", created_at=datetime.now(UTC))
         sess.add(imp)
         sess.flush()
