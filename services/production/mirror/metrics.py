@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from math import ceil
 from statistics import median
 from typing import Any
 
@@ -41,6 +42,29 @@ class Leg:
 
 
 @dataclass(frozen=True)
+class TradeLine:
+    """One leg as the broker's file has it: what a trader knows his trade by (TICKET-822)."""
+
+    symbol: str
+    segment: str  # EQ, FUT or OPT
+    side: str  # "Buy" or "Sell": how it was opened
+    quantity: int | None
+    entry_price: Decimal | None
+    exit_price: Decimal | None
+    net: Decimal
+    strike: Decimal | None = None
+    option_type: str | None = None
+    entry_ts: datetime | None = None
+
+    @property
+    def instrument(self) -> str:
+        """As the trader knows it: WIDGETOIL 5000 CE. A leg stored before Annex H has no strike."""
+        if self.strike is None or not self.option_type:
+            return self.symbol
+        return f"{self.symbol} {self.strike.normalize():f} {self.option_type}"
+
+
+@dataclass(frozen=True)
 class Trip:
     """One decision as the Mirror sees it: a round trip, or a position of several legs."""
 
@@ -53,9 +77,12 @@ class Trip:
     net: Decimal
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
+    number_in_force: Decimal | None = None  # his number that day, in rupees (TICKET-831)
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
+    lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
+    premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
 
     @property
     def is_win(self) -> bool:
@@ -77,6 +104,19 @@ class Trip:
         same zone (definitions 1), so the two compare without a clock of their own.
         """
         return self.exit_ts.date().isoformat() == self.trading_day
+
+    @property
+    def instrument(self) -> str:
+        """The trade's name on a row. A position of several legs is named by its underlying."""
+        if len(self.lines) == 1:
+            return self.lines[0].instrument
+        return f"{self.symbol} · {len(self.lines)} legs" if self.lines else self.symbol
+
+    @property
+    def result_percent(self) -> Decimal | None:
+        """The result as a share of the premium, to one decimal. Shown beside what was paid
+        and never used as R (feedback 12)."""
+        return _round(self.net / self.premium * 100, "0.1") if self.premium else None
 
 
 def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
@@ -109,7 +149,7 @@ def _trim(value: Decimal) -> Decimal:
     Used for counts and medians, where a trailing zero is noise. NOT used for the
     holding-time ratio, where 3.0 says "measured" and 3 would say "round number".
     """
-    return value.normalize()
+    return Decimal(format(value.normalize(), "f"))  # 50, not 5E+1
 
 
 @dataclass(frozen=True)
@@ -161,6 +201,15 @@ class TwoStraightLosses:
     condition_mean: Decimal | None
     comparison_mean: Decimal | None
     state: s.ResultState
+
+
+@dataclass(frozen=True)
+class BreakEven:
+    """The win rate at which these average winners and losers would net to nothing."""
+
+    average_winner: Decimal | None
+    average_loser: Decimal | None
+    percent: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -216,6 +265,18 @@ class LosingRun:
 class RiskFigureCounts:
     counts: dict[s.RiskUnitSourceV1, int]
     showable: int
+    state: s.ResultState
+
+
+@dataclass(frozen=True)
+class TradesPastNumber:
+    """Same-day trades that lost more than the number in force the day they were opened."""
+
+    count: int
+    trip_ids: list[str]
+    measured: int  # same-day trades with a number in force
+    before_number: int  # same-day trades with none in force yet
+    held_past_day: int  # positions left out, as every same-day figure leaves them out
     state: s.ResultState
 
 
@@ -336,6 +397,30 @@ def held_past_day(trips: list[Trip]) -> HeldPastDay:
     return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
 
 
+@dataclass(frozen=True)
+class OptionResult:
+    """What the option trades came to, and the largest held gain outside them."""
+
+    net: Decimal
+    count: int
+    held_gain: Trip | None
+    held_gain_days: int | None
+
+
+def option_result(trips: list[Trip]) -> OptionResult | None:
+    """Options only; None when there are none. Stated side by side, never netted."""
+    options = [t for t in trips if t.is_option]
+    if not options:
+        return None
+    gains = [t for t in trips if not t.is_option and not t.closed_same_day and t.is_win]
+    gain = max(gains, key=lambda t: t.net, default=None)
+    days = (gain.exit_ts.date() - gain.entry_ts.date()).days if gain else None
+    return OptionResult(
+        net=sum((t.net for t in options), Decimal(0)), count=len(options),
+        held_gain=gain, held_gain_days=days,
+    )
+
+
 def best_five(trips: list[Trip]) -> list[Trip]:
     """Highest net, descending. Ties: earlier entry first. No winsorising."""
     return sorted(trips, key=lambda t: (-t.net, t.entry_ts))[:5]
@@ -412,6 +497,20 @@ def strike_rate(trips: list[Trip]) -> StrikeRate:
         rate_percent=_trim(_round(Decimal(wins) / Decimal(wins + losses) * 100, "0.1")),
         state=s.ResultState.COUNTED_FACT,
     )
+
+
+def break_even(trips: list[Trip]) -> BreakEven:
+    """Average loser over average winner plus average loser. Scratches are in neither.
+
+    Needs a winner and a loser: with one side empty there is nothing to balance.
+    """
+    wins = [t.net for t in trips if t.is_win]
+    losses = [-t.net for t in trips if t.is_loss]
+    if not wins or not losses:
+        return BreakEven(None, None, None)
+    winner = sum(wins, Decimal(0)) / len(wins)
+    loser = sum(losses, Decimal(0)) / len(losses)
+    return BreakEven(winner, loser, _trim(_round(loser / (winner + loser) * 100, "0.1")))
 
 
 def average_lots(trips: list[Trip]) -> AverageLots:
@@ -501,6 +600,96 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
     )
 
 
+LOSS_SIZES_MINIMUM = 20
+"""Below this, "one in twenty" is not something the file can say."""
+
+
+@dataclass(frozen=True)
+class LossSizes:
+    """A trader's losses by size, in whole rupees. Describes them and suggests nothing."""
+
+    half: int
+    three_quarters: int
+    nine_tenths: int
+    one_in_twenty: int
+    biggest: int
+
+
+def loss_sizes(trips: list[Trip]) -> LossSizes | None:
+    """Read off the ranked losses. "Or less" rounds up, "more than" down, so both stay true."""
+    losses = sorted(-t.net for t in trips if t.is_loss)
+    if len(losses) < LOSS_SIZES_MINIMUM:
+        return None
+
+    def at(share: Decimal) -> Decimal:
+        return losses[ceil(share * len(losses)) - 1]
+
+    def up(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_CEILING))
+
+    def down(value: Decimal) -> int:
+        return int(value.to_integral_value(rounding=ROUND_FLOOR))
+
+    return LossSizes(
+        half=up(at(Decimal("0.5"))),
+        three_quarters=up(at(Decimal("0.75"))),
+        nine_tenths=up(at(Decimal("0.9"))),
+        one_in_twenty=down(at(Decimal("0.95"))),
+        biggest=up(losses[-1]),
+    )
+
+
+def book_of(symbol: str) -> str:
+    """The book a trade belongs to. CRUDEOIL and CRUDEOILM are one book to a trader."""
+    return "crude" if symbol.startswith("CRUDE") else symbol
+
+
+def trade_book(trip: Trip) -> str:
+    """The book a trade belongs to, in a trader's own words: one definition (TICKET-822).
+
+    An option is its underlying's, with crude's two contracts as one. A share or an ETF is
+    in one book with the other shares and ETFs, held or not; a future is in Futures.
+    """
+    if trip.is_option:
+        book = book_of(trip.symbol)
+        return "Crude options" if book == "crude" else f"{book} options"
+    if trip.lines and trip.lines[0].segment == "EQ":
+        return "Stocks and ETFs"
+    return "Futures"
+
+
+@dataclass(frozen=True)
+class PremiumPaid:
+    """What a typical bought option cost in one book, and how much of it a result was."""
+
+    book: str
+    paid: Decimal
+    percent: int
+
+
+def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
+    """Medians per book, biggest book first. Recorded for reading, never a denominator.
+
+    Per book because a blend describes none of them. A book below the minimum is left out
+    rather than pooled: a handful of unrelated instruments has no typical trade.
+    """
+    books: dict[str, list[Trip]] = {}
+    for trip in trips:
+        if trip.is_option and trip.premium:
+            books.setdefault(book_of(trip.symbol), []).append(trip)
+    read = []
+    for book, options in sorted(books.items(), key=lambda kv: -len(kv[1])):
+        results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
+        if len(results) < LOSS_SIZES_MINIMUM:
+            continue
+        read.append(PremiumPaid(
+            book=book,
+            paid=median(t.premium for t in options),
+            percent=int(median(results).to_integral_value()),
+        ))
+    return read
+
+
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
     """How many trips have a risk unit, by source.
 
@@ -514,6 +703,27 @@ def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
     return RiskFigureCounts(
         counts=counts, showable=showable,
         state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
+    """How many trades lost more than his number. The one place this count is decided.
+
+    A count, not a score: he chose the number. "More than" is strict, so a loss exactly
+    equal to the number, in paise, is not counted. It reads rupees and never
+    risk_unit_source, so a sold option with no risk figure counts the same as any other
+    trade (Annex H section 6).
+    """
+    same_day = same_day_trips(trips)
+    measured = [t for t in same_day if t.number_in_force is not None]
+    past = [t for t in measured if _round(-t.net) > t.number_in_force]
+    return TradesPastNumber(
+        count=len(past),
+        trip_ids=[t.trip_id for t in past],
+        measured=len(measured),
+        before_number=len(same_day) - len(measured),
+        held_past_day=len(trips) - len(same_day),
+        state=s.ResultState.COUNTED_FACT if measured else s.ResultState.INSUFFICIENT_SAMPLE,
     )
 
 

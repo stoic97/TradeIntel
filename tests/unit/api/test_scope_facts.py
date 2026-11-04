@@ -20,6 +20,9 @@ from tests.unit.api.test_scope_chapters import IMP, TRIPS, readable, trips_from
 UNREAD = {"excluded": [(3, "A header row repeated mid-file")], "rejected": [], "refused": []}
 
 
+ENDING = {"journal_href": "/journals", "changed": None, "answered": False, "answers": {}, "note_limit": 2000}
+
+
 def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:
     """What routes_mirror.scope_fact renders, without the app."""
     ctx = SF.record_context(trips)
@@ -43,6 +46,7 @@ def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:
             trading_day_count=len(ctx["days"].counts),
             sources=s.RiskUnitSourceV1,
             **(unread if key == "unread" else {}),
+            **({"ending": ENDING} if key == "not-told" else {}),
             **ctx,
         )
     )
@@ -73,13 +77,16 @@ def test_a_fact_page_has_its_path_and_no_bottom_nav(key):
 
 
 @pytest.mark.parametrize("key", TRADE_FACTS)
-def test_every_trade_behind_a_fact_is_listed_and_the_count_matches(key):
-    """Handoff 11: every trade, never a sample, and the count on the page is the fact's."""
+def test_every_trade_behind_a_fact_is_listed_or_a_link_away_and_the_count_matches(key):
+    """Handoff 11: every trade, never a sample. A long list is one link away [TICKET-822];
+    tests/unit/api/test_trade_rows.py follows the link through the app."""
     page = fact_page(key)
     behind = S.trades_behind(key, CTX)
-    assert page.count('<article class="trade">') == len(behind)
-    listed = [int(n) for n in re.findall(r'class="trade__label">Trade (\d+) ·', page)]
-    assert sorted(listed) == sorted(TRIPS.index(t) + 1 for t in behind)
+    if len(behind) > S.INLINE_TRADES:
+        assert page.count('<article class="trade">') == 0
+        assert f'href="{S.see_all_href(key)}"' in page
+    else:
+        assert page.count('<article class="trade">') == len(behind)
     caption = re.search(r'<p class="evidence__caption">(.*?)</p>', page, re.DOTALL)[1]
     assert readable(caption).endswith(f"{len(behind)} trades.")
 
@@ -103,7 +110,7 @@ def test_the_worst_days_table_says_each_day_against_the_normal_day_as_the_mirror
 
 
 def test_the_strike_rate_page_lists_winners_losers_and_level_apart():
-    page = fact_page("strike")
+    page = fact_page("strike", trips=trips_from([100, -50, 0]))
     for title in ("Winners", "Losers"):
         assert f'<span class="trades__day">{title}</span>' in page
 
@@ -132,7 +139,7 @@ def test_what_we_could_not_read_lists_rejected_rows_and_refused_trades_when_ther
 def test_what_we_have_not_told_you_has_no_trades_and_carries_the_lineage():
     page = fact_page("not-told")
     assert "The trades behind this" not in page
-    assert "Nothing recommends a change." in page
+    assert "Recommend a change" in page
     assert "Computed from import 7" in page
 
 

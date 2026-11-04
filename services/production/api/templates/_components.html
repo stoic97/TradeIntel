@@ -129,19 +129,22 @@
 </nav>
 {%- endmacro %}
 
-{#- One trade, every fill of it: a label, one row, its strip drawn to time, its fills.
-    trade: number, instrument, day, time_in, time_out, held_minutes, net (the value),
-    fill_minutes (from the first fill), fills (time, side, qty, price as written, row).
-    Fills are not kept yet (B5, handoff D4); with none, the fills table is left off. -#}
+{#- One trade, named as the trader knows it: the instrument, buy or sell, the quantity; its
+    day, in, out, held and result; the prices, and on a bought option what was paid and the
+    result against it. trade: instrument, day, time_in, time_out, held_minutes, net (the
+    value), and side, qty, entry_price, exit_price, paid, result_percent, legs where the
+    row has them. A position is one row with its legs under it (Annex H). fills: time, side,
+    qty, price as written, row; not kept yet (B5, handoff D4), so with none it is left off. -#}
 {% macro trade(t) -%}
-{%- set s = scope_strip(t.fill_minutes) -%}
 <article class="trade">
-      <div class="trade__label">Trade {{ t.number }} · {{ t.instrument }}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
-      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees }}</span></div>
-      <svg class="trade__strip" viewBox="0 0 350 18" preserveAspectRatio="none" aria-hidden="true"><path class="strip__axis" d="{{ s.axis }}"/><path class="strip__tick" d="{{ s.ticks }}"/><path class="strip__dot" d="{{ s.dots }}"/><path class="strip__bar" d="{{ s.bar }}"/></svg>
+      <div class="trade__label">{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ t.qty|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
+      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_minutes|count }} min</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees_on_a_trade }}</span></div>
+      {%- if t.get("entry_price") and t.get("exit_price") %}
+      <div class="trade__prices">{{ t.entry_price|price }} → {{ t.exit_price|price }}{% if t.get("paid") %} · Paid {{ t.paid|rupees(signed=false) }} · {{ t.result_percent|signed_percent }} of premium{% endif %}</div>
+      {%- endif %}
       {%- if t.get("legs") %}
-      <table class="fills">
-        <tbody>{% for leg in t.legs %}<tr><td>{{ leg.label }}</td><td class="table__num num--{{ leg.net|tone }}">{{ leg.net|rupees }}</td></tr>{% endfor %}</tbody>
+      <table class="fills trade__legs">
+        <tbody>{% for leg in t.legs %}<tr><td>{{ leg.label }}</td><td class="table__num num--{{ leg.net|tone }}">{{ leg.net|rupees_on_a_trade }}</td></tr><tr><td class="trade__leg-detail" colspan="2">{% if leg.qty %}Qty {{ leg.qty|count }} · {% endif %}{{ leg.entry_price|price }} → {{ leg.exit_price|price }}</td></tr>{% endfor %}</tbody>
       </table>
       {%- endif %}
       {%- if t.fills %}
