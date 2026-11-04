@@ -39,7 +39,7 @@ def option(when, kind, net, *, day="2026-09-02", strike=5000, lots=1, held=180, 
     line = mx.TradeLine(symbol, "OPT", "Buy", lots * 50, Decimal(10), Decimal(11), Decimal(net),
                         Decimal(strike), kind, entry)
     return mx.Trip(f"{day}-{when}", symbol, day, entry, entry + timedelta(seconds=held), held,
-                   Decimal(net), lots, s.RiskUnitSourceV1.PREMIUM_PAID, True, (), (line,))
+                   Decimal(net), lots, s.RiskUnitSourceV1.PREMIUM_PAID, is_option=True, lines=(line,))
 
 
 def share(when, net, *, day="2026-09-02", symbol="WIDGETETF"):
@@ -47,7 +47,7 @@ def share(when, net, *, day="2026-09-02", symbol="WIDGETETF"):
     line = mx.TradeLine(symbol, "EQ", "Buy", 10, Decimal(100), Decimal(101), Decimal(net),
                         entry_ts=entry)
     return mx.Trip(f"{day}-{when}", symbol, day, entry, entry + timedelta(minutes=3), 180,
-                   Decimal(net), 1, s.RiskUnitSourceV1.UNAVAILABLE, False, (), (line,))
+                   Decimal(net), 1, s.RiskUnitSourceV1.UNAVAILABLE, is_option=False, lines=(line,))
 
 
 QUIET = [option("09:20", "CE", 10, day="2026-09-01"), option("09:20", "CE", 10, day="2026-09-03")]
@@ -230,7 +230,7 @@ def test_a_position_of_several_legs_is_not_a_switch():
         for side, strike, kind in (("Buy", 5000, "CE"), ("Sell", 5100, "PE"))
     )
     position = mx.Trip("spread", "WIDGETIDX", "2026-09-02", entry, entry + timedelta(minutes=3), 180,
-                       Decimal(50), 1, s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, True, (), legs)
+                       Decimal(50), 1, s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, is_option=True, lines=legs)
     day = [option("09:20", "CE", 50), position, option("09:40", "CE", 50), *QUIET]
     story = mx.busiest_day_story(day, "2026-09-02")
     assert story.switches == 0
@@ -249,7 +249,7 @@ def test_a_position_alone_says_there_is_no_call_or_put_to_follow():
     positions = [
         mx.Trip(f"p{i}", "WIDGETIDX", "2026-09-02", entry + timedelta(hours=i),
                 entry + timedelta(hours=i, minutes=3), 180, Decimal(50), 1,
-                s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, True, (), legs)
+                s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, is_option=True, lines=legs)
         for i in range(2)
     ]
     assert "These were positions of several legs, so there is no call or put to follow." in story_of(
@@ -533,11 +533,7 @@ def test_the_one_number_is_mentioned_while_chapter_four_still_asks_for_it(page):
     line would describe something no longer there."""
     no_budget = [*DAY]
     assert NUMBER_LINE in readable(page(no_budget))
-    declared = [
-        mx.Trip(t.trip_id, t.symbol, t.trading_day, t.entry_ts, t.exit_ts, t.holding_seconds, t.net, t.lots,
-                s.RiskUnitSourceV1.DECLARED_BUDGET, t.is_option, t.legs, t.lines)
-        for t in DAY
-    ]
+    declared = [replace(t, risk_unit_source=s.RiskUnitSourceV1.DECLARED_BUDGET) for t in DAY]
     text = readable(page(declared))
     assert "the one number" not in text
     assert "Chapter 4: What we read" in text
