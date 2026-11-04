@@ -110,7 +110,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["clock"]["figure"] == f"{len(CTX['hours'])} hours"
     assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
-    assert FIGS["unread"]["figure"] == "40 of 40"
+    assert FIGS["unread"]["figure"] == "40 of 40 rows"
     assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40"
     assert FIGS["not-told"]["figure"] == "4"
 

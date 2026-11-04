@@ -4,5 +4,5 @@
   <span class="story-card__chart"><dl class="facts-list facts-list--card">
       <dt>Rows in your file</dt><dd>{{ imp.rows_in|count }}</dd><dt>Rows we read</dt><dd>{{ imp.rows_parsed|count }}</dd>
       <dt>Rows set aside</dt><dd>{{ imp.rows_excluded|count }}</dd><dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
-      <dt>Trades refused</dt><dd>{{ imp.trips_refused|count }}</dd><dt>Charges in the file</dt><dd>{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd></dl></span>
+      <dt>Trades refused</dt><dd>{{ imp.trips_refused|count }}</dd><dt>Charges in the file</dt><dd>{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd></dl>{% include "scope/_refused.html" %}</span>
 {% endcall %}
