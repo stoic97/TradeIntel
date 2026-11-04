@@ -9,6 +9,7 @@ is history, not his record, and showing both would double-count a re-upload.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -35,6 +36,13 @@ class MisdeclaredQuantityUnit(Exception):
     """A quantity that cannot be whole lots under the declared unit."""
 
 
+def _number_in_force(
+    trading_day: str, declarations: list[m.RiskBudgetDeclaration]
+) -> Decimal | None:
+    """His number on this day in rupees, a percentage converted; none before its date."""
+    return rb.rupees(rb.in_force(declarations, trading_day))
+
+
 def _measured_against(
     row: m.Trip, trading_day: str, declarations: list[m.RiskBudgetDeclaration]
 ) -> s.RiskUnitSourceV1:
@@ -50,7 +58,7 @@ def _measured_against(
     PRD 5.5 puts the declared budget first in the hierarchy, so it wins here too,
     over a stop and over the premium.
     """
-    if rb.rupees(rb.in_force(declarations, trading_day)) is not None:
+    if _number_in_force(trading_day, declarations) is not None:
         return s.RiskUnitSourceV1.DECLARED_BUDGET
     return row.risk_unit_source
 
@@ -282,4 +290,7 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             uncapped=any(leg.uncapped for leg in legs),
             premium=_premium(legs),
         ))
-    return trips, imp
+    # Read off each trip's own day, so it holds for whatever trips were built above.
+    return [
+        replace(t, number_in_force=_number_in_force(t.trading_day, declarations)) for t in trips
+    ], imp

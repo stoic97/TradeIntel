@@ -78,6 +78,7 @@ class Trip:
     net: Decimal
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
+    number_in_force: Decimal | None = None  # his number that day, in rupees (TICKET-831)
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
@@ -269,6 +270,18 @@ class RiskFigureCounts:
 
 
 @dataclass(frozen=True)
+class TradesPastNumber:
+    """Same-day trades that lost more than the number in force the day they were opened."""
+
+    count: int
+    trip_ids: list[str]
+    measured: int  # same-day trades with a number in force
+    before_number: int  # same-day trades with none in force yet
+    held_past_day: int  # positions left out, as every same-day figure leaves them out
+    state: s.ResultState
+
+
+@dataclass(frozen=True)
 class JournalUnitDefault:
     median_trips_per_day: Decimal
     unit: s.JournalUnit
@@ -383,6 +396,30 @@ def same_day_trips(trips: list[Trip]) -> list[Trip]:
 def held_past_day(trips: list[Trip]) -> HeldPastDay:
     held = [t for t in trips if not t.closed_same_day]
     return HeldPastDay(trips=held, count=len(held), net=sum((t.net for t in held), Decimal(0)))
+
+
+@dataclass(frozen=True)
+class OptionResult:
+    """What the option trades came to, and the largest held gain outside them."""
+
+    net: Decimal
+    count: int
+    held_gain: Trip | None
+    held_gain_days: int | None
+
+
+def option_result(trips: list[Trip]) -> OptionResult | None:
+    """Options only; None when there are none. Stated side by side, never netted."""
+    options = [t for t in trips if t.is_option]
+    if not options:
+        return None
+    gains = [t for t in trips if not t.is_option and not t.closed_same_day and t.is_win]
+    gain = max(gains, key=lambda t: t.net, default=None)
+    days = (gain.exit_ts.date() - gain.entry_ts.date()).days if gain else None
+    return OptionResult(
+        net=sum((t.net for t in options), Decimal(0)), count=len(options),
+        held_gain=gain, held_gain_days=days,
+    )
 
 
 def best_five(trips: list[Trip]) -> list[Trip]:
@@ -803,6 +840,27 @@ def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
     return RiskFigureCounts(
         counts=counts, showable=showable,
         state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
+    """How many trades lost more than his number. The one place this count is decided.
+
+    A count, not a score: he chose the number. "More than" is strict, so a loss exactly
+    equal to the number, in paise, is not counted. It reads rupees and never
+    risk_unit_source, so a sold option with no risk figure counts the same as any other
+    trade (Annex H section 6).
+    """
+    same_day = same_day_trips(trips)
+    measured = [t for t in same_day if t.number_in_force is not None]
+    past = [t for t in measured if _round(-t.net) > t.number_in_force]
+    return TradesPastNumber(
+        count=len(past),
+        trip_ids=[t.trip_id for t in past],
+        measured=len(measured),
+        before_number=len(same_day) - len(measured),
+        held_past_day=len(trips) - len(same_day),
+        state=s.ResultState.COUNTED_FACT if measured else s.ResultState.INSUFFICIENT_SAMPLE,
     )
 
 

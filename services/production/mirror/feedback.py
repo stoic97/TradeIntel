@@ -52,6 +52,41 @@ class State:
         return "recorded"
 
 
+NOTE_LIMIT = 2000
+WHOLE_REPORT = ""
+
+
+def report_answer(sess: Session, trader: m.Trader, import_id: int) -> str | None:
+    """The answer given about this report, if one was."""
+    return sess.scalars(
+        select(m.ReportFeedback.answer).where(
+            m.ReportFeedback.trader_id == trader.id,
+            m.ReportFeedback.import_id == import_id,
+            m.ReportFeedback.trading_day == WHOLE_REPORT,
+        )
+    ).first()
+
+
+def record_report_answer(
+    sess: Session, *, trader: m.Trader, import_id: int, answer: str, note: str | None
+) -> None:
+    """Keep the first answer about a report and its note; a later one changes nothing."""
+    if answer not in ANSWERS:
+        raise NotAsked(f"answer {answer!r}")
+    if report_answer(sess, trader, import_id) is not None:
+        return
+    sess.add(
+        m.ReportFeedback(
+            trader_id=trader.id, import_id=import_id, trading_day=WHOLE_REPORT, answer=answer,
+            note=(note or "").strip()[:NOTE_LIMIT] or None, answered_at=datetime.now(UTC),
+        )
+    )
+    try:
+        sess.flush()
+    except IntegrityError:  # a second tap raced the first: the first stands
+        sess.rollback()
+
+
 def _row(sess: Session, trader: m.Trader, chapter: int) -> m.ChapterFeedback | None:
     return sess.scalars(
         select(m.ChapterFeedback).where(
