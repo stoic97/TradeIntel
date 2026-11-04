@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from services.production.accounts import consent as cs
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
@@ -56,7 +57,7 @@ def client(engine):
                 trader_id=trader.id,
                 purpose=s.ConsentPurpose.DIAGNOSIS,
                 scope="v1",
-                terms_version="0-draft",
+                terms_version=CONSENT_TEXT.version,
                 granted=True,
                 at=datetime.now(UTC),
                 method="web",
@@ -202,7 +203,7 @@ def test_a_fact_page_carries_the_dwell_script(engine):
                 trader_id=trader.id,
                 purpose=s.ConsentPurpose.DIAGNOSIS,
                 scope="v1",
-                terms_version="0-draft",
+                terms_version=CONSENT_TEXT.version,
                 granted=True,
                 at=datetime.now(UTC),
                 method="web",

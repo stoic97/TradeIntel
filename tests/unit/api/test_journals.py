@@ -33,6 +33,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
@@ -87,7 +88,7 @@ def _seed(sess, login_id: str) -> m.Trader:
             fees_available=False,
             risk_unit_source=s.RiskUnitSourceV1(t["risk_unit_source"])))
     sess.add(m.ConsentEvent(trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS,
-                            scope="v1", terms_version="0-draft", granted=True,
+                            scope="v1", terms_version=CONSENT_TEXT.version, granted=True,
                             at=datetime.now(UTC), method="web", wording_shown="x" * 100))
     sess.commit()
 

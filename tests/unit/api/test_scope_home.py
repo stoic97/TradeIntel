@@ -38,7 +38,7 @@ def test_each_chapter_leads_with_its_lead_facts_figure():
     view = SF.home_view(FIGS, CTX)
     assert [i["figure"] for i in view["items"]] == [
         FIGS["share"]["figure"], FIGS["hold"]["figure"], FIGS["down"]["figure"],
-        FIGS["unread"]["figure"]]
+        FIGS["unread"]["hub_figure"]]
 
 
 def test_the_centre_is_the_five_days_share():

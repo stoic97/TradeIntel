@@ -69,15 +69,17 @@ def _owned(sess, trader: m.Trader, journal_id: int) -> m.Journal:
 def trips_of(sess, trader: m.Trader, journal: m.Journal) -> list[m.Trip]:
     """The trips this Journal covers, in the order they were opened.
 
-    Looked up across all of the trader's imports rather than the current one: a
-    Journal written from the first upload keeps its trades after the second lands.
+    Read from the upload that wrote this Journal, not the current one: a Journal written
+    from the first upload keeps its trades after the second lands. And not from every
+    upload: trip_id is a content hash, so the same trade in a later upload has the same
+    id and would be listed once per upload (TICKET-796).
     """
     ids = json.loads(journal.trip_ids)
     if not ids:
         return []
     found = sess.scalars(
         select(m.Trip).join(m.Import, m.Trip.import_id == m.Import.id)
-        .where(m.Import.trader_id == trader.id,
+        .where(m.Import.trader_id == trader.id, m.Trip.import_id == journal.import_id,
                or_(m.Trip.trip_id.in_(ids), m.Trip.position_id.in_(ids)))
     ).all()
     return sorted(found, key=lambda t: t.entry_ts)
@@ -181,6 +183,7 @@ def journal_page(request: Request, journal_id: int):
             request, "journal.html", title=f"Your Journal, {journal.period_start}",
             journal=journal, paragraphs=paragraphs, rows=rows, answers=answers,
             prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
+            uncounted=imp.trips_refused if imp else 0,
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=wtp.should_ask(sess, trader=trader), wtp_question=wtp.QUESTION,
         )
