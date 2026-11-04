@@ -25,6 +25,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from services.production.accounts.consent import CURRENT as CONSENT_TEXT
 from services.production.api.app import create_app
 from services.production.api.routes_budget import _today
 from services.production.db import models as m
@@ -52,7 +53,7 @@ def client(engine):
         sess.add(trader)
         sess.flush()
         sess.add(m.ConsentEvent(trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS,
-                                scope="v1", terms_version="0-draft", granted=True,
+                                scope="v1", terms_version=CONSENT_TEXT.version, granted=True,
                                 at=datetime.now(UTC), method="web",
                                 wording_shown="x" * 100))
         sess.commit()

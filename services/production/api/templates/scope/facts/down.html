@@ -16,8 +16,8 @@
   <table class="table">
     <thead><tr><th></th><th class="table__num">Strike rate</th><th class="table__num">Average lots</th></tr></thead>
     <tbody>
-      <tr><td class="table__text">After two straight losses</td><td class="table__num">{% if after_strike.rate_percent is not none %}{{ after_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ after_lots.mean if after_lots.mean is not none else "—" }}</td></tr>
-      <tr><td class="table__text">Every other trade</td><td class="table__num">{% if rest_strike.rate_percent is not none %}{{ rest_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ rest_lots.mean if rest_lots.mean is not none else "—" }}</td></tr>
+      <tr><td class="table__text">After two straight losses</td><td class="table__num">{% if after_strike.rate_percent is not none %}{{ after_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ after_lots.mean|lots if after_lots.mean is not none else "—" }}</td></tr>
+      <tr><td class="table__text">Every other trade</td><td class="table__num">{% if rest_strike.rate_percent is not none %}{{ rest_strike.rate_percent }}%{% else %}—{% endif %}</td><td class="table__num">{{ rest_lots.mean|lots if rest_lots.mean is not none else "—" }}</td></tr>
     </tbody>
   </table><p class="body table-note">This happened on <span class="num">{{ days_with_the_condition|count }}</span> of your <span class="num">{{ trading_day_count|count }}</span> trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run.</p>
 {% endblock %}

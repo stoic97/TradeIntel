@@ -6,7 +6,7 @@
     the title), `body` (its figures and tables) and `caption` (what the trades below
     are). A fact in a state shows the state in place of its figure and sentences. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import path, gross_line, trades %}
+{% from "_components.html" import path, gross_line, uncounted_line, trades %}
 {% block stage %}
 {{ path(chapter.facts|length, index, chapter.name, back_href, fact.title) }}
 {% endblock %}
@@ -16,6 +16,7 @@
     <h1 class="title fact__title">{{ fact.title }}</h1>
     {% if f.state %}{% include "scope/_state.html" %}{% else %}{% block head %}{% endblock %}{% endif %}
     {% block gross %}{% if not imp.fees_available %}{{ gross_line() }}{% endif %}{% endblock %}
+    {{ uncounted_line(imp.trips_refused) }}
   </div>
   {% if not f.state %}{% block body %}{% endblock %}{% endif %}
   {% block evidence %}
