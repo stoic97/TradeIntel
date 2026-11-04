@@ -99,7 +99,7 @@ def _trim(value: Decimal) -> Decimal:
     Used for counts and medians, where a trailing zero is noise. NOT used for the
     holding-time ratio, where 3.0 says "measured" and 3 would say "round number".
     """
-    return value.normalize()
+    return Decimal(format(value.normalize(), "f"))  # 50, not 5E+1
 
 
 @dataclass(frozen=True)
@@ -148,6 +148,15 @@ class TwoStraightLosses:
     condition_mean: Decimal | None
     comparison_mean: Decimal | None
     state: s.ResultState
+
+
+@dataclass(frozen=True)
+class BreakEven:
+    """The win rate at which these average winners and losers would net to nothing."""
+
+    average_winner: Decimal | None
+    average_loser: Decimal | None
+    percent: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -394,6 +403,20 @@ def strike_rate(trips: list[Trip]) -> StrikeRate:
         rate_percent=_trim(_round(Decimal(wins) / Decimal(wins + losses) * 100, "0.1")),
         state=s.ResultState.COUNTED_FACT,
     )
+
+
+def break_even(trips: list[Trip]) -> BreakEven:
+    """Average loser over average winner plus average loser. Scratches are in neither.
+
+    Needs a winner and a loser: with one side empty there is nothing to balance.
+    """
+    wins = [t.net for t in trips if t.is_win]
+    losses = [-t.net for t in trips if t.is_loss]
+    if not wins or not losses:
+        return BreakEven(None, None, None)
+    winner = sum(wins, Decimal(0)) / len(wins)
+    loser = sum(losses, Decimal(0)) / len(losses)
+    return BreakEven(winner, loser, _trim(_round(loser / (winner + loser) * 100, "0.1")))
 
 
 def average_lots(trips: list[Trip]) -> AverageLots:

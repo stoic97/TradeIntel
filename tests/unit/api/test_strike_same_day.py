@@ -11,6 +11,7 @@ Whole history would be 7 winners and 7 losers, averaging 8,650 and 360.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -29,7 +30,7 @@ HELD = mx.load_trips(
 ONLY_HELD = [t for t in HELD if t.trip_id in {"h03", "h06", "h09", "h11"}]
 SENTENCE = (
     "Your average winner was ₹310 and your average loser ₹270. "
-    "At those sizes, winning 46.6% of the time is break-even."
+    "At those sizes, break-even is a strike rate of 46.6%."
 )
 NOTE = (
     "These are trades you closed the day you opened them. "
@@ -106,14 +107,33 @@ def test_chapter_three_still_compares_every_trade():
         (Decimal("0.961"), "+₹0.96"),
     ],
 )
-def test_an_amount_under_a_rupee_shows_its_paise(value, written):
+def test_a_trade_under_a_rupee_shows_its_paise(value, written):
     """A win of 96 paise written as ₹0 reads as a winner that made nothing."""
-    assert formatting.rupees(value) == written
+    assert formatting.rupees_on_a_trade(value) == written
 
 
 @pytest.mark.parametrize(
     ("value", "written"),
     [(Decimal(0), "₹0"), (Decimal("1.96"), "+₹1"), (Decimal("-12345.6"), "−₹12,345")],
 )
-def test_every_other_amount_reads_as_before(value, written):
-    assert formatting.rupees(value) == written
+def test_every_other_trade_reads_as_before(value, written):
+    assert formatting.rupees_on_a_trade(value) == written
+
+
+def test_the_trade_card_uses_it():
+    trips = trips_from([1, -1, 1])
+    small = [replace(trips[0], net=Decimal("0.96")), *trips[1:]]
+    assert "+₹0.96" in readable(fact_page("clock", small))
+
+
+def test_totals_keep_the_whole_rupee_cut():
+    assert formatting.rupees(Decimal("0.96")) == "₹0"
+
+
+@pytest.mark.parametrize(
+    ("trips", "shown"), [(HELD, "50"), (trips_from([1] * 10 + [-1] * 10), "50")]
+)
+def test_a_round_percentage_is_written_as_a_number(trips, shown):
+    """5E+1 is what a trimmed 50 came out as, on the page."""
+    assert f"{shown}%" in readable(fact_page("strike", trips))
+    assert "E+" not in readable(fact_page("strike", trips))
