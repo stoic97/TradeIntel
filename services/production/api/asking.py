@@ -71,8 +71,8 @@ def _times(n: int, one: str, many: str) -> str:
 def _climbed_while_losing(climb: list[dict]) -> bool:
     """Size never fell on the way to the top, and every trade before the top lost.
 
-    Without this, 1, 2, 1, 5, 7 lots reads "from 1 lot to 7 after 1 loss": each word true, and
-    the sentence says one jump that never happened.
+    Without this, a size that rises, falls and rises again reads as one jump after the first
+    loss: each word true, and the sentence says something that never happened.
     """
     sizes = [t["lots"] for t in climb if t["lots"] is not None]
     return sizes == sorted(sizes) and all(t["net"] < 0 for t in climb[:-1])

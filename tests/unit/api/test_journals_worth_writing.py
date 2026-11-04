@@ -404,9 +404,9 @@ def _line(trades, usual="1.074"):
 
 
 def test_the_size_line_counts_the_losses_before_the_first_rise():
-    """1 lot, four losses, then 2, then 3: the rise starts after four."""
-    trades = [_t(-1), _t(-1), _t(-1), _t(-1), _t(-1, 2), _t(-1, 3), _t(5, 3)]
-    assert _line(trades) == ("On 11 Feb 2025 you went from 1 lot to 3 after 4 losses. "
+    """1 lot, two losses, then 2, then 4: the rise starts after two."""
+    trades = [_t(-1), _t(-1), _t(-1, 2), _t(-1, 4), _t(5, 4)]
+    assert _line(trades) == ("On 11 Feb 2025 you went from 1 lot to 4 after 2 losses. "
                              "Your usual is about 1.1.")
 
 
