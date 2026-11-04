@@ -56,7 +56,8 @@ def toggle_part(page: str) -> str:
 
 
 def text(page: str) -> str:
-    return html.unescape(" ".join(re.sub(r"<[^>]+>", " ", page).split()))
+    """As read aloud. A closing link tag joins what follows it, as its full stop does."""
+    return html.unescape(" ".join(re.sub(r"<[^>]+>", " ", page.replace("</a>", "")).split()))
 
 
 def test_the_library_sorts_into_what_each_check_waits_on():
@@ -84,8 +85,8 @@ def test_a_group_nothing_waits_on_is_not_counted():
 
 @pytest.mark.parametrize(("on", "line"), [
     ("market_context", "Waiting on market context (2 checks)."),
-    ("stop", "Waiting on the stop you used (2 checks): you can help: answer "
-             "'Where was your stop?' in your journals."),
+    ("stop", ("Waiting on the stop you used (2 checks): you can help: answer "
+              "'Where was your stop?' in your journals.")),
     ("finer_prices", "Waiting on finer prices (2 checks)."),
     ("release_calendar", "Waiting on a calendar of news releases (2 checks)."),
 ])

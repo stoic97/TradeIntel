@@ -32,7 +32,7 @@ def version(trading_day: str, before: int, after: int) -> NS:
 
 def rows_of(page: str) -> list[str]:
     body = page.split("<tbody>", 1)[1].split("</tbody>", 1)[0]
-    cells = re.findall(r"<tr>(.*?)</tr>", body, re.S)
+    cells = re.findall(r"<tr>(.*?)</tr>", body, re.DOTALL)
     return [html.unescape(" ".join(re.sub(r"<[^>]+>", " ", c).split())) for c in cells]
 
 

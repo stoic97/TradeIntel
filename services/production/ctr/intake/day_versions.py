@@ -88,6 +88,45 @@ def apply(existing: dict[str, int], diffs: list[DayDiffResult]) -> dict[str, int
     return updated
 
 
+DAYS_NAMED = 3
+
+
+@dataclass(frozen=True)
+class UploadChange:
+    """What one upload did to the rows of the days it carried, against the last one."""
+
+    rows: int
+    days: tuple[str, ...]
+
+    @property
+    def one_row(self) -> bool:
+        return abs(self.rows) == 1
+
+    @property
+    def days_named(self) -> tuple[str, ...]:
+        """The days the list has room to name."""
+        return self.days[:DAYS_NAMED]
+
+    @property
+    def days_more(self) -> int:
+        """The days past those."""
+        return max(0, len(self.days) - DAYS_NAMED)
+
+
+def upload_change(versions) -> UploadChange:
+    """Rows and days, from the day versions one upload wrote.
+
+    Row counts only: a day can keep its count while its trades change through pairing,
+    so a day left out of ``days`` kept its count, and is not said to be the same. A day
+    the upload does not mention wrote no version, so it counts for nothing here.
+    """
+    moved = [v for v in versions if v.rows_after != v.rows_before]
+    return UploadChange(
+        rows=sum(v.rows_after - v.rows_before for v in moved),
+        days=tuple(sorted(v.trading_day for v in moved)),
+    )
+
+
 def shrunk_days(diffs: list[DayDiffResult]) -> list[DayDiffResult]:
     """The days to put in front of the trader. A day losing rows is never silent."""
     return [d for d in diffs if d.day_shrank]

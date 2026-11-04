@@ -29,5 +29,20 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .account__sign-out { margin-top: var(--space-4); }
 .consent__draft { margin-top: var(--space-6); }
 
+/* TICKET-829; the kit draws none of these. What an upload changed sits under what was
+   read, beside Open. The steps number themselves, and a long file name may break. The
+   groups of checks are plain lines, and the toggle is a link the browser opens. */
+.account__change { display: block; margin-top: var(--space-1); }
+.upload__steps-title { margin-top: var(--space-4); }
+.upload__steps { margin-top: var(--space-2); padding-left: var(--space-5); list-style: decimal; }
+.upload__steps li + li { margin-top: var(--space-1); }
+.upload__file-name { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.check-groups { margin-top: var(--space-4); padding: 0; list-style: none; }
+.check-groups li + li { margin-top: var(--space-3); }
+.check-groups .body-small { margin-top: var(--space-1); }
+.curious { margin-top: var(--space-8); }
+.curious summary { cursor: pointer; }
+.curious > .body-small { margin-top: var(--space-3); }
+
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }

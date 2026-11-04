@@ -25,9 +25,9 @@ def idle_part() -> str:
 
 
 def steps() -> list[str]:
-    listed = re.search(r'<ol class="upload__steps[^"]*">(.*?)</ol>', idle_part(), re.S)
+    listed = re.search(r'<ol class="upload__steps[^"]*">(.*?)</ol>', idle_part(), re.DOTALL)
     assert listed, "the page has no list of steps"
-    items = re.findall(r"<li>(.*?)</li>", listed[1], re.S)
+    items = re.findall(r"<li>(.*?)</li>", listed[1], re.DOTALL)
     return [html.unescape(" ".join(re.sub(r"<[^>]+>", " ", i).split())) for i in items]
 
 
