@@ -1,5 +1,11 @@
 {% from "_components.html" import story_card, trades_behind, chart %}
 {% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
   {% if f.held.count %}<span class="mirror mirror--card">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</span>{% endif %}
-  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>{{ f.first_hour }}:00</span><span>Net (gross), by the hour you opened</span><span>{{ f.last_hour }}:00</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--light legend__swatch--hatch"></span>— few trades</span></span></span>
+  {%- for c in f.clocks %}
+  <span class="story-card__chart"><span class="clock-card__book">{{ c.book }}, {{ c.zone }}</span><span class="clock-card__line">Largest: {{ c.largest.net|rupees }} at {{ c.largest_label }}</span>{{ chart(c.chart) }}<span class="figure__axis"><span>{{ c.first_hour }}</span><span>Net (gross), by the hour you opened</span><span>{{ c.last_hour }}</span></span></span>
+  {%- endfor %}
+  <span class="legend"><span><span class="legend__swatch legend__swatch--light legend__swatch--hatch"></span>— few trades</span></span>
+  {%- if f.other_clocks %}
+  <span class="clock-card__line"><span class="num">{{ f.other_clocks|length }}</span> more {{ "book" if f.other_clocks|length == 1 else "books" }} on the page.</span>
+  {%- endif %}
 {% endcall %}

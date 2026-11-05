@@ -29,6 +29,20 @@
 .trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
 .trade-filters__clear { margin-top: var(--space-3); }
 
+/* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
+   phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
+.clock-book { margin-top: var(--space-10); }
+.clock-book__line, .clock-book__note { margin-top: var(--space-3); }
+.clock-book__table td:first-child { white-space: normal; }
+.clock-book__table th { vertical-align: bottom; }
+.clock-book__table a { color: inherit; text-decoration: underline; }
+.clock-book .num { white-space: nowrap; } /* a minus stays with its figure */
+.clock-others { margin-top: var(--space-10); }
+.clock-others summary { cursor: pointer; }
+.clock-next { margin-top: var(--space-10); }
+.clock-card__book, .clock-card__line { display: block; font-size: 12px; line-height: 18px; }
+.clock-card__book { margin-top: var(--space-3); color: var(--color-ink); font-weight: 600; }
+
 /* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
    so the reading state is the request itself: htmx puts .htmx-request on #upload
    while it is in flight (hx-indicator), and the form gives way to "Reading your file"
@@ -67,6 +81,21 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .account__sign-out { margin-top: var(--space-4); }
 .consent__draft { margin-top: var(--space-6); }
 
+/* TICKET-829; the kit draws none of these. What an upload changed sits under what was
+   read, beside Open. The steps number themselves, and a long file name may break. The
+   groups of checks are plain lines, and the toggle is a link the browser opens. */
+.account__change { display: block; margin-top: var(--space-1); }
+.upload__steps-title { margin-top: var(--space-4); }
+.upload__steps { margin-top: var(--space-2); padding-left: var(--space-5); list-style: decimal; }
+.upload__steps li + li { margin-top: var(--space-1); }
+.upload__file-name { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.check-groups { margin-top: var(--space-4); padding: 0; list-style: none; }
+.check-groups li + li { margin-top: var(--space-3); }
+.check-groups .body-small { margin-top: var(--space-1); }
+.curious { margin-top: var(--space-8); }
+.curious summary { cursor: pointer; }
+.curious > .body-small { margin-top: var(--space-3); }
+
 /* The report's ending (TICKET-825); the kit draws no such page. */
 .ending__found, .ending__table, .ending__changed, .ending__steps, .ending__check { margin-top: var(--space-6); }
 .ending__list { margin: var(--space-2) 0 0; padding-left: 20px; display: grid; gap: var(--space-2); }
@@ -85,3 +114,8 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
+
+/* The five days on the reveal (TICKET-816); the kit's reveal doesn't list them. */
+.reveal__title { margin-top: var(--space-4); }
+.reveal__days { list-style: none; margin: var(--space-6) 0 0; padding: 0; }
+.reveal__day { display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-2); align-items: baseline; padding: var(--space-2) 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
