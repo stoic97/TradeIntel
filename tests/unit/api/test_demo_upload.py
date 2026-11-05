@@ -68,9 +68,11 @@ def journal_ids(engine, import_id: int) -> list[int]:
 
 
 def record_pages(engine, imp: m.Import) -> list[str]:
-    first_journal = journal_ids(engine, imp.id)[0]
+    """The pages a record is read on, and its first Journal if it has one: the demo has
+    many; the two-trade real file may have none, and then there is no Journal page."""
+    journals = [f"/journals/{journal_ids(engine, imp.id)[0]}"] if journal_ids(engine, imp.id) else []
     return ["/", "/mirror", "/mirror/chapter/1", "/mirror/chapter/3",
-            "/mirror/fact/worst-days", "/journals", f"/journals/{first_journal}",
+            "/mirror/fact/worst-days", "/journals", *journals,
             f"/imports/{imp.id}", "/eligibility", "/account"]
 
 
@@ -115,6 +117,7 @@ def test_the_demo_needs_its_token_and_consent(client, engine):
 def test_every_page_drawn_from_the_demo_says_so(client, engine):
     try_the_demo(client)
     (imp,) = imports(engine)
+    assert journal_ids(engine, imp.id), "the demo's pages include a Journal"
     for path in record_pages(engine, imp):
         r = client.get(path)
         assert r.status_code == 200, path
