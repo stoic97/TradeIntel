@@ -627,8 +627,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["run"]["next"] = _next_fact("clock")
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     # The chapter's dial says findings (TICKET-827); home's slice and the card keep their figure.
-    # After two straight losses is a count: a page may state no direction until research can
-    # test one (post_loss_sentence_may_show). A date holds together when its slice stacks.
+    # After two straight losses is a count: a direction shows only where the file's own shuffle
+    # test passes (post_loss_sentence_may_show). A date holds together when its slice stacks.
     if not out["down"]["state"]:
         out["down"]["dial_figure"] = _trades_word(ctx["two_losses"].condition)
     if not out["busiest"]["state"]:

@@ -70,7 +70,7 @@ def card_of(page: str, number: int) -> tuple[str, str]:
 
 @pytest.fixture()
 def gate_open(monkeypatch):
-    """As if research had exposed a test production may call, and this file had passed it."""
+    """As if this file had passed the shuffle test, which a file this small can't."""
     monkeypatch.setattr(mx, "post_loss_sentence_may_show", lambda trips: True)
 
 
@@ -83,7 +83,7 @@ DOWN_PAGES = [
 # ---------- The gate ----------
 
 
-def test_no_post_loss_sentence_may_show_today():
+def test_a_file_this_small_keeps_the_post_loss_sentence_closed():
     assert mx.post_loss_sentence_may_show(DOWN) is False
 
 
