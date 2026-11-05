@@ -1,12 +1,60 @@
+{#- The longest losing run as a story (TICKET-820): when, in what, what it cost, then the
+    run itself. Every line is a fact counted from this run; a line that is not true of it is
+    not said. The re-entry count is that day's only, by ruling. -#}
 {% extends "scope/fact.html" %}
-{% from "_components.html" import figure %}
+{% from "_components.html" import figure, money, trade, button %}
+{% block fact_title %}{% if f.story %}{{ f.story.lead }}: {{ f.story.when }}, {{ f.story.what }}, {{ money(f.story.net) }}.{% else %}{{ fact.title }}{% endif %}{% endblock %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ run.length|count }}</span></div>
     <p class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ f.day_count|count }}</span> days{% endif %}.</p>
 {% endblock %}
 {% block body %}
-  {% call figure(1, "Every trade, in order", f.page_chart) %}
-    <div class="legend"><span>one square per trade, in order</span><span><span class="legend__swatch legend__swatch--ink"></span>the run</span></div>
+  {% call figure(1, "The run, trade by trade", f.timeline) %}
+    <div class="figure__axis"><span>{{ f.story.axis_from }}</span><span>{{ f.story.axis_to }}</span></div>
+    <div class="legend">
+      {%- if f.story.has_call %}<span><span class="legend__swatch legend__swatch--ink legend__swatch--dot"></span>call</span>{% endif %}
+      {%- if f.story.has_put %}<span><span class="legend__swatch legend__swatch--put legend__swatch--dot"></span>put</span>{% endif %}
+      {%- if f.story.has_call or f.story.has_put %}<span>bigger marker, bigger size</span>{% endif %}
+      <span>each marker where the trade closed</span>
+      {%- if f.story.has_plain %}<span><span class="legend__swatch legend__swatch--faint"></span>a future, a share or a position of several legs</span>{% endif %}
+      <span><span class="legend__swatch legend__swatch--band"></span>the run</span>
+    </div>
+    <p class="body-small run__range">Running result from the run's first trade: lowest {{ money(f.story.lowest) }}, last {{ money(f.story.last) }}.</p>
   {% endcall %}
+  {%- if f.story.flips_words or f.story.size_words or f.story.back_in %}
+  <div class="run__lines">
+    {%- if f.story.flips_words %}
+    <p class="mirror">You switched between calls and puts {{ f.story.flips_words }}. Both lost.</p>
+    {%- endif %}
+    {%- if f.story.size_words %}
+    <p class="mirror">{{ f.story.size_words }}</p>
+    {%- endif %}
+    {%- if f.story.back_in %}
+    <p class="mirror"><span class="num">{{ f.story.back_in.within|count }}</span> of <span class="num">{{ f.story.back_in.of|count }}</span> {{ "time" if f.story.back_in.of == 1 else "times" }}, you were back in within 2 minutes.</p>
+    {%- endif %}
+  </div>
+  {%- endif %}
+  <div class="run__lines">
+    {%- if f.story.costliest %}
+    <p class="body-small">Your longest run: {{ f.story.summary }}, {{ money(f.story.net) }}.</p>
+    <p class="body-small">Your costliest run: {{ f.story.costliest.summary }}, {{ money(f.story.costliest.net) }}.</p>
+    {%- else %}
+    <p class="body-small">Your longest run is also your costliest: {{ f.story.summary }}, {{ money(f.story.net) }}.</p>
+    {%- endif %}
+  </div>
 {% endblock %}
 {% block caption %}The trades in that run.{% endblock %}
+{% block lineage %}
+  {%- if f.story %}
+  <section class="run__after">
+    {%- if f.story.after %}
+    <h2 class="heading">The first trade after the run</h2>
+    <div class="trades">{{ trade(f.story.after, after=true) }}</div>
+    {%- endif %}
+    <p class="mirror">{{ f.story.closed_on }} closed at {{ money(f.story.last_day_net) }}.</p>
+  </section>
+  <section class="run__next">
+    <p class="mirror">This run started {{ f.story.started }}.</p>
+    {{ button("See the clock", facts["clock"].href, block=true) }}
+  </section>
+  {%- endif %}
+{% endblock %}
