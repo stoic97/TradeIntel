@@ -203,6 +203,27 @@ RISK_SOURCES = (
 """As the Mirror's risk table names them; ATR is among "nothing we could use" there too."""
 
 
+def _money_parts(ctx: dict, shown: list[mx.Trip]) -> list[tuple[str, list[mx.Trip]]]:
+    """Best five and worst five in rank order, then what was held (TICKET-818). With under ten
+    same-day trades one can be on both lists; a list of every trade counts it once."""
+    kept = {t.trip_id for t in shown}
+    parts = []
+    for title, listed in (
+        ("Best five", ctx["best"]),
+        ("Worst five", ctx["worst"]),
+        ("Held past the day", ctx["held_past_day"].trips),
+    ):
+        parts.append((title, [t for t in listed if t.trip_id in kept]))
+        kept -= {t.trip_id for t in listed}
+    return parts
+
+
+def ranked(trips: list[mx.Trip], ctx: dict) -> list[dict]:
+    """One of the money fact's lists, as the trade macro draws it, in the order it was ranked."""
+    numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
+    return [trade(t, numbers[t.trip_id]) for t in trips]
+
+
 def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]:
     """The trades behind a fact, grouped as the fact reads them, for the trades macro.
 
@@ -213,7 +234,9 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
     """
     shown = trades_behind(key, ctx) if only is None else only
     numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
-    if key == "math":
+    if key == "money":
+        parts = _money_parts(ctx, shown)
+    elif key == "math":
         parts = [(title, [t for t in shown if getattr(t, flag)]) for title, flag in OUTCOMES]
     elif key == "clock":
         hours = sorted({t.entry_ts.hour for t in shown})
@@ -275,7 +298,6 @@ def trade(t: mx.Trip, number: int, gap: int | None = None) -> dict:
     drawn, because it means nothing to him (TICKET-822). A position of several legs has
     its side, size and prices on each leg, and no premium. `gap` is on a run's rows only.
     """
-    held_minutes = t.holding_seconds // 60
     only_line = t.lines[0] if len(t.lines) == 1 else None
     return {
         "number": number,
@@ -289,7 +311,7 @@ def trade(t: mx.Trip, number: int, gap: int | None = None) -> dict:
         "day": formatting.day(t.trading_day),
         "time_in": t.entry_ts.strftime("%H:%M"),
         "time_out": t.exit_ts.strftime("%H:%M"),
-        "held_minutes": held_minutes,
+        "held_seconds": t.holding_seconds,
         "net": t.net,
         "fill_minutes": [0, t.holding_seconds / 60],
         "fills": [],
