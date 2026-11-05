@@ -905,6 +905,8 @@ def verdict(trips: list[Trip]) -> Verdict:
         options_net=sum((t.net for t in options), Decimal(0)), options_trades=len(options),
         others_net=sum((t.net for t in others), Decimal(0)), others_trades=len(others),
         books=tuple(rows), standout=standout,
+    )
+
 
 @dataclass(frozen=True)
 class WorstDayRow:
