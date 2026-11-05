@@ -1,21 +1,26 @@
 {% extends "scope/fact.html" %}
-{% from "_components.html" import figure %}
+{% from "_components.html" import money %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    <p class="mirror">The largest result in any one hour: {{ money(f.lead.net) }} at <span class="num">{{ f.lead_label }}</span>, in {{ f.lead_book }}.</p>
     {%- if f.held.count %}
     <p class="mirror">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
     {%- endif %}
 {% endblock %}
 {% block body %}
-  {% call figure(1, "Net (gross) by the hour you opened", f.page_chart) %}
-    <div class="figure__axis"><span>{{ f.first_hour }}:00</span><span>one bar per hour</span><span>{{ f.last_hour }}:00</span></div>
-  {% endcall %}
-  <p class="table-label">Table 1</p>
-  <table class="table">
-    <thead><tr><th>Hour you opened</th><th class="table__num">Net (gross)</th><th class="table__num">Trades</th></tr></thead>
-    <tbody>
-      {% for hour in hours %}<tr><td>{{ "%02d"|format(hour.hour) }}:00{% if hour.small_sample %} — few trades{% endif %}</td><td class="table__num num--{{ hour.net|tone }}">{{ hour.net|rupees }}</td><td class="table__num">{{ hour.trips|count }}</td></tr>{% endfor %}
-    </tbody>
-  </table>
+  {%- for c in f.clocks %}
+  {% with c=c, with_chart=true, minimum=f.rate_minimum %}{% include "scope/_clock_book.html" %}{% endwith %}
+  {%- endfor %}
+  {%- if f.other_clocks %}
+  <details class="clock-others">
+    <summary class="body-small"><span class="num">{{ f.other_clocks|length }}</span> more {{ "book" if f.other_clocks|length == 1 else "books" }}, under <span class="num">{{ f.rate_minimum }}</span> same-day trades{{ "" if f.other_clocks|length == 1 else " each" }}.</summary>
+    {%- for c in f.other_clocks %}
+    {% with c=c, with_chart=false, minimum=f.rate_minimum %}{% include "scope/_clock_book.html" %}{% endwith %}
+    {%- endfor %}
+  </details>
+  {%- endif %}
 {% endblock %}
 {% block caption %}Every trade, by the hour you opened it.{% endblock %}
+{% block lineage %}
+  <p class="clock-next">{{ button(f.next.label, f.next.href, block=true) }}</p>
+{% endblock %}

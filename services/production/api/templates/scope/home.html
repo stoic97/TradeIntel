@@ -22,7 +22,7 @@
   {%- endif %}
 </header>
 {% endblock %}
-{% block content %}
+{% block content %}{% if charges is defined and charges %}{% include "scope/_charges_line.html" %}{% endif %}
   <p class="label">Counted from your file</p>
   <h1 class="title fact__title">
   {%- if verdict.options_trades %}Your option trades {{ came(verdict.options_net, verdict.options_size) }}.

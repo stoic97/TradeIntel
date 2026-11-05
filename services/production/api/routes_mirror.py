@@ -23,6 +23,7 @@ from services.production.api import scope_map as SM
 from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.charges import record as charge_record
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -88,9 +89,11 @@ def scope_home(request: Request):
     if early is not None:
         return early
     trips, imp, context = record
+    with make_session(request.app.state.engine) as sess:
+        charges = charge_record.build(sess, current_trader(request, sess), imp)
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
                 imp=imp, trade_count=len(trips), trading_day_count=len(context["days"].counts),
-                **SF.home_context(context, imp, _opened_chapters(request)))
+                charges=charges, **SF.home_context(context, imp, _opened_chapters(request)))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)

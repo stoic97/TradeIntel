@@ -28,7 +28,7 @@ def upload(id_, outcome, rows, trades):
 CONTEXT = {
     "account.html": {"display_name": "Ravi", "login_id": "ravi", "imports": [
         upload(3, s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS, 1240, 40),
-        upload(4, s.ImportOutcome.REJECTED, 3, 0)]},
+        upload(4, s.ImportOutcome.REJECTED, 3, 0)], "changes": {}},
     "delete_confirm.html": {"error": "Tick the box to confirm."},
     "delete_done.html": {},
     "404.html": {},

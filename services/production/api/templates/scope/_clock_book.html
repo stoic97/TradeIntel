@@ -1,0 +1,28 @@
+{#- One book's clock on the fact page: which book and which time, what happened in its
+    largest hour, its chart if it has one, and every hour with ₹, trades, ₹ per trade and
+    win rate. Every figure is one metrics decided. An hour under the minimum shows no win
+    rate; ₹ per trade shows at any count. -#}
+{% from "_components.html" import figure, money %}
+<section class="clock-book" aria-label="{{ c.book }}">
+  <h2 class="heading">{{ c.book }}</h2>
+  <p class="body-small"><span class="num">{{ c.trades|count }}</span> same-day {{ "trade" if c.trades == 1 else "trades" }}, by the hour you opened, {{ c.zone }}.</p>
+  <p class="mirror clock-book__line">Its largest result in one hour: {{ money(c.largest.net) }} at <span class="num">{{ c.largest_label }}</span>, over <span class="num">{{ c.largest.trips|count }}</span> {{ "trade" if c.largest.trips == 1 else "trades" }}, {{ money(c.largest.per_trade) }} per trade.</p>
+  {%- if with_chart %}
+  {% call figure(c.number, "Net (gross) by the hour you opened", c.page_chart) %}
+    <div class="figure__axis"><span>{{ c.first_hour }}</span><span>one bar per hour</span><span>{{ c.last_hour }}</span></div>
+  {% endcall %}
+  {%- endif %}
+  <p class="table-label">Table {{ c.number }}</p>
+  <table class="table clock-book__table">
+    <thead><tr><th>Hour you opened</th><th class="table__num">Net (gross)</th><th class="table__num">Trades</th><th class="table__num">₹ per trade</th><th class="table__num">Win rate</th></tr></thead>
+    <tbody>
+      {% for hour in c.hours %}<tr><td><a href="{{ hour.href }}">{{ hour.label }}{% if hour.small_sample %} — few trades{% endif %}</a></td><td class="table__num num--{{ hour.net|tone }}">{{ hour.net|rupees }}</td><td class="table__num">{{ hour.trades|count }}</td><td class="table__num num--{{ hour.per_trade|tone }}">{{ hour.per_trade|rupees }}</td><td class="table__num">{% if hour.win_rate is none %}—{% else %}{{ hour.win_rate }}%{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {%- if c.other %}
+  <p class="body-small clock-book__note">Per trade, <span class="num">{{ c.other_label }}</span> is larger: {{ money(c.other.net) }} over <span class="num">{{ c.other.trips|count }}</span> trades is {{ money(c.other.per_trade) }} per trade. The <span class="num">{{ c.largest_label }}</span> hour's {{ money(c.largest.net) }} is spread over <span class="num">{{ c.largest.trips|count }}</span> {{ "trade" if c.largest.trips == 1 else "trades" }}, which is {{ money(c.largest.per_trade) }} per trade.</p>
+  {%- endif %}
+  {%- if c.hides_a_rate %}
+  <p class="body-small clock-book__note">An hour with fewer than <span class="num">{{ minimum }}</span> trades shows no win rate.</p>
+  {%- endif %}
+</section>
