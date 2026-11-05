@@ -53,6 +53,10 @@
     <p class="mirror">{{ f.story.closed_on }} closed at {{ money(f.story.last_day_net) }}.</p>
   </section>
   <section class="run__next">
+    {%- if run_journal_href is defined and run_journal_href %}
+    <p class="mirror">You lost <span class="num">{{ run.length|count }}</span> in a row on {{ f.start_day }}. What do you remember?</p>
+    {{ button("Your journal for " ~ f.start_day, run_journal_href, "secondary", block=true) }}
+    {%- endif %}
     <p class="mirror">This run started {{ f.story.started }}.</p>
     {{ button("See the clock", facts["clock"].href, block=true) }}
   </section>
