@@ -29,9 +29,9 @@ CTX = record_context(TRIPS)
 
 
 def test_the_chapters_and_facts_are_the_handoffs():
-    """Handoff section 4: four chapters, twelve facts, in slice order, with their keys."""
+    """Handoff section 4: four chapters, eleven facts, in slice order, with their keys."""
     assert [(c.number, c.name, [f.key for f in c.facts]) for c in S.CHAPTERS] == [
-        (1, "Where your results came from", ["worst-days", "share", "money"]),
+        (1, "Where your results came from", ["worst-days", "money"]),
         (2, "Your patterns", ["hold", "strike", "run", "clock"]),
         (3, "Your behaviour", ["down", "busiest"]),
         (4, "What we read", ["unread", "risk", "not-told"]),
@@ -42,7 +42,7 @@ def test_the_chapters_and_facts_are_the_handoffs():
 def test_every_fact_has_a_chart_the_geometry_draws():
     from services.production.api import scope_geometry as G
 
-    assert {f.chart for f in S.FACTS.values()} == set(G.CHARTS)
+    assert {f.chart for f in S.FIGURES.values()} == set(G.CHARTS)
 
 
 def test_every_fact_title_is_a_heading_the_mirror_already_uses():

@@ -1,30 +1,64 @@
+{#- The five worst days: what they share, then a collapsed block for each. "In common" is the
+    founder's ruling (scope_facts.worst_days_in_common); when nothing is shared the page says so
+    and leads with the rupees. Every trade stays one tap away, and on its own list. -#}
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money, figure, share_sentence %}
+{% from "_components.html" import money, trades, button %}
 {% block head %}
-    <div class="fact__figure">{{ money(worst_days.sum, "hero") }}</div>
-    <p class="mirror">Those five days came to {{ money(worst_days.sum) }}.</p>
-    {%- if share.shown_as_percentage %}
-    <p class="mirror">{{ share_sentence(share) }} Your result for the whole period was {{ money(share.total) }}.</p>
+    {%- if f.in_common %}
+    {%- for line in f.in_common %}
+    <p class="mirror">{{ line }}</p>
+    {%- endfor %}
     {%- else %}
+    <div class="fact__figure">{{ money(worst_days.sum, "hero") }}</div>
+    <p class="mirror">They don't share a book, an hour or a size.</p>
+    {%- endif %}
+    {%- if share.shown_as_percentage %}
+    <p class="mirror">Your five worst days: {{ money(worst_days.sum) }}. Your other <span class="num">{{ share.other_days_count|count }}</span> days: {{ money(share.other_days_net) }}.</p>
+    {%- else %}
+    <p class="mirror">Those five days came to {{ money(worst_days.sum) }}.</p>
     <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
     {%- endif %}
 {% endblock %}
-{% block body %}
-  {% call figure(1, "Net (gross) for each trading day", f.page_chart) %}
-    <div class="figure__axis"><span>{{ f.first_day }}</span><span>one bar per trading day</span><span>{{ f.last_day }}</span></div>
-    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst days</span><span><span class="legend__swatch legend__swatch--light"></span>Other days</span></div>
-  {% endcall %}
-  {%- if facts.share.page_chart %}
-  {% call figure(2, "The five days within all your losing days", facts.share.page_chart) %}
-    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst days · {{ money(worst_days.sum) }}</span><span class="legend__end">Whole period · {{ money(share.total) }}</span></div>
-  {% endcall %}
+{% block body %}{% endblock %}
+{% block evidence %}
+  {%- if not f.state %}
+  <section class="day-blocks" aria-labelledby="days-title">
+    <h2 class="heading" id="days-title">The five days</h2>
+    <p class="body-small">Each line is your running result through the day, first trade to last. Tap a day to see its trades.</p>
+    {%- for b in f.blocks %}
+    <details class="day-block" id="day-{{ b.iso }}">
+      <summary class="day-block__summary">
+        <span class="day-block__when"><span class="num">{{ b.day }}</span> <span class="body-small">{{ b.books }} · {{ b.trades|count }} {{ "trade" if b.trades == 1 else "trades" }} · {{ b.span }}</span></span>
+        {{ b.line }}
+        <span class="day-block__net">{{ money(b.net) }}</span>
+        <span class="body-small day-block__went">{{ b.went }}{% if b.vs_normal %} {{ b.vs_normal }}.{% endif %}</span>
+      </summary>
+      {%- if b.iso in (flagged_days or []) %}
+      <p class="body-small day-block__flag">You told us this day looks wrong.</p>
+      {%- else %}
+      <form class="day-block__flag" method="post" action="/mirror/feedback/day">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="trading_day" value="{{ b.iso }}">
+        <label class="field"><span class="field__label">Is this day wrong?</span><input class="field__input" name="note" maxlength="2000"></label>
+        <button class="btn btn--secondary" type="submit">Tell us</button>
+      </form>
+      {%- endif %}
+      {{ trades(b.groups) }}
+    </details>
+    {%- endfor %}
+    <p class="day-blocks__next">{{ button("Your 5 best and 5 worst trades →", f.next_href) }}</p>
+  </section>
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The trades behind this</h2>
+    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__see-all">{{ button("See all trades", f.all_trades_href, "secondary") }}</p>
+  </section>
+  <p class="day-blocks__next">{{ button("Your 5 best and 5 worst trades →", f.next_href) }}</p>
+  {%- else %}
+  <section class="evidence" aria-labelledby="evidence-title">
+    <h2 class="heading" id="evidence-title">The trades behind this</h2>
+    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    {{ trades(groups) }}
+  </section>
   {%- endif %}
-  <p class="table-label">Table 1</p>
-  <table class="table">
-    <thead><tr><th class="table__index"></th><th class="table__day">Day</th><th class="table__num">Net (gross)</th><th class="table__num">Trades</th><th class="table__num">vs your normal day</th></tr></thead>
-    <tbody>
-      {% for day in f.rows %}<tr><td class="table__index">{{ loop.index }}</td><td>{{ day.day }}</td><td class="table__num num--{{ day.net|tone }}">{{ day.net|rupees }}</td><td class="table__num">{{ day.trades|count }}</td><td class="table__num">{{ day.vs_normal }}×</td></tr>{% endfor %}
-    </tbody>
-  </table>
 {% endblock %}
-{% block caption %}The five days, and every trade on them.{% endblock %}

@@ -118,7 +118,23 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .scope-card__split .num { color: inherit; }
 .latest__when .body-small { display: block; }
 
+/* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
+.import__days { margin-top: var(--space-4); }
+.import__days > summary { cursor: pointer; }
+
 /* The five days on the reveal (TICKET-816); the kit's reveal doesn't list them. */
 .reveal__title { margin-top: var(--space-4); }
 .reveal__days { list-style: none; margin: var(--space-6) 0 0; padding: 0; }
 .reveal__day { display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-2); align-items: baseline; padding: var(--space-2) 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+
+/* The five worst days, one collapsed block each. */
+.day-blocks { margin-top: var(--space-6); }
+.day-block { border-top: 1px solid var(--color-rule, #dce0e6); padding: var(--space-3) 0; }
+.day-block__summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; cursor: pointer; }
+.day-block__when .body-small { display: block; }
+.day-block__went { grid-column: 1 / -1; }
+.day-block__line { display: block; }
+.day-block__zero { stroke: #c9d1dd; stroke-width: 1; }
+.day-block__run { stroke: currentColor; stroke-width: 1.5; }
+.day-block__flag { margin: var(--space-3) 0; }
+.day-blocks__next, .chapter__next { margin-top: var(--space-6); }

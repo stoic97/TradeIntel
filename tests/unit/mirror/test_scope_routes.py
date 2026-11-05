@@ -90,5 +90,5 @@ def test_what_we_could_not_read_reads_the_import_rows(client):
 
 
 def test_a_fact_is_signed_in_only(engine):
-    r = TestClient(create_app()).get("/mirror/fact/share", follow_redirects=False)
+    r = TestClient(create_app()).get("/mirror/fact/money", follow_redirects=False)
     assert (r.status_code, r.headers["location"]) == (303, "/login")

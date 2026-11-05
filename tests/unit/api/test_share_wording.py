@@ -25,9 +25,9 @@ def test_the_reveal_gives_the_share_the_base_rate_and_the_rupees():
     assert "Your result for the whole period was −₹25,000." in page
 
 
-@pytest.mark.parametrize("key", ["share", "worst-days"])
-def test_the_fact_pages_say_the_same(key):
-    assert SENTENCE in readable(fact_page(key))
+def test_the_worst_days_page_no_longer_leads_with_the_same_sentence():
+    """The reveal and the chapter card say it; three pages in a row saying it was the problem."""
+    assert SENTENCE not in readable(fact_page("worst-days"))
 
 
 def test_the_chapter_cards_say_the_same():
@@ -35,14 +35,13 @@ def test_the_chapter_cards_say_the_same():
 
 
 def test_the_fact_is_named_for_what_it_measures():
-    assert S.FACTS["share"].title == "Share of your losses"
+    assert S.FIGURES["share"].title == "Share of your losses"
 
 
 @pytest.mark.parametrize(
     "page",
     [
         lambda: reveal(),
-        lambda: fact_page("share"),
         lambda: fact_page("worst-days"),
         lambda: chapter_page(1),
     ],
@@ -58,6 +57,6 @@ def test_scope_home_centre_is_the_result_not_the_share():
 
 
 def test_a_history_with_no_losing_day_tells_the_rupees_only():
-    page = readable(fact_page("share", trips_from([10, 20, 30, 40, 50, 60])))
+    page = readable(fact_page("worst-days", trips_from([10, 20, 30, 40, 50, 60])))
     assert "of your losses" not in page.replace("Share of your losses", "")
     assert "Your result for the whole period was +₹210." in page

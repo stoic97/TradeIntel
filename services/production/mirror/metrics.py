@@ -15,6 +15,7 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
@@ -950,10 +951,6 @@ class FiveDaysRead:
     story: WorstDayStory | None
 
 
-def _day_book(trip: Trip) -> str:
-    return book_of(trip.symbol) if trip.is_option else "equity"
-
-
 def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     """The five worst days named, with what the record says they have in common.
 
@@ -968,7 +965,7 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     for day in worst:
         ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
         rows.append(WorstDayRow(
-            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+            day.trading_day, tuple(dict.fromkeys(trade_book(t) for t in ordered)), day.trips, day.net,
         ))
         rest = sum((t.net for t in ordered[1:]), Decimal(0))
         if ordered[0].is_loss and rest < 0:
@@ -991,6 +988,66 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
         ),
         story=story,
     )
+
+
+@dataclass(frozen=True)
+class DayBlock:
+    """One of the five worst days, as the worst-days page reads it. Counts only, no cause."""
+
+    trading_day: str
+    books: tuple[str, ...]
+    book: str | None  # the book with the most trades that day; None on a tie
+    trades: int
+    net: Decimal
+    first_in: datetime
+    last_out: datetime
+    running: tuple[Decimal, ...]  # the result after each trade, first to last
+    first_net: Decimal
+    later: int
+    later_lost: int
+    longest_run: int  # the most losses in a row within the day
+
+
+def _longest_run_in(ordered: list[Trip]) -> int:
+    longest = current = 0
+    for trip in ordered:
+        current = current + 1 if trip.is_loss else 0
+        longest = max(longest, current)
+    return longest
+
+
+def _main_book(ordered: list[Trip]) -> str | None:
+    counts = Counter(trade_book(t) for t in ordered).most_common(2)
+    if len(counts) == 2 and counts[0][1] == counts[1][1]:
+        return None
+    return counts[0][0]
+
+
+def worst_day_blocks(trips: list[Trip]) -> tuple[DayBlock, ...]:
+    """The five worst days, worst first, on the entry date as every other page counts them."""
+    by_day = _by_day(trips)
+    blocks = []
+    for day in five_worst_days(trips).days:
+        ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
+        running, total = [], Decimal(0)
+        for trip in ordered:
+            total += trip.net
+            running.append(total)
+        blocks.append(DayBlock(
+            trading_day=day.trading_day,
+            books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
+            book=_main_book(ordered),
+            trades=len(ordered),
+            net=day.net,
+            first_in=ordered[0].entry_ts,
+            last_out=max(t.exit_ts for t in ordered),
+            running=tuple(running),
+            first_net=ordered[0].net,
+            later=len(ordered) - 1,
+            later_lost=sum(t.is_loss for t in ordered[1:]),
+            longest_run=_longest_run_in(ordered),
+        ))
+    return tuple(blocks)
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
