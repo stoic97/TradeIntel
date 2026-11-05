@@ -21,7 +21,7 @@ TL = mx.two_straight_losses(TRIPS)
 OPEN = (
     f"After two straight losses, your next trades averaged "
     f"{formatting.rupees(TL.condition_mean, exact=True)}. "
-    f"Your other trades while down averaged {formatting.rupees(TL.comparison_mean, exact=True)}."
+    f"Your other trades that qualified averaged {formatting.rupees(TL.comparison_mean, exact=True)}."
 )
 
 
