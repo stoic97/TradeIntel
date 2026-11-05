@@ -86,10 +86,18 @@ def _risk_unit_for(
     return s.RiskUnitSourceV1.UNAVAILABLE, None, None
 
 
-def _next_version(sess: Session, trader: m.Trader) -> tuple[int, int | None]:
+def _next_version(sess: Session, trader: m.Trader,
+                  source_account: str) -> tuple[int, int | None]:
+    """The next version of this source account's export, and the import it supersedes.
+
+    Per source account, as day versions are (``existing_days``): a version of one
+    account's file says nothing about another's. It is what keeps the demo (TICKET-842)
+    out of a real upload's history, since imports are insert-only and a real import
+    pointing at a demo one would pin the demo in place.
+    """
     previous = sess.scalars(
         select(m.Import)
-        .where(m.Import.trader_id == trader.id)
+        .where(m.Import.trader_id == trader.id, m.Import.source_account == source_account)
         .order_by(m.Import.id.desc())
     ).first()
     if previous is None:
@@ -122,7 +130,7 @@ def write_plan(
     sess.add(raw)
     sess.flush()
 
-    version_no, supersedes = _next_version(sess, trader)
+    version_no, supersedes = _next_version(sess, trader, source_account)
 
     imp = m.Import(
         trader_id=trader.id,

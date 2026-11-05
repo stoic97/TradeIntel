@@ -68,6 +68,7 @@ def lots_for(
     profile: profiles.InstrumentProfile,
     quantity_unit: str,
     on: date | None = None,
+    expiry: date | None = None,
 ) -> int:
     """The trader's size in lots, from the count his broker exported.
 
@@ -84,6 +85,11 @@ def lots_for(
     expiries, so the profile may carry dated sizes and ``on`` picks the ones in
     force that day. The largest one that divides the quantity wins; with no date,
     or no history, the current size is the only candidate.
+
+    A lot size is really the expiry's, so where the profile states which expiries a
+    size covers, the sizes that cover this ``expiry`` go first. That settles a tie and
+    nothing else: with no readable expiry, no stated boundary, or a quantity only
+    another live size divides, the answer is the one the date alone gives.
     """
     if quantity_unit == "lots":
         return quantity
@@ -92,7 +98,8 @@ def lots_for(
         raise MisdeclaredQuantityUnit(
             f"{profile.exchange}:{profile.symbol} has no lot size in force on {on}"
         )
-    for lot_size in candidates:
+    covering = profile.lot_sizes_for_expiry(on, expiry) if expiry is not None else ()
+    for lot_size in (*covering, *candidates):
         if lot_size <= 0:
             raise MisdeclaredQuantityUnit(
                 f"{profile.exchange}:{profile.symbol} has a lot size of {lot_size}"
@@ -107,6 +114,11 @@ def lots_for(
         f"{f' on {on}' if on else ''} ({sizes}) -- not a position anyone can "
         "hold, so either the declared quantity unit or the profile's lot history is wrong"
     )
+
+
+def _two_sizes_divide(quantity: int, profile: profiles.InstrumentProfile, on: date) -> bool:
+    """A tie the date cannot settle. With one divisor, the expiry would change nothing."""
+    return sum(Decimal(quantity) % size == 0 for size in profile.lot_sizes_on(on)) > 1
 
 
 def _leg_label(leg: m.Trip) -> str:
@@ -139,8 +151,8 @@ def expiries_for(sess: Session, imp: m.Import) -> dict[tuple, date | None]:
 
     A trip row does not store its expiry and trip rows are insert-only, so a column would
     leave every import already made without one. The raw row has it, for every import, so
-    this reads it there and needs no migration. Only the trade list asks: a fact page
-    does not read the expiry, and parsing a whole file on each page would be waste.
+    this reads it there and needs no migration. Only the trade list and a size the date
+    cannot settle ask: parsing a whole file on each page would be waste.
 
     The same contract at the same instant under two expiries cannot be told apart, so it
     has no expiry here rather than a guessed one.
@@ -260,6 +272,20 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
 
     declarations = rb.for_trader(sess, trader)
 
+    read_expiries: dict[tuple, date | None] | None = None
+
+    def lots_of(leg: m.Trip, day: date) -> int:
+        """A leg's size, reading the raw file only when its contract's expiry can decide it."""
+        nonlocal read_expiries
+        quantity = leg.quantity or 1
+        profile = profile_for(leg)
+        expiry = None
+        if profile.states_expiries_on(day) and _two_sizes_divide(quantity, profile, day):
+            if read_expiries is None:
+                read_expiries = expiries_for(sess, imp)
+            expiry = read_expiries.get(expiry_key(_line(leg)))
+        return lots_for(quantity, profile, quantity_unit, on=day, expiry=expiry)
+
     # A position is one decision, so the record reads it as one trade: its legs added up,
     # first in to last out (Annex H section 3). Rows arrive in entry order.
     positions: dict[object, list[m.Trip]] = {}
@@ -281,8 +307,7 @@ def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | No
             exit_ts=exit_ts.astimezone(zone),
             holding_seconds=int((exit_ts - entry_ts).total_seconds()),
             net=sum((leg.net for leg in legs), Decimal(0)),
-            lots=max(lots_for(leg.quantity or 1, profile_for(leg), quantity_unit,
-                              on=date.fromisoformat(trading_day)) for leg in legs),
+            lots=max(lots_of(leg, date.fromisoformat(trading_day)) for leg in legs),
             risk_unit_source=_measured_against(first, trading_day, declarations),
             is_option=first.segment == "OPT",
             legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),

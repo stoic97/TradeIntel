@@ -25,6 +25,7 @@ count taken from his history is his data too.
 | Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |
 | The trader's own browser | A signed session cookie. No trade data | Signed, not encrypted | 30 days, or sign-out | n/a |
+| The app's memory | The network address a new account came from, only in memory, so the sign-up cap can count it. Never written to the database or a file | No | An hour, or until a restart | Nothing of his to delete |
 | The server's logs | Request paths and status codes. **No request bodies, no uploaded content, no figures** | No | Rotated at 14 days | Nothing of his to delete |
 
 **That is the entire list.** No analytics. No error reporting. No email service.

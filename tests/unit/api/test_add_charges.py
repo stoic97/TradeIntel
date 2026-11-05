@@ -163,7 +163,7 @@ def test_the_sum_keeps_its_paise_until_it_is_shown(client, engine):  # noqa: F81
 def test_the_line_sits_above_the_rest_of_home(client, engine):  # noqa: F811
     post_file(client, engine, FULL)
     page = words(client.get("/mirror").text)
-    assert page.index("Before charges") < page.index("What your trades actually did")
+    assert page.index("Before charges") < page.index("Counted from your file")
 
 
 def test_a_file_for_some_days_says_how_many_it_covers(client, engine):  # noqa: F811

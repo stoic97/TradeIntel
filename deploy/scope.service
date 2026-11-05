@@ -24,8 +24,13 @@ EnvironmentFile=/etc/scope/scope.env
 # uv wants a cache under the service user's home, and uv installed to /root,
 # which ProtectHome=yes puts out of reach anyway. The venv's own uvicorn needs
 # neither uv on PATH nor anywhere to write.
+#
+# The forwarded address is believed from Caddy on this box and from nobody else. These
+# are uvicorn's defaults today, written out because the sign-up cap counts by address:
+# without them every visitor is 127.0.0.1 and all of them share one cap.
 ExecStart=/srv/scope/.venv/bin/uvicorn services.production.api.app:create_app \
-    --factory --host 127.0.0.1 --port 8000
+    --factory --host 127.0.0.1 --port 8000 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
 
 # Caddy is the only thing that talks to it; it never listens on a public address.
 Restart=on-failure
