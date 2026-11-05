@@ -83,7 +83,7 @@ def test_many_changes_are_counted_not_all_listed():
     page = later(
         changed_days=[f"2026-09-0{i}" for i in range(1, 6)], shrunk_days=[]
     )
-    assert "5 days changed: 01 Sep, 02 Sep, 03 Sep and 2 more." in readable(page)
+    assert "5 days changed: 01 Sep 2026, 02 Sep 2026, 03 Sep 2026 and 2 more." in readable(page)
 
 
 def test_a_day_that_lost_rows_is_never_behind_the_toggle():
@@ -91,10 +91,10 @@ def test_a_day_that_lost_rows_is_never_behind_the_toggle():
         days=[day("2026-09-08", 90, 80, shrank=True)],
         changed_days=["2026-09-08"], shrunk_days=["2026-09-08"],
     )
-    assert "08 Sep has fewer rows than before." in page
+    assert "08 Sep 2026 has fewer rows than before." in page
     assert page.index("fewer rows than before") < page.index("<details")
 
 
 def test_two_days_that_lost_rows_read_in_the_plural():
     page = later(changed_days=["2026-09-07", "2026-09-08"], shrunk_days=["2026-09-07", "2026-09-08"])
-    assert "07 Sep, 08 Sep have fewer rows than before." in page
+    assert "07 Sep 2026, 08 Sep 2026 have fewer rows than before." in page
