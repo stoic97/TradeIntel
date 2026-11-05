@@ -24,7 +24,8 @@ Your busiest day: <span class="num">{{ a.story.trades|count }}</span> {{ "trade"
   {%- endif -%}
 {%- else -%}
   {%- if a.number is not none -%}
-Your number is {{ money(a.number, signed=false) }}; <span class="num">{{ a.past.count|count }}</span> {{ "trade" if a.past.count == 1 else "trades" }} lost more than it.
+Your number is {{ money(a.number, signed=false) }}
+    {%- if a.past.measured %}; <span class="num">{{ a.past.count|count }}</span> {{ "trade" if a.past.count == 1 else "trades" }} lost more than it{% endif %}.
   {%- elif a.uncapped -%}
 <span class="num">{{ a.uncapped|count }}</span> sold-option {{ "trade has" if a.uncapped == 1 else "trades have" }} no risk cap, and no budget is set, so there is no risk figure yet.
   {%- else -%}

@@ -16,9 +16,11 @@ from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.mirror import metrics as mx
+from services.shared.schemas import scope_v1 as s
 from tests.unit.api.templating import template_env
 from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
 from tests.unit.api.test_scope_chapters import TRIPS as FORTY
+from tests.unit.api.test_scope_facts import fact_page
 from tests.unit.api.test_scope_home_verdict import t
 from tests.unit.mirror.test_page import NEVER_USED
 
@@ -171,8 +173,9 @@ def test_row_four_with_one_uncapped_trade_says_it_in_the_singular():
 
 
 def test_row_four_with_a_number_says_it_and_what_lost_more():
-    past = CTX["past_number"]
-    row = rows(hub(number=Decimal(500)))["What we read"]
+    trips = [mx.replace(x, number_in_force=Decimal(500)) for x in FORTY]
+    past = mx.trades_past_number(trips)
+    row = rows(hub(trips, number=Decimal(500)))["What we read"]
     assert f"Your number is ₹500; {past.count} trades lost more than it." in row
 
 
@@ -193,10 +196,11 @@ def test_a_wedge_says_how_many_are_uncapped():
     assert (wedges(trips)[3]["figure"], wedges(trips)[3]["label"]) == ("two", "uncapped")
 
 
-def test_a_wedge_with_a_number_says_it():
-    item = wedges(number=Decimal(500))[3]
+def test_a_wedge_with_a_number_says_how_many_went_past_it():
+    trips = [mx.replace(x, number_in_force=Decimal(500)) for x in FORTY]
+    item = wedges(trips, number=Decimal(500))[3]
     assert item["label"] == "past it"
-    assert item["figure"] == SF._wedge_count(CTX["past_number"].count)
+    assert item["figure"] == SF._wedge_count(mx.trades_past_number(trips).count)
 
 
 def fit(figure, label):
@@ -289,6 +293,75 @@ def test_row_three_agrees_with_chapter_three():
     page = readable(chapter_page(3))
     assert f"{CTX['days'].busiest_trips} trades" in page
     assert str(CTX["two_losses"].condition) in page
+
+
+def with_number(trips, number=Decimal(500)):
+    return [mx.replace(x, number_in_force=number) for x in trips]
+
+
+def test_row_four_with_no_budget_agrees_with_the_risk_page():
+    trips = [mx.replace(x, risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID) for x in FORTY]
+    assert "Set your number" in fact_page("risk", trips)
+    assert "no budget is set" in rows(hub(trips))["What we read"].lower()
+
+
+def test_row_four_uncapped_count_agrees_with_chapter_four():
+    trips = [mx.replace(x, uncapped=True) if i < 2 else x for i, x in enumerate(FORTY)]
+    assert "2 sold-option trades have no risk cap" in rows(hub(trips))["What we read"]
+    assert "2 trades were sold options with no cap" in readable(chapter_page(4, trips))
+
+
+def test_row_four_past_number_count_agrees_with_the_risk_page():
+    trips = with_number(FORTY)
+    count = mx.trades_past_number(trips).count
+    assert count > 0
+    assert f"{count} trades lost more than your number." in readable(fact_page("risk", trips))
+    assert f"Your number is ₹500; {count} trades lost more than it." in rows(hub(trips, number=Decimal(500)))["What we read"]
+
+
+def test_a_number_with_nothing_measured_against_it_claims_no_clean_record():
+    """Set today, on trades from before: no trade was measured, and the risk page shows no count."""
+    assert mx.trades_past_number(FORTY).measured == 0
+    row = rows(hub(number=Decimal(500)))["What we read"]
+    assert "Your number is ₹500." in row
+    assert "lost more" not in row
+    assert "lost more than your number" not in readable(fact_page("risk"))
+    item = wedges(number=Decimal(500))[3]
+    assert (item["figure"], item["label"]) == ("set", "number")
+
+
+def test_wedge_one_agrees_with_chapter_one():
+    assert wedges()[0]["figure"] in readable(chapter_page(1))
+
+
+def test_wedge_two_agrees_with_chapter_two():
+    assert wedges()[1]["figure"] in readable(chapter_page(2))
+
+
+def test_wedge_three_agrees_with_chapter_three():
+    trips = busy_file(12)
+    figure = wedges(trips)[2]["figure"]
+    assert figure == "12"
+    assert f"{figure} trades" in readable(chapter_page(3, trips))
+
+
+def test_wedge_three_in_words_is_the_same_count_chapter_three_prints():
+    assert wedges(busy_file(3))[2]["figure"] == "three"
+    assert "3 trades" in readable(chapter_page(3, busy_file(3)))
+
+
+def test_wedge_four_uncapped_agrees_with_chapter_four():
+    many = [mx.replace(x, uncapped=True) if i < 12 else x for i, x in enumerate(FORTY)]
+    assert wedges(many)[3]["figure"] == "12"
+    assert "12 trades were sold options with no cap" in readable(chapter_page(4, many))
+
+
+def test_wedge_four_past_number_agrees_with_the_risk_page():
+    trips = with_number(FORTY)
+    figure = wedges(trips, number=Decimal(500))[3]["figure"]
+    count = mx.trades_past_number(trips).count
+    assert figure == SF._wedge_count(count)
+    assert f"{count} trades lost more than your number." in readable(fact_page("risk", trips))
 
 
 def test_the_hub_says_none_of_the_never_use_words():
