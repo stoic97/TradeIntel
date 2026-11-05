@@ -53,5 +53,12 @@ def test_each_size_has_its_rule_on_both_dials():
         assert rule + " {" in CSS
 
 
-def test_a_number_never_wraps_inside_itself():
-    assert re.search(r"(?m)^\.num \{ white-space: nowrap; \}", CSS)
+def test_a_rupee_figure_never_wraps_inside_itself():
+    """A minus stays with its figure wherever a rupee figure is drawn with its tone."""
+    assert re.search(r"(?m)^\.num--gain, \.num--loss, \.num--plain, \.num--zero \{ white-space: nowrap; \}", CSS)
+
+
+def test_other_numbers_may_still_wrap():
+    """Every .num going unbreakable pushed a row of date chips, and a hero reading
+    "N of M rows", past the edge of the page."""
+    assert not re.search(r"(?m)^\.num \{[^}]*white-space: nowrap", CSS)
