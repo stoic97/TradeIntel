@@ -13,6 +13,7 @@ its slice and its card - never hidden - and its figure is a dash.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from datetime import timedelta
 
@@ -782,6 +783,12 @@ def _clock_view(ctx: dict) -> dict:
     }
 
 
+def keep_digit_with_its_unit(figure: str) -> str:
+    """A slice breaks a figure that won't fit, and a lone digit reads as a serial. Joined here, on
+    the dial's copy only, because stacked_split is the kit's."""
+    return re.sub(r"^(\d) ", lambda m: f"{m[1]}{chr(0xA0)}", figure)
+
+
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre."""
     c = S.chapter(n)
@@ -790,7 +797,9 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         fig = figs[f.key]
         item = {
             "name": f.title,
-            "figure": fig.get("dial_figure", fig.get("finding", fig["figure"])),
+            "figure": keep_digit_with_its_unit(
+                fig.get("dial_figure", fig.get("finding", fig["figure"]))
+            ),
             "href": fig["href"],
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,
