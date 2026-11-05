@@ -5,12 +5,7 @@
 {% extends "layout.html" %}
 {% from "_components.html" import dial, gross_line, uncounted_line, lockup, chip, money, button %}
 {% set nav = "scope" %}
-{% macro came(net, size) -%}
-{%- if net > 0 %}made {{ money(size, signed=false) }}{% elif net < 0 %}lost {{ money(size, signed=false) }}{% else %}came out level{% endif -%}
-{%- endmacro %}
-{% macro held(s) -%}
-{%- if s.held_days %}, held up to <span class="num">{{ s.held_days|count }}</span> day{{ "" if s.held_days == 1 else "s" }}{% endif -%}
-{%- endmacro %}
+{% from "_verdict.html" import came, held, verdict_sentence %}
 {% block stage %}
 <header class="stage stage--home on-navy">
   <div class="stage__bar">{{ lockup() }}{{ chip("In development.", on_navy=true) }}</div>
@@ -24,11 +19,7 @@
 {% endblock %}
 {% block content %}{% if charges is defined and charges %}{% include "scope/_charges_line.html" %}{% endif %}
   <p class="label">Counted from your file</p>
-  <h1 class="title fact__title">
-  {%- if verdict.options_trades %}Your option trades {{ came(verdict.options_net, verdict.options_size) }}.
-    {%- if verdict.others_trades %} {% if verdict.made_back %}{{ verdict.standout.symbol }}{{ held(verdict.standout) }}{% if verdict.standout.held_days %},{% endif %} made back {{ money(verdict.standout.net, signed=false) }} of it.{% else %}Your stock, ETF and futures trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif %}{% endif %}
-  {%- else %}Your trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif -%}
-  </h1>
+  <h1 class="title fact__title">{{ verdict_sentence(verdict) }}</h1>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   <p class="label label--plain home__heading">Your books</p>
   <ul class="home__books">
