@@ -1,16 +1,16 @@
 """The shuffle test that decides whether Chapter 3 may say a direction [TICKET-838].
 
-The rule was committed here before any real file went through it:
+The rule, written in framework_v1.yaml under production_gates and held to it here:
 
 * null: the framework's N-B, outcomes shuffled within each day, 2,000 draws, the condition
   worked out again on each draw;
 * statistic: the two means the sentence prints, in rupees;
-* pass: p <= 0.05 two-sided, because the sentence says whichever way the means point;
+* pass: p <= 0.05, one-sided in B2's stated direction, trades after two losses doing worse;
 * minimum: the framework's 30 condition and 60 comparison, and closed below it;
-* no 0.25R cutoff: most traders have no R, and this gates a sentence that prints both figures.
-  It isn't a research Finding.
+* no 0.25R cutoff: most traders have no R, and this gates a sentence, not a Finding.
 
-Inputs are synthetic.
+A result in the other direction keeps the gate closed however strong it is. Scope must not print
+a sentence the file argues against. Inputs are synthetic.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import yaml
 
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle as T
@@ -73,8 +74,39 @@ def test_the_draws_and_minimums_are_the_frameworks_own():
     assert (T.DRAWS, T.MIN_CONDITION, T.MIN_COMPARISON) == (2000, 30, 60)
 
 
-def test_the_bar_is_five_percent_two_sided():
-    assert T.ALPHA == 0.05
+def gate_in_the_framework() -> dict:
+    framework = yaml.safe_load(Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8"))
+    found = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if "production_gates" in node:
+                found.append(node["production_gates"])
+            for value in node.values():
+                walk(value)
+
+    walk(framework)
+    assert len(found) == 1, "the bar is written down once, in the framework"
+    return found[0]["B2_post_loss_sentence"]
+
+
+def test_the_bar_is_in_the_framework_not_only_in_the_code():
+    gate = gate_in_the_framework()
+    assert gate["null"] == "N-B"
+    assert gate["draws"] == T.DRAWS
+    assert gate["bar_p"] == T.ALPHA == 0.05
+    assert gate["sided"] == "one"
+    assert gate["direction"] == T.DIRECTION == "<"
+    assert gate["outcome"] == "net_rupees"
+    assert gate["minimum"] == f"{T.MIN_CONDITION}/{T.MIN_COMPARISON}"
+    assert gate["opposite_direction"] == "closed"
+
+
+def test_the_gates_direction_is_b2s_own():
+    framework = Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8")
+    b2 = Path("services/research/library/b2.py").read_text(encoding="utf-8")
+    assert 'DIRECTION = "<"' in b2
+    assert "id: B2," in framework
 
 
 def test_production_can_run_it_without_the_research_packages():
@@ -142,9 +174,51 @@ def test_a_planted_effect_opens_it():
     assert T.shuffle_test(synthetic(8, effect=-1500)).passes
 
 
-def test_a_planted_effect_the_other_way_opens_it_too():
-    """The sentence says whichever way the means point, so the test looks both ways."""
-    assert T.shuffle_test(synthetic(9, effect=1500)).passes
+def two_sided_p(obs) -> tuple[float, float]:
+    """What a two-sided bar would have read on this file: the ruling is that it doesn't count."""
+    r = np.array([o.r for o in obs], dtype=float)
+    day = np.array([o.day for o in obs])
+    pop, first, second = T.last_two_resolved(obs)
+    seen, _, _ = T._difference(r, pop, first, second)
+    rng = np.random.default_rng(T.SEED)
+    wider = sum(
+        abs(T._difference(T.shuffle_within_days(r, day, rng), pop, first, second)[0]) >= abs(seen)
+        for _ in range(T.DRAWS)
+    )
+    return seen, (wider + 1) / (T.DRAWS + 1)
+
+
+def test_a_strong_effect_the_other_way_keeps_it_closed():
+    got = T.shuffle_test(synthetic(9, effect=1500))
+    assert got.difference > 0
+    assert got.p > 0.5
+    assert not got.passes
+
+
+def test_the_other_way_at_a_two_sided_p_of_about_0_033_keeps_it_closed():
+    """The case the ruling is about: a two-sided bar would open here, on a sentence the file
+    argues against. Trades after two losses did better, so the gate stays shut."""
+    obs = synthetic(27, effect=150)
+    difference, two_sided = two_sided_p(obs)
+    assert difference > 0
+    assert 0.028 <= two_sided <= 0.038
+    got = T.shuffle_test(obs)
+    assert got.p > 0.5
+    assert not got.passes
+
+
+def test_the_gate_on_the_page_stays_closed_the_other_way():
+    trips = trips_from(synthetic(27, effect=150))
+    assert mx.post_loss_sentence_may_show(trips) is False
+    html = fact_page("down", trips)
+    assert CLOSED in html
+    assert OPEN not in html
+
+
+def test_a_level_result_keeps_it_closed():
+    obs = [Obs(day=d, entry_at=float(k), exit_at=k + 0.5, r=-1.0 if k < 2 else 1.0) for d in range(40) for k in range(5)]
+    got = T.shuffle_test(obs)
+    assert not got.passes
 
 
 def test_a_clean_trader_keeps_it_closed():
