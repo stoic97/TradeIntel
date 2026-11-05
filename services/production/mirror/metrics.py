@@ -16,9 +16,10 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from itertools import pairwise
 from math import ceil
 from statistics import median
 from typing import Any
@@ -713,6 +714,186 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
     )
 
 
+def costliest_losing_run(trips: list[Trip]) -> LosingRun:
+    """The losing run that lost the most rupees, read as longest_losing_run reads a run.
+
+    Two that cost the same read the one with more trades, then the earlier. Each run is
+    said alone: the rupees are never added up across runs, because the winners between
+    them are left out and the total would mislead.
+    """
+    runs: list[list[Trip]] = []
+    current: list[Trip] = []
+    for trip in trips:
+        if trip.is_loss:
+            current.append(trip)
+        else:
+            current = []
+            continue
+        if len(current) == 1:
+            runs.append(current)
+    if not runs:
+        return LosingRun(0, [], False, [], s.ResultState.INSUFFICIENT_SAMPLE)
+    worst = min(runs, key=lambda run: (_run_net(run), -len(run)))
+    days = sorted({t.trading_day for t in worst})
+    return LosingRun(
+        length=len(worst), trip_ids=[t.trip_id for t in worst],
+        crosses_days=len(days) > 1, days=days, state=s.ResultState.COUNTED_FACT,
+    )
+
+
+def _run_net(trips: list[Trip]) -> Decimal:
+    """Back to the paise a broker reports in: a fill split across parcels sums just short."""
+    return _round(sum((t.net for t in trips), Decimal(0)))
+
+
+RE_ENTRY_SECONDS = 120
+""""Back in within 2 minutes", from the previous trade's exit. Exactly two minutes counts.
+
+A count on one day in one book, as the ruling on TICKET-820 allows. How fast a trader goes
+back in across days or books is pre-registered research, and no page says it."""
+
+
+@dataclass(frozen=True)
+class SizeRise:
+    """The first time a run's size went up, and how far it climbed before it next fell."""
+
+    losses_before: int
+    steps: list[int]
+
+
+@dataclass(frozen=True)
+class BackIn:
+    within: int  # of those, how many inside RE_ENTRY_SECONDS
+    of: int  # re-entries on the day: a trade opened after the last one closed
+
+
+@dataclass(frozen=True)
+class RunStory:
+    """One losing run, as what happened: when, in what, what it cost, and what came next."""
+
+    trades: list[Trip]
+    length: int
+    net: Decimal
+    days: list[str]
+    books: list[str]  # most trades first, then as they came
+    same_day: bool  # opened and closed on one date, so a span of time can be said
+    span_seconds: int
+    gaps: dict[str, int]  # trip_id: seconds since the previous exit; negative if it was still open
+    flips: int
+    size: SizeRise | None
+    back_in: BackIn | None
+    after: Trip | None  # the first trade after the run
+    last_day: str
+    last_day_net: Decimal
+    running: list[tuple[Trip, Decimal]]  # the run and the trade after, each as it closed
+    lowest: Decimal
+    last: Decimal
+
+
+def call_or_put(trip: Trip) -> str | None:
+    """"CE" or "PE" on one option. A position of several legs is neither, and nor is a share."""
+    if not trip.is_option or len(trip.lines) != 1:
+        return None
+    return trip.lines[0].option_type or None
+
+
+def _gaps(trades: list[Trip]) -> dict[str, int]:
+    """Seconds from each trade back to the exit of the one before, on the same trading day.
+
+    A night is not a gap, so a day's first trade has none. Negative when the one before was
+    still open.
+    """
+    return {
+        cur.trip_id: int((cur.entry_ts - prev.exit_ts).total_seconds())
+        for prev, cur in pairwise(trades)
+        if cur.trading_day == prev.trading_day
+    }
+
+
+def _flips(trades: list[Trip]) -> int:
+    """Calls to puts and back, between neighbouring trades on one underlying."""
+    return sum(
+        1
+        for prev, cur in pairwise(trades)
+        if call_or_put(prev) and call_or_put(cur)
+        and call_or_put(prev) != call_or_put(cur)
+        and book_of(prev.symbol) == book_of(cur.symbol)
+    )
+
+
+def _size_rise(trades: list[Trip]) -> SizeRise | None:
+    """The first rise in quantity, and the climb until it next fell.
+
+    Quantities compare only on one instrument, each trade with one size: 100 of one contract
+    against 200 of another is not a rise, and a position of several legs has no one size.
+    """
+    if len({t.symbol for t in trades}) != 1 or any(len(t.lines) != 1 for t in trades):
+        return None
+    sizes = [t.lines[0].quantity for t in trades]
+    if not all(sizes):
+        return None
+    first = next((i for i in range(1, len(sizes)) if sizes[i] > sizes[i - 1]), None)
+    if first is None:
+        return None
+    steps = [sizes[first - 1], sizes[first]]
+    for size in sizes[first + 1:]:
+        if size < steps[-1]:
+            break
+        if size > steps[-1]:
+            steps.append(size)
+    return SizeRise(losses_before=first, steps=steps)
+
+
+def _back_in(gaps: dict[str, int], days: list[str], books: list[str]) -> BackIn | None:
+    """How many re-entries came inside two minutes: one day and one book, or nothing is said."""
+    if len(days) != 1 or len(books) != 1:
+        return None
+    returns = [g for g in gaps.values() if g >= 0]
+    within = sum(g <= RE_ENTRY_SECONDS for g in returns)
+    return BackIn(within=within, of=len(returns)) if within else None
+
+
+def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
+    """A run's facts, computed from its own trades. None for no run. States facts, never causes."""
+    trades = subset(trips, trip_ids)
+    if not trades:
+        return None
+    last = trips.index(trades[-1])
+    after = trips[last + 1] if last + 1 < len(trips) else None
+    days = sorted({t.trading_day for t in trades})
+    counts: dict[str, int] = {}
+    for t in trades:
+        counts[trade_book(t)] = counts.get(trade_book(t), 0) + 1
+    books = sorted(counts, key=lambda book: -counts[book])
+    gaps = _gaps(trades)
+    started, ended = trades[0].entry_ts, max(t.exit_ts for t in trades)
+    with_after = _gaps([trades[-1], after]) if after else {}
+    running: list[tuple[Trip, Decimal]] = []
+    total = Decimal(0)
+    for t in sorted([*trades, after] if after else trades, key=lambda t: t.exit_ts):
+        total += t.net
+        running.append((t, _round(total)))
+    return RunStory(
+        trades=trades,
+        length=len(trades),
+        net=_run_net(trades),
+        days=days,
+        books=books,
+        same_day=len(days) == 1 and all(t.closed_same_day for t in trades),
+        span_seconds=int((ended - started).total_seconds()),
+        gaps={**gaps, **with_after},
+        flips=_flips(trades),
+        size=_size_rise(trades),
+        back_in=_back_in(gaps, days, books),
+        after=after,
+        last_day=days[-1],
+        last_day_net=_run_net([t for t in trips if t.trading_day == days[-1]]),
+        running=running,
+        lowest=min(value for _, value in running),
+        last=running[-1][1],
+    )
+
+
 LOSS_SIZES_MINIMUM = 20
 """Below this, "one in twenty" is not something the file can say."""
 
@@ -970,6 +1151,123 @@ def math_by_book(trips: list[Trip]) -> list[BookMath]:
             biggest_losers=_biggest_losers(book_trips),
         ))
     return out
+
+
+@dataclass(frozen=True)
+class StripTrade:
+    """One trade on the call/put strip. side is CE, PE, or both for a position of several legs."""
+
+    side: str
+    net: Decimal
+
+
+@dataclass(frozen=True)
+class BusiestDayStory:
+    """What a day was made of, for any trader (TICKET-827). A part that is not true of the day
+    is None, and the page says something plainer: nothing here assumes one strike or one book.
+
+    book is the book with more than half of the day's trades, at least two of them. Everything
+    from book_net to held_past_day reads that book's trades only. net is the whole day, every
+    book, which is what the list under the story adds up to.
+    """
+
+    day: str
+    trades: int
+    net: Decimal
+    book: str | None = None
+    book_trades: int = 0
+    book_net: Decimal | None = None
+    strike: Decimal | None = None  # the one strike every leg was on
+    strikes: int = 0  # how many strikes, when every leg has one
+    lots: int | None = None  # the one size of every trade, options with a single leg only
+    lots_low: int | None = None
+    lots_high: int | None = None
+    switches: int | None = None  # call to put or back, one single-leg trade to the next
+    one_side: str | None = None  # CE or PE, when every trade in the book was that side
+    only_positions: bool = False
+    started: datetime | None = None  # the book's first entry
+    ended: datetime | None = None  # its last exit, or last entry if one stayed open past the day
+    median_hold_seconds: int | None = None  # None if one stayed open past the day
+    longest_hold_seconds: int | None = None
+    holds_alike: bool = False  # every hold within a factor of two of the median
+    held_past_day: int = 0
+    strip: tuple[StripTrade, ...] = ()
+    strip_is_the_book: bool = False
+
+
+def _strip_side(trip: Trip) -> str | None:
+    if len(trip.lines) > 1:
+        return "both"
+    if trip.lines and trip.lines[0].option_type in ("CE", "PE"):
+        return trip.lines[0].option_type
+    return None
+
+
+def busiest_day_story(trips: list[Trip], day: str) -> BusiestDayStory:
+    """One day told in its own terms: which book, which strike, what size, how often the side
+    changed, how long each was held. See BusiestDayStory for what each part covers."""
+    on_day = sorted((t for t in trips if t.trading_day == day), key=lambda t: (t.entry_ts, t.trip_id))
+    by_book: dict[str, list[Trip]] = {}
+    for t in on_day:
+        by_book.setdefault(trade_book(t), []).append(t)
+    book = next((b for b, ts in by_book.items() if len(ts) >= 2 and len(ts) * 2 > len(on_day)), None)
+    book_trips = by_book[book] if book else []
+    book_is_options = bool(book_trips) and book_trips[0].is_option
+    drawn = book_trips if book_is_options else [t for t in on_day if t.is_option]
+    story = BusiestDayStory(
+        day=day,
+        trades=len(on_day),
+        net=sum((t.net for t in on_day), Decimal(0)),
+        strip=tuple(StripTrade(side, t.net) for t in drawn if (side := _strip_side(t))),
+        strip_is_the_book=book_is_options,
+    )
+    if not book_trips:
+        return story
+
+    open_past_day = sum(not t.closed_same_day for t in book_trips)
+    parts: dict[str, Any] = {
+        "book": book,
+        "book_trades": len(book_trips),
+        "book_net": sum((t.net for t in book_trips), Decimal(0)),
+        "started": book_trips[0].entry_ts,
+        "ended": book_trips[-1].entry_ts if open_past_day else max(t.exit_ts for t in book_trips),
+        "held_past_day": open_past_day,
+    }
+    if not open_past_day:
+        holds = [t.holding_seconds for t in book_trips]
+        middle = int(median(holds))
+        parts.update(
+            median_hold_seconds=middle,
+            longest_hold_seconds=max(holds),
+            holds_alike=all(middle <= 2 * h and h <= 2 * middle for h in holds),
+        )
+    if book_is_options and all(t.lines for t in book_trips):
+        parts.update(_option_parts(book_trips))
+    return replace(story, **parts)
+
+
+def _option_parts(trips: list[Trip]) -> dict[str, Any]:
+    """Strike, size and side, each only when every trade in the book can answer it."""
+    parts: dict[str, Any] = {}
+    strikes = {line.strike for t in trips for line in t.lines}
+    if None not in strikes:
+        parts["strikes"] = len(strikes)
+        if len(strikes) == 1:
+            parts["strike"] = next(iter(strikes))
+    single = [t for t in trips if len(t.lines) == 1]
+    if len(single) == len(trips):
+        sizes = {t.lots for t in trips}
+        if len(sizes) == 1:
+            parts["lots"] = next(iter(sizes))
+        else:
+            parts.update(lots_low=min(sizes), lots_high=max(sizes))
+    sides = [side for t in single if (side := _strip_side(t))]
+    parts["only_positions"] = not single
+    if sides:
+        parts["switches"] = sum(a != b for a, b in pairwise(sides))
+        if len(sides) == len(trips) and len(set(sides)) == 1:
+            parts["one_side"] = sides[0]
+    return parts
 
 
 @dataclass(frozen=True)
