@@ -17,7 +17,7 @@
       {%- else %} None came when the two most recent had not both lost.{% endif %}
     {%- endif %}</p>
 {% endblock %}
-{% block caption %}Every trade opened after two that had already closed at a loss.{% endblock %}
+{% block caption %}Every trade opened after two earlier trades that day had already closed.{% endblock %}
 {% block caption_more %}<p class="evidence__caption"><span class="num">{{ f.trade_count|count }}</span> of <span class="num">{{ two_losses.population|count }}</span> qualifying trades. Listed in the order you opened them.</p>{% endblock %}
 {% block lineage %}
   {{ next_fact(f.next) }}
