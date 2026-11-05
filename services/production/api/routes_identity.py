@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
 from services.production.accounts import auth
+from services.production.ctr.intake import day_versions as dv
 from services.production.db import models as m
 from services.production.db.session import make_session
 
@@ -210,6 +211,24 @@ def logout(request: Request, csrf_token: str = Form(None)):
     return response
 
 
+def _upload_changes(sess, trader: m.Trader) -> dict[int, dv.UploadChange]:
+    """What each upload changed, by import id, for every upload that followed another.
+
+    A rejected file writes no day versions, so it neither has a change nor counts as
+    the upload before one. The first file read has nothing to compare with. That is
+    asked of the order of the files, not of rows_before: a later file holding only new
+    days also has no rows before it.
+    """
+    versions = sess.scalars(
+        select(m.TradingDayVersion).where(m.TradingDayVersion.trader_id == trader.id)
+    ).all()
+    by_import: dict[int, list[m.TradingDayVersion]] = {}
+    for version in versions:
+        by_import.setdefault(version.import_id, []).append(version)
+    return {import_id: dv.upload_change(by_import[import_id])
+            for import_id in sorted(by_import)[1:]}
+
+
 @router.get("/account", response_class=HTMLResponse)
 def account(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -223,4 +242,4 @@ def account(request: Request):
         ).all()
         return page(request, "account.html", title="Your account",
                     display_name=trader.display_name, login_id=trader.login_id,
-                    imports=imports)
+                    imports=imports, changes=_upload_changes(sess, trader))

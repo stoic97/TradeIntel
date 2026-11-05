@@ -33,6 +33,13 @@ Appendix A: hours with fewer than five trips are still shown. Hiding a thin hour
 would make the remaining ones look more solid than they are.
 """
 
+CLOCK_MINIMUM_TRADES = 30
+"""Below this, an hour on a book's clock shows ₹ and the count but no win rate (ruling).
+
+Also where a book's clock gets a chart of its own, and which hours a ₹ per trade is set
+beside: a rate has a minimum, and ₹ per trade does not, but one trade is not a comparison.
+"""
+
 
 @dataclass(frozen=True)
 class Leg:
@@ -251,6 +258,29 @@ class HourResult:
     net: Decimal
     trips: int
     small_sample: bool
+
+
+@dataclass(frozen=True)
+class ClockHour:
+    """One hour on one book's clock."""
+
+    hour: int
+    net: Decimal
+    trips: int
+    per_trade: Decimal
+    small_sample: bool
+    win_rate: Decimal | None  # as strike_rate reads it; none under CLOCK_MINIMUM_TRADES
+    win_rate_state: s.ResultState
+
+
+@dataclass(frozen=True)
+class BookClock:
+    book: str  # trade_book's name for it
+    hours: list[ClockHour]
+    trips: int
+    net: Decimal
+    largest: ClockHour
+    larger_per_trade: ClockHour | None
 
 
 @dataclass(frozen=True)
@@ -588,6 +618,25 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
+def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
+    """May a page state a direction for trades after two straight losses? Not today.
+
+    TICKET-832 lets that sentence show only if the research library's shuffle test (B2)
+    passes on the trader's file. There is no such test to call. Research has the null
+    written down (N-B in prereg/framework_v1.yaml, and its measured inflation in
+    engine/evidence.py) but no function that runs it, and library/b2.py is a Bayesian M1
+    fit. Production may not import research either (methodology Rule 5), and the server
+    installs without the research group. Writing a statistic here would redefine research's
+    test, so this answers False and the page says "No difference we can stand behind."
+    beside the same numbers.
+
+    What turns it on: research exposes a callable test where production may use it
+    (services/shared), and this returns whether it passed on these trips. Nothing else
+    needs to change; the sentence is written, and tested with this patched open.
+    """
+    return False
+
+
 def subset(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:
     """The named trips, in their original order. For comparing a group to the rest."""
     wanted = set(trip_ids)
@@ -689,6 +738,69 @@ def result_by_hour(trips: list[Trip]) -> list[HourResult]:
         )
         for hour, hour_trips in sorted(hours.items())
     ]
+
+
+def clock_hour_of(hour: int, trips: list[Trip]) -> ClockHour:
+    """One hour on one book's clock. ₹ per trade is arithmetic and shows at any count.
+
+    The total is back to the paise a broker reports in: a fill split across parcels sums to
+    -99.99...9, and the whole-rupee cut would then print a rupee less than the file has.
+    """
+    rate = strike_rate(trips) if len(trips) >= CLOCK_MINIMUM_TRADES else None
+    net = _round(sum((t.net for t in trips), Decimal(0)))
+    return ClockHour(
+        hour=hour,
+        net=net,
+        trips=len(trips),
+        per_trade=net / len(trips),
+        small_sample=len(trips) < SMALL_SAMPLE_TRIPS,
+        win_rate=rate.rate_percent if rate else None,
+        win_rate_state=rate.state if rate else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+def _larger_per_trade(hours: list[ClockHour], largest: ClockHour) -> ClockHour | None:
+    """The hour larger per trade than the largest total, among hours of 30 trades or more.
+
+    A one-trade hour is always "large per trade", so it is not set beside a total. Whole
+    rupees, as the page prints them: two hours that read the same are not larger or smaller.
+    """
+    counted = [h for h in hours if h.trips >= CLOCK_MINIMUM_TRADES]
+    if not counted:
+        return None
+    other = max(counted, key=lambda h: (abs(h.per_trade), h.trips))
+    return other if int(abs(other.per_trade)) > int(abs(largest.per_trade)) else None
+
+
+def clocks_by_book(trips: list[Trip]) -> list[BookClock]:
+    """One clock per book, most trades first. Hours are the instrument's own, as result_by_hour's.
+
+    The largest hour is the largest result either way, in rupees; two the same size read
+    the one with more trades, then the earlier. It says what happened and calls no hour good.
+    """
+    books: dict[str, dict[int, list[Trip]]] = {}
+    for trip in trips:
+        books.setdefault(trade_book(trip), {}).setdefault(trip.entry_ts.hour, []).append(trip)
+    clocks = []
+    for book, by_hour in books.items():
+        hours = [clock_hour_of(hour, by_hour[hour]) for hour in sorted(by_hour)]
+        largest = max(hours, key=lambda h: (abs(h.net), h.trips, -h.hour))
+        clocks.append(BookClock(
+            book=book,
+            hours=hours,
+            trips=sum(h.trips for h in hours),
+            net=sum((h.net for h in hours), Decimal(0)),
+            largest=largest,
+            larger_per_trade=_larger_per_trade(hours, largest),
+        ))
+    return sorted(clocks, key=lambda c: (-c.trips, c.book))
+
+
+def lead_clock(clocks: list[BookClock]) -> BookClock | None:
+    """The clock whose largest hour is the largest across the books; the fact leads with it."""
+    if not clocks:
+        return None
+    return max(clocks, key=lambda c: (abs(c.largest.net), c.largest.trips, c.trips))
 
 
 def longest_losing_run(trips: list[Trip]) -> LosingRun:
@@ -804,6 +916,87 @@ def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
             percent=int(median(results).to_integral_value()),
         ))
     return read
+
+
+@dataclass(frozen=True)
+class WorstDayRow:
+    trading_day: str
+    books: tuple[str, ...]
+    trades: int
+    net: Decimal
+
+
+@dataclass(frozen=True)
+class WorstDayStory:
+    """How the worst day went, from its first trade."""
+
+    trading_day: str
+    first_net: Decimal
+    later: int
+    net: Decimal
+
+    @property
+    def first_size(self) -> Decimal:
+        return abs(self.first_net)
+
+    @property
+    def down(self) -> Decimal:
+        return -self.net
+
+
+@dataclass(frozen=True)
+class FiveDaysRead:
+    """What the five worst days were and what they share. Counts from the file, no cause."""
+
+    rows: tuple[WorstDayRow, ...]
+    first_lost_days: int
+    lost_after_first: Decimal
+    shared_book: str | None
+    past_nine: int
+    story: WorstDayStory | None
+
+
+def _day_book(trip: Trip) -> str:
+    return book_of(trip.symbol) if trip.is_option else "equity"
+
+
+def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
+    """The five worst days named, with what the record says they have in common.
+
+    A day counts as "first trade lost, and more lost after it" only if the rest of the day also
+    lost, so a day that recovered isn't described as carrying on losing.
+    """
+    worst = five_worst_days(trips).days
+    if not worst:
+        return None
+    by_day = _by_day(trips)
+    rows, lost_days, lost_after = [], 0, Decimal(0)
+    for day in worst:
+        ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
+        rows.append(WorstDayRow(
+            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+        ))
+        rest = sum((t.net for t in ordered[1:]), Decimal(0))
+        if ordered[0].is_loss and rest < 0:
+            lost_days += 1
+            lost_after += -rest
+    shared = set(rows[0].books).intersection(*(r.books for r in rows))
+    worst_first = sorted(by_day[worst[0].trading_day], key=lambda t: t.entry_ts)
+    story = None
+    if len(worst_first) > 1 and worst[0].net < 0:
+        story = WorstDayStory(
+            worst[0].trading_day, worst_first[0].net, len(worst_first) - 1, worst[0].net,
+        )
+    return FiveDaysRead(
+        rows=tuple(rows),
+        first_lost_days=lost_days,
+        lost_after_first=lost_after,
+        shared_book=next((b for b in rows[0].books if b in shared), None),
+        past_nine=sum(
+            any(t.entry_ts.hour >= 21 for t in by_day[day.trading_day]) for day in worst
+        ),
+        story=story,
+    )
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
