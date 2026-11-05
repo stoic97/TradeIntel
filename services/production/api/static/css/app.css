@@ -56,8 +56,10 @@
 .num { white-space: nowrap; } /* a minus stays with its figure, on every page */
 .scope__centre-figure--long { font-size: 18px; }
 .scope__centre-figure--longer { font-size: 15px; }
+.scope__centre-figure--longest { font-size: 13px; }
 .scope--desktop .scope__centre-figure--long { font-size: 26px; }
 .scope--desktop .scope__centre-figure--longer { font-size: 22px; }
+.scope--desktop .scope__centre-figure--longest { font-size: 19px; }
 .clock-others { margin-top: var(--space-10); }
 .clock-others summary { cursor: pointer; }
 .clock-next { margin-top: var(--space-10); }

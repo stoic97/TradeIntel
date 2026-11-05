@@ -33,11 +33,12 @@ def test_home_does_not_say_it_is_in_development():
 
 @pytest.mark.parametrize(("figure", "expected"), [
     ("₹0", "scope__centre-figure"),
-    ("−₹1,420", "scope__centre-figure"),
+    ("₹1,420", "scope__centre-figure"),
+    ("−₹1,420", "scope__centre-figure scope__centre-figure--long"),
     ("−₹58,522", "scope__centre-figure scope__centre-figure--long"),
     ("+₹9,99,999", "scope__centre-figure scope__centre-figure--longer"),
     ("−₹1,27,263", "scope__centre-figure scope__centre-figure--longer"),
-    ("−₹12,34,567", "scope__centre-figure scope__centre-figure--longer"),
+    ("−₹12,34,567", "scope__centre-figure scope__centre-figure--longest"),
 ])
 def test_a_longer_result_is_drawn_smaller_so_it_stays_in_the_centre(figure, expected):
     assert centre_class(figure) == expected
@@ -45,8 +46,10 @@ def test_a_longer_result_is_drawn_smaller_so_it_stays_in_the_centre(figure, expe
 
 def test_each_size_has_its_rule_on_both_dials():
     for rule in (".scope__centre-figure--long", ".scope__centre-figure--longer",
+                 ".scope__centre-figure--longest",
                  ".scope--desktop .scope__centre-figure--long",
-                 ".scope--desktop .scope__centre-figure--longer"):
+                 ".scope--desktop .scope__centre-figure--longer",
+                 ".scope--desktop .scope__centre-figure--longest"):
         assert rule + " {" in CSS
 
 

@@ -431,6 +431,8 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
 def _centre_figure_class(figure: str) -> str:
     """The centre is a fixed circle and a result can run to ten characters or more, so a longer
     figure is drawn smaller. The sizes are in app.css; the kit's own is the short one."""
+    if len(figure) >= CENTRE_LONGEST:
+        return "scope__centre-figure scope__centre-figure--longest"
     if len(figure) >= CENTRE_LONGER:
         return "scope__centre-figure scope__centre-figure--longer"
     if len(figure) >= CENTRE_LONG:
@@ -553,7 +555,7 @@ def _esc(s) -> str:
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-CENTRE_LONG, CENTRE_LONGER = 8, 10
+CENTRE_LONG, CENTRE_LONGER, CENTRE_LONGEST = 7, 9, 11
 """Characters at which a centre figure steps down a size."""
 
 
