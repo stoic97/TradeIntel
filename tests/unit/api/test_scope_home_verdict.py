@@ -29,9 +29,10 @@ from tests.unit.api.test_scope_chapters import TRIPS as FORTY
 def t(day, net, symbol="CRUDEOIL", is_option=True, held_days=0, at="10:00"):
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
     exit_ts = entry + timedelta(days=held_days, minutes=10)
+    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None, Decimal(net)),)
     return mx.Trip(
         f"{symbol}-{day}-{at}", symbol, day, entry, exit_ts, int((exit_ts - entry).total_seconds()),
-        Decimal(net), 1, sc.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option,
+        Decimal(net), 1, sc.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
     )
 
 
@@ -86,7 +87,7 @@ def test_each_book_has_its_result_and_its_trades():
         ("Crude options", Decimal(-2400), 20),
         ("NIFTY options", Decimal(-100), 20),
         ("Other options", Decimal(-20), 5),
-        ("Stocks, ETFs and futures", Decimal(1100), 3),
+        ("Stocks and ETFs", Decimal(1100), 3),
     ]
 
 
@@ -197,7 +198,7 @@ def test_each_book_has_a_row_with_one_line():
     assert "Crude options −₹2,400 20 trades. Worst day: 05 Jan 2026, −₹500." in body
     assert "NIFTY options −₹100 20 trades. Worst day: 02 Feb 2026, −₹150." in body
     assert "Other options −₹20 5 trades. Worst day: 01 May 2026, −₹10." in body
-    assert "Stocks, ETFs and futures +₹1,100 3 trades. Shree Cement made ₹1,300, held up to 300 days." in body
+    assert "Stocks and ETFs +₹1,100 3 trades. Shree Cement made ₹1,300, held up to 300 days." in body
 
 
 def test_a_single_trade_reads_in_the_singular():
@@ -287,7 +288,7 @@ def test_chapter_3_counts_and_compares_nothing():
     body = text(trips=FORTY)
     assert (
         f"On {population} occasions you opened a trade after two earlier trades that day "
-        "had already closed at a loss."
+        "had already closed."
     ) in body
     assert "on average" not in body and "each" not in body
 
@@ -333,3 +334,32 @@ def test_with_everything_read_there_is_no_button():
 
 def test_no_buy_or_sell_calls_stays():
     assert "<span>No buy or sell calls, ever.</span><span>4 chapters</span>" in page()
+
+
+def _future(net):
+    entry = datetime.fromisoformat("2026-06-01T10:00:00+05:30")
+    return mx.Trip("f1", "NIFTY FUT", "2026-06-01", entry, entry + timedelta(minutes=5), 300,
+                   Decimal(net), 1, sc.RiskUnitSourceV1.UNAVAILABLE, is_option=False,
+                   lines=(mx.TradeLine("NIFTY FUT", "FUT", "Buy", 1, None, None, Decimal(net)),))
+
+
+def test_the_books_are_the_ones_every_other_page_calls_them():
+    """One definition, trade_book: a future isn't in with the stocks here and apart on the clock."""
+    trips = [*options(), t("2026-06-02", 700, "INFY", is_option=False), _future(-250)]
+    books = {row.label: row.net for row in mx.verdict(trips).books}
+    assert books["Stocks and ETFs"] == Decimal(700)
+    assert books["Futures"] == Decimal(-250)
+
+
+def test_a_standout_sits_on_the_row_that_holds_it():
+    trips = [*options(), t("2025-01-01", 900, "Shree Cement", is_option=False, held_days=30),
+             _future(10)]
+    rows = {row.label: row for row in mx.verdict(trips).books}
+    assert rows["Stocks and ETFs"].standout.symbol == "Shree Cement"
+    assert rows["Futures"].standout is None
+
+
+def test_the_verdict_still_adds_stocks_and_futures_together():
+    """The sentence and the card's split read the two as one group; the rows split it."""
+    made = mx.verdict([*options(), t("2026-06-02", 700, "INFY", is_option=False), _future(-250)])
+    assert (made.others_net, made.others_trades) == (Decimal(450), 2)
