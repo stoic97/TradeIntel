@@ -119,7 +119,8 @@ class _Reader:
 def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     imports = sess.execute(
         select(m.Import.id, m.Import.trader_id, m.Import.outcome, m.Import.code_version,
-               m.Import.rows_in, m.Import.rows_parsed, m.Import.created_at)
+               m.Import.rows_in, m.Import.rows_parsed, m.Import.rows_excluded,
+               m.Import.created_at, m.Import.raw_file_id)
         .order_by(m.Import.id)
     ).all()
     read = []
@@ -266,12 +267,19 @@ def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tupl
                m.Import.outcome == s.ImportOutcome.REJECTED)
         .order_by(m.Import.id.desc()).limit(FEED_LENGTH)
     ).all())
+    # Only a re-read or a confirmation gives a second import to one stored file: neither
+    # sent anything new.
+    first_import_of = {}
+    for row in imports:
+        first_import_of.setdefault(row.raw_file_id, row.id)
     lines = []
     for row in imports[-FEED_LENGTH:]:
         who = real[row.trader_id].login_id
         if row.outcome is s.ImportOutcome.REJECTED:
             reason = refusal_reason(rejections.get(row.id))
             text = f"{who} had a file refused: {reason}" if reason else f"{who} had a file refused"
+        elif first_import_of[row.raw_file_id] != row.id:
+            text = f"{who} had a file read again: {_rows_read(row)} rows read"
         else:
             text = f"{who} uploaded a file: {_rows_read(row)} rows read"
         lines.append((row.created_at, text))
@@ -361,7 +369,9 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "login_id": _name(reader.login_id),
         "step": _step(reader),
         "rows_read": _rows_read(latest) if latest else NOT_RECORDED,
-        "rows_refused": latest.rows_in - latest.rows_parsed if latest else NOT_RECORDED,
+        # A set-aside row was read and not refused. Older readings counted it in both.
+        "rows_refused": (max(0, latest.rows_in - latest.rows_parsed - latest.rows_excluded)
+                         if latest else NOT_RECORDED),
         "uploads_refused": reader.uploads_refused,
         "duplicates": duplicates.get(latest.id, 0) if latest else NOT_RECORDED,
         "on_current": _on_current(reader, running_version),

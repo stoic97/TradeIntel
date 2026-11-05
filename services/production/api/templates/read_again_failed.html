@@ -1,0 +1,10 @@
+{#- A file that could not be read again (TICKET-844). Nothing was written, so his record
+    is what it was, and the page says that before anything else. -#}
+{% extends "layout.html" %}
+{% set nav = "account" %}
+{% block content %}
+  <p class="label label--plain">Your upload</p>
+  <h1 class="title">Your file was not read again</h1>
+  <p class="lead file-error">{{ sentence }}</p>
+  <a class="btn btn--text" href="/account">Back to your account</a>
+{% endblock %}

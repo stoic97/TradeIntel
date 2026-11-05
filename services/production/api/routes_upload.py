@@ -10,7 +10,8 @@ pathological file would otherwise hold the request open while being read.
 
 **It refuses a byte-identical re-upload with a message.** Content-addressed storage
 makes the second copy harmless, but silently accepting it would leave the trader
-believing he had added something.
+believing he had added something. When reconstruction has moved on since that file was
+read, the message also offers to read the stored file again; he decides (TICKET-844).
 
 **It checks ownership on every read.** An import that is not yours is a 404, not a
 403: "that exists but isn't yours" is itself information about another trader.
@@ -19,6 +20,8 @@ believing he had added something.
 from __future__ import annotations
 
 import hashlib
+import logging
+import threading
 from datetime import date
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -27,8 +30,8 @@ from sqlalchemy import select
 
 from services.production import demo
 from services.production.accounts import deletion
-from services.production.accounts.file_store import FileStore
-from services.production.api import limits
+from services.production.accounts.file_store import CannotDecrypt, FileStore, NoSuchFile
+from services.production.api import formatting, limits
 from services.production.api.routes_consent import (
     has_diagnosis_consent,
     trader_today,
@@ -37,16 +40,24 @@ from services.production.api.routes_consent import (
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.charges import statement as charge_statement
 from services.production.ctr.adapters import filemap
-from services.production.ctr.intake import duplicates as dup
 from services.production.ctr.intake import persist
 from services.production.ctr.intake import pipeline as pl
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import constants as k
 from services.production.journal import generate as gen
+from services.production.mirror import loader
 from services.shared.schemas import scope_v1 as s
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+_READING_AGAIN = threading.Lock()
+COULD_NOT_OPEN = ("We could not open your stored file, so it was not read again. Nothing "
+                  "changed: your figures are still the ones from the last reading. The "
+                  "fault is ours, not your file's.")
+COULD_NOT_READ = ("The newer code could not read your stored file, so it was not read again. "
+                  "Nothing changed: your figures are still the ones from the last reading.")
 
 
 def _store(request: Request) -> FileStore:
@@ -68,6 +79,48 @@ def _owned_import(sess, trader: m.Trader, import_id: int) -> m.Import | None:
     if imp is None or imp.trader_id != trader.id:
         return None
     return imp
+
+
+def _first_upload(sess, trader: m.Trader, digest: str) -> m.RawFile | None:
+    """The first time he sent these bytes. Older confirmations wrote another row for them."""
+    return sess.scalars(
+        select(m.RawFile).where(m.RawFile.trader_id == trader.id, m.RawFile.sha256 == digest)
+        .order_by(m.RawFile.id)
+    ).first()
+
+
+def _when(raw: m.RawFile) -> str:
+    return raw.uploaded_at.astimezone(limits.INDIA).strftime("%d %b %Y")
+
+
+def _same_file_again(sess, trader: m.Trader, digest: str) -> tuple[str, int | None]:
+    """What to say when he sends bytes he has already sent, and any import to offer reading.
+
+    Which file, when, and how many rows, because two exports from one account have nearly
+    identical names. Never that he should go to his broker for a file he has. The offer is
+    only for the file the report reads now, and only when this code would read it differently.
+    """
+    first = _first_upload(sess, trader, digest)
+    named = f"You have already uploaded this exact file: {first.original_name}, on {_when(first)}"
+    reading = sess.scalars(
+        select(m.Import).join(m.RawFile, m.Import.raw_file_id == m.RawFile.id)
+        .where(m.Import.trader_id == trader.id, m.RawFile.sha256 == digest)
+        .order_by(m.Import.id.desc())
+    ).first()
+    if reading is None:  # stored by the charges step, so it has no rows of a tradebook
+        return f"{named}. Nothing was added.", None
+    if reading.outcome is s.ImportOutcome.REJECTED:
+        return f"{named}. We could not read it as a tradebook. Nothing was added.", None
+
+    rows = f"{formatting.count(reading.rows_in)} {'row' if reading.rows_in == 1 else 'rows'}"
+    said = f"{named}, {rows}. Nothing was added."
+    current = loader.current_import(sess, trader)
+    if current is None:
+        return said, None
+    if sess.get(m.RawFile, current.raw_file_id).sha256 == digest:
+        return said, current.id if pl.out_of_date(current) else None
+    reads = _first_upload(sess, trader, sess.get(m.RawFile, current.raw_file_id).sha256)
+    return f"{said} Your record now reads {reads.original_name}, from {_when(reads)}.", None
 
 
 @router.post("/upload")
@@ -109,15 +162,9 @@ async def upload_file(
             return upload_page(request, status_code=400, error=limits.TOO_LARGE)
 
         digest = hashlib.sha256(content).hexdigest()
-        already = sess.scalars(
-            select(m.RawFile).where(m.RawFile.trader_id == trader.id,
-                                    m.RawFile.sha256 == digest)
-        ).first()
-        if already is not None:
-            return upload_page(request, status_code=400,
-                               error="You have already uploaded this exact file. Nothing "
-                                     "was added. If you meant to send a newer export, "
-                                     "download it again from your broker.")
+        if _first_upload(sess, trader, digest) is not None:
+            sentence, offered = _same_file_again(sess, trader, digest)
+            return upload_page(request, status_code=400, error=sentence, read_again_id=offered)
         return _ingest(request, sess, trader, content=content,
                        file_name=file.filename or "tradebook.csv",
                        export_date=export_date or None, source_account="A")
@@ -250,10 +297,16 @@ def import_review(request: Request, import_id: int):
             d.trading_day for d in days if d.diff is not s.DayDiff.IDENTICAL
         ]
         shrunk_days = [d.trading_day for d in days if d.day_shrank]
+        read_again = persist.read_with_newer_code(sess, imp)
+        earlier = persist.earlier_reading(sess, imp) if read_again else None
+        confirmed = [r for r in rows if r.flag is s.RowFlag.TRADER_CONFIRMED_DUPLICATE]
         return page(request, "import_review.html", title="What we read",
                     imp=imp, groups=groups, excluded=excluded, rejected=rejected,
                     days=days, first_upload=first_upload, changed_days=changed_days,
-                    shrunk_days=shrunk_days,
+                    shrunk_days=shrunk_days, read_again=read_again,
+                    same_file=persist.reads_same_file_as_before(sess, imp),
+                    rows_confirmed=len(confirmed) if pl.rebuilt_without_confirmed(imp) else 0,
+                    trades_before=earlier.trips_reconstructed if earlier else None,
                     charges_offered=(charges_open(request) and not imp.fees_available
                                      and imp.trips_reconstructed > 0))
 
@@ -263,72 +316,123 @@ def confirm_duplicates(request: Request, import_id: int,
                        dup_group: str = Form(...), csrf_token: str = Form(None)):
     """The trader says a flagged group is one trade recorded twice.
 
-    The import is re-run as a new version with those rows excluded. The earlier
-    version keeps its rows: a confirmation is a new reading of the same file, not an
-    edit of what we first read.
+    The file is read again as a new version without those rows, so every figure is
+    rebuilt from what remains. The earlier version keeps its rows: a confirmation is a
+    new reading of the same file, not an edit of what we first read. It adds no file, so
+    the day's upload limit doesn't count it. Only the current import's file, as with a
+    re-read: an older file's would replace what the report reads. A page left open on an
+    earlier reading of this file adds to the current one, so nothing confirmed since is
+    lost, and a group already settled writes nothing.
     """
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
-    with make_session(request.app.state.engine) as sess:
+    with _READING_AGAIN, make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
             return RedirectResponse("/login", status_code=303)
         imp = _owned_import(sess, trader, import_id)
-        if imp is None:
+        current = loader.current_import(sess, trader)
+        if imp is None or current is None or not persist.same_file(sess, imp, current):
             return page(request, "404.html", status_code=404, title="Not found")
+        if dup_group not in persist.still_suspected(sess, current):
+            return RedirectResponse(f"/imports/{current.id}", status_code=303)
 
-        raw = sess.get(m.RawFile, imp.raw_file_id)
-        content = _store(request).get(raw.sha256)
-        text = content.decode("utf-8-sig", errors="replace")
-
-        existing = persist.existing_days(sess, trader=trader,
-                                         source_account=imp.source_account)
+        raw = sess.get(m.RawFile, current.raw_file_id)
         # The same gate the upload path keeps. A confirmation re-reads the file
         # from the store and re-plans it, so an unchecked broker map has to
         # refuse here too -- otherwise the gate held on upload and let go one
         # click later, which is the worse failure of the two (TD-024).
         try:
-            plan = pl.plan_import(
-                text,
-                context=pl.ImportContext(
-                    trader_id=str(trader.id), source_account=imp.source_account,
-                    code_version=_code_version(request), existing_days=existing,
-                    export_date=imp.export_date,
-                    export_date_source=imp.export_date_source,
-                ),
-                production=request.app.state.settings.production,
-            )
+            plan = _read_stored(request, sess, trader, current, raw, also_confirm=(dup_group,))
+        except (NoSuchFile, CannotDecrypt):
+            logger.exception("import %s: the stored file could not be opened", current.id)
+            return _not_read_again(request, 503, COULD_NOT_OPEN)
         except filemap.UnverifiedFileMap:
             return page(request, "upload_closed.html", status_code=503,
                         title="Not open for your broker yet")
-        confirmed = dup.confirm_group(
-            dup.Classification(tuple(
-                dup.ClassifiedRow(r.row_no, r.raw_text, r.flag, r.dup_group, r.fill_id)
-                for r in plan.rows
-            )),
-            dup_group,
-        )
-        by_row = {r.row_no: r for r in confirmed.rows}
-        plan = plan.with_rows(tuple(
-            pl.PlannedRow(
-                r.row_no,
-                r.raw_text,
-                "EXCLUDED" if by_row[r.row_no].excluded else r.status,
-                r.reason,
-                by_row[r.row_no].flag,
-                r.dup_group,
-                r.fill_id,
-            )
-            for r in plan.rows
-        ))
 
-        new_import = persist.write_plan(
-            sess, trader=trader, plan=plan, raw_sha256=raw.sha256,
-            original_name=raw.original_name, stored_path=raw.stored_path,
-            size=raw.size, source_account=imp.source_account,
-        )
-        sess.commit()
+        new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
+                                           source_account=current.source_account)
         gen.for_import(sess, trader=trader)
         sess.commit()
         return RedirectResponse(f"/imports/{new_import.id}", status_code=303)
+
+
+@router.post("/imports/{import_id}/read-again")
+def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
+    """He asks for his stored file to be read by the current code (TICKET-844).
+
+    A new version of the import reading the same ``RawFile``, so nothing earlier changes
+    and the day's upload limit doesn't count it. Only the current import's file: any older
+    or refused one would replace what the report reads. When there's nothing to do it
+    writes nothing, so repeat clicks are harmless. Everything, Journals included, commits
+    together or not at all, so a failure leaves the old import current.
+    """
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+
+    # One process (ADR 007), so this makes the check and the write one step: the second
+    # of a double click waits, then finds the import already current.
+    with _READING_AGAIN, make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        if not has_diagnosis_consent(sess, trader):
+            return RedirectResponse("/consent", status_code=303)
+        imp = _owned_import(sess, trader, import_id)
+        current = loader.current_import(sess, trader)
+        if imp is None or current is None or not persist.same_file(sess, imp, current):
+            return page(request, "404.html", status_code=404, title="Not found")
+        if not pl.out_of_date(current):
+            return RedirectResponse(f"/imports/{current.id}", status_code=303)
+
+        raw = sess.get(m.RawFile, current.raw_file_id)
+        try:
+            plan = _read_stored(request, sess, trader, current, raw)
+        except (NoSuchFile, CannotDecrypt):
+            logger.exception("import %s: the stored file could not be opened", current.id)
+            return _not_read_again(request, 503, COULD_NOT_OPEN)
+        except filemap.UnverifiedFileMap:
+            return page(request, "upload_closed.html", status_code=503,
+                        title="Not open for your broker yet")
+        except Exception:  # an unforeseen failure must still leave his record as it was
+            logger.exception("import %s: the stored file could not be planned", current.id)
+            return _not_read_again(request, 422, COULD_NOT_READ)
+        if plan.outcome is s.ImportOutcome.REJECTED or not plan.trips:
+            return _not_read_again(request, 422, COULD_NOT_READ)
+
+        try:
+            new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
+                                               source_account=current.source_account)
+            gen.for_import(sess, trader=trader)
+            sess.commit()
+        except Exception:  # as above: nothing has been committed
+            sess.rollback()
+            logger.exception("import %s: the new reading could not be written", current.id)
+            return _not_read_again(request, 422, COULD_NOT_READ)
+        return RedirectResponse(f"/imports/{new_import.id}", status_code=303)
+
+
+def _not_read_again(request: Request, status_code: int, sentence: str):
+    return page(request, "read_again_failed.html", status_code=status_code,
+                title="Your file was not read again", sentence=sentence)
+
+
+def _read_stored(request: Request, sess, trader: m.Trader, imp: m.Import, raw: m.RawFile,
+                 also_confirm: tuple[str, ...] = ()) -> pl.ImportPlan:
+    """A new plan of an import's stored file, keeping what was stated and confirmed on it."""
+    text = _store(request).get(raw.sha256).decode("utf-8-sig", errors="replace")
+    return pl.plan_import(
+        text,
+        context=pl.ImportContext(
+            trader_id=str(trader.id), source_account=imp.source_account,
+            code_version=_code_version(request),
+            existing_days=persist.existing_days(sess, trader=trader,
+                                                source_account=imp.source_account),
+            export_date=imp.export_date,
+            export_date_source=imp.export_date_source,
+        ),
+        production=request.app.state.settings.production,
+        confirmed_groups=persist.confirmed_groups(sess, imp) | set(also_confirm),
+    )

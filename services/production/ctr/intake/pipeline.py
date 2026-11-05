@@ -17,7 +17,8 @@ Persistence writes the plan; it decides nothing.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field, replace
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 
 from services.production.ctr import reconstruct as rc
 from services.production.ctr.adapters import dhan_tradebook, filemap
@@ -66,9 +67,11 @@ class ImportPlan:
     filemap_version: str | None = None
     profile_versions: dict[str, str] = field(default_factory=dict)
     code_version: str = ""
+    reconstruction_version: str | None = None
     rows: tuple[PlannedRow, ...] = ()
     rows_in: int = 0
     rows_parsed: int = 0
+    """The rows the record is built from. Set-aside and unreadable rows aren't among them."""
     rows_excluded: int = 0
     fees_available: bool = False
     missing_fields: tuple[str, ...] = ()
@@ -81,19 +84,6 @@ class ImportPlan:
     density_default_unit: str | None = None
     export_date: str | None = None
     export_date_source: str | None = None
-
-    def with_rows(self, rows: tuple[PlannedRow, ...]) -> ImportPlan:
-        """A copy carrying different row statuses, with the counts kept consistent.
-
-        Used when a trader confirms a duplicate group: the file is re-read and the
-        confirmed rows become exclusions. Rebuilding through dataclasses.replace
-        rather than __dict__ means a field added later cannot be silently dropped.
-        """
-        return replace(
-            self,
-            rows=rows,
-            rows_excluded=sum(1 for r in rows if r.status == "EXCLUDED"),
-        )
 
     def digest(self) -> str:
         """A content hash over what this plan decided.
@@ -168,10 +158,40 @@ def _density_default(trips: list[RoundTrip], days: list[str]) -> str:
     )
 
 
+def out_of_date(imp) -> bool:
+    """Whether this code would read this stored import's file differently.
+
+    Asks what reconstruction and the broker's file map say, never ``code_version``, which
+    moves on every deploy. An import from before the version was stored has none, so it
+    reads as out of date. Profile versions stay out of it: nothing stored comes from a
+    profile's lot sizes, the pages read those live, so a new one needs no re-read.
+    """
+    if imp.reconstruction_version != rc.RECONSTRUCTION_VERSION:
+        return True
+    adapter = oc.adapter_for(imp.adapter_id)
+    return adapter is None or adapter.file_map().version != imp.adapter_version
+
+
+def rebuilt_without_confirmed(imp) -> bool:
+    """Whether this stored import's trips were built without the rows he confirmed."""
+    return imp.reconstruction_version not in rc.BEFORE_CONFIRMED_ROWS_LEFT
+
+
 def plan_import(
-    text: str, *, context: ImportContext, production: bool = False
+    text: str,
+    *,
+    context: ImportContext,
+    production: bool = False,
+    confirmed_groups: Iterable[str] = (),
 ) -> ImportPlan:
-    """Decide what this upload does. Writes nothing."""
+    """Decide what this upload does. Writes nothing.
+
+    ``confirmed_groups`` are the duplicate groups the trader has confirmed. The file can't
+    say which they are, so every read of a stored file passes them here (``dup.confirm_group``).
+    Their extra rows leave before pairing, because a row gone can change how later fills pair,
+    so every figure below comes from what remains. Rows and trips are decided here together
+    and nothing changes one without the other.
+    """
     decision = oc.check_format(text)
     adapter = oc.select_adapter(text)
 
@@ -186,34 +206,41 @@ def plan_import(
             outcome=s.ImportOutcome.REJECTED,
             rejection_text=oc.rejection_for(decision, adapter),
             code_version=context.code_version,
+            reconstruction_version=rc.RECONSTRUCTION_VERSION,
             export_date=context.export_date,
             export_date_source=context.export_date_source,
         )
 
     file_map = adapter.file_map()
     raw_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    parsed = dhan_tradebook.parse(
-        text.splitlines(), trader_id=context.trader_id, raw_hash=raw_hash
-    )
+    lines = text.splitlines()
+    parsed = dhan_tradebook.parse(lines, trader_id=context.trader_id, raw_hash=raw_hash)
 
-    body = text.splitlines()[1:]
-    classification = dup.classify_rows([line for line in body if line.strip()])
+    classification = dup.classify_rows([line for line in lines[1:] if line.strip()])
+    for group in sorted(confirmed_groups):
+        classification = dup.confirm_group(classification, group)
 
     rejected_by_row = {r.row: r.reason for r in parsed.rejected}
     rows: list[PlannedRow] = []
     for row in classification.rows:
         reason = rejected_by_row.get(row.row_no + 1)
-        if reason is not None:
-            status = "REJECTED"
-        elif row.excluded:
+        if row.excluded:
             status = "EXCLUDED"
+        elif reason is not None:
+            status = "REJECTED"
         else:
             status = "PARSED"
         rows.append(
             PlannedRow(row.row_no, row.raw_text, status, reason, row.flag, row.dup_group)
         )
 
+    # The whole file above says what each row is; only what remains is read into fills.
     fills: list[Fill] = parsed.fills
+    if classification.excluded:
+        remaining = [r.raw_text for r in classification.rows if not r.excluded]
+        fills = dhan_tradebook.parse(
+            [lines[0], *remaining], trader_id=context.trader_id, raw_hash=raw_hash
+        ).fills
     result = rc.reconstruct(fills, fees_available=parsed.fees_available, short_options=True)
 
     profile_map = profiles.load_all(PROFILE_DIR)
@@ -265,6 +292,7 @@ def plan_import(
         filemap_version=file_map.version,
         profile_versions=profiles.versions_used(list(used.values())),
         code_version=context.code_version,
+        reconstruction_version=rc.RECONSTRUCTION_VERSION,
         rows=tuple(rows),
         rows_in=parsed.rows_in,
         rows_parsed=len(fills),

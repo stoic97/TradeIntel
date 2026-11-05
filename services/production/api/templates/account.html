@@ -33,7 +33,7 @@
     <table class="table"><thead><tr><th class="table__wide">When</th><th>What we read</th><th></th></tr></thead>
       <tbody>
       {%- for imp in imports %}
-        <tr><td>{{ imp.created_at.strftime('%d %b %Y') }}</td><td class="table__text">{% if imp.source_account == "DEMO" %}Demo, {% endif %}{% if imp.outcome.value == "rejected" %}not a tradebook{% else %}{{ imp.rows_in|count }} rows, {{ imp.trips_reconstructed|count }} trades{% endif %}{% if imp.id in changes %}{{ upload_change(changes[imp.id]) }}{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ imp.id }}">Open</a></td></tr>
+        <tr><td>{{ imp.created_at.strftime('%d %b %Y') }}</td><td class="table__text">{% if imp.source_account == "DEMO" %}Demo, {% endif %}{% if imp.outcome.value == "rejected" %}not a tradebook{% else %}{{ imp.rows_in|count }} rows, {{ imp.trips_reconstructed|count }} trades{% endif %}{% if reads_again is defined and imp.id in reads_again %}<span class="account__change">Same file, read again with newer code.</span>{% endif %}{% if imp.id in changes %}{{ upload_change(changes[imp.id]) }}{% endif %}{% if read_again_id is defined and imp.id == read_again_id %}<form class="account__read-again" method="post" action="/imports/{{ imp.id }}/read-again"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><span class="account__change">Read by older code. You don't need a new file, and your figures may change.</span><button class="btn btn--pill-small" type="submit">Read this file again</button></form>{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ imp.id }}">Open</a></td></tr>
       {%- endfor %}
       </tbody>
     </table>

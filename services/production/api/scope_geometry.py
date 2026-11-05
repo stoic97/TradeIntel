@@ -428,6 +428,18 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
     raise ValueError("no figure sizes to lay out with")
 
 
+def _centre_figure_class(figure: str) -> str:
+    """The centre is a fixed circle and a result can run to ten characters or more, so a longer
+    figure is drawn smaller. The sizes are in app.css; the kit's own is the short one."""
+    if len(figure) >= CENTRE_LONGEST:
+        return "scope__centre-figure scope__centre-figure--longest"
+    if len(figure) >= CENTRE_LONGER:
+        return "scope__centre-figure scope__centre-figure--longer"
+    if len(figure) >= CENTRE_LONG:
+        return "scope__centre-figure scope__centre-figure--long"
+    return "scope__centre-figure"
+
+
 def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -> dict:
     """Every primitive of the dial.
 
@@ -543,6 +555,10 @@ def _esc(s) -> str:
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+CENTRE_LONG, CENTRE_LONGER, CENTRE_LONGEST = 7, 9, 11
+"""Characters at which a centre figure steps down a size."""
+
+
 def _text_block(
     lines: list, x: float, top: float, line_height: float, size: float, align: str, cls: str
 ) -> str:
@@ -600,7 +616,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         state_class = f" scope__slice--{s['state']}" if s["state"] else ""
         o.append(
             f'<a class="scope__slice{state_class}" href="{s["href"]}" '
-            f'aria-label="{_esc(s["number"] + ". " + s["name"] + ".")}">'
+            f'aria-label="{_esc(s["name"] + ".")}">'
         )
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
@@ -612,22 +628,21 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 f'<circle class="scope__opened" cx="{fmt(s["openedMark"][0])}" '
                 f'cy="{fmt(s["openedMark"][1])}" r="{js_str(r)}"/>'
             )
-        o.append(
-            _text_block([s["number"]], c["x"], c["numberY"], 13, 11, "center", "scope__number")
-        )
+        # No serial beside the figure (TICKET-843): order is the slice's position and its name.
         tight = " scope__figure--tight" if c["tight"] else ""
-        o.append(
-            _text_block(
-                [c["head"]],
-                c["x"],
-                c["headY"],
-                c["lineHeight"],
-                c["figSize"],
-                "center",
-                f"scope__figure scope__figure--s{js_str(c['figSize'])} "
-                f"scope__figure--{c['tone']}{tight}",
+        if c["head"]:  # a slice with nothing counted from the file shows its name only
+            o.append(
+                _text_block(
+                    [c["head"]],
+                    c["x"],
+                    c["headY"],
+                    c["lineHeight"],
+                    c["figSize"],
+                    "center",
+                    f"scope__figure scope__figure--s{js_str(c['figSize'])} "
+                    f"scope__figure--{c['tone']}{tight}",
+                )
             )
-        )
         if c["tail"]:
             o.append(
                 _text_block(
@@ -676,7 +691,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 24 if phone else 34,
                 22 if phone else 32,
                 "center",
-                "scope__centre-figure",
+                _centre_figure_class(figure),
             )
         )
         o.append(

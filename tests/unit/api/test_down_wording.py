@@ -15,6 +15,7 @@ the condition of the whole population.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from services.production.api import scope_facts as SF
 from tests.unit.api.test_scope_chapters import TRIPS, chapter_page, readable
@@ -57,3 +58,12 @@ def test_the_fact_pages_trades_are_captioned_for_what_they_are():
     page = fact_page("down")
     caption = re.search(r'<p class="evidence__caption">(.*?)</p>', page, re.DOTALL)[1]
     assert readable(caption).startswith(CAPTION)
+
+
+def test_the_opening_sentence_does_not_say_the_other_trades_were_while_down():
+    """The comparison group is every other trade that qualified, and on some of them the
+    trader was not down. The sentence shows only once the gate opens, so a page test can't
+    see it until then: this reads the words themselves."""
+    opening = Path("services/production/api/templates/scope/_opening.html").read_text(encoding="utf-8")
+    assert "while down" not in opening
+    assert "Your other trades that qualified averaged" in opening

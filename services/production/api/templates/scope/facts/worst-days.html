@@ -43,6 +43,9 @@
         <button class="btn btn--secondary" type="submit">Tell us</button>
       </form>
       {%- endif %}
+      {%- if journal_hrefs is defined and b.iso in journal_hrefs %}
+      <p class="body-small day-block__journal"><a href="{{ journal_hrefs[b.iso] }}">Your journal for {{ b.day }}</a></p>
+      {%- endif %}
       {{ trades(b.groups) }}
     </details>
     {%- endfor %}

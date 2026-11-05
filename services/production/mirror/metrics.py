@@ -212,6 +212,9 @@ class TwoStraightLosses:
     condition_mean: Decimal | None
     comparison_mean: Decimal | None
     state: s.ResultState
+    outside: int = 0  # TICKET-836: trips outside the B2 population, Table 1's third row
+    outside_net: Decimal = Decimal(0)
+    outside_mean: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -496,6 +499,9 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     ]
     condition_net = sum((t.net for t in condition_trips), Decimal(0))
     comparison_net = sum((t.net for t in comparison_trips), Decimal(0))
+    # TICKET-836: every trip outside the population, so the table has a row for trades not down.
+    outside_trips = [t for t, pop in zip(trips, in_pop, strict=True) if not pop]
+    outside_net = sum((t.net for t in outside_trips), Decimal(0))
 
     return TwoStraightLosses(
         population=int(in_pop.sum()),
@@ -506,6 +512,9 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
         comparison_net=comparison_net,
         condition_mean=_trim(_round(condition_net / len(condition_trips))) if condition_trips else None,
         comparison_mean=_trim(_round(comparison_net / len(comparison_trips))) if comparison_trips else None,
+        outside=len(outside_trips),
+        outside_net=outside_net,
+        outside_mean=_trim(_round(outside_net / len(outside_trips))) if outside_trips else None,
         state=s.ResultState.COUNTED_FACT,
     )
 

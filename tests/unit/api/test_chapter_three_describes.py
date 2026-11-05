@@ -5,8 +5,8 @@ Worked by hand, in order, each trade closed before the next opens, all on one da
     -100  no two trades before it
     -200  no two trades before it
     +300  the two before both lost: after two straight losses
-    -50   two before it, but the last one won: another trade while down
-    -151  two before it, but one of them won: another trade while down
+    -50   two before it, but the last one won: another trade that qualified
+    -151  two before it, but one of them won: another trade that qualified
     -25   the two before both lost: after two straight losses
 
 After two straight losses: (300 - 25) / 2 = +137.5. The others: (-50 - 151) / 2 = -100.5.
@@ -33,7 +33,7 @@ OLD_TITLE = "Trading on while already down"
 TITLE = "After two straight losses"
 BETTER = (
     "After two straight losses, your next trades averaged +₹137.5. "
-    "Your other trades while down averaged −₹100.5."
+    "Your other trades that qualified averaged −₹100.5."
 )
 
 
@@ -119,7 +119,7 @@ def test_closed_the_numbers_are_still_shown_and_no_pattern_is_invented(page):
     assert "+₹137.5" in text
     assert "−₹100.5" in text
     assert "your next trades averaged" not in text
-    assert "while down averaged" not in text
+    assert "that qualified averaged" not in text
 
 
 # ---------- With the gate open, ready for when research exposes a callable test ----------
@@ -158,7 +158,7 @@ def test_open_the_sentence_says_it_whichever_way_the_table_points():
     _, sentence = head_of(fact_page("down", trips))
     assert sentence == (
         "After two straight losses, your next trades averaged −₹125. "
-        "Your other trades while down averaged −₹10."
+        "Your other trades that qualified averaged −₹10."
     )
 
 

@@ -3,12 +3,12 @@
     chapter found. Every line describes: a post-loss comparison waits on the shuffle test,
     and a price-band finding on the research seat. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line, uncounted_line, lockup, chip, money, button %}
+{% from "_components.html" import dial, gross_line, uncounted_line, lockup, money, button %}
 {% set nav = "scope" %}
 {% from "_verdict.html" import came, held, verdict_sentence %}
 {% block stage %}
 <header class="stage stage--home on-navy">
-  <div class="stage__bar">{{ lockup() }}{{ chip("In development.", on_navy=true) }}</div>
+  <div class="stage__bar">{{ lockup() }}</div>
   <div class="stage__dial">
   {{ dial(view) }}
   </div>

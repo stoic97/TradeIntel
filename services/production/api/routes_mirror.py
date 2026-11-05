@@ -24,6 +24,7 @@ from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.charges import record as charge_record
+from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -114,7 +115,7 @@ def scope_chapter(request: Request, n: int):
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
-                next_href=SM.chapter_href(2) if n == 1 else None,
+                next_step=SF.chapter_next(n),
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
@@ -216,6 +217,7 @@ def scope_fact(request: Request, key: str):
     figs = SF.facts(context, imp)
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
+    journals = _journal_links(request, key, figs[key], context)
     return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
                 enter_class=enter_class(request), body_class="screen__body--fact",
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
@@ -223,7 +225,8 @@ def scope_fact(request: Request, key: str):
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **context)
+                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **journals,
+                **context)
 
 
 def _flagged_days(request: Request, imp) -> set[str]:
@@ -231,18 +234,42 @@ def _flagged_days(request: Request, imp) -> set[str]:
         return FB.flagged_days(sess, current_trader(request, sess), imp.id)
 
 
+def _journal_ids(sess, trader, days: set[str]) -> dict[str, int]:
+    """The newest DAY journal for each of `days`. Ascending version_no, so the latest version
+    of a day is the one left in the map; a day with no journal is not in it."""
+    if not days:
+        return {}
+    return dict(sess.execute(
+        select(m.Journal.period_start, m.Journal.id)
+        .where(m.Journal.trader_id == trader.id, m.Journal.unit == s_enums.JournalUnit.DAY,
+               m.Journal.period_start.in_(sorted(days)))
+        .order_by(m.Journal.version_no)
+    ).all())
+
+
+def _journal_links(request: Request, key: str, fact: dict, context: dict) -> dict:
+    """A finding links the journal of the day it is about, or shows no link (TICKET-839).
+    Worst days: one href per block whose day has a journal. The run: the day it began."""
+    if key == "worst-days":
+        days = {b["iso"] for b in fact["blocks"]}
+    elif key == "run" and context["run"].days:
+        days = {context["run"].days[0]}
+    else:
+        return {}
+    with make_session(request.app.state.engine) as sess:
+        opens = _journal_ids(sess, current_trader(request, sess), days)
+    hrefs = {day: f"/journals/{jid}" for day, jid in opens.items()}
+    if key == "worst-days":
+        return {"journal_hrefs": hrefs}
+    return {"run_journal_href": hrefs.get(context["run"].days[0])}
+
+
 def _ending(request: Request, imp, fact: dict) -> dict:
     """What the report's last page reads from beyond the record (TICKET-825)."""
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         worst = fact["flagged"]["worst"]
-        # Ascending, so the latest version of a day is the one left in the map.
-        opens = {} if worst is None else dict(sess.execute(
-            select(m.Journal.period_start, m.Journal.id)
-            .where(m.Journal.trader_id == trader.id, m.Journal.unit == s_enums.JournalUnit.DAY,
-                   m.Journal.period_start == worst["iso"])
-            .order_by(m.Journal.version_no)
-        ).all())
+        opens = {} if worst is None else _journal_ids(sess, trader, {worst["iso"]})
         earlier = sess.scalars(
             select(m.Import).join(m.Trip, m.Trip.import_id == m.Import.id)
             .where(m.Import.trader_id == trader.id, m.Import.id < imp.id)
@@ -254,6 +281,8 @@ def _ending(request: Request, imp, fact: dict) -> dict:
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
+                # One file read again is not a new file (TICKET-844).
+                "same_file": persist.same_file(sess, imp, earlier),
             },
             "answered": FB.report_answer(sess, trader, imp.id) is not None,
             "answers": FB.ANSWERS,
@@ -331,6 +360,9 @@ def scope_fact_trades(request: Request, key: str):
                 listing=TL.listing(key, context, request.query_params, expiries))
 
 
+CONFIRMED_ROW = "You told us this row repeats a trade already in the file."
+
+
 def _plain_refusal(reason: str) -> str:
     """Why a stored trade was refused, for a trader. New uploads refuse no sold option."""
     if "short option" in reason:
@@ -352,7 +384,8 @@ def _unread(request: Request, imp) -> dict:
             .order_by(m.SkippedTrip.id)
         ).all()
         return {
-            "excluded": [(r.row_no, r.reason) for r in rows if r.status == "EXCLUDED"],
+            "excluded": [(r.row_no, r.reason or CONFIRMED_ROW)
+                         for r in rows if r.status == "EXCLUDED"],
             "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
             "refused": [_plain_refusal(t.reason) for t in refused],
         }
