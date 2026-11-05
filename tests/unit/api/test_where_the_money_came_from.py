@@ -42,7 +42,8 @@ from tests.unit.api.test_upload import client, engine  # noqa: F401
 
 HEADLINE = "Your best trades weren't trades."
 HOOK = "Your best and worst trades are in the same place."
-CAVEAT = "This describes what happened, not advice to hold longer."
+CUT = ("This describes what happened, not advice to hold longer.",
+       "A trade can lose fast simply by being wrong from the start.")
 DAY = "2026-09-01"
 
 
@@ -387,25 +388,26 @@ def test_a_morning_trader_reads_no_sentence_about_evenings():
     assert "from 5 pm on" not in page and "from 8 pm on" not in page
 
 
-def test_the_durations_are_told_as_medians_and_the_caveat_goes_with_them():
+def test_the_durations_are_told_as_medians_with_no_sentence_about_them():
     page = page_of(WHOLE)
     assert "Your best five ran a median of 60 min." in page
     assert "Your worst five lost a median of ₹2,700 each, in a median of 11 min." in page
-    assert CAVEAT in page
+    for line in CUT:
+        assert line not in page, "rule 3: the page describes, and explains nothing"
 
 
 def test_a_list_with_a_loser_in_its_best_five_gets_no_durations():
     page = page_of([trip(f"y{i}", -10 * (i + 1)) for i in range(10)])
-    assert "ran a median of" not in page and CAVEAT not in page
+    assert "ran a median of" not in page
 
 
 def test_fewer_than_five_trades_a_side_gets_no_durations():
     page = page_of([trip("a", 300), trip("b", -100)])
-    assert "ran a median of" not in page and CAVEAT not in page
+    assert "ran a median of" not in page
 
 
 def test_nothing_on_the_page_says_to_hold_longer():
-    page = page_of(WHOLE).replace(CAVEAT, "").lower()
+    page = page_of(WHOLE).lower()
     assert "hold longer" not in page
     assert "let your winners" not in page and "cut your losers" not in page
 
