@@ -42,48 +42,44 @@ def test_the_medians_read_same_day_trades():
     assert h.ratio == Decimal("2.0")
 
 
-def test_the_figure_reads_those_medians():
-    assert facts()["hold"]["figure"] == "20 · 10 min"
-
-
-def test_the_table_counts_same_day_trades():
-    f = facts()["hold"]
-    assert (f["winner_count"], f["loser_count"]) == (5, 5)
+def test_the_page_says_those_medians():
+    assert "Your winners were open a median of 20 minutes, your losers 10 minutes." in readable(
+        fact_page("math", HELD)
+    )
 
 
 def test_the_trades_listed_are_the_trades_counted():
-    ids = {t.trip_id for t in S.trades_behind("hold", SF.record_context(HELD))}
+    ids = {t.trip_id for t in S.trades_behind("math", SF.record_context(HELD))}
     assert not ids & HELD_IDS
     assert len(ids) == 10
 
 
 def test_both_cards_count_the_same_trades():
     figs = facts()
-    assert figs["hold"]["trade_count"] == figs["clock"]["trade_count"] == 10
+    assert figs["math"]["trade_count"] == figs["clock"]["trade_count"] == 10
 
 
 def test_the_overview_draws_no_holding_in_either():
     page = readable(chapter_page(2, HELD))
-    assert "375 min" in page
     assert "525600" not in page and "5,25,600" not in page
-    assert page.count(NOTE) >= 2, "the hold card and the clock card, and any other fact that says it"
+    assert page.count(NOTE) >= 2, "the math card and the clock card, and any other fact that says it"
 
 
 def test_the_fact_page_says_what_is_left_out():
-    assert NOTE in readable(fact_page("hold", HELD))
+    assert NOTE in readable(fact_page("math", HELD))
 
 
 def test_a_history_of_only_held_positions_says_not_enough():
-    f = facts(ONLY_HELD)["hold"]
+    f = facts(ONLY_HELD)["math"]
     assert f["state"] == "not-enough"
     assert f["figure"] == "—"
 
 
 def test_that_history_still_renders():
-    for page in (fact_page("hold", ONLY_HELD), chapter_page(2, ONLY_HELD)):
+    for page in (fact_page("math", ONLY_HELD), chapter_page(2, ONLY_HELD)):
         assert "None" not in readable(page)
 
 
 def test_same_day_winners_with_no_loser_say_not_enough():
-    assert facts(ONE_SIDED)["hold"]["state"] == "not-enough"
-    assert "None" not in readable(fact_page("hold", ONE_SIDED))
+    assert facts(ONE_SIDED)["math"]["state"] == "not-enough"
+    assert "None" not in readable(fact_page("math", ONE_SIDED))

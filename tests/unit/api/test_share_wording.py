@@ -11,7 +11,7 @@ import pytest
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from tests.unit.api.test_reveal_page import reveal
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable, trips_from
+from tests.unit.api.test_scope_chapters import TRIPS, chapter_page, readable, trips_from
 from tests.unit.api.test_scope_facts import fact_page
 
 SENTENCE = "5 of your 8 trading days (about 63%) carried about 96% of your losses."
@@ -25,9 +25,9 @@ def test_the_reveal_gives_the_share_the_base_rate_and_the_rupees():
     assert "Your result for the whole period was −₹25,000." in page
 
 
-@pytest.mark.parametrize("key", ["share", "worst-days"])
-def test_the_fact_pages_say_the_same(key):
-    assert SENTENCE in readable(fact_page(key))
+def test_the_worst_days_page_no_longer_leads_with_the_same_sentence():
+    """The reveal and the chapter card say it; three pages in a row saying it was the problem."""
+    assert SENTENCE not in readable(fact_page("worst-days"))
 
 
 def test_the_chapter_cards_say_the_same():
@@ -35,14 +35,13 @@ def test_the_chapter_cards_say_the_same():
 
 
 def test_the_fact_is_named_for_what_it_measures():
-    assert S.FACTS["share"].title == "Share of your losses"
+    assert S.FIGURES["share"].title == "Share of your losses"
 
 
 @pytest.mark.parametrize(
     "page",
     [
         lambda: reveal(),
-        lambda: fact_page("share"),
         lambda: fact_page("worst-days"),
         lambda: chapter_page(1),
     ],
@@ -51,12 +50,13 @@ def test_no_page_calls_it_a_share_of_the_result(page):
     assert OLD not in readable(page())
 
 
-def test_scope_home_centre_says_losses():
-    view = SF.home_view(SF.facts(SF.record_context(TRIPS), IMP), SF.record_context(TRIPS))
-    assert view["centre"]["captionLines"] == ["of your losses", "in five days"]
+def test_scope_home_centre_is_the_result_not_the_share():
+    """The share still reads "of your losses" on its own fact; home's centre is the result."""
+    view = SF.home_view(SF.record_context(TRIPS))
+    assert "of your losses" not in view["centre"]["captionLines"]
 
 
 def test_a_history_with_no_losing_day_tells_the_rupees_only():
-    page = readable(fact_page("share", trips_from([10, 20, 30, 40, 50, 60])))
+    page = readable(fact_page("worst-days", trips_from([10, 20, 30, 40, 50, 60])))
     assert "of your losses" not in page.replace("Share of your losses", "")
     assert "Your result for the whole period was +₹210." in page

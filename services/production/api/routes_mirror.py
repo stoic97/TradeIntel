@@ -1,4 +1,4 @@
-"""The Mirror, told as the Scope: Home, four chapters, twelve facts (handoff 4, 5).
+"""The Mirror, told as the Scope: Home, four chapters, eleven facts (handoff 4, 5).
 
 The pages format; they compute nothing. Every figure comes from
 services/production/mirror/metrics.py, through scope_facts.record_context, so there is
@@ -11,6 +11,8 @@ argument is that he should not have to.
 """
 
 from __future__ import annotations
+
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -30,6 +32,8 @@ from services.production.mirror import loader
 from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
+
+SHARE_MOVED = "share"
 
 
 def load_record(request: Request):
@@ -74,6 +78,10 @@ def enter_class(request: Request) -> str:
     return ENTER[enter].format(tap=tap)
 
 
+CHAPTER_SURFACE = "scope_chapter"
+"""Not one of /events' surfaces: the page can't claim a chapter was opened, only the route can."""
+
+
 @router.get("/mirror", response_class=HTMLResponse)
 def scope_home(request: Request):
     """Scope home (handoff 4, level 1): the four chapters on the dial, the five days'
@@ -83,12 +91,11 @@ def scope_home(request: Request):
     if early is not None:
         return early
     trips, imp, context = record
-    figs = SF.facts(context, imp)
     with make_session(request.app.state.engine) as sess:
         charges = charge_record.build(sess, current_trader(request, sess), imp)
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
-                view=SF.home_view(figs, context), imp=imp, trade_count=len(trips),
-                trading_day_count=len(context["days"].counts), charges=charges)
+                imp=imp, trade_count=len(trips), trading_day_count=len(context["days"].counts),
+                charges=charges, **SF.home_context(context, imp, _opened_chapters(request)))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -102,13 +109,38 @@ def scope_chapter(request: Request, n: int):
     if early is not None:
         return early
     _trips, imp, context = record
+    _mark_opened(request, chapter)
     figs = SF.facts(context, imp)
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
+                next_href=SM.chapter_href(2) if n == 1 else None,
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
+
+
+def _opened_chapters(request: Request) -> frozenset[int]:
+    """The chapters this trader has opened, whichever upload he was reading."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        keys = set(sess.scalars(select(m.DwellEvent.key).where(
+            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE)))
+    return frozenset(c.number for c in SM.CHAPTERS if c.name in keys)
+
+
+def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
+    """Noted on the server, so "read" doesn't depend on a script running. One row a chapter;
+    the key is its name, because an event's key never holds a digit (routes_events)."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        seen = sess.scalar(select(m.DwellEvent.id).where(
+            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE,
+            m.DwellEvent.key == chapter.name).limit(1))
+        if seen is None:
+            sess.add(m.DwellEvent(trader_id=trader.id, surface=CHAPTER_SURFACE, key=chapter.name,
+                                  event="view", at=datetime.now(UTC), duration_ms=None))
+            sess.commit()
 
 
 def _feedback_context(request: Request, n: int) -> dict:
@@ -158,10 +190,21 @@ def chapter_feedback(request: Request, n: int, answer: str = Form(None),
     return RedirectResponse(f"{SM.chapter_href(n)}#feedback", status_code=303)
 
 
+def _moved(request: Request, key: str, rest: str = "") -> RedirectResponse:
+    """A fact that merged into another: same page below it, same query. No record is read,
+    so the page it lands on is the one that asks for a login."""
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(f"/mirror/fact/{SM.MOVED_FACTS[key]}{rest}{query}", status_code=301)
+
+
 @router.get("/mirror/fact/{key}", response_class=HTMLResponse)
 def scope_fact(request: Request, key: str):
     """A fact (handoff 4, level 3): the lens and path, the Mirror's sentences and
     figures, then every trade behind it."""
+    if key in SM.MOVED_FACTS:
+        return _moved(request, key)
+    if key == SHARE_MOVED:  # it was fact 2 of chapter 1; its one new row is on worst days now
+        return RedirectResponse(SM.fact_href("worst-days", lens=False), status_code=303)
     if key not in SM.FACTS:
         return HTMLResponse("", status_code=404)
     early, record = load_record(request)
@@ -172,6 +215,7 @@ def scope_fact(request: Request, key: str):
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
+    flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
     return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
                 enter_class=enter_class(request), body_class="screen__body--fact",
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
@@ -179,7 +223,12 @@ def scope_fact(request: Request, key: str):
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **context)
+                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **context)
+
+
+def _flagged_days(request: Request, imp) -> set[str]:
+    with make_session(request.app.state.engine) as sess:
+        return FB.flagged_days(sess, current_trader(request, sess), imp.id)
 
 
 def _ending(request: Request, imp, fact: dict) -> dict:
@@ -241,10 +290,32 @@ def report_feedback(request: Request, answer: str = Form(None), note: str = Form
                             status_code=303)
 
 
+@router.post("/mirror/feedback/day", response_class=HTMLResponse)
+def day_feedback(request: Request, trading_day: str = Form(None), note: str = Form(None),
+                 csrf_token: str = Form(None)):
+    """"Is this day wrong?" on one of the five worst days, which it must be."""
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    early, record = load_record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    if trading_day not in {b.trading_day for b in context["day_blocks"]}:
+        return HTMLResponse("", status_code=400)
+    with make_session(request.app.state.engine) as sess:
+        FB.flag_day(sess, trader=current_trader(request, sess), import_id=imp.id,
+                    trading_day=trading_day, note=note)
+        sess.commit()
+    return RedirectResponse(f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}",
+                            status_code=303)
+
+
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)
 def scope_fact_trades(request: Request, key: str):
     """Every trade behind a fact, with the filters the fact page has no room for. A fact
     page links here when its list is long (TICKET-822), so nothing behind it is out of reach."""
+    if key in SM.MOVED_FACTS:
+        return _moved(request, key, "/trades")
     if key not in TL.FACTS_WITH_TRADES:
         return HTMLResponse("", status_code=404)
     early, record = load_record(request)

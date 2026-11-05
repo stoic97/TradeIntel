@@ -89,6 +89,12 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+def minutes_seconds(seconds: int) -> str:
+    """A gap between two trades: 1:30, 0:12. Minutes are not carried into hours."""
+    whole_minutes, rest = divmod(int(seconds), 60)
+    return f"{whole_minutes}:{rest:02d}"
+
+
 SECONDS_A_DAY = 24 * 60 * 60
 DAYS_A_MONTH = 30
 
@@ -134,6 +140,20 @@ def signed_percent(value) -> str:
     return f"{MINUS if cut < 0 else '+'}{abs(cut)}%"
 
 
+def time_of_day(when) -> str:
+    """A clock time as a sentence says it: 9:17 am, 2:51 pm, 12:05 pm."""
+    return f"{when.hour % 12 or 12}:{when.minute:02d} {'am' if when.hour < 12 else 'pm'}"
+
+
+def minutes_in_words(seconds: int, *, about: bool = True) -> str:
+    """A hold in a sentence, to the nearest minute: about 3 minutes. Never about 0 minutes."""
+    if seconds < 30:
+        return "under a minute"
+    whole = (seconds + 30) // 60
+    words = f"{count(whole)} {'minute' if whole == 1 else 'minutes'}"
+    return f"about {words}" if about else words
+
+
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
@@ -144,7 +164,13 @@ def day(iso_date: str) -> str:
     return f"{dom} {MONTHS[int(month) - 1]} {year}"
 
 
+def book_in_a_sentence(book: str) -> str:
+    """A trade_book name inside a sentence: "were crude options", "were NIFTY options"."""
+    return book[0].lower() + book[1:] if book[1:2].islower() else book
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
     env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, hold=hold, day=day, lots=lots)
     env.filters.update(price=price, signed_percent=signed_percent)
+    env.filters.update(book_in_a_sentence=book_in_a_sentence)

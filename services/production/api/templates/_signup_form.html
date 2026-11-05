@@ -1,0 +1,11 @@
+{#- Create your account: the fields the app has always asked for (kit screen 3). On the
+    sign-up page, and on the front door so that opening Scope reaches it directly. -#}
+<form method="post" action="/signup">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label class="field"><span class="field__label">Your name</span><input class="field__input" name="display_name" type="text" autocomplete="name" required></label>
+  <label class="field"><span class="field__label">Login id</span><input class="field__input" name="login_id" type="text" autocomplete="username" required></label>
+  <label class="field"><span class="field__label">Password</span><input class="field__input" name="password" type="password" autocomplete="new-password" minlength="12" required><span class="field__hint">At least 12 characters. There is no email on your account, so keep this somewhere safe — a reset has to go through us.</span></label>
+  <div class="screen__actions">
+    <button class="btn btn--primary btn--block" type="submit">Create account</button>
+  </div>
+</form>

@@ -49,15 +49,6 @@ class _InsertOnly:
     """Marker: rows of this table are never updated (design section 3)."""
 
 
-class InviteCode(Base):
-    __tablename__ = "invite_code"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(64), unique=True)
-    created_at: Mapped[datetime] = mapped_column(AwareDateTime)
-    redeemed_by: Mapped[int | None] = mapped_column(ForeignKey("trader.id"))
-    redeemed_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
-
-
 class Trader(Base):
     __tablename__ = "trader"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -279,6 +270,17 @@ class WtpAnswer(Base, _InsertOnly):
     free_text: Mapped[str | None] = mapped_column(Text)
     uploads_so_far: Mapped[int] = mapped_column(Integer)
     days_since_first_upload: Mapped[int] = mapped_column(Integer)
+    asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class WtpAsked(Base, _InsertOnly):
+    """Which Journal the willingness-to-pay question was put on. It is asked there and nowhere
+    else: this row is the "asked once" flag, written when the question is first drawn."""
+
+    __tablename__ = "wtp_asked"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
     asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 

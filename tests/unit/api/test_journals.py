@@ -124,20 +124,23 @@ def test_the_fixture_generates_more_journals_than_fit_on_the_surface(engine, cli
     assert len(_journals(engine)) > 5, "the eight-day fixture should backfill"
 
 
-def test_the_list_shows_five_and_counts_the_rest(engine, client):
+def _linked(html: str) -> set[int]:
+    return {int(x) for x in re.findall(r'/journals/(\d+)"', html)}
+
+
+def test_the_list_shows_five_at_most_and_counts_the_rest(engine, client):
+    """Which five: the days the report named (test_journals_worth_writing)."""
     body = client.get("/journals").text
-    shown = {int(x) for x in re.findall(r'/journals/(\d+)"', body)}
-    assert len(shown) == 5, f"{len(shown)} journals on the surface, not five"
-    newest = [j.id for j in _journals(engine)][:5]
-    assert shown == set(newest), "the surface must be the latest five"
+    shown = _linked(body)
+    assert 0 < len(shown) <= 5, f"{len(shown)} journals on the surface"
     assert "catch-up" in body.lower() or "earlier journal" in body.lower()
 
 
-def test_the_catch_up_list_holds_everything_behind_the_surface(engine, client):
-    body = client.get("/journals/catch-up").text
-    listed = {int(x) for x in re.findall(r'/journals/(\d+)"', body)}
-    behind = {j.id for j in _journals(engine)[5:]}
-    assert listed == behind
+def test_the_catch_up_list_holds_everything_the_surface_does_not(engine, client):
+    shown = _linked(client.get("/journals").text)
+    listed = _linked(client.get("/journals/catch-up").text)
+    assert not shown & listed, "no Journal is on both lists"
+    assert shown | listed == {j.id for j in _journals(engine)}, "and none is on neither"
 
 
 def test_a_journal_renders_the_prose_the_generator_wrote(engine, client):

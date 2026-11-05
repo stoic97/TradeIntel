@@ -87,6 +87,38 @@ def record_report_answer(
         sess.rollback()
 
 
+def flagged_days(sess: Session, trader: m.Trader, import_id: int) -> set[str]:
+    """The days of this report the trader has said look wrong."""
+    return set(sess.scalars(
+        select(m.ReportFeedback.trading_day).where(
+            m.ReportFeedback.trader_id == trader.id,
+            m.ReportFeedback.import_id == import_id,
+            m.ReportFeedback.trading_day != WHOLE_REPORT,
+        )
+    ).all())
+
+
+def flag_day(
+    sess: Session, *, trader: m.Trader, import_id: int, trading_day: str, note: str | None
+) -> None:
+    """"Is this day wrong?": kept with the report's own answers, so there is one route to read.
+
+    The first flag on a day stands, like every answer here.
+    """
+    if trading_day in flagged_days(sess, trader, import_id):
+        return
+    sess.add(
+        m.ReportFeedback(
+            trader_id=trader.id, import_id=import_id, trading_day=trading_day, answer="wrong",
+            note=(note or "").strip()[:NOTE_LIMIT] or None, answered_at=datetime.now(UTC),
+        )
+    )
+    try:
+        sess.flush()
+    except IntegrityError:  # a second tap raced the first: the first stands
+        sess.rollback()
+
+
 def _row(sess: Session, trader: m.Trader, chapter: int) -> m.ChapterFeedback | None:
     return sess.scalars(
         select(m.ChapterFeedback).where(
