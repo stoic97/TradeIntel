@@ -68,6 +68,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "clocks": mx.clocks_by_book(same_day),
         "run": mx.longest_losing_run(trips),
         "risk": mx.risk_figure_counts(trips),
+        "five_days": mx.five_days_read(trips),
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
         "trips": trips,
