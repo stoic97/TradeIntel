@@ -47,7 +47,7 @@ def test_every_design_table_exists():
     run_migrations(engine)
     tables = set(inspect(engine).get_table_names())
     expected = {
-        "invite_code", "trader", "consent_event", "risk_budget_declaration",
+        "trader", "consent_event", "risk_budget_declaration",
         "raw_file", "import", "import_row", "trading_day_version", "trip",
         "open_position", "skipped_trip", "journal", "journal_field_entry",
         "wtp_answer", "dwell_event", "rule_declaration", "adherence_event",

@@ -31,7 +31,6 @@ CARD_H = {
     "worst": 84,
     "share": 56,
     "money": 150,
-    "hold": 80,
     "strike": 40,
     "run": 40,
     "clock": 84,
@@ -75,6 +74,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "five_days": mx.five_days_read(trips),
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
+        "book_math": mx.math_by_book(same_day),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -102,11 +102,6 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_money(
             [_f(t.net) for t in ctx["best"]], [_f(t.net) for t in ctx["worst"]], w, h
         )
-    if kind == "hold":
-        held = mx.holding_series(mx.same_day_trips(trips))  # one holding would blank the axis
-        wins = [x / 60 for x in held.winners_seconds]
-        losses = [x / 60 for x in held.losers_seconds]
-        return G.chart_hold(wins, losses, max([*wins, *losses, 1]), w, h, mini)
     if kind == "strike":
         st = ctx["strike"]
         return G.chart_strike(st.wins, st.losses, st.scratches, w, h, mini)
@@ -150,8 +145,7 @@ def _state(key: str, ctx: dict) -> str:
     metric = {
         "worst-days": "worst_days",
         "share": "share",
-        "hold": "holding",
-        "strike": "strike",
+        "math": "holding",  # both a winner and a loser, or there is nothing to balance
         "run": "run",
         "down": "two_losses",
         "busiest": "days",
@@ -172,14 +166,7 @@ def _figure(key: str, ctx: dict, imp) -> str:
         return formatting.rupees(share.total)  # the second state leads with the whole result
     if key == "money":
         return f"{formatting.count(len(S.trades_behind('money', ctx)))} trades"
-    if key == "hold":
-        h = ctx["holding"]
-        w, lo = (
-            formatting.minutes(h.winners_median_seconds),
-            formatting.minutes(h.losers_median_seconds),
-        )
-        return f"{w} · {lo} min"
-    if key == "strike":
+    if key == "math":
         return f"{ctx['strike'].rate_percent}%"
     if key == "run":
         return f"{formatting.count(ctx['run'].length)} trades"
@@ -366,9 +353,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         options_amount=abs(options.net) if options else None,  # the sentence says lost or made
         flagged=_flagged_days(ctx, out),
     )
-    held = mx.holding_series(mx.same_day_trips(trips))
-    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
-    out["hold"]["held"] = ctx["held_past_day"]
+    out["math"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
     for key, fact in S.FIGURES.items():  # the fact page's figure: full width, 96 px
         out[key]["page_chart"] = (
@@ -407,9 +392,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for b, w in zip(ctx["best"], ctx["worst"], strict=False)
     ]
-    out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
-    out["strike"]["held"] = ctx["held_past_day"]
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
     out["risk"]["sizes"] = ctx["loss_sizes"]
@@ -561,7 +544,7 @@ def home_context(ctx: dict, imp, opened: frozenset[int] = frozenset()) -> dict:
     best = max(ctx["trips"], key=lambda t: t.net)
     states = {
         1: "not-enough" if len(ctx["worst_days"].days) < 5 else "",
-        2: figs["hold"]["state"],
+        2: figs["math"]["state"],
         3: figs["down"]["state"],
         4: "",
     }

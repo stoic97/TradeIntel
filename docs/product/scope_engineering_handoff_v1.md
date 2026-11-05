@@ -92,7 +92,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 0 | Front door, signed out | `/` | Restyle `home.html` | Navy door |
 | 1 | Scope page | plusev.in/scope | Restyle (plusev-web) | Navy door |
 | 2a–2c | Demo on an invented trader: guess, reveal, its trades | plusev.in/scope | New (plusev-web, static) | Stores nothing; TR-010 |
-| 3 | Create your account | `/invite/{code}` | Restyle | Name, login id, password (≥ 12). **No email anywhere in v1** (ADR-007) |
+| 3 | Create your account | `/signup`, and on the front door `/` | Restyle | Name, login id, password (≥ 12). **No email anywhere in v1** (ADR-007) |
 | 4 | Sign in | `/login` | Restyle | One error for any failure |
 | 5, 5b, 5c | Consent, what you agreed to, consent declined | `/consent`, `/settings/consent` | Restyle; 5c new | Consent text in full from `consent.py` |
 | 6, 7a, 7b, 7c | Upload, broker not open, not a tradebook, Scope not open | `/upload` | Restyle | |
@@ -256,7 +256,7 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to `docs/runbooks/deletion-log.md`.
 5. ₹ renders in Plex on the server (not a fallback font).
 6. `/scope/data` on plusev-web, the consent text and `docs/runbooks/data-flow-map.md` say the same thing about storage, access and backups.
-7. Invite the first trader with the `invite --code <code>` command from `deploy.md` §4 (it prints a `127.0.0.1` URL; substitute `https://scope.plusev.in`), and send code and link together.
+7. Sign-up is open at `https://scope.plusev.in` (TICKET-841): the first trader signs up there.
 
 ## 13. Decisions
 

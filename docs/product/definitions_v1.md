@@ -72,3 +72,15 @@ The three duplicate fixtures (repeated legitimate fills · a duplicated block ·
 ## 7. Product constants named here
 
 density threshold = 2 trips on the median eligible day · Journal surface = latest 5 · WTP floor = second upload or 14 days · WTP price = ₹500 placeholder · default N = 10. All in one module, each with its argument; changed by the kickoff, never fitted to a history. (PRD §13.4, §14.)
+
+## 8. The math of your trading
+
+Strike rate and hold time as one fact, per book, on same-day trades only (section 1). A book is `metrics.trade_book`; a year is the year of the trading day.
+
+- **Win rate:** winners ÷ (winners + losers). A level trade is in the book's count and in neither side.
+- **Break-even win rate:** average loser ÷ (average winner + average loser).
+- **Average winner needed:** average loser × losers ÷ winners. The same identity solved for the winner: put it in the line above and the answer is the win rate.
+- **More winners:** the break-even win rate × (winners + losers) − winners, to the nearest whole trade and never below one while the book is short. None when winners made at least what losers lost.
+- **Medians** of rupees and of minutes are each worked out on their own. They describe no single trade.
+- **Minimum:** a book row, or a year of one, with fewer than 30 same-day trades is `INSUFFICIENT_SAMPLE`, "not enough trades to say", and carries no figure but its count. 30 is the framework's standard n_min.
+- **Biggest losers:** losses past ₹1,000, not at it, against the book's other losers. **Closed quickly:** within five minutes, five included. **Top winners:** the biggest tenth, rounded up.

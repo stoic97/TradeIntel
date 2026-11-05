@@ -134,9 +134,6 @@ def delete_trader(
                   m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
-    # His invite is his: leaving the row would point at an account that is gone,
-    # and clearing the trader from it would hand the code back out as unused.
-    _delete_where(sess, m.InviteCode, m.InviteCode.redeemed_by == trader_id, removed)
     _delete_where(sess, m.Trader, m.Trader.id == trader_id, removed)
 
     sess.flush()

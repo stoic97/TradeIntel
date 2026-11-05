@@ -1,6 +1,6 @@
 """The front door and the signed-in home (handoff 5: screens 0 and 20).
 
-Signed out, "/" is the navy door: invitation only, and the way back in. Signed in
+Signed out, "/" is the navy door: sign-up on the page, and the way back in. Signed in
 with a record, it is home - the verdict that opens the report, the days worth a look,
 and the upload. Signed in without a record yet, it sends the trader where
 landing_for says he belongs, because a home with nothing on it is not a destination.
