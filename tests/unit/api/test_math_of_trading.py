@@ -456,8 +456,7 @@ def test_the_chapter_reads_same_day_only():
     assert [b.whole.trades for b in context["book_math"]] == [60]
 
 
-def test_the_home_slice_leads_with_the_strike_rate():
+def test_the_facts_figure_is_the_strike_rate():
     context = SF.record_context(BOTH)
     figs = SF.facts(context, IMP)
     assert figs["math"]["figure"] == f"{context['strike'].rate_percent}%"
-    assert SF.home_view(figs, context)["items"][1]["figure"] == figs["math"]["figure"]

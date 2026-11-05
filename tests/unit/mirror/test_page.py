@@ -85,7 +85,7 @@ def test_scope_home_renders(client):
 def test_the_chapters_appear_on_home_in_the_order_the_prd_fixes(client):
     body = client.get("/mirror").text
     links = re.findall(r'href="/mirror/chapter/(\d)\?', body)
-    assert links == ["1", "2", "3", "4"]
+    assert list(dict.fromkeys(links)) == ["1", "2", "3", "4"], "the dial, then the list and button"
 
 
 def test_every_fact_is_two_taps_from_home(client):
@@ -98,7 +98,7 @@ def test_every_fact_is_two_taps_from_home(client):
 
 def test_the_headline_figures_are_the_fixture_figures(client):
     pages = every_page(client)
-    assert "96%" in pages["/mirror"], "share of total, in Home's centre"
+    assert ">96</span>%" in pages["/mirror/chapter/1"], "share of total, in Chapter 1"
     assert "24,000" in pages["/mirror/fact/worst-days"], "five worst days"
     assert "15.8%" in pages["/mirror/fact/math"], "strike rate"
     assert ">10<" in pages["/mirror/fact/run"], "longest losing run"
