@@ -1,11 +1,11 @@
-"""Invite, password, session, CSRF (design section 1, ruling Q3-C).
+"""Sign-up, password, session, CSRF (design section 1, ruling Q3-C).
 
-The door is an invite code; the trader gets a login id and a password from the
-founder directly. No email is stored and none is sent, which keeps the data-flow map
+The door is open (TICKET-841, test_open_sign_up.py); the trader chooses a login id and
+a password. No email is stored and none is sent, which keeps the data-flow map
 to one company.
 
 What these tests fix is not the happy path -- it is the ways an auth layer usually
-leaks: a code that works twice, a login message that tells an attacker which half
+leaks: a login message that tells an attacker which half
 was wrong, a session that survives logout, a form that accepts a cross-site post, a
 cookie readable by script.
 """
@@ -41,14 +41,6 @@ def client(app_env):
     return TestClient(create_app())
 
 
-def make_invite(engine, code: str = "INVITE-1") -> str:
-    from datetime import UTC, datetime
-    with make_session(engine) as sess:
-        sess.add(m.InviteCode(code=code, created_at=datetime.now(UTC)))
-        sess.commit()
-    return code
-
-
 def token(client: TestClient, path: str) -> str:
     page = client.get(path)
     found = CSRF.search(page.text)
@@ -56,40 +48,18 @@ def token(client: TestClient, path: str) -> str:
     return found.group(1)
 
 
-def redeem(client, engine, code="INVITE-1", login_id="rikk", password="a-long-enough-password"):
-    make_invite(engine, code)
-    csrf = token(client, f"/invite/{code}")
-    return client.post(
-        f"/invite/{code}",
+def redeem(client, engine, login_id="rikk", password="a-long-enough-password"):
+    """Make an account, then leave it signed out, as these tests start from."""
+    client.cookies.clear()
+    csrf = token(client, "/signup")
+    response = client.post(
+        "/signup",
         data={"login_id": login_id, "display_name": "Rikk", "password": password,
               "csrf_token": csrf},
         follow_redirects=False,
     )
-
-
-def test_an_unknown_code_does_not_offer_an_account(client):
-    assert client.get("/invite/NOPE").status_code == 404
-
-
-def test_redeeming_creates_the_trader_and_marks_the_code(client, app_env):
-    _, engine = app_env
-    response = redeem(client, engine)
-    assert response.status_code in (302, 303)
-    with make_session(engine) as sess:
-        trader = sess.scalars(select(m.Trader)).one()
-        assert trader.login_id == "rikk"
-        code = sess.scalars(select(m.InviteCode)).one()
-        assert code.redeemed_by == trader.id
-        assert code.redeemed_at is not None
-
-
-def test_a_code_cannot_create_two_accounts(client, app_env):
-    _, engine = app_env
-    redeem(client, engine)
-    second = client.get("/invite/INVITE-1")
-    assert second.status_code == 404
-    with make_session(engine) as sess:
-        assert len(sess.scalars(select(m.Trader)).all()) == 1
+    client.cookies.clear()
+    return response
 
 
 def test_the_password_is_stored_as_an_argon2_hash(client, app_env):
@@ -99,16 +69,6 @@ def test_the_password_is_stored_as_an_argon2_hash(client, app_env):
         stored = sess.scalars(select(m.Trader)).one().password_hash
     assert stored.startswith("$argon2id$")
     assert "correct-horse-battery" not in stored
-
-
-def test_a_short_password_is_refused_plainly(client, app_env):
-    _, engine = app_env
-    make_invite(engine, "SHORT")
-    csrf = token(client, "/invite/SHORT")
-    response = client.post("/invite/SHORT", data={
-        "login_id": "x", "display_name": "X", "password": "abc", "csrf_token": csrf})
-    assert response.status_code == 400
-    assert "12" in response.text
 
 
 def test_login_succeeds_and_the_session_persists(client, app_env):
