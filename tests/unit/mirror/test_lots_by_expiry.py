@@ -145,8 +145,7 @@ def test_a_stated_boundary_must_be_a_date(tmp_path):
 def test_a_stated_range_cannot_end_before_it_starts(tmp_path):
     path = _profile(tmp_path, (
         '  - {units: "20", from: "2024-11-20", until: "2026-12-31"}',
-        '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01", '
-        'expiries_until: "2026-01-01"}',
+        '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01", expiries_until: "2026-01-01"}',
     ))
     with pytest.raises(profiles.InvalidProfile):
         profiles.load_one(path)
@@ -216,7 +215,7 @@ def test_one_contract_at_one_instant_under_two_expiries_keeps_todays_answer(clie
     assert set(_lots_by_hour(client, engine, content).values()) == {4}
 
 
-def test_a_quantity_only_one_size_divides_does_not_read_the_raw_file(  # noqa: F811
+def test_a_quantity_only_one_size_divides_does_not_read_the_raw_file(
     client, engine, monkeypatch  # noqa: F811
 ):
     """Every page loads the record, and parsing the whole file each time would be waste."""
