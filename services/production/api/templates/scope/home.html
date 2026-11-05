@@ -1,7 +1,7 @@
 {#- Scope home: the home of the verdict (Scope_Feedback section 10). The dial's centre is the
-    trader's result, its slices the ways in; below, what happened, by book, then what each
-    chapter found. Every line describes: a post-loss comparison waits on the shuffle test,
-    and a price-band finding on the research seat. -#}
+    trader's result, its slices each chapter's answer; below, what happened, by book, then those
+    answers in full, then the counts on one line. Every line describes: a post-loss comparison
+    shows only where the file's own shuffle test lets it. -#}
 {% extends "layout.html" %}
 {% from "_components.html" import dial, gross_line, uncounted_line, lockup, chip, money, button %}
 {% set nav = "scope" %}
@@ -33,19 +33,13 @@
   <ol class="home__chapters">
     {%- for c in chapters %}
     <li class="home__chapter{% if c.opened %} home__chapter--read{% endif %}"><span class="label">{{ c.number }} · {{ c.name }}{% if c.opened %} · Read{% endif %}</span>
-      <p class="body">
-      {%- if c.state %}Not enough trades yet.
-      {%- elif c.number == 1 %}{% if best_was_held %}Your best trades weren't trades.{% else %}Your five worst days came to {{ money(worst_days.sum) }}.{% endif %}
-      {%- elif c.number == 2 %}Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.
-      {%- elif c.number == 3 %}On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed.
-      {%- else %}What we read: <span class="num">{{ imp.rows_parsed|count }}</span> of <span class="num">{{ imp.rows_in|count }}</span> rows.{% include "scope/_refused.html" %}
-      {%- endif %}</p>
+      <p class="body">{% include "scope/_hub_answer.html" %}</p>
       {{ button("Open chapter " ~ c.number, href=c.href, kind="text") }}
     </li>
     {%- endfor %}
   </ol>
-  <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>
   {{ uncounted_line(imp.trips_refused) }}
-  <p class="label label--plain home__foot"><span>No buy or sell calls, ever.</span><span>4 chapters</span></p>
+  <p class="label label--plain home__foot"><span>{{ imp.rows_parsed|count }} of {{ imp.rows_in|count }} rows read · {{ trade_count|count }} trades · {{ trading_day_count|count }} trading days{% if not imp.fees_available %} · before charges{% endif %}</span><span>No buy or sell calls, ever.</span></p>
+  {% include "scope/_refused.html" %}
   {% include "scope/_lineage.html" %}
 {% endblock %}

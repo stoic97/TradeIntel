@@ -16,10 +16,10 @@ from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from tests.unit.api.templating import template_env
-from tests.unit.mirror.test_page import NEVER_USED
 from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
 from tests.unit.api.test_scope_chapters import TRIPS as FORTY
 from tests.unit.api.test_scope_home_verdict import t
+from tests.unit.mirror.test_page import NEVER_USED
 
 CTX = SF.record_context(FORTY)
 FIGS = SF.facts(CTX, IMP)

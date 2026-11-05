@@ -472,11 +472,11 @@ def test_a_fact_in_a_state_keeps_its_dash_on_the_dial():
 
 
 def test_the_card_and_home_keep_their_own_figures():
-    """Only the chapter's dial changes: home's slice says whether it has been read, and a card's
-    figure sits beside the sentence that explains it."""
+    """Only the chapter's dial changes: home's slice says the busiest day, and a card's figure
+    sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
     assert figs["down"]["figure"] == "4"
-    assert SF.home_view(SF.record_context(DOWN))["items"][2]["figure"] == "Open"
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "busiest day"
     assert ">4<" in chapter_page(3, DOWN)
 
 

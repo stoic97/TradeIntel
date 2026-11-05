@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 from dataclasses import replace
 from html import unescape
 from pathlib import Path
@@ -20,6 +21,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from services.production.api import dial as D
+from services.production.api import limits
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.api.app import create_app
@@ -50,6 +52,9 @@ def pages(tmp_path_factory):
 
     os.environ.update(SCOPE_DB=f"sqlite:///{(root / 'd.db').as_posix()}", SCOPE_FILES=str(root / "files"),
                       SCOPE_SECRET_KEY="x" * 40, SCOPE_FILE_KEY=generate_key())
+    healthy = shutil._ntuple_diskusage(total=100, used=50, free=50)  # conftest's patch comes later
+    patch = pytest.MonkeyPatch()
+    patch.setattr(limits.shutil, "disk_usage", lambda _path: healthy)
     try:
         engine = make_engine(os.environ["SCOPE_DB"])
         run_migrations(engine)
@@ -58,6 +63,7 @@ def pages(tmp_path_factory):
         got = {path: client.get(path).text for path in (HUB, *CHAPTERS)}
         engine.dispose()
     finally:
+        patch.undo()
         for key, value in saved.items():
             if value is None:
                 os.environ.pop(key, None)
@@ -201,7 +207,3 @@ def test_the_slice_keeps_its_order_for_a_screen_reader(pages):
 
 def test_a_facts_serial_beside_its_title_stays():
     assert "story-card__num" in chapter_page(1, TRIPS)
-
-
-def test_home_keeps_saying_open_or_read(pages):
-    assert {w for texts in slices(pages[HUB]) for c, w in texts if c.split()[0] == "figure"} == {"Open"}
