@@ -97,7 +97,7 @@ def test_each_fact_says_what_its_trades_are():
     assert "Your best five and worst five, by result." in fact_page("money")
     assert "How long each trade was open, by how it ended." in fact_page("math")
     assert "Every trade, by the hour you opened it." in fact_page("clock")
-    assert "Every trade opened after two that had already closed at a loss." in fact_page("down")
+    assert "Every trade opened after two earlier trades that day had already closed." in fact_page("down")
 
 
 def test_the_strike_rate_page_lists_winners_losers_and_level_apart():

@@ -1302,6 +1302,116 @@ def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
     return read
 
 
+NAMED_BOOK_MINIMUM = 20
+"""Below this a book has no row of its own and goes in with the other options."""
+
+
+@dataclass(frozen=True)
+class Standout:
+    """The one instrument that made at least half of what the non-option trades made."""
+
+    symbol: str
+    net: Decimal
+    held_days: int  # calendar days, the longest it was held; 0 if closed the day it opened
+
+
+@dataclass(frozen=True)
+class BookResult:
+    label: str
+    net: Decimal
+    trades: int
+    worst_day: str | None  # the day this book lost most; None if it never lost a day
+    worst_net: Decimal | None
+    standout: Standout | None = None
+
+
+@dataclass(frozen=True)
+class Verdict:
+    """The whole result, split the way the trader thinks of it. The books add up to it."""
+
+    options_net: Decimal
+    options_trades: int
+    others_net: Decimal
+    others_trades: int
+    books: tuple[BookResult, ...]
+    standout: Standout | None
+
+    @property
+    def options_size(self) -> Decimal:
+        return abs(self.options_net)
+
+    @property
+    def others_size(self) -> Decimal:
+        return abs(self.others_net)
+
+    @property
+    def made_back(self) -> bool:
+        """"Made back" is only true of a part of what the options lost."""
+        return bool(self.standout and self.options_net < 0 and self.standout.net < -self.options_net)
+
+
+def _worst_of_book(trips: list[Trip]) -> tuple[str | None, Decimal | None]:
+    days: dict[str, Decimal] = {}
+    for trip in trips:
+        days[trip.trading_day] = days.get(trip.trading_day, Decimal(0)) + trip.net
+    day, net = min(days.items(), key=lambda kv: (kv[1], kv[0]))
+    return (day, net) if net < 0 else (None, None)
+
+
+def _book_result(label: str, trips: list[Trip], standout: Standout | None = None) -> BookResult:
+    worst_day, worst_net = _worst_of_book(trips)
+    return BookResult(label, sum((t.net for t in trips), Decimal(0)), len(trips), worst_day, worst_net, standout)
+
+
+def _standout(others: list[Trip]) -> Standout | None:
+    """Named only when the group made money and this one made at least half of it."""
+    total = sum((t.net for t in others), Decimal(0))
+    if total <= 0:
+        return None
+    by_symbol: dict[str, list[Trip]] = {}
+    for trip in others:
+        by_symbol.setdefault(trip.symbol, []).append(trip)
+    symbol, trips = max(by_symbol.items(), key=lambda kv: sum(t.net for t in kv[1]))
+    net = sum((t.net for t in trips), Decimal(0))
+    if net * 2 < total:
+        return None
+    held = max((t.exit_ts.date() - t.entry_ts.date()).days for t in trips)
+    return Standout(symbol, net, held)
+
+
+def verdict(trips: list[Trip]) -> Verdict:
+    """The result by book: every named option book, the other options, then the rest.
+
+    Whole history, not same-day: this is what the file came to. A figure pooled into "other"
+    is only a sum, which is why a book under the minimum can go there (a median could not).
+    """
+    options = [t for t in trips if t.is_option]
+    others = [t for t in trips if not t.is_option]
+    by_book: dict[str, list[Trip]] = {}
+    for trip in options:
+        by_book.setdefault(trade_book(trip), []).append(trip)
+    named = {b: ts for b, ts in by_book.items() if len(ts) >= NAMED_BOOK_MINIMUM}
+    pooled = [t for b, ts in by_book.items() if b not in named for t in ts]
+    rows = sorted(
+        (_book_result(b, ts) for b, ts in named.items()),
+        key=lambda r: (r.net, r.label),
+    )
+    if pooled:
+        rows.append(_book_result("Other options", pooled))
+    standout = _standout(others)
+    other_books: dict[str, list[Trip]] = {}
+    for trip in others:
+        other_books.setdefault(trade_book(trip), []).append(trip)
+    for book, ts in sorted(other_books.items()):
+        holds_it = standout is not None and any(t.symbol == standout.symbol for t in ts)
+        rows.append(_book_result(book, ts, standout if holds_it else None))
+    return Verdict(
+        options_net=sum((t.net for t in options), Decimal(0)), options_trades=len(options),
+        others_net=sum((t.net for t in others), Decimal(0)), others_trades=len(others),
+        books=tuple(rows), standout=standout,
+    )
+
+
 @dataclass(frozen=True)
 class WorstDayRow:
     trading_day: str

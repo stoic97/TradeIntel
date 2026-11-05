@@ -1,0 +1,14 @@
+{#- The verdict, one sentence, for every screen that says it: Scope home and home after sign-in
+    read this, so the two can't disagree. Figures are amounts: the sentence says lost or made. -#}
+{% from "_components.html" import money %}
+{% macro came(net, size) -%}
+{%- if net > 0 %}made {{ money(size, signed=false) }}{% elif net < 0 %}lost {{ money(size, signed=false) }}{% else %}came out level{% endif -%}
+{%- endmacro %}
+{% macro held(s) -%}
+{%- if s.held_days %}, held up to <span class="num">{{ s.held_days|count }}</span> day{{ "" if s.held_days == 1 else "s" }}{% endif -%}
+{%- endmacro %}
+{% macro verdict_sentence(verdict) -%}
+{%- if verdict.options_trades %}Your option trades {{ came(verdict.options_net, verdict.options_size) }}.
+  {%- if verdict.others_trades %} {% if verdict.made_back %}{{ verdict.standout.symbol }}{{ held(verdict.standout) }}{% if verdict.standout.held_days %},{% endif %} made back {{ money(verdict.standout.net, signed=false) }} of it.{% else %}Your stock, ETF and futures trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif %}{% endif %}
+{%- else %}Your trades {{ came(verdict.others_net, verdict.others_size) }}.{% endif -%}
+{%- endmacro %}

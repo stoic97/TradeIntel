@@ -159,6 +159,22 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
 
+/* Scope home's verdict by book and its chapters (TICKET-823); the kit draws neither. */
+.home__start { margin-top: var(--space-4); }
+.home__heading { margin-top: var(--space-5); }
+.home__books, .home__chapters { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.home__book, .home__chapter { padding: var(--space-3) 0; border-top: 1px solid var(--color-hairline); }
+.home__book-head { display: flex; justify-content: space-between; gap: var(--space-3); }
+.home__chapter--read .label { color: var(--color-muted); }
+
+/* Home after sign-in: the verdict on the card, and why each day is worth a look. */
+.scope-card__verdict { display: block; margin-top: 10px; font-size: var(--font-size-title, 1.5rem); line-height: 1.25; }
+.scope-card__verdict .num { color: inherit; }
+.scope-card__split { display: grid; gap: var(--space-1); margin-top: var(--space-3); }
+.scope-card__split .num { color: inherit; }
+.latest__when .body-small { display: block; }
+.latest__when { padding-block: var(--space-2); }
+
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
 .import__days > summary { cursor: pointer; }
