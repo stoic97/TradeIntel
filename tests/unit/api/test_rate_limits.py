@@ -16,6 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -356,9 +357,8 @@ def test_a_disk_just_under_the_line_takes_the_file(app, engine, monkeypatch):
 def test_a_nearly_full_disk_refuses_a_charges_file_too(app, engine, monkeypatch):
     client = sign_up_with_consent(TestClient(app), engine, "U", "rikk")
     assert upload(client, path=GOOD).status_code == 303
-    url_page = charges_post
     full_disk(monkeypatch, k.UPLOADS_REFUSED_AT_DISK_PERCENT)
-    assert url_page(client, engine, "rikk").status_code == 503
+    assert charges_post(client, engine, "rikk").status_code == 503
 
 
 def test_the_refusal_is_in_the_log_because_nobody_else_is_told(app, engine, monkeypatch, caplog):
@@ -425,20 +425,42 @@ def test_nobody_needs_to_be_signed_in_to_be_refused(app):
     assert posted.status_code == 413
 
 
-def test_a_body_with_no_stated_length_is_stopped_at_the_cap(app, engine):
+def test_a_body_with_no_stated_length_is_stopped_at_the_cap():
+    """No browser sends one, so it is counted as it arrives and the read stops at the cap."""
+    import asyncio
+
+    chunk = b"x" * (1024 * 1024)
+    handed_over = []
+
+    async def receive():
+        return {"type": "http.request", "body": chunk, "more_body": True}
+
+    async def app(scope, receive, send):
+        while True:
+            handed_over.append(len((await receive())["body"]))
+
+    async def send(_message):
+        raise AssertionError("nothing is sent from here")
+
+    scope = {"type": "http", "method": "POST", "path": "/upload", "query_string": b"", "headers": []}
+    with pytest.raises(HTTPException) as refused:
+        asyncio.run(limits.BodyCap(app, refuse=limits.plain_refusal)(scope, receive, send))
+    assert refused.value.status_code == 413
+    assert sum(handed_over) <= k.MAX_REQUEST_BYTES
+
+
+def test_the_real_app_answers_a_body_with_no_stated_length_past_the_cap(app, engine):
     client = sign_up_with_consent(TestClient(app), engine, "U", "rikk")
     before = raw_files(engine)
-    chunks_read = []
 
     def endless():
-        for n in range(50):
-            chunks_read.append(n)
+        for _ in range(50):
             yield b"x" * (1024 * 1024)
 
     posted = client.post("/upload", content=endless(),
                          headers={"content-type": "multipart/form-data; boundary=x"},
                          follow_redirects=False)
-    assert 400 <= posted.status_code < 500
+    assert posted.status_code == 413
     assert raw_files(engine) == before
 
 

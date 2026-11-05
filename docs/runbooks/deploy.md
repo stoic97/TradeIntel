@@ -146,6 +146,16 @@ The release gate, PRD section 10. None of it is optional and none of it is code:
    refuses real accounts on purpose** — a real account reaching `/consent` gets
    the "not open yet" page, by design.
 
+## When uploads are refused
+
+The caps are in `services/production/journal/constants.py`, each with its argument.
+
+- **A trader says uploads are refused for storage:** the disk has passed
+  `UPLOADS_REFUSED_AT_DISK_PERCENT`. Nothing alerts on this. It's only in the log:
+  `journalctl -u scope | grep "uploads refused"`, and `df -h /srv/scope`.
+- **Someone can't sign up behind a shared connection:** the count is in memory, so
+  `systemctl restart scope` clears it.
+
 ## What this does not cover
 
 Postgres (ADR-005, Phase 1), a second app process, log shipping, uptime

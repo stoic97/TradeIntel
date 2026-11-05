@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from services.production.accounts import auth
+from services.production.api import limits
 from services.production.ctr.intake import day_versions as dv
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -137,6 +138,16 @@ def signup(
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
+    # Before the password is hashed: hashing is the costly part of a sign-up.
+    connection = limits.connection(request)
+    wait = request.app.state.signups.wait_seconds(connection)
+    if wait:
+        return limits.with_retry_after(
+            page(request, "signup.html", status_code=429, title="Create your account",
+                 error=limits.signups_refused(wait)),
+            wait,
+        )
+
     login_id, display_name = login_id.strip(), display_name.strip()
     if not login_id or not display_name:
         return _signup_refused(request, "A name and a login id are both needed.")
@@ -167,6 +178,7 @@ def signup(
         sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="sign_up", target=None,
                                at=datetime.now(UTC)))
         sess.commit()
+        request.app.state.signups.add(connection)
 
         response = RedirectResponse(landing_for(sess, trader), status_code=303)
         _set_session_cookie(response, request, auth.new_session(trader.id))
