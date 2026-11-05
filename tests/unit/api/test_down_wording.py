@@ -1,4 +1,4 @@
-"""TICKET-840: "Trading on while already down" says what its count counts.
+"""TICKET-840: Chapter 3's down story ("After two straight losses") says what its count counts.
 
 B2's population (services/shared/conditions/b2_condition.py, Annex A.1) is every
 trade with at least two earlier same-day trades closed before it opened, whatever
@@ -6,6 +6,10 @@ those trades made. Only the condition asks that the two most recent both lost. T
 sentence used to say the population's trades came "after two earlier trades that day
 had already closed at a loss", which claims the condition of every trade in the
 population. The words change; no number does.
+
+The fact page no longer repeats the card's sentence (TICKET-832 opens it with the one
+sentence and counts its trades in its own words); what it must still not do is claim
+the condition of the whole population.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ SENTENCE = (
     "On {population} occasions you opened a trade after two earlier trades that day had "
     "already closed. On {condition} of those, the two most recent had both lost."
 )
+FACT_COUNT = "These are the {population} trades you opened once at least two earlier trades that day had closed."
 CAPTION = "Every trade opened after two earlier trades that day had already closed."
 OLD_CLAIM = "had already closed at a loss"
 
@@ -44,7 +49,7 @@ def test_the_chapter_three_card_says_what_its_count_counts():
 
 def test_the_fact_page_says_what_its_count_counts():
     page = readable(fact_page("down"))
-    assert SENTENCE.format(**counts()) in page
+    assert FACT_COUNT.format(**counts()) in page
     assert OLD_CLAIM not in page
 
 

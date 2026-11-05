@@ -12,7 +12,7 @@
   </div>
 </header>
 {% endblock %}
-{% block content %}
+{% block content %}{% if charges is defined and charges %}{% include "scope/_charges_line.html" %}{% endif %}
   <p class="label">Counted from your file</p>
   <h1 class="title fact__title">What your trades actually did.</h1>
   <p class="body"><span class="num">{{ trade_count|count }}</span> trades, <span class="num">{{ trading_day_count|count }}</span> trading days. Every figure here is counted from your file. Open any line to see the trades behind it.</p>

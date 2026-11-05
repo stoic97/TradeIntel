@@ -17,6 +17,9 @@
     <dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
   </dl>
   <a class="link import__next" href="/guess">See your record — what these trades say, with the trades behind every line.</a>
+  {%- if charges_offered is defined and charges_offered %}
+  <a class="link import__next" href="/imports/{{ imp.id }}/charges">Add charges, if you have them: a file from your broker.</a>
+  {%- endif %}
   {%- if not imp.fees_available %}
   <p class="gross-line">This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
   {%- endif %}
@@ -54,6 +57,16 @@
     <h2 class="card-title">Days in this upload</h2>
     {%- if first_upload %}
     <p class="body"><span class="num">{{ days|length|count }}</span> trading days, from <span class="num">{{ days[0].trading_day }}</span> to <span class="num">{{ days[-1].trading_day }}</span>. All of them are new to Scope.</p>
+    {%- else %}
+    <p class="body">Since your last upload, {% if changed_days %}<span class="num">{{ changed_days|length|count }}</span> {{ "day" if changed_days|length == 1 else "days" }} changed: {% for d in changed_days[:3] %}{{ d|day }}{% if not loop.last %}, {% endif %}{% endfor %}{% if changed_days[3:] %} and {{ changed_days[3:]|length|count }} more{% endif %}{% else %}no day changed{% endif %}.</p>
+    {%- endif %}
+    {#- A day that lost rows is never silent (day_versions.py), so it stays outside. -#}
+    {%- if shrunk_days %}
+    <p class="body">{% for d in shrunk_days %}{{ d|day }}{% if not loop.last %}, {% endif %}{% endfor %} {{ "has" if shrunk_days|length == 1 else "have" }} fewer rows than before.</p>
+    {%- endif %}
+    <details class="import__days">
+    <summary class="link">Show all <span class="num">{{ days|length|count }}</span> days</summary>
+    {%- if first_upload %}
     <p class="subhead import__days-title">Every day, with its row count</p>
     <table class="table"><thead><tr><th class="table__day">Day</th><th class="table__num">Rows</th></tr></thead>
       <tbody>
@@ -69,6 +82,7 @@
       {%- endfor %}
       </tbody></table>
     {%- endif %}
+    </details>
   </section>
   {%- endif %}
   <p class="provenance">Journal unit for this upload: {{ imp.density_default_unit }}.</p>

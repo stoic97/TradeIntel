@@ -29,6 +29,20 @@
 .trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
 .trade-filters__clear { margin-top: var(--space-3); }
 
+/* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
+   phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
+.clock-book { margin-top: var(--space-10); }
+.clock-book__line, .clock-book__note { margin-top: var(--space-3); }
+.clock-book__table td:first-child { white-space: normal; }
+.clock-book__table th { vertical-align: bottom; }
+.clock-book__table a { color: inherit; text-decoration: underline; }
+.clock-book .num { white-space: nowrap; } /* a minus stays with its figure */
+.clock-others { margin-top: var(--space-10); }
+.clock-others summary { cursor: pointer; }
+.clock-next { margin-top: var(--space-10); }
+.clock-card__book, .clock-card__line { display: block; font-size: 12px; line-height: 18px; }
+.clock-card__book { margin-top: var(--space-3); color: var(--color-ink); font-weight: 600; }
+
 /* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
    so the reading state is the request itself: htmx puts .htmx-request on #upload
    while it is in flight (hx-indicator), and the form gives way to "Reading your file"
@@ -41,10 +55,54 @@
    width comes out of the two clock columns, so the result column stays as wide as it was. */
 .trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
 
+/* The math of your trading: a row per book and a table per book, which the kit does not draw.
+   More columns would push a phone sideways, so a table holds five at most, a figure stays
+   whole, only a book's long name may break, and a second figure sits under the first. */
+.math__book { margin-top: var(--space-8); }
+.math__table td.table__text { overflow-wrap: anywhere; }
+.math__under { display: block; color: var(--color-faint); }
+.math__secondary { margin-top: var(--space-4); color: var(--color-faint); }
+
+/* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
+   kit draws the figure there. */
+.fact__title + .mirror { margin-top: var(--space-3); }
+.opening-figure { white-space: nowrap; }
+
+/* The call/put strip on the busiest day (TICKET-827), not in the kit: which row says the side,
+   so neither colour has to. An outline only on a trade that made money. */
+.chart__call { fill: var(--color-ink); }
+.chart__put { fill: var(--color-faint); }
+.chart__won { fill: none; stroke: var(--color-gain); stroke-width: 1.5; }
+.strip-note { margin-top: var(--space-2); }
+
+/* Where a chapter-3 page goes next (TICKET-827); the kit's fact pages end at their list. */
+.chapter-next { margin-top: var(--space-10); }
+.chapter-next + .chapter-next { margin-top: var(--space-3); }
+.chapter-next__line { margin-bottom: var(--space-3); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
 button.guess__option { width: 100%; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--color-hairline); font: inherit; text-align: left; cursor: pointer; }
+
+/* The losing run's timeline (TICKET-820), the Scope's own chart: a put is a hollow marker
+   and a call a filled one, so they read apart without colour, and the run is a quiet band.
+   The headline is a sentence, so its rupees take the title's font; a figure never breaks
+   between its minus and its rupee sign, on a phone least of all. */
+.fact__title .num { font: inherit; }
+.fact__title .num, .run__range .num, .run__lines .num, .run__after .num, .run__next .num, .mirror--card .num { white-space: nowrap; }
+.chart__band { fill: var(--color-hairline); fill-opacity: .35; }
+.chart__put { fill: var(--color-page); stroke: var(--color-ink); stroke-width: 1.25; }
+.legend__swatch--put { background: none; box-shadow: inset 0 0 0 1.25px var(--color-ink); }
+.legend__swatch--band { background: var(--color-hairline); opacity: .6; }
+.run__range { margin-top: var(--space-2); }
+.run__lines { margin-top: var(--space-6); }
+.run__lines .body-small + .body-small { margin-top: var(--space-2); }
+.trade__gap { font-size: 12px; line-height: 18px; color: var(--color-faint); }
+.run__after, .run__next { margin-top: var(--space-6); }
+.run__after .trades { margin-top: var(--space-3); }
+.run__after .mirror { margin-top: var(--space-4); }
+.run__next .btn { margin-top: var(--space-4); }
 
 /* Sign out on the Account page (D6); the kit draws no place for it. */
 .account__sign-out { margin-top: var(--space-4); }
@@ -83,3 +141,24 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
+
+/* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
+.import__days { margin-top: var(--space-4); }
+.import__days > summary { cursor: pointer; }
+
+/* The five days on the reveal (TICKET-816); the kit's reveal doesn't list them. */
+.reveal__title { margin-top: var(--space-4); }
+.reveal__days { list-style: none; margin: var(--space-6) 0 0; padding: 0; }
+.reveal__day { display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-2); align-items: baseline; padding: var(--space-2) 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+
+/* The five worst days, one collapsed block each. */
+.day-blocks { margin-top: var(--space-6); }
+.day-block { border-top: 1px solid var(--color-rule, #dce0e6); padding: var(--space-3) 0; }
+.day-block__summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; cursor: pointer; }
+.day-block__when .body-small { display: block; }
+.day-block__went { grid-column: 1 / -1; }
+.day-block__line { display: block; }
+.day-block__zero { stroke: #c9d1dd; stroke-width: 1; }
+.day-block__run { stroke: currentColor; stroke-width: 1.5; }
+.day-block__flag { margin: var(--space-3) 0; }
+.day-blocks__next, .chapter__next { margin-top: var(--space-6); }

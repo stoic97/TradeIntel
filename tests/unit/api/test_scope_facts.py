@@ -1,4 +1,4 @@
-"""The twelve fact pages: the path, the Mirror's sentences, and every trade behind each.
+"""The fact pages: the path, the Mirror's sentences, and every trade behind each.
 
 Rendered through the app's templates with the Mirror's 40-trade fixture. Handoff 11:
 each fact page lists every trade behind it, and the count matches the fact.
@@ -95,22 +95,13 @@ def test_each_fact_says_what_its_trades_are():
     """The Mirror's drawer captions, where the Mirror had a drawer (wording.DRAWER_CAPTIONS)."""
     assert "The five days, and every trade on them." in fact_page("worst-days")
     assert "Your best five and worst five, by result." in fact_page("money")
-    assert "How long each trade was open, by how it ended." in fact_page("hold")
+    assert "How long each trade was open, by how it ended." in fact_page("math")
     assert "Every trade, by the hour you opened it." in fact_page("clock")
     assert "Every trade opened after two earlier trades that day had already closed." in fact_page("down")
 
 
-def test_the_worst_days_table_says_each_day_against_the_normal_day_as_the_mirror_did():
-    page = fact_page("worst-days")
-    normal = float(CTX["days"].normal_day)
-    for d in CTX["worst_days"].days:
-        row = f"<td>{formatting.day(d.trading_day)}</td>"
-        assert row in page
-        assert f"{d.trips / normal:.1f}×" in page
-
-
 def test_the_strike_rate_page_lists_winners_losers_and_level_apart():
-    page = fact_page("strike", trips=trips_from([100, -50, 0]))
+    page = fact_page("math", trips=trips_from([100, -50, 0]))
     for title in ("Winners", "Losers"):
         assert f'<span class="trades__day">{title}</span>' in page
 
@@ -143,7 +134,7 @@ def test_what_we_have_not_told_you_has_no_trades_and_carries_the_lineage():
     assert "Computed from import 7" in page
 
 
-@pytest.mark.parametrize("key", ["hold", "run"])
+@pytest.mark.parametrize("key", ["math", "run"])
 def test_a_fact_that_cannot_be_counted_says_so_in_place_of_its_figure(key):
     page = fact_page(key, trips_from([100, 200, 300, 50]))
     assert "result-state--not-enough" in page and "Not enough trades yet" in page
@@ -159,10 +150,9 @@ def test_risk_with_nothing_to_measure_against_is_not_in_the_file():
 
 def test_a_share_that_is_not_a_percentage_is_told_as_the_mirror_tells_it():
     trips = trips_from([10, 20, 30, 40, 50, 60])
-    for key in ("worst-days", "share"):
-        page = readable(fact_page(key, trips))
-        assert "Your result for the whole period was" in page
-        assert "% of your losses" not in page
+    page = readable(fact_page("worst-days", trips))
+    assert "Your result for the whole period was" in page
+    assert "% of your losses" not in page
 
 
 def test_an_average_keeps_its_paise_as_the_mirror_printed_it():

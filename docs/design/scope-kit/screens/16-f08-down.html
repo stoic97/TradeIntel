@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trading on while already down · PlusEV Scope</title>
+<title>After two straight losses · PlusEV Scope</title>
 <link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/static/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/static/icons/favicon-16.png" sizes="16x16" type="image/png">
@@ -14,7 +14,7 @@
 <script src="/static/js/htmx.min.js" defer></script>
 </head>
 <!--
-  Screen: 16 · Fact · Trading on while already down
+  Screen: 16 · Fact · After two straight losses
   Route:  GET /scope/behaviour/down
   enter_class: "vt-lens" when arriving from the chapter dial or a story card; empty otherwise.
 -->
@@ -26,13 +26,14 @@
   <span class="path__crumbs path__crumbs--short">
     <a class="path__link" href="/scope">Scope</a><span class="path__sep" aria-hidden="true">›</span>
     <a class="path__link" href="/scope/behaviour?enter=back&amp;fact=1" title="Your behaviour" aria-label="Your behaviour">Your…</a><span class="path__sep" aria-hidden="true">›</span>
-    <span class="path__current" aria-current="page">Trading on while already down</span>
+    <span class="path__current" aria-current="page">After two straight losses</span>
   </span>
 </nav>
 <main class="screen__body screen__body--fact">
   <div class="fact__head">
     <p class="fact__chapter">CHAPTER 3 · FACT 1 OF 2</p>
-    <h1 class="title fact__title">Trading on while already down</h1>
+    <h1 class="title fact__title">After two straight losses</h1>
+    <p class="mirror">{{ opening_sentence }}</p>
     <div class="fact__figure"><span class="num num--hero">{{ occasion_count }}</span></div>
     
     <p class="mirror">On <span class="num ">{{ occasion_count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss. On <span class="num ">{{ both_lost_count }}</span> of those, the two most recent had both lost.</p>

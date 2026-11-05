@@ -29,10 +29,11 @@ CTX = record_context(TRIPS)
 
 
 def test_the_chapters_and_facts_are_the_handoffs():
-    """Handoff section 4: four chapters, twelve facts, in slice order, with their keys."""
+    """Handoff section 4 in slice order, with strike rate and hold time as one fact and the
+    share as a line on worst days."""
     assert [(c.number, c.name, [f.key for f in c.facts]) for c in S.CHAPTERS] == [
-        (1, "Where your results came from", ["worst-days", "share", "money"]),
-        (2, "Your patterns", ["hold", "strike", "run", "clock"]),
+        (1, "Where your results came from", ["worst-days", "money"]),
+        (2, "Your patterns", ["math", "run", "clock"]),
         (3, "Your behaviour", ["down", "busiest"]),
         (4, "What we read", ["unread", "risk", "not-told"]),
     ]
@@ -42,20 +43,21 @@ def test_the_chapters_and_facts_are_the_handoffs():
 def test_every_fact_has_a_chart_the_geometry_draws():
     from services.production.api import scope_geometry as G
 
-    assert {f.chart for f in S.FACTS.values()} == set(G.CHARTS)
+    # The hold and strike charts stay in the geometry, pinned there, with no fact drawing them.
+    assert {f.chart for f in S.FIGURES.values()} <= set(G.CHARTS)
 
 
 def test_every_fact_title_is_a_heading_the_mirror_already_uses():
     """Handoff 6: the Mirror's own headings, word for word."""
     mirror = mirror_sentences()
     for f in S.FACTS.values():
-        if f.key in ("share", "strike", "run", "busiest"):
-            continue  # facts the long page told inside another section's sentences
+        if f.key in ("share", "math", "run", "busiest"):
+            continue  # told inside another section's sentences, or a new title (D9)
         assert f.title in mirror, f.key
 
 
 def test_a_fact_knows_its_chapter_and_place():
-    assert S.chapter_of("clock") == (S.CHAPTERS[1], 3)
+    assert S.chapter_of("clock") == (S.CHAPTERS[1], 2)
     with pytest.raises(KeyError):
         S.chapter_of("nope")
     with pytest.raises(KeyError):
@@ -119,7 +121,7 @@ def test_the_busiest_day_lists_every_trade_on_it():
     assert len(shown) == CTX["days"].busiest_trips
 
 
-@pytest.mark.parametrize("key", ["hold", "strike", "clock", "risk"])
+@pytest.mark.parametrize("key", ["math", "clock", "risk"])
 def test_a_fact_about_every_trade_lists_every_trade(key):
     """B3 for strike rate: winners and losers are every trade, so all of them."""
     assert S.trades_behind(key, CTX) == TRIPS
@@ -149,7 +151,7 @@ def test_most_facts_group_by_trading_day():
 
 
 def test_the_outcome_facts_group_by_how_a_trade_ended():
-    got = {g["title"]: g["trade_count"] for g in S.groups("strike", CTX)}
+    got = {g["title"]: g["trade_count"] for g in S.groups("math", CTX)}
     assert got == {
         k: v
         for k, v in {
