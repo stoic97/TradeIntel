@@ -360,6 +360,9 @@ def scope_fact_trades(request: Request, key: str):
                 listing=TL.listing(key, context, request.query_params, expiries))
 
 
+CONFIRMED_ROW = "You told us this row repeats a trade already in the file."
+
+
 def _plain_refusal(reason: str) -> str:
     """Why a stored trade was refused, for a trader. New uploads refuse no sold option."""
     if "short option" in reason:
@@ -381,7 +384,8 @@ def _unread(request: Request, imp) -> dict:
             .order_by(m.SkippedTrip.id)
         ).all()
         return {
-            "excluded": [(r.row_no, r.reason) for r in rows if r.status == "EXCLUDED"],
+            "excluded": [(r.row_no, r.reason or CONFIRMED_ROW)
+                         for r in rows if r.status == "EXCLUDED"],
             "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
             "refused": [_plain_refusal(t.reason) for t in refused],
         }

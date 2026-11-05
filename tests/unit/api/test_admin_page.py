@@ -669,7 +669,7 @@ def test_upload_health_reads_the_latest_file_and_counts_refusals_across_all(app,
         sess.commit()
     row = row_of(view(app, engine), "someone")
     assert row["rows_read"] == "7 of 10"
-    assert row["rows_refused"] == 3
+    assert row["rows_refused"] == 1, "of 10: 7 read, 2 set aside"
     assert row["uploads_refused"] == 1
     assert row["duplicates"] == 3
 
