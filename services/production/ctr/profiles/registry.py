@@ -53,6 +53,8 @@ _REQUIRED = (
     "expiry_rule",
 )
 
+_LOT_SIZE_FIELDS = frozenset({"units", "from", "until", "expiries_from", "expiries_until"})
+
 
 class InvalidProfile(Exception):
     """A profile file the loader refuses. Raised at load time, never at use time."""
@@ -79,14 +81,27 @@ class LotSize:
     while because existing expiries keep the old lot while new ones get the new. So
     windows may overlap, and a trade resolves to whichever in-force size divides
     its quantity. ``until`` is None for the size in force today.
+
+    ``from`` and ``until`` are safe bounds on the trade date, not expiry boundaries.
+    Which expiries a size covers is stated separately, and only where it is known:
+    ``expiries_from`` and ``expiries_until`` are bounds on the calendar, not claims
+    about any one contract's expiry day. Left out, nothing is known in that direction.
     """
 
     units: Decimal
     from_day: date
     until_day: date | None
+    expiries_from: date | None = None
+    expiries_until: date | None = None
 
     def in_force_on(self, day: date) -> bool:
         return self.from_day <= day and (self.until_day is None or day <= self.until_day)
+
+    def rules_out(self, expiry: date) -> bool:
+        """True only when the profile states this size does not cover that expiry."""
+        return (self.expiries_from is not None and expiry < self.expiries_from) or (
+            self.expiries_until is not None and expiry > self.expiries_until
+        )
 
 
 @dataclass(frozen=True)
@@ -117,6 +132,28 @@ class InstrumentProfile:
             return (self.contract_multiplier,)
         sizes = sorted({ls.units for ls in self.lot_sizes if ls.in_force_on(day)}, reverse=True)
         return tuple(sizes)
+
+    def lot_sizes_for_expiry(self, day: date | None, expiry: date) -> tuple[Decimal, ...]:
+        """The in-force sizes this expiry is not ruled out of, largest first.
+
+        A size with no stated boundary stays in, because nothing rules it out. So with
+        no boundaries this is every size in force, as it is by date alone.
+        """
+        if day is None:
+            return ()
+        sizes = {
+            ls.units for ls in self.lot_sizes if ls.in_force_on(day) and not ls.rules_out(expiry)
+        }
+        return tuple(sorted(sizes, reverse=True))
+
+    def states_expiries_on(self, day: date | None) -> bool:
+        """Whether a stated boundary could decide between the sizes in force on a day."""
+        if day is None:
+            return False
+        return any(
+            ls.in_force_on(day) and (ls.expiries_from or ls.expiries_until)
+            for ls in self.lot_sizes
+        )
 
     @property
     def key(self) -> tuple[str, str]:
@@ -166,6 +203,10 @@ def _date_from(raw: Any, field: str, where: str) -> date:
     raise InvalidProfile(f"{where}: {field} must be a date")
 
 
+def _optional_date(entry: dict, key: str, field: str, where: str) -> date | None:
+    return None if entry.get(key) is None else _date_from(entry[key], f"{field}.{key}", where)
+
+
 def _lot_sizes(raw: Any, multiplier: Decimal, where: str) -> tuple[LotSize, ...]:
     """Parse ``lot_sizes``; the open-ended entry must agree with contract_multiplier."""
     if raw is None:
@@ -176,6 +217,9 @@ def _lot_sizes(raw: Any, multiplier: Decimal, where: str) -> tuple[LotSize, ...]
     for i, entry in enumerate(raw):
         if not isinstance(entry, dict) or "units" not in entry or "from" not in entry:
             raise InvalidProfile(f"{where}: lot_sizes[{i}] needs units and from")
+        unknown = set(entry) - _LOT_SIZE_FIELDS
+        if unknown:
+            raise InvalidProfile(f"{where}: lot_sizes[{i}] has unknown {sorted(unknown)}")
         units = _decimal_from_string(entry["units"], f"lot_sizes[{i}].units", where)
         from_day = _date_from(entry["from"], f"lot_sizes[{i}].from", where)
         until_day = None
@@ -183,7 +227,12 @@ def _lot_sizes(raw: Any, multiplier: Decimal, where: str) -> tuple[LotSize, ...]
             until_day = _date_from(entry["until"], f"lot_sizes[{i}].until", where)
             if until_day < from_day:
                 raise InvalidProfile(f"{where}: lot_sizes[{i}] ends before it starts")
-        out.append(LotSize(units=units, from_day=from_day, until_day=until_day))
+        expiries_from = _optional_date(entry, "expiries_from", f"lot_sizes[{i}]", where)
+        expiries_until = _optional_date(entry, "expiries_until", f"lot_sizes[{i}]", where)
+        if expiries_from and expiries_until and expiries_until < expiries_from:
+            raise InvalidProfile(f"{where}: lot_sizes[{i}] covers no expiry")
+        out.append(LotSize(units=units, from_day=from_day, until_day=until_day,
+                           expiries_from=expiries_from, expiries_until=expiries_until))
     current = [ls for ls in out if ls.until_day is None]
     if len(current) != 1:
         raise InvalidProfile(f"{where}: exactly one lot_sizes entry may be open-ended (no until)")

@@ -19,6 +19,11 @@ DEFAULT_TRIPS_PER_JOURNAL = 10
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_UPLOAD_ROWS = 50_000
+MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 1024 * 1024
+
+SIGNUPS_PER_IP_PER_HOUR = 10
+UPLOADS_PER_ACCOUNT_PER_DAY = 20
+UPLOADS_REFUSED_AT_DISK_PERCENT = 85
 
 ARGUMENTS: dict[str, str] = {
     "DENSITY_THRESHOLD_TRIPS_PER_DAY": (
@@ -60,5 +65,29 @@ ARGUMENTS: dict[str, str] = {
         "The row equivalent of the byte cap, since a file can be small and still have "
         "very many rows. Fifty thousand is roughly fifteen times the largest real "
         "history we hold."
+    ),
+    "MAX_REQUEST_BYTES": (
+        "The form parser writes a whole body to temporary files before any route runs, so "
+        "the byte cap above can't protect the disk on its own. This is checked first, from "
+        "the stated length. The extra megabyte is room for the form around a file at the "
+        "byte cap, so that file still gets the byte cap's own sentence."
+    ),
+    "SIGNUPS_PER_IP_PER_HOUR": (
+        "One person needs one account. Ten leaves room for the case that is real here: "
+        "Indian mobile networks put many people behind one address, and a link handed round "
+        "a room or a family all arrives from it. It stops a script filling the database "
+        "with accounts, not a determined person, and it isn't meant to."
+    ),
+    "UPLOADS_PER_ACCOUNT_PER_DAY": (
+        "A trader sends a file, gets the wrong report, sends the right one, and perhaps a "
+        "newer export and a charges file: about five on a busy day. Twenty is well past "
+        "that. At the ten megabyte cap it also limits one account to 200 MB a day, which "
+        "the 85 percent disk line can absorb while someone notices."
+    ),
+    "UPLOADS_REFUSED_AT_DISK_PERCENT": (
+        "The droplet's disk is 8.65 GB and was at 58.7 percent on 5 Nov 2026. Eighty-five "
+        "leaves more than a gigabyte for what must keep writing after uploads stop: the "
+        "database, the logs and a deploy. It refuses long before a write could fail halfway "
+        "through, and it costs nothing to raise once the disk is bigger."
     ),
 }

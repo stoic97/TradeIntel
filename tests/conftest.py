@@ -11,9 +11,12 @@ The keys below are test values and are never valid anywhere else.
 
 from __future__ import annotations
 
+import shutil
+
 import pytest
 
 from services.production.accounts.file_store import generate_key
+from services.production.api import limits
 from services.production.db.session import dispose_all_engines
 
 TEST_SECRET_KEY = "test-secret-key-at-least-32-chars-long"
@@ -41,6 +44,10 @@ def scope_environment(tmp_path, monkeypatch):
     """
     monkeypatch.setenv("SCOPE_SECRET_KEY", TEST_SECRET_KEY)
     monkeypatch.setenv("SCOPE_FILE_KEY", TEST_FILE_KEY)
+    # The disk check reads a real disk, so uploads in tests would refuse on a full laptop.
+    # The tests about the check set their own disk.
+    monkeypatch.setattr(limits.shutil, "disk_usage",
+                        lambda _path: shutil._ntuple_diskusage(total=100, used=50, free=50))
     monkeypatch.setenv("SCOPE_DB", f"sqlite:///{tmp_path / 'scope.db'}")
     monkeypatch.setenv("SCOPE_FILES", str(tmp_path / "files"))
     monkeypatch.delenv("SCOPE_PRODUCTION", raising=False)

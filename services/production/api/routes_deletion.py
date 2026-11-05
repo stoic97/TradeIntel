@@ -69,7 +69,7 @@ def delete_submit(
     # request that renders this page.
     response = page(request, "delete_done.html", title="Deleted",
                     removed=removed, retained=retained, hide_nav=True)
-    # His session points at an account that no longer exists. Clearing the cookie
-    # is tidiness, not security: current_trader already finds nothing.
+    # His session is for an account that no longer exists. Clearing the cookie is
+    # tidiness, not security: current_trader checks a session against its account.
     response.delete_cookie(auth.SESSION_COOKIE)
     return response

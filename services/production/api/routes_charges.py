@@ -14,6 +14,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
+from services.production.api import limits
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.api.routes_upload import _owned_import, _store, charges_open
@@ -72,6 +73,14 @@ async def add_file(request: Request, import_id: int,
 
         def refuse(error: str):
             return _step(request, sess, trader, imp, status_code=400, error=error)
+
+        refusal = limits.upload_refusal(request, sess, trader)
+        if refusal is not None:
+            return limits.with_retry_after(
+                _step(request, sess, trader, imp, status_code=refusal.status_code,
+                      error=refusal.sentence),
+                refusal.retry_after,
+            )
 
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:

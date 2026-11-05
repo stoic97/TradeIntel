@@ -68,8 +68,11 @@ def add_trader(engine, login_id, *, dev=False, name=None) -> int:
 def signed_in(app, trader_id: int | None = None) -> TestClient:
     client = TestClient(app, follow_redirects=False)
     if trader_id is not None:
-        client.cookies.set(auth.SESSION_COOKIE,
-                           auth.seal_session(auth.new_session(trader_id), TEST_SECRET_KEY))
+        with make_session(app.state.engine) as sess:
+            trader = sess.get(m.Trader, trader_id)
+            password_hash = trader.password_hash if trader else "an account that has gone"
+        session = auth.new_session(trader_id, password_hash, TEST_SECRET_KEY)
+        client.cookies.set(auth.SESSION_COOKIE, auth.seal_session(session, TEST_SECRET_KEY))
     return client
 
 

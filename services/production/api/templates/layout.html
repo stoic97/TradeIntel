@@ -36,6 +36,7 @@
 <div class="screen{% if screen_class %} {{ screen_class }}{% endif %}">
 {% block stage %}{% endblock %}
 <main class="screen__body{% if nav %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
+{% if demo %}<p class="demo-line" role="note">{{ demo }}</p>{% endif %}
 {% block content %}{% endblock %}
 </main>
 {% if nav %}{{ bottom_nav(nav) }}{% endif %}

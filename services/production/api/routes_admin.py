@@ -43,7 +43,7 @@ def admin(request: Request):
         sess.commit()
         view = admin_view.build(sess, running_version=request.app.state.code_version,
                                 production=config.production)
-    return page(request, "admin.html", title="Admin", screen_class="screen--admin",
+    return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
                 body_class="admin", **view)
 
 
