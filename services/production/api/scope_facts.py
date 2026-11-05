@@ -231,9 +231,6 @@ SHARED_BY_AT_LEAST = 4
 SHORTEST_RUN = 2
 """One loss is not a run."""
 
-BOOK_WORDS = {"equity": "stocks and ETFs"}
-
-
 def _part_of_day(hour: int) -> str:
     """The day as a trader splits it: morning, the NSE afternoon, the crude evening."""
     if hour < 12:
@@ -270,7 +267,7 @@ def worst_days_in_common(ctx: dict) -> list[str]:
     lines = []
     book = _shared({b.trading_day: b.book for b in blocks})
     hour = _shared({b.trading_day: _part_of_day(b.first_in.hour) for b in blocks})
-    book_words = BOOK_WORDS.get(book[0], book[0]) if book else ""
+    book_words = formatting.book_in_a_sentence(book[0]) if book else ""
     if book and hour and book[1] == hour[1]:
         lines.append(f"{_of_the_five(len(book[1]))} were {book_words}, {hour[0]}.")
     else:
@@ -313,7 +310,7 @@ def _day_block(block: mx.DayBlock, ctx: dict) -> dict:
     return {
         "iso": block.trading_day,
         "day": formatting.day(block.trading_day),
-        "books": ", ".join(BOOK_WORDS.get(b, b) for b in block.books),
+        "books": ", ".join(block.books),
         "trades": block.trades,
         "span": _day_span(block),
         "net": block.net,

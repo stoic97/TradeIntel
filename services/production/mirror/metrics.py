@@ -841,10 +841,6 @@ class FiveDaysRead:
     story: WorstDayStory | None
 
 
-def _day_book(trip: Trip) -> str:
-    return book_of(trip.symbol) if trip.is_option else "equity"
-
-
 def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     """The five worst days named, with what the record says they have in common.
 
@@ -859,7 +855,7 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     for day in worst:
         ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
         rows.append(WorstDayRow(
-            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+            day.trading_day, tuple(dict.fromkeys(trade_book(t) for t in ordered)), day.trips, day.net,
         ))
         rest = sum((t.net for t in ordered[1:]), Decimal(0))
         if ordered[0].is_loss and rest < 0:
@@ -911,7 +907,7 @@ def _longest_run_in(ordered: list[Trip]) -> int:
 
 
 def _main_book(ordered: list[Trip]) -> str | None:
-    counts = Counter(_day_book(t) for t in ordered).most_common(2)
+    counts = Counter(trade_book(t) for t in ordered).most_common(2)
     if len(counts) == 2 and counts[0][1] == counts[1][1]:
         return None
     return counts[0][0]
@@ -929,7 +925,7 @@ def worst_day_blocks(trips: list[Trip]) -> tuple[DayBlock, ...]:
             running.append(total)
         blocks.append(DayBlock(
             trading_day=day.trading_day,
-            books=tuple(dict.fromkeys(_day_book(t) for t in ordered)),
+            books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
             book=_main_book(ordered),
             trades=len(ordered),
             net=day.net,
