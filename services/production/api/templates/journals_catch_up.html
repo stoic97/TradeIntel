@@ -4,6 +4,10 @@
 {% block content %}
   <p class="label label--plain">Journals</p>
   <h1 class="title fact__title">Earlier Journals</h1>
+  {%- if started %}
+  <p class="body">Every other day, newest first. <a class="link" href="/journals">Back to your Journals</a>.</p>
+  {%- else %}
   <p class="body">Everything behind the five most recent, newest first. <a class="link" href="/journals">Back to the latest</a>.</p>
+  {%- endif %}
   {% with latest = journals %}{% include "_journal_index.html" %}{% endwith %}
 {% endblock %}

@@ -53,7 +53,7 @@ def test_every_design_table_exists():
         "wtp_answer", "dwell_event", "rule_declaration", "adherence_event",
         "deletion_record", "admin_action", "chapter_feedback", "chapter_feedback_reason",
         "guess_answer", "leaving_card_shown", "leaving_card_answer", "charge_statement",
-        "report_feedback",
+        "report_feedback", "wtp_asked",
     }
     assert expected <= tables, f"missing: {sorted(expected - tables)}"
 

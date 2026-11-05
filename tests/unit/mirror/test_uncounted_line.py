@@ -34,7 +34,6 @@ def text(html: str) -> str:
         "/mirror/chapter/1",
         "/mirror/chapter/3",
         "/mirror/fact/worst-days",
-        "/mirror/fact/share",
         "/mirror/fact/money",
         "/mirror/fact/not-told",
     ],

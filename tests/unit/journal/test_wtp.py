@@ -170,3 +170,45 @@ def test_an_answer_outside_the_three_is_refused(session):
 def test_the_question_names_the_placeholder_price(session):
     assert str(k.WTP_PRICE_INR) in wtp.QUESTION
     assert "would you pay" in wtp.QUESTION.lower()
+
+
+# ---------- Asked once means one Journal, not every Journal after the third [TICKET-826] ----------
+
+
+def test_it_is_asked_on_the_first_journal_it_may_be_asked_on(session):
+    trader = a_trader(session)
+    imp = an_upload(session, trader, days_ago=30)
+    written = journals(session, trader, imp, count=10, opened=3)
+    session.commit()
+    assert wtp.ask_here(session, trader=trader, journal=written[0]) is True
+
+
+def test_it_is_not_asked_on_any_other_journal(session):
+    trader = a_trader(session)
+    imp = an_upload(session, trader, days_ago=30)
+    written = journals(session, trader, imp, count=10, opened=3)
+    session.commit()
+    wtp.ask_here(session, trader=trader, journal=written[0])
+    session.commit()
+    assert wtp.ask_here(session, trader=trader, journal=written[1]) is False
+    assert wtp.ask_here(session, trader=trader, journal=written[0]) is True, "same page, again"
+
+
+def test_a_journal_before_the_trigger_does_not_use_up_the_asking(session):
+    trader = a_trader(session)
+    imp = an_upload(session, trader, days_ago=30)
+    written = journals(session, trader, imp, count=10, opened=2)
+    session.commit()
+    assert wtp.ask_here(session, trader=trader, journal=written[0]) is False
+    assert session.scalars(select(m.WtpAsked)).first() is None
+
+
+def test_once_answered_it_is_not_asked_on_that_journal_either(session):
+    trader = a_trader(session)
+    imp = an_upload(session, trader, days_ago=30)
+    written = journals(session, trader, imp, count=10, opened=3)
+    session.commit()
+    wtp.ask_here(session, trader=trader, journal=written[0])
+    wtp.record(session, trader=trader, journal=written[0], answer="no", free_text="")
+    session.commit()
+    assert wtp.ask_here(session, trader=trader, journal=written[0]) is False

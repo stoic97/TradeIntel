@@ -164,7 +164,7 @@
   <section class="trades__group">
     <div class="trades__head">
       <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ group.trade_count|count }} {{ "trade" if group.trade_count == 1 else "trades" }} · {{ group.net|rupees }}</span></div>
-      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Result</span></div>
     </div>
     {%- for t in group.trades %}
     {{ trade(t) }}

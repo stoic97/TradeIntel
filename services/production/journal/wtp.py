@@ -7,7 +7,8 @@ Each condition blocks a different way of getting a worthless answer. Opens rathe
 than generations, because a backfill makes sixty Journals in a second and he has
 read none of them. A second upload or a fortnight, because asking a man who has had
 the product for four minutes what he would pay produces a number about his
-politeness. And once, because a question asked twice is a request.
+politeness. And once, because a question asked twice is a request: ``ask_here`` holds it
+to the first Journal it may be asked on, and ``wtp_asked`` remembers which that was.
 
 The answer is stored with uploads-so-far and days-since-first-upload. Ten answers
 give the first price range at zero cost; ten answers nobody can interpret give
@@ -22,6 +23,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from services.production.db import models as m
@@ -85,6 +87,30 @@ def should_ask(sess: Session, *, trader: m.Trader) -> bool:
         or _days_since_first_upload(sess, trader) >= k.WTP_DAYS_SINCE_FIRST_UPLOAD
     )
     return settled_in
+
+
+def _asked_on(sess: Session, trader: m.Trader) -> m.WtpAsked | None:
+    return sess.scalars(select(m.WtpAsked).where(m.WtpAsked.trader_id == trader.id)).first()
+
+
+def ask_here(sess: Session, *, trader: m.Trader, journal: m.Journal) -> bool:
+    """Whether this Journal is the one that asks. The caller commits.
+
+    The first Journal drawn once he may be asked becomes the one, and only that one asks. It
+    stays there until answered, so saving a note on that page doesn't take the question away.
+    """
+    if not should_ask(sess, trader=trader):
+        return False
+    asked = _asked_on(sess, trader)
+    if asked is None:
+        sess.add(m.WtpAsked(trader_id=trader.id, journal_id=journal.id,
+                            asked_at=datetime.now(UTC)))
+        try:
+            sess.flush()
+        except IntegrityError:  # two tabs raced: the other one asked
+            sess.rollback()
+        asked = _asked_on(sess, trader)
+    return asked is not None and asked.journal_id == journal.id
 
 
 def record(
