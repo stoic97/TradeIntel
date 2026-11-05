@@ -5,7 +5,7 @@ product-only account, Caddy and Let's Encrypt in front, systemd behind, daily
 droplet backups. Everything below follows from that.
 
 **First run: 21 October 2026**, on the cheapest Basic droplet (512 MB, 10 GB) in
-BLR1, which is comfortable for a few dozen invited traders. Everything below has
+BLR1, which is comfortable for a few dozen traders. Everything below has
 been done once and the corrections that run produced are folded in. Expect to
 correct a line or two anyway, and commit the correction.
 
@@ -118,11 +118,8 @@ root-owned, so root reads the file and passes it in:
 
     sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
         .venv/bin/python -m services.production.api.cli init-db
-    sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
-        .venv/bin/python -m services.production.api.cli invite --code <code>
 
-The invite command prints a `127.0.0.1` URL because it has no idea what hostname
-it is reachable at. Substitute the real one.
+Sign-up is open at the site's front door, so there is nothing to mint.
 
 ## 5. Backups and the drill
 
@@ -152,4 +149,4 @@ The release gate, PRD section 10. None of it is optional and none of it is code:
 ## What this does not cover
 
 Postgres (ADR-005, Phase 1), a second app process, log shipping, uptime
-monitoring. Each is additive; none is needed for a handful of invited traders.
+monitoring. Each is additive; none is needed for a handful of traders.

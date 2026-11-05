@@ -64,7 +64,7 @@ the motion (see Motion).
 | `screens/02a-demo-guess.html` | 2a · Demo · guess | `GET /demo` |
 | `screens/02b-demo-reveal.html` | 2b · Demo · reveal | `GET /demo/reveal?guess=…` |
 | `screens/02c-demo-trades.html` | 2c · Demo · the trades | `GET /demo/trades` |
-| `screens/03-create-account.html` | 3 · Create your account | `GET /invite/{code} · POST /invite/{code}` |
+| `screens/03-create-account.html` | 3 · Create your account | `GET /signup · POST /signup` |
 | `screens/04-sign-in.html` | 4 · Sign in | `GET /login · POST /login` |
 | `screens/05-consent.html` | 5 · Before you upload (consent, in full) | `GET /consent · POST /consent` |
 | `screens/05b-consent-ledger.html` | 5b · What you agreed to (consent ledger, from Account) | `GET /account/consent` |

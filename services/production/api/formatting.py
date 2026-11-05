@@ -89,6 +89,12 @@ def minutes(seconds) -> str:
     return count(_whole(Decimal(str(seconds)) / 60))
 
 
+def minutes_seconds(seconds: int) -> str:
+    """A gap between two trades: 1:30, 0:12. Minutes are not carried into hours."""
+    whole_minutes, rest = divmod(int(seconds), 60)
+    return f"{whole_minutes}:{rest:02d}"
+
+
 def lots(value) -> str:
     """Average lots to one decimal, as the Journal says them: 1.7, not 1.667."""
     return str(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
@@ -134,7 +140,13 @@ def day(iso_date: str) -> str:
     return f"{dom} {MONTHS[int(month) - 1]} {year}"
 
 
+def book_in_a_sentence(book: str) -> str:
+    """A trade_book name inside a sentence: "were crude options", "were NIFTY options"."""
+    return book[0].lower() + book[1:] if book[1:2].islower() else book
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
     env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
     env.filters.update(price=price, signed_percent=signed_percent)
+    env.filters.update(book_in_a_sentence=book_in_a_sentence)

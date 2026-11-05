@@ -15,6 +15,7 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
@@ -713,6 +714,186 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
     )
 
 
+def costliest_losing_run(trips: list[Trip]) -> LosingRun:
+    """The losing run that lost the most rupees, read as longest_losing_run reads a run.
+
+    Two that cost the same read the one with more trades, then the earlier. Each run is
+    said alone: the rupees are never added up across runs, because the winners between
+    them are left out and the total would mislead.
+    """
+    runs: list[list[Trip]] = []
+    current: list[Trip] = []
+    for trip in trips:
+        if trip.is_loss:
+            current.append(trip)
+        else:
+            current = []
+            continue
+        if len(current) == 1:
+            runs.append(current)
+    if not runs:
+        return LosingRun(0, [], False, [], s.ResultState.INSUFFICIENT_SAMPLE)
+    worst = min(runs, key=lambda run: (_run_net(run), -len(run)))
+    days = sorted({t.trading_day for t in worst})
+    return LosingRun(
+        length=len(worst), trip_ids=[t.trip_id for t in worst],
+        crosses_days=len(days) > 1, days=days, state=s.ResultState.COUNTED_FACT,
+    )
+
+
+def _run_net(trips: list[Trip]) -> Decimal:
+    """Back to the paise a broker reports in: a fill split across parcels sums just short."""
+    return _round(sum((t.net for t in trips), Decimal(0)))
+
+
+RE_ENTRY_SECONDS = 120
+""""Back in within 2 minutes", from the previous trade's exit. Exactly two minutes counts.
+
+A count on one day in one book, as the ruling on TICKET-820 allows. How fast a trader goes
+back in across days or books is pre-registered research, and no page says it."""
+
+
+@dataclass(frozen=True)
+class SizeRise:
+    """The first time a run's size went up, and how far it climbed before it next fell."""
+
+    losses_before: int
+    steps: list[int]
+
+
+@dataclass(frozen=True)
+class BackIn:
+    within: int  # of those, how many inside RE_ENTRY_SECONDS
+    of: int  # re-entries on the day: a trade opened after the last one closed
+
+
+@dataclass(frozen=True)
+class RunStory:
+    """One losing run, as what happened: when, in what, what it cost, and what came next."""
+
+    trades: list[Trip]
+    length: int
+    net: Decimal
+    days: list[str]
+    books: list[str]  # most trades first, then as they came
+    same_day: bool  # opened and closed on one date, so a span of time can be said
+    span_seconds: int
+    gaps: dict[str, int]  # trip_id: seconds since the previous exit; negative if it was still open
+    flips: int
+    size: SizeRise | None
+    back_in: BackIn | None
+    after: Trip | None  # the first trade after the run
+    last_day: str
+    last_day_net: Decimal
+    running: list[tuple[Trip, Decimal]]  # the run and the trade after, each as it closed
+    lowest: Decimal
+    last: Decimal
+
+
+def call_or_put(trip: Trip) -> str | None:
+    """"CE" or "PE" on one option. A position of several legs is neither, and nor is a share."""
+    if not trip.is_option or len(trip.lines) != 1:
+        return None
+    return trip.lines[0].option_type or None
+
+
+def _gaps(trades: list[Trip]) -> dict[str, int]:
+    """Seconds from each trade back to the exit of the one before, on the same trading day.
+
+    A night is not a gap, so a day's first trade has none. Negative when the one before was
+    still open.
+    """
+    return {
+        cur.trip_id: int((cur.entry_ts - prev.exit_ts).total_seconds())
+        for prev, cur in pairwise(trades)
+        if cur.trading_day == prev.trading_day
+    }
+
+
+def _flips(trades: list[Trip]) -> int:
+    """Calls to puts and back, between neighbouring trades on one underlying."""
+    return sum(
+        1
+        for prev, cur in pairwise(trades)
+        if call_or_put(prev) and call_or_put(cur)
+        and call_or_put(prev) != call_or_put(cur)
+        and book_of(prev.symbol) == book_of(cur.symbol)
+    )
+
+
+def _size_rise(trades: list[Trip]) -> SizeRise | None:
+    """The first rise in quantity, and the climb until it next fell.
+
+    Quantities compare only on one instrument, each trade with one size: 100 of one contract
+    against 200 of another is not a rise, and a position of several legs has no one size.
+    """
+    if len({t.symbol for t in trades}) != 1 or any(len(t.lines) != 1 for t in trades):
+        return None
+    sizes = [t.lines[0].quantity for t in trades]
+    if not all(sizes):
+        return None
+    first = next((i for i in range(1, len(sizes)) if sizes[i] > sizes[i - 1]), None)
+    if first is None:
+        return None
+    steps = [sizes[first - 1], sizes[first]]
+    for size in sizes[first + 1:]:
+        if size < steps[-1]:
+            break
+        if size > steps[-1]:
+            steps.append(size)
+    return SizeRise(losses_before=first, steps=steps)
+
+
+def _back_in(gaps: dict[str, int], days: list[str], books: list[str]) -> BackIn | None:
+    """How many re-entries came inside two minutes: one day and one book, or nothing is said."""
+    if len(days) != 1 or len(books) != 1:
+        return None
+    returns = [g for g in gaps.values() if g >= 0]
+    within = sum(g <= RE_ENTRY_SECONDS for g in returns)
+    return BackIn(within=within, of=len(returns)) if within else None
+
+
+def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
+    """A run's facts, computed from its own trades. None for no run. States facts, never causes."""
+    trades = subset(trips, trip_ids)
+    if not trades:
+        return None
+    last = trips.index(trades[-1])
+    after = trips[last + 1] if last + 1 < len(trips) else None
+    days = sorted({t.trading_day for t in trades})
+    counts: dict[str, int] = {}
+    for t in trades:
+        counts[trade_book(t)] = counts.get(trade_book(t), 0) + 1
+    books = sorted(counts, key=lambda book: -counts[book])
+    gaps = _gaps(trades)
+    started, ended = trades[0].entry_ts, max(t.exit_ts for t in trades)
+    with_after = _gaps([trades[-1], after]) if after else {}
+    running: list[tuple[Trip, Decimal]] = []
+    total = Decimal(0)
+    for t in sorted([*trades, after] if after else trades, key=lambda t: t.exit_ts):
+        total += t.net
+        running.append((t, _round(total)))
+    return RunStory(
+        trades=trades,
+        length=len(trades),
+        net=_run_net(trades),
+        days=days,
+        books=books,
+        same_day=len(days) == 1 and all(t.closed_same_day for t in trades),
+        span_seconds=int((ended - started).total_seconds()),
+        gaps={**gaps, **with_after},
+        flips=_flips(trades),
+        size=_size_rise(trades),
+        back_in=_back_in(gaps, days, books),
+        after=after,
+        last_day=days[-1],
+        last_day_net=_run_net([t for t in trips if t.trading_day == days[-1]]),
+        running=running,
+        lowest=min(value for _, value in running),
+        last=running[-1][1],
+    )
+
+
 LOSS_SIZES_MINIMUM = 20
 """Below this, "one in twenty" is not something the file can say."""
 
@@ -769,6 +950,207 @@ def trade_book(trip: Trip) -> str:
     if trip.lines and trip.lines[0].segment == "EQ":
         return "Stocks and ETFs"
     return "Futures"
+
+
+BOOK_ROW_MINIMUM = 30
+"""Below this a book row, or a year of one, says "not enough trades to say". The framework's
+standard n_min (framework_v1.yaml, B-series), reused rather than invented."""
+
+QUICK_CLOSE_SECONDS = 300
+"""Closed within five minutes, five itself included."""
+
+BIG_LOSS_RUPEES = Decimal(1000)
+"""A loss past this, not at it, is in the biggest-losers line. A plain round line, not a
+figure from anyone's record."""
+
+
+@dataclass(frozen=True)
+class MathRow:
+    """One book, or one year of a book: the sizes, and the two ways to break even.
+
+    Below the minimum only the label, the count and the state are set, so a page has no
+    figure to print by mistake.
+    """
+
+    label: str
+    trades: int
+    state: s.ResultState
+    wins: int = 0
+    losses: int = 0
+    scratches: int = 0
+    decided: int = 0  # winners and losers: a level trade is in neither
+    win_percent: Decimal | None = None
+    average_winner: Decimal | None = None
+    average_loser: Decimal | None = None
+    median_winner: Decimal | None = None
+    median_loser: Decimal | None = None
+    winners_median_seconds: int | None = None
+    losers_median_seconds: int | None = None
+    break_even_percent: Decimal | None = None
+    more_winners: int | None = None
+    winner_needed: Decimal | None = None
+    winner_gap: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class QuickCloses:
+    """How many of a book's losers and winners were closed within five minutes, as shares."""
+
+    losers_percent: int
+    winners_percent: int
+
+
+@dataclass(frozen=True)
+class TopWinners:
+    """The biggest tenth of a book's winners, and their share of what its winners made."""
+
+    count: int
+    winners: int
+    percent: int
+
+
+@dataclass(frozen=True)
+class BiggestLosers:
+    """Losers past the line, against the book's other losers. Each median is its own."""
+
+    above: Decimal
+    count: int
+    trades_percent: int
+    losses_percent: int
+    median_seconds: int
+    others_median_seconds: int | None
+    median_lots: int | None  # options only: a share's "lot" is one share, not a size
+    others_median_lots: int | None
+
+
+@dataclass(frozen=True)
+class BookMath:
+    """A book's row, its years, and the lines under it. Only a counted book has the rest."""
+
+    whole: MathRow
+    years: tuple[MathRow, ...] = ()
+    quick_closes: QuickCloses | None = None
+    top_winners: TopWinners | None = None
+    biggest_losers: BiggestLosers | None = None
+
+
+def _share(part: Decimal | int, whole: Decimal | int) -> int:
+    """A whole percentage. Unlike _whole_percent, nothing at all reads 0, not 1."""
+    return int(_round(Decimal(part) / Decimal(whole) * 100, "1")) if part else 0
+
+
+def _more_winners(row_wins: list[Decimal], row_losses: list[Decimal], be: BreakEven) -> int | None:
+    """Winners that would have to be losers' places for the win rate to reach break-even, with
+    the trades and the averages as they are. None when the book is already at or past it,
+    which is the same as winners having made at least what losers lost. Exact from there on:
+    a book short by less than half a winner still says one."""
+    if sum(row_wins, Decimal(0)) >= sum(row_losses, Decimal(0)):
+        return None
+    rate = be.average_loser / (be.average_winner + be.average_loser)
+    decided = len(row_wins) + len(row_losses)
+    return max(1, int(_round(rate * decided - len(row_wins), "1")))
+
+
+def math_row(label: str, trips: list[Trip]) -> MathRow:
+    """The row for these trades. Break-even is average loser / (average winner + average
+    loser); the average winner needed is the same identity solved for the winner instead,
+    average loser x losers / winners. Both come from the averages break_even() decides."""
+    strike = strike_rate(trips)
+    if len(trips) < BOOK_ROW_MINIMUM or strike.state is not s.ResultState.COUNTED_FACT:
+        return MathRow(label, len(trips), s.ResultState.INSUFFICIENT_SAMPLE)
+    wins = [t.net for t in trips if t.is_win]
+    losses = [-t.net for t in trips if t.is_loss]
+    be = break_even(trips)
+    held = holding_time(trips)
+    balanced = be.percent is not None
+    needed = be.average_loser * len(losses) / len(wins) if balanced else None
+    return MathRow(
+        label=label,
+        trades=len(trips),
+        state=s.ResultState.COUNTED_FACT,
+        wins=strike.wins,
+        losses=strike.losses,
+        scratches=strike.scratches,
+        decided=strike.wins + strike.losses,
+        win_percent=strike.rate_percent,
+        average_winner=sum(wins, Decimal(0)) / len(wins) if wins else None,
+        average_loser=sum(losses, Decimal(0)) / len(losses) if losses else None,
+        median_winner=median(wins) if wins else None,
+        median_loser=median(losses) if losses else None,
+        winners_median_seconds=held.winners_median_seconds,
+        losers_median_seconds=held.losers_median_seconds,
+        break_even_percent=be.percent,
+        more_winners=_more_winners(wins, losses, be) if balanced else None,
+        winner_needed=needed,
+        winner_gap=needed - be.average_winner if balanced else None,
+    )
+
+
+def _quick_closes(trips: list[Trip]) -> QuickCloses:
+    def quick(side: list[Trip]) -> int:
+        closed = sum(1 for t in side if t.holding_seconds <= QUICK_CLOSE_SECONDS)
+        return _share(closed, len(side)) if side else 0
+
+    return QuickCloses(
+        losers_percent=quick([t for t in trips if t.is_loss]),
+        winners_percent=quick([t for t in trips if t.is_win]),
+    )
+
+
+def _top_winners(trips: list[Trip]) -> TopWinners | None:
+    wins = sorted((t.net for t in trips if t.is_win), reverse=True)
+    if not wins:
+        return None
+    count = ceil(len(wins) / 10)
+    return TopWinners(count, len(wins), _share(sum(wins[:count]), sum(wins)))
+
+
+def _biggest_losers(trips: list[Trip]) -> BiggestLosers | None:
+    losers = [t for t in trips if t.is_loss]
+    big = [t for t in losers if -t.net > BIG_LOSS_RUPEES]
+    if not big:
+        return None
+    others = [t for t in losers if -t.net <= BIG_LOSS_RUPEES]
+
+    def lots(side: list[Trip]) -> int | None:
+        sized = [t.lots for t in side if t.is_option]
+        return int(median(sized)) if sized else None
+
+    return BiggestLosers(
+        above=BIG_LOSS_RUPEES,
+        count=len(big),
+        trades_percent=_share(len(big), len(trips)),
+        losses_percent=_share(sum(-t.net for t in big), sum(-t.net for t in losers)),
+        median_seconds=int(median(t.holding_seconds for t in big)),
+        others_median_seconds=int(median(t.holding_seconds for t in others)) if others else None,
+        median_lots=lots(big),
+        others_median_lots=lots(others),
+    )
+
+
+def math_by_book(trips: list[Trip]) -> list[BookMath]:
+    """A book's math, per book by trade_book and per year, biggest book first. Pass the
+    same-day trades: a holding is not a trade the day's decisions made."""
+    books: dict[str, list[Trip]] = {}
+    for trip in trips:
+        books.setdefault(trade_book(trip), []).append(trip)
+    out = []
+    for book, book_trips in sorted(books.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        whole = math_row(book, book_trips)
+        if whole.state is not s.ResultState.COUNTED_FACT:
+            out.append(BookMath(whole))
+            continue
+        years: dict[str, list[Trip]] = {}
+        for trip in book_trips:
+            years.setdefault(trip.trading_day[:4], []).append(trip)
+        out.append(BookMath(
+            whole=whole,
+            years=tuple(math_row(year, years[year]) for year in sorted(years)),
+            quick_closes=_quick_closes(book_trips),
+            top_winners=_top_winners(book_trips),
+            biggest_losers=_biggest_losers(book_trips),
+        ))
+    return out
 
 
 @dataclass(frozen=True)
@@ -958,10 +1340,6 @@ class FiveDaysRead:
     story: WorstDayStory | None
 
 
-def _day_book(trip: Trip) -> str:
-    return book_of(trip.symbol) if trip.is_option else "equity"
-
-
 def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     """The five worst days named, with what the record says they have in common.
 
@@ -976,7 +1354,7 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     for day in worst:
         ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
         rows.append(WorstDayRow(
-            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+            day.trading_day, tuple(dict.fromkeys(trade_book(t) for t in ordered)), day.trips, day.net,
         ))
         rest = sum((t.net for t in ordered[1:]), Decimal(0))
         if ordered[0].is_loss and rest < 0:
@@ -999,6 +1377,66 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
         ),
         story=story,
     )
+
+
+@dataclass(frozen=True)
+class DayBlock:
+    """One of the five worst days, as the worst-days page reads it. Counts only, no cause."""
+
+    trading_day: str
+    books: tuple[str, ...]
+    book: str | None  # the book with the most trades that day; None on a tie
+    trades: int
+    net: Decimal
+    first_in: datetime
+    last_out: datetime
+    running: tuple[Decimal, ...]  # the result after each trade, first to last
+    first_net: Decimal
+    later: int
+    later_lost: int
+    longest_run: int  # the most losses in a row within the day
+
+
+def _longest_run_in(ordered: list[Trip]) -> int:
+    longest = current = 0
+    for trip in ordered:
+        current = current + 1 if trip.is_loss else 0
+        longest = max(longest, current)
+    return longest
+
+
+def _main_book(ordered: list[Trip]) -> str | None:
+    counts = Counter(trade_book(t) for t in ordered).most_common(2)
+    if len(counts) == 2 and counts[0][1] == counts[1][1]:
+        return None
+    return counts[0][0]
+
+
+def worst_day_blocks(trips: list[Trip]) -> tuple[DayBlock, ...]:
+    """The five worst days, worst first, on the entry date as every other page counts them."""
+    by_day = _by_day(trips)
+    blocks = []
+    for day in five_worst_days(trips).days:
+        ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
+        running, total = [], Decimal(0)
+        for trip in ordered:
+            total += trip.net
+            running.append(total)
+        blocks.append(DayBlock(
+            trading_day=day.trading_day,
+            books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
+            book=_main_book(ordered),
+            trades=len(ordered),
+            net=day.net,
+            first_in=ordered[0].entry_ts,
+            last_out=max(t.exit_ts for t in ordered),
+            running=tuple(running),
+            first_net=ordered[0].net,
+            later=len(ordered) - 1,
+            later_lost=sum(t.is_loss for t in ordered[1:]),
+            longest_run=_longest_run_in(ordered),
+        ))
+    return tuple(blocks)
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:

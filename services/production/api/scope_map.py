@@ -1,4 +1,4 @@
-"""The Scope's map: four chapters, twelve facts, and the trades behind each (handoff 4, 5).
+"""The Scope's map: four chapters, eleven facts, and the trades behind each (handoff 4, 5).
 
 The Mirror's nine counted facts, told as a story in four chapters: Home, a chapter,
 a fact - two taps to any fact, never more than three. This module is the one place
@@ -41,7 +41,6 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Where your results came from",
         (
             Fact("worst-days", "Your worst trading days", "worst"),
-            Fact("share", "Share of your losses", "share"),
             Fact("money", "Where the money came from", "money"),
         ),
         feedback=True,
@@ -50,8 +49,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         2,
         "Your patterns",
         (
-            Fact("hold", "How long you hold", "hold"),
-            Fact("strike", "Strike rate", "strike"),
+            Fact("math", "The math of your trading", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
         ),
@@ -80,18 +78,28 @@ CHAPTERS: tuple[Chapter, ...] = (
 
 FACTS: dict[str, Fact] = {f.key: f for c in CHAPTERS for f in c.facts}
 
+FIGURES: dict[str, Fact] = {**FACTS, "share": Fact("share", "Share of your losses", "share")}
+"""Everything with a figure. The share has no page of its own now: its one new row is a line on
+the worst-days page, and /mirror/fact/share goes there. Home and the reveal still read it."""
+
 OLD_DWELL_LINES = {
     "worst-days": "worst-days",
     "best-worst-trades": "money",
     "two-straight-losses": "down",
-    "holding-time": "hold",
+    "holding-time": "math",
     "by-hour": "clock",
+    "hold": "math",
+    "strike": "math",
 }
 """The long Mirror page's dwell keys, and the fact page each is now read on.
 
 Dwell events are keyed by fact page from here on (handoff 9). Events stored before
-the Scope keep their old keys; this is how to read the two together.
+the Scope keep their old keys; this is how to read the two together. How long you hold
+and Strike rate were fact pages of their own until they merged, so their keys are here too.
 """
+
+MOVED_FACTS = {"hold": "math", "strike": "math"}
+"""Fact URLs that have moved, and where to. A bookmark or an old link still arrives."""
 
 
 def chapter(n: int) -> Chapter:
@@ -171,7 +179,7 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key in ("hold", "strike", "clock"):
+    if key in ("math", "clock"):
         return mx.same_day_trips(trips)
     if key == "risk":
         return list(trips)
@@ -203,7 +211,7 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
     """
     shown = trades_behind(key, ctx) if only is None else only
     numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
-    if key in ("hold", "strike"):
+    if key == "math":
         parts = [(title, [t for t in shown if getattr(t, flag)]) for title, flag in OUTCOMES]
     elif key == "clock":
         hours = sorted({t.entry_ts.hour for t in shown})
@@ -224,31 +232,46 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
             (title, [t for t in shown if t.risk_unit_source in sources])
             for title, sources in RISK_SOURCES
         ]
+    elif key == "run":  # a run's days are named by their dates: "Day 1" says nothing (TICKET-820)
+        parts = [
+            (formatting.day(d), [t for t in shown if t.trading_day == d])
+            for d in sorted({t.trading_day for t in shown})
+        ]
     else:
         days = sorted({t.trading_day for t in shown})
         parts = [
             (f"Day {i} · {formatting.day(d)}", [t for t in shown if t.trading_day == d])
             for i, d in enumerate(days, start=1)
         ]
+    gaps = mx.run_story(ctx["trips"], ctx["run"].trip_ids).gaps if key == "run" and shown else {}
     return [
         {
             "title": title,
             "trade_count": len(trips),
             "net": sum(t.net for t in trips),
-            "trades": [trade(t, numbers[t.trip_id]) for t in trips],
+            "trades": [trade(t, numbers[t.trip_id], gaps.get(t.trip_id)) for t in trips],
         }
         for title, trips in parts
         if trips
     ]
 
 
-def trade(t: mx.Trip, number: int) -> dict:
+def gap_words(seconds: int | None) -> str | None:
+    """A row's gap since the last trade's exit, as minutes:seconds (TICKET-820)."""
+    if seconds is None:
+        return None
+    if seconds < 0:
+        return "Opened before the last trade closed"
+    return f"Back in after {formatting.minutes_seconds(seconds)}"
+
+
+def trade(t: mx.Trip, number: int, gap: int | None = None) -> dict:
     """One trade as the trades macro draws it.
 
     The fills under it (B5) are not kept yet (handoff D4), so the fills table is left off.
     `number` is the trade's place in his record: it identifies a row for code and is not
     drawn, because it means nothing to him (TICKET-822). A position of several legs has
-    its side, size and prices on each leg, and no premium.
+    its side, size and prices on each leg, and no premium. `gap` is on a run's rows only.
     """
     held_minutes = t.holding_seconds // 60
     only_line = t.lines[0] if len(t.lines) == 1 else None
@@ -279,4 +302,5 @@ def trade(t: mx.Trip, number: int) -> dict:
             for leg, line in zip(t.legs, t.lines, strict=False)
         ],
         "uncapped": t.uncapped,
+        "gap": gap_words(gap),
     }

@@ -225,32 +225,32 @@ def test_a_result_under_a_rupee_on_one_trade_keeps_its_paise(value, want):
 
 
 def test_a_long_list_is_not_on_the_fact_page():
-    behind = S.trades_behind("strike", SF.record_context(TRIPS))
+    behind = S.trades_behind("math", SF.record_context(TRIPS))
     assert len(behind) > S.INLINE_TRADES
-    page = fact_page("strike")
+    page = fact_page("math")
     assert '<article class="trade">' not in page
-    assert 'href="/mirror/fact/strike/trades"' in page
+    assert 'href="/mirror/fact/math/trades"' in page
     assert "See all trades" in page
 
 
 def test_the_fact_page_still_says_how_many_trades_are_behind_it():
-    page = fact_page("strike")
+    page = fact_page("math")
     caption = re.search(r'<p class="evidence__caption">(.*?)</p>', page, re.DOTALL)[1]
     assert text(caption).endswith(f"{len(TRIPS)} trades.")
 
 
 def test_a_short_list_stays_on_the_fact_page_with_no_link():
     trips = trips_from([100, -50, 25])
-    page = fact_page("strike", trips=trips)
+    page = fact_page("math", trips=trips)
     assert page.count('<article class="trade">') == 3
     assert "See all trades" not in page
 
 
 def test_a_list_of_exactly_the_limit_stays_on_the_page():
     trips = trips_from([100] * S.INLINE_TRADES)
-    assert fact_page("strike", trips=trips).count('<article class="trade">') == S.INLINE_TRADES
+    assert fact_page("math", trips=trips).count('<article class="trade">') == S.INLINE_TRADES
     over = trips_from([100] * (S.INLINE_TRADES + 1))
-    assert '<article class="trade">' not in fact_page("strike", trips=over)
+    assert '<article class="trade">' not in fact_page("math", trips=over)
 
 
 def test_every_trade_behind_a_long_fact_is_reachable_through_the_link(client, engine):  # noqa: F811
@@ -286,7 +286,7 @@ def test_the_list_is_signed_in_only(engine):  # noqa: F811
     from services.production.api.app import create_app
 
     anonymous = TestClient(create_app())
-    got = anonymous.get("/mirror/fact/strike/trades", follow_redirects=False)
+    got = anonymous.get("/mirror/fact/math/trades", follow_redirects=False)
     assert got.status_code == 303 and got.headers["location"] == "/login"
 
 
@@ -390,7 +390,7 @@ def test_a_filter_with_nothing_to_choose_between_is_left_off(client, engine):  #
         "2026-11-17,09:40:00,WIDGETOIL 19 NOV 5000 CALL,SELL,INTRADAY,MCX,Commodity,100,12.00,1200.00,Traded",
     ]
     assert upload(client, content=("\n".join([header, *rows]) + "\n").encode()).status_code == 303
-    page = client.get("/mirror/fact/strike/trades").text
+    page = client.get("/mirror/fact/math/trades").text
     assert 'name="year"' not in page and 'name="book"' not in page
 
 
@@ -406,7 +406,7 @@ def test_a_link_can_arrive_with_a_filter_already_chosen():
 
 
 def test_a_holding_stays_out_of_the_same_day_lists(uploaded):
-    for key in ("hold", "strike", "clock"):
+    for key in ("math", "clock"):
         page = uploaded.get(f"/mirror/fact/{key}/trades").text
         assert not any(a.startswith("Widget ETF") for a in articles(page)), key
 

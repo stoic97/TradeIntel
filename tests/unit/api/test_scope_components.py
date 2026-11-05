@@ -196,6 +196,8 @@ def test_every_trade_is_listed_as_the_kit_lists_it(screen):
     # the label, and the unexplained bar is gone. Everything else stays the kit's.
     fragment = fragment.replace("Trade {{ trade.number }} · ", "")
     fragment = re.sub(r'\s*<svg class="trade__strip".*?</svg>', "", fragment, flags=re.DOTALL)
+    # "Net (gross)" contradicted itself; the gross line on the page says what the result is.
+    fragment = fragment.replace("Net (gross)", "Result")
     want = kit(fragment, trade_groups=[as_the_kit_gives_it(GROUP)])
     got = ours('{% from "_components.html" import trades %}{{ trades(groups) }}', groups=[GROUP])
     assert same(got) == same(want)

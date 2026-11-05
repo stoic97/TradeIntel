@@ -97,15 +97,11 @@ FIGS = SF.facts(CTX, IMP)
 
 
 def test_each_fact_leads_with_the_figure_metrics_decided():
-    share, h = CTX["share"], CTX["holding"]
+    share = CTX["share"]
     assert FIGS["worst-days"]["figure"] == formatting.rupees(CTX["worst_days"].sum)
     assert FIGS["share"]["figure"] == f"{share.share_percent}%"
     assert FIGS["money"]["figure"] == "10 trades"
-    assert FIGS["hold"]["figure"] == (
-        f"{formatting.minutes(h.winners_median_seconds)} · "
-        f"{formatting.minutes(h.losers_median_seconds)} min"
-    )
-    assert FIGS["strike"]["figure"] == f"{CTX['strike'].rate_percent}%"
+    assert FIGS["math"]["figure"] == f"{CTX['strike'].rate_percent}%"
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
     assert FIGS["clock"]["figure"] == "10:00"
     assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
@@ -121,7 +117,7 @@ def test_every_fact_counts_the_trades_behind_it(key):
 
 
 def test_on_the_fixture_every_fact_is_counted():
-    assert {k: f["state"] for k, f in FIGS.items()} == dict.fromkeys(S.FACTS, "")
+    assert {k: f["state"] for k, f in FIGS.items()} == dict.fromkeys(S.FIGURES, "")
 
 
 # ---------- States: never hidden, never an all-clear ----------
@@ -129,7 +125,7 @@ def test_on_the_fixture_every_fact_is_counted():
 
 def test_a_history_with_no_losers_says_not_enough_on_the_facts_that_need_one():
     figs = SF.facts(SF.record_context(trips_from([100, 200, 300, 50])), IMP)
-    for key in ("hold", "run"):
+    for key in ("math", "run"):
         assert figs[key]["state"] == "not-enough", key
         assert figs[key]["figure"] == "—"
         assert figs[key]["chart"] is None and figs[key]["mini"] is None
@@ -176,8 +172,8 @@ def test_the_dial_has_a_slice_per_fact_in_slice_order(n):
 def test_a_slice_in_a_state_is_marked_and_draws_no_mini_chart():
     figs = SF.facts(SF.record_context(trips_from([100, 200, 300, 50])), IMP)
     svg = str(dial.scope_dial(SF.chapter_view(2, figs)))
-    assert svg.count("scope__slice--not-enough") == 2  # hold and run
-    assert svg.count('class="scope__mini') == 2  # strike and clock
+    assert svg.count("scope__slice--not-enough") == 2  # the math and the run
+    assert svg.count('class="scope__mini') == 1  # the clock
 
 
 # ---------- The page ----------
@@ -230,7 +226,6 @@ SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell the
     2: [
         "Your winners were open a median of",
         "minutes, your losers",
-        "That is a ratio of",
         "Your strike rate was",
         "winners against",
         "Your longest run of consecutive losers was",

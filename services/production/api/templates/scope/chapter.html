@@ -2,7 +2,7 @@
     the chapter's facts on the navy stage, then one story card per fact, in slice order.
     Every sentence is the Mirror's own, word for word (test_wording_reference.py). -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line, uncounted_line %}
+{% from "_components.html" import button, dial, gross_line, uncounted_line %}
 {% from "scope/_next.html" import chapter_four %}
 {% set nav = "scope" %}
 {% block stage %}
@@ -23,6 +23,9 @@
   </div>
   {%- if chapter.feedback %}
   {% include "scope/_feedback.html" %}
+  {%- endif %}
+  {%- if next_href %}
+  <p class="chapter__next">{{ button("Chapter 2: your patterns", next_href) }}</p>
   {%- endif %}
   {%- if chapter.number == 3 %}
   {{ chapter_four(facts["busiest"].chapter_four) }}

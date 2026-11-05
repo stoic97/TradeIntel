@@ -6,10 +6,12 @@
 {% block stage %}
 <header class="stage stage--door on-navy">
   <div class="stage__bar"><a href="https://plusev.in" aria-label="PlusEV">{{ lockup() }}</a></div>
-  <p class="label label--plain door__note">Invitation only.</p>
   <h1 class="title door__title">A record of how you traded, built from your own tradebook.</h1>
 </header>
 {% endblock %}
 {% block content %}
+  <h2 class="heading">Create your account</h2>
+  <p class="body">Choose a login id and a password.</p>
+  {% include "_signup_form.html" %}
   <a class="link" href="/login">Sign in if you already have an account.</a>
 {% endblock %}

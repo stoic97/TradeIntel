@@ -4,7 +4,7 @@
 
 ## Context
 
-PRD v1.2 is frozen. v1 is infrastructure with a user-facing surface: invite-only intake, reconstruction, risk budget, eligibility, the Mirror with an evidence drawer, the Journal, consent and deletion. It serves a handful of invited design partners before the research gate; no Findings, no LLM, no payment. One builder. The data-flow map in PRD §10 is a release gate, so every external service is a cost to be justified. ADR-004 fixes Python 3.11 + uv; ADR-005 fixes SQLite at Phase 0 and Postgres 16 at Phase 1; the methodology forbids production importing research (Rule 5) while the PRD requires the Mirror and the research library to share one B2 function.
+PRD v1.2 is frozen. v1 is infrastructure with a user-facing surface: intake (invite-only until 5 Nov 2026), reconstruction, risk budget, eligibility, the Mirror with an evidence drawer, the Journal, consent and deletion. It serves a handful of invited design partners before the research gate; no Findings, no LLM, no payment. One builder. The data-flow map in PRD §10 is a release gate, so every external service is a cost to be justified. ADR-004 fixes Python 3.11 + uv; ADR-005 fixes SQLite at Phase 0 and Postgres 16 at Phase 1; the methodology forbids production importing research (Rule 5) while the PRD requires the Mirror and the research library to share one B2 function.
 
 ## Decision
 
@@ -14,7 +14,7 @@ PRD v1.2 is frozen. v1 is infrastructure with a user-facing surface: invite-only
 | Database | SQLite (WAL) via SQLAlchemy 2 + Alembic, schema portable; Postgres 16 at Phase 1 per ADR-005. |
 | Raw files | On the server disk, named by the SHA-256 of the uploaded bytes, never modified; encrypted at rest with a server key held in `/etc/scope/` and in the founder's password manager; the restore drill proves recoverability. |
 | Hosting | One DigitalOcean Basic Droplet, Bangalore, under a product-only account; Caddy + Let's Encrypt; systemd; daily droplet backups. Hostname `scope.plusev.in` when DNS is available; self-signed TLS for internal testing until then. |
-| Login | Invite code redeemed once, then login id + password (argon2id). Credentials handed to beta traders directly. No email service exists in v1. |
+| Login | Open sign-up, then login id + password (argon2id). The invite code was removed on 5 Nov 2026 (TICKET-841). No email service exists in v1. |
 | Uploads | Synchronous in the request, with stated size and row caps. No queue, no worker. |
 | Prose | Deterministic Jinja2 templates over counted facts. No LLM until a Finding exists (Manual B-9). |
 | B2 condition | `population_and_condition()` moves byte-for-byte to `services/shared/conditions/b2_condition.py`; research imports it from there. Only `shared` satisfies both the PRD's one-function rule and methodology Rule 5. |
