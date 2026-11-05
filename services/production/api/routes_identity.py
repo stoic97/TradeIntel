@@ -152,7 +152,9 @@ def signup(
         if signed_in is not None:
             return RedirectResponse(landing_for(sess, signed_in), status_code=303)
         taken = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
-        if taken is not None:
+        # A listed id nobody holds, or one whose owner deleted himself, is still an admin's:
+        # registering it would make a stranger an admin.
+        if taken is not None or login_id in _settings(request).admin_login_ids:
             return _signup_refused(request, "That login id is taken.")
 
         trader = m.Trader(display_name=display_name, login_id=login_id,

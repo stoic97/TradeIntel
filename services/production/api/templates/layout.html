@@ -28,9 +28,9 @@
 <link rel="stylesheet" href="/static/css/components.css">
 <link rel="stylesheet" href="/static/css/motion.css">
 <link rel="stylesheet" href="/static/css/app.css">
-<script src="/static/js/motion.js"></script>
+{% block head_scripts %}<script src="/static/js/motion.js"></script>
 <script src="/static/js/htmx.min.js" defer></script>
-</head>
+{% endblock %}</head>
 <body>
 <svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
 <div class="screen{% if screen_class %} {{ screen_class }}{% endif %}">

@@ -259,10 +259,25 @@ def test_a_method_refused_elsewhere_is_still_a_405(app):
     assert signed_in(app).delete("/signup").status_code == 405
 
 
+def every_route(routes):
+    """app.routes holds each include_router as a wrapper, so a flat walk finds no route at all."""
+    for route in routes:
+        included = getattr(route, "original_router", None)
+        if included is not None:
+            yield from every_route(included.routes)
+        else:
+            yield route
+
+
+def test_the_walk_of_the_routes_really_reaches_them(app):
+    methods = {r.path: r.methods for r in every_route(app.routes) if isinstance(r, APIRoute)}
+    assert "POST" in methods["/signup"], "a walk that misses this would pass whatever /admin did"
+
+
 def test_only_get_routes_exist_under_admin(app):
-    found = [r for r in app.routes
-             if isinstance(r, APIRoute) and r.path.rstrip("/").startswith("/admin")]
-    assert found, "the walk found no admin route"
+    found = [r for r in every_route(app.routes)
+             if isinstance(r, APIRoute) and r.path.startswith("/admin")]
+    assert {r.path for r in found} == {"/admin", "/admin/"}
     for route in found:
         assert route.methods <= {"GET"}, route.path
 
@@ -1054,7 +1069,7 @@ def test_a_load_reads_no_trade_and_no_stored_file_row(app, engine):
     said = " ".join(statements_for_one_load(app, engine, admin_client(app, engine))).lower()
     assert not re.search(r"\b(from|join)\s+trip\b", said)
     assert "raw_text" not in said
-    assert "password_hash" not in re.sub(r"insert into trader.*?\)", "", said)
+    assert said.count("password_hash") == 1  # who is asking, as every page does; not the list
 
 
 # ---------- How it is drawn ----------

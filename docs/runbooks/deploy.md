@@ -66,6 +66,12 @@ system-wide just to generate one string:
     SCOPE_DB           sqlite:////srv/scope/data/scope.db
     SCOPE_FILES        /srv/scope/data/files
     SCOPE_PRODUCTION   1
+    ADMIN_LOGIN_IDS    <login ids, comma-separated, no spaces>
+
+`ADMIN_LOGIN_IDS` names who may open `/admin`. Unset or empty means nobody: the app
+still starts and the page is a 404 for everyone. A login id on the list cannot be
+taken at sign-up by anyone, because whoever held it would be an admin. So sign up
+first, then add the id here and restart: a change takes effect on restart.
 
 **Put the file key in the password manager before anything is uploaded.** Lose it
 and every stored tradebook is unreadable — Fernet authenticates, so the app

@@ -12,6 +12,23 @@
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
 
+/* /admin (TICKET-848) is a working table, not a phone column, so it takes the width. Everything
+   wide scrolls inside its own box and the page itself never does. The selectors are this long
+   so they outrank any later rule for .screen__body, whatever the order. */
+.screen.screen--admin { max-width: none; }
+.screen.screen--admin > .screen__body.admin { max-width: none; min-width: 0; }
+.admin__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--space-3); margin-top: var(--space-6); }
+.admin__head { margin-top: var(--space-10); margin-bottom: var(--space-3); }
+.admin__scroll { overflow-x: auto; max-width: 100%; }
+.admin__table th, .admin__table td { padding-right: var(--space-3); white-space: nowrap; }
+.admin__stale { color: var(--color-loss); font-weight: 600; }
+.admin__note, .admin__notes { margin-top: var(--space-3); max-width: 80ch; color: var(--color-muted); }
+.admin__notes { padding-left: var(--space-4); }
+.admin__feed { list-style: none; margin: 0; padding: 0; overflow-wrap: anywhere; }
+.admin__feed li { padding: var(--space-1) 0; border-bottom: var(--hairline-thin) solid var(--color-hairline); }
+.admin__quiet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-2) var(--space-3); margin: 0; overflow-wrap: anywhere; }
+.admin__quiet dd { margin: 0; }
+
 /* A trade row names the trade (TICKET-822). The kit's label is a faint caption over a trade
    number; here it is what the trader recognises his trade by, so it reads as text. The
    prices sit under the row, and wrap rather than push a phone sideways. */
