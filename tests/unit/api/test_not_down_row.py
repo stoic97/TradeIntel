@@ -47,7 +47,9 @@ SAYS = (
     "your other trades opened once at least two earlier trades that day had closed, "
     "and your trades opened when fewer than two earlier trades that day had closed."
 )
-VERDICT = re.compile(r"\b(better|worse|best|worst|higher|lower|outperform\w*|beats?|improv\w*)\b", re.I)
+VERDICT = re.compile(
+    r"\b(better|worse|best|worst|higher|lower|outperform\w*|beats?|improv\w*)\b", re.IGNORECASE
+)
 PAGES = [lambda: fact_page("down", HISTORY), lambda: chapter_page(3, HISTORY)]
 IDS = ["fact page", "card"]
 
