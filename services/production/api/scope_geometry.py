@@ -1006,6 +1006,31 @@ def chart_notold(w: float, h: float, mini: bool = False) -> dict:
     return _chart(w, h, {"light": light})
 
 
+def chart_call_put(trades: list, w: float, h: float) -> dict:
+    """The option trades of one day, in order: calls on the top row, puts on the bottom, a
+    position of several legs on both. Bar height is the size of the result; a bar that made
+    money is outlined. trades is (side, net), side being CE, PE or both.
+
+    Not in the kit, so not in CHARTS, which the parity test holds to the kit's JavaScript.
+    """
+    gap, bw = 8, w / len(trades)
+    top = (h - gap) / 2
+    tall, biggest = top - 4, max([abs(net) for _, net in trades] + [1])
+    m = {"axis": f"M0 {fmt(top)}H{js_str(w)}M0 {fmt(h)}H{js_str(w)}", "light": "", "call": "", "put": "", "won": ""}
+    for i, (side, net) in enumerate(trades):
+        bh = max(3, abs(net) / biggest * tall)
+        x = i * bw + bw * 0.15
+        above, below = _r2(x, top - bh, bw * 0.7, bh), _r2(x, h - bh, bw * 0.7, bh)
+        if side == "both":
+            m["light"] += above + below
+            continue
+        bar = above if side == "CE" else below
+        m["call" if side == "CE" else "put"] += bar
+        if net > 0:
+            m["won"] += bar
+    return _chart(w, h, m)
+
+
 CHARTS = {
     "worst": chart_worst,
     "share": chart_share,

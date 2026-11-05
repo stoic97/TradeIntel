@@ -85,6 +85,18 @@
 .fact__title + .mirror { margin-top: var(--space-3); }
 .opening-figure { white-space: nowrap; }
 
+/* The call/put strip on the busiest day (TICKET-827), not in the kit: which row says the side,
+   so neither colour has to. An outline only on a trade that made money. */
+.chart__call { fill: var(--color-ink); }
+.chart__put { fill: var(--color-faint); }
+.chart__won { fill: none; stroke: var(--color-gain); stroke-width: 1.5; }
+.strip-note { margin-top: var(--space-2); }
+
+/* Where a chapter-3 page goes next (TICKET-827); the kit's fact pages end at their list. */
+.chapter-next { margin-top: var(--space-10); }
+.chapter-next + .chapter-next { margin-top: var(--space-3); }
+.chapter-next__line { margin-bottom: var(--space-3); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
