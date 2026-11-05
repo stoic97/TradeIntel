@@ -268,12 +268,10 @@ def test_a_run_at_the_end_of_the_file_has_no_after_section_and_keeps_its_close()
 # ---------- The next button ----------
 
 
-def test_the_page_ends_with_a_link_to_the_clock_and_what_happened_at_that_hour():
+def test_the_page_ends_with_a_link_to_the_clock_and_says_nothing_about_that_hour():
     html = fact_page("run", trips=EVENING)
-    assert (
-        "This run started at 18:00. Your trades in WIDGETOIL options opened in the 18:00 hour "
-        "came to −₹1,000, over 6 trades."
-    ) in readable(html)
+    assert "This run started at 18:00." in readable(html)
+    assert "opened in the" not in readable(html)
     assert re.search(
         r'<a class="btn btn--primary btn--block" href="/mirror/fact/clock[^"]*">See the clock</a>',
         html,

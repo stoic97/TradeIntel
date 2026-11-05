@@ -327,17 +327,3 @@ def test_a_mixed_run_names_every_book_most_trades_first():
     ]
 
 
-# ---------- The hour it started, as the clock tells it ----------
-
-
-def test_the_hour_a_run_started_is_counted_in_its_book_on_same_day_trades(story):
-    # r1 to r6 open in the 18:00 hour and come to -1,000. The trade after opens at 19:01.
-    assert story.start_hour.hour == 18
-    assert story.start_hour.book == "WIDGETOIL options"
-    assert story.start_hour.net == Decimal("-1000.00")
-    assert story.start_hour.trips == 6
-
-
-def test_a_run_that_opened_on_a_position_held_past_the_day_has_no_hour_to_point_at():
-    trips = [trip("b", DAY, "15:00:00", "10:00:00", -1, closed_day="2026-03-04")]
-    assert mx.run_story(trips, ["b"]).start_hour is None
