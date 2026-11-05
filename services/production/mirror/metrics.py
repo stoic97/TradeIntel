@@ -19,11 +19,13 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from functools import lru_cache
 from itertools import pairwise
 from math import ceil
 from statistics import median
 from typing import Any
 
+from services.shared.conditions import b2_shuffle
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
 
@@ -463,6 +465,18 @@ def worst_five(trips: list[Trip]) -> list[Trip]:
     return sorted(trips, key=lambda t: (t.net, t.entry_ts))[:5]
 
 
+def b2_observations(trips: list[Trip]) -> list[Obs]:
+    """The trips as the shared B2 definition and its shuffle test read them, in net rupees."""
+    day_index = {day: i for i, day in enumerate(sorted({t.trading_day for t in trips}))}
+    return [
+        Obs(day=day_index[t.trading_day],
+            entry_at=t.entry_ts.timestamp(),
+            exit_at=t.exit_ts.timestamp(),
+            r=float(t.net))
+        for t in trips
+    ]
+
+
 def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     """The research library's B2 population and condition, on this trader's trips.
 
@@ -474,15 +488,7 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
         return TwoStraightLosses(0, 0, 0, [], Decimal(0), Decimal(0), None, None,
                                  s.ResultState.INSUFFICIENT_SAMPLE)
 
-    day_index = {day: i for i, day in enumerate(sorted({t.trading_day for t in trips}))}
-    obs = [
-        Obs(day=day_index[t.trading_day],
-            entry_at=t.entry_ts.timestamp(),
-            exit_at=t.exit_ts.timestamp(),
-            r=float(t.net))
-        for t in trips
-    ]
-    in_pop, cond = population_and_condition(obs)
+    in_pop, cond = population_and_condition(b2_observations(trips))
 
     condition_trips = [t for t, flag in zip(trips, cond, strict=True) if flag]
     comparison_trips = [
@@ -504,23 +510,20 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
+@lru_cache(maxsize=64)
+def _post_loss_gate(obs: tuple[Obs, ...]) -> bool:
+    return b2_shuffle.shuffle_test(obs).passes
+
+
 def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
-    """May a page state a direction for trades after two straight losses? Not today.
+    """May a page state a direction for trades after two straight losses?
 
-    TICKET-832 lets that sentence show only if the research library's shuffle test (B2)
-    passes on the trader's file. There is no such test to call. Research has the null
-    written down (N-B in prereg/framework_v1.yaml, and its measured inflation in
-    engine/evidence.py) but no function that runs it, and library/b2.py is a Bayesian M1
-    fit. Production may not import research either (methodology Rule 5), and the server
-    installs without the research group. Writing a statistic here would redefine research's
-    test, so this answers False and the page says "No difference we can stand behind."
-    beside the same numbers.
-
-    What turns it on: research exposes a callable test where production may use it
-    (services/shared), and this returns whether it passed on these trips. Nothing else
-    needs to change; the sentence is written, and tested with this patched open.
+    Only if B2's shuffle test passes on this trader's own file (TICKET-832's ruling). Every page
+    of a record asks, so a file is tested once per process; the test's seed is fixed, so a
+    restart gets the same answer. Closed, the page says "No difference we can stand behind."
+    beside the same numbers, and that isn't a finding about the trader.
     """
-    return False
+    return _post_loss_gate(tuple(b2_observations(trips))) if trips else False
 
 
 def subset(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:
