@@ -148,6 +148,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   .screen__body--fact { max-width: 1312px; display: grid; grid-template-columns: minmax(0, 700px) minmax(0, 520px); grid-template-rows: repeat(14, auto) 1fr; column-gap: var(--space-16); justify-content: center; align-items: start; }
   .screen__body--fact > * { grid-column: 1; min-width: 0; }
   .screen__body--fact > .evidence { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
+  .screen__body--fact > .day-blocks__next { display: none; }
 
   .path { padding-inline: max(var(--space-4), calc((100vw - 1284px) / 2)); }
 
