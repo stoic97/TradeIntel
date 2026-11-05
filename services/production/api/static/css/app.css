@@ -55,6 +55,11 @@
    width comes out of the two clock columns, so the result column stays as wide as it was. */
 .trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
 
+/* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
+   kit draws the figure there. */
+.fact__title + .mirror { margin-top: var(--space-3); }
+.opening-figure { white-space: nowrap; }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
