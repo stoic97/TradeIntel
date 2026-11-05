@@ -1,6 +1,7 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import figure %}
 {% from "scope/_math.html" import math_table, sizes_table %}
+{% from "scope/_next.html" import next_fact %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ strike.rate_percent }}%</span></div>
     <p class="mirror">Your strike rate was <span class="num">{{ strike.rate_percent }}</span>% — <span class="num">{{ strike.wins|count }}</span> winners against <span class="num">{{ strike.losses|count }}</span> losers.</p>
@@ -42,3 +43,6 @@
   {% endfor %}
 {% endblock %}
 {% block caption %}How long each trade was open, by how it ended.{% endblock %}
+{% block lineage %}
+  {{ next_fact(f.next) }}
+{% endblock %}

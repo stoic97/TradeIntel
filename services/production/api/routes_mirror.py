@@ -115,7 +115,7 @@ def scope_chapter(request: Request, n: int):
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
-                next_href=SM.chapter_href(2) if n == 1 else None,
+                next_step=SF.chapter_next(n),
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)

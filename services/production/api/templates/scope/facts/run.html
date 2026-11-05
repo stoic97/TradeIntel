@@ -3,6 +3,7 @@
     not said. The re-entry count is that day's only, by ruling. -#}
 {% extends "scope/fact.html" %}
 {% from "_components.html" import figure, money, trade, button %}
+{% from "scope/_next.html" import next_fact %}
 {% block fact_title %}{% if f.story %}{{ f.story.lead }}: {{ f.story.when }}, {{ f.story.what }}, {{ money(f.story.net) }}.{% else %}{{ fact.title }}{% endif %}{% endblock %}
 {% block head %}
     <p class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ f.day_count|count }}</span> days{% endif %}.</p>
@@ -60,5 +61,7 @@
     <p class="mirror">This run started {{ f.story.started }}.</p>
     {{ button("See the clock", facts["clock"].href, block=true) }}
   </section>
+  {%- else %}
+  {{ next_fact(f.next) }}
   {%- endif %}
 {% endblock %}
