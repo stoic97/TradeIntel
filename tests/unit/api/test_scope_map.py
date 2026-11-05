@@ -177,11 +177,11 @@ def test_risk_groups_by_what_a_trade_was_measured_against():
 def test_a_trade_is_drawn_from_its_entry_to_its_exit():
     t = TRIPS[0]  # 09:30 to 10:00 on 01 Sep
     got = S.trade(t, 1)
-    assert (got["day"], got["time_in"], got["time_out"], got["held_minutes"]) == (
+    assert (got["day"], got["time_in"], got["time_out"], got["held_seconds"]) == (
         "01 Sep 2026",
         "09:30",
         "10:00",
-        30,
+        1800,
     )
     assert got["fill_minutes"] == [0, 30] and got["fills"] == []
 
