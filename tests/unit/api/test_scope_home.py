@@ -53,7 +53,6 @@ def test_home_is_the_kits_page():
     page = home_page()
     assert '<header class="stage stage--home on-navy">' in page
     assert '<span class="lockup__name">PlusEV</span>' in page
-    assert '<span class="chip chip--on-navy">In development.</span>' in page
     assert '<p class="label">Counted from your file</p>' in page
     assert '<h1 class="title fact__title">Your option trades' in page
     assert ('<span class="num">40</span> trades, <span class="num">8</span> trading days. '

@@ -428,6 +428,16 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
     raise ValueError("no figure sizes to lay out with")
 
 
+def _centre_figure_class(figure: str) -> str:
+    """The centre is a fixed circle and a result can run to ten characters or more, so a longer
+    figure is drawn smaller. The sizes are in app.css; the kit's own is the short one."""
+    if len(figure) >= CENTRE_LONGER:
+        return "scope__centre-figure scope__centre-figure--longer"
+    if len(figure) >= CENTRE_LONG:
+        return "scope__centre-figure scope__centre-figure--long"
+    return "scope__centre-figure"
+
+
 def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -> dict:
     """Every primitive of the dial.
 
@@ -541,6 +551,10 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
 
 def _esc(s) -> str:
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+CENTRE_LONG, CENTRE_LONGER = 8, 10
+"""Characters at which a centre figure steps down a size."""
 
 
 def _text_block(
@@ -676,7 +690,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 24 if phone else 34,
                 22 if phone else 32,
                 "center",
-                "scope__centre-figure",
+                _centre_figure_class(figure),
             )
         )
         o.append(
