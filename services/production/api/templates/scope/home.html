@@ -46,7 +46,7 @@
       {%- if c.state %}Not enough trades yet.
       {%- elif c.number == 1 %}{% if best_was_held %}Your best trades weren't trades.{% else %}Your five worst days came to {{ money(worst_days.sum) }}.{% endif %}
       {%- elif c.number == 2 %}Your winners were open a median of <span class="num">{{ holding.winners_median_seconds|minutes }}</span> minutes, your losers <span class="num">{{ holding.losers_median_seconds|minutes }}</span> minutes.
-      {%- elif c.number == 3 %}On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss.
+      {%- elif c.number == 3 %}On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed.
       {%- else %}What we read: <span class="num">{{ imp.rows_parsed|count }}</span> of <span class="num">{{ imp.rows_in|count }}</span> rows.{% include "scope/_refused.html" %}
       {%- endif %}</p>
       {{ button("Open chapter " ~ c.number, href=c.href, kind="text") }}

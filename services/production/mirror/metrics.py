@@ -889,18 +889,22 @@ def verdict(trips: list[Trip]) -> Verdict:
     others = [t for t in trips if not t.is_option]
     by_book: dict[str, list[Trip]] = {}
     for trip in options:
-        by_book.setdefault(book_of(trip.symbol), []).append(trip)
+        by_book.setdefault(trade_book(trip), []).append(trip)
     named = {b: ts for b, ts in by_book.items() if len(ts) >= NAMED_BOOK_MINIMUM}
     pooled = [t for b, ts in by_book.items() if b not in named for t in ts]
     rows = sorted(
-        (_book_result(f"{b[0].upper()}{b[1:]} options", ts) for b, ts in named.items()),
+        (_book_result(b, ts) for b, ts in named.items()),
         key=lambda r: (r.net, r.label),
     )
     if pooled:
         rows.append(_book_result("Other options", pooled))
     standout = _standout(others)
-    if others:
-        rows.append(_book_result("Stocks, ETFs and futures", others, standout))
+    other_books: dict[str, list[Trip]] = {}
+    for trip in others:
+        other_books.setdefault(trade_book(trip), []).append(trip)
+    for book, ts in sorted(other_books.items()):
+        holds_it = standout is not None and any(t.symbol == standout.symbol for t in ts)
+        rows.append(_book_result(book, ts, standout if holds_it else None))
     return Verdict(
         options_net=sum((t.net for t in options), Decimal(0)), options_trades=len(options),
         others_net=sum((t.net for t in others), Decimal(0)), others_trades=len(others),
