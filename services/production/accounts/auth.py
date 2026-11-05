@@ -8,7 +8,7 @@ exists.
 
 **Sessions are signed cookies, not rows.** A signed cookie needs no table and no
 cleanup, and the signature makes forgery as hard as the secret key. The cost is that
-a session cannot be revoked server-side for all devices; with a handful of invited
+a session cannot be revoked server-side for all devices; with few
 accounts and a password reset available that is an acceptable v1 trade, and it is
 recorded here rather than discovered later.
 

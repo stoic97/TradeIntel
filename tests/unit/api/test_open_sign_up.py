@@ -13,8 +13,6 @@ from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, select
 
@@ -221,7 +219,7 @@ def test_the_admin_command_is_gone(capsys):
 
 def test_no_production_code_mentions_the_gate():
     pattern = re.compile(r"InviteCode|invite_code|/invite/|invite-only|invitation only|"
-                         r"redeem_invite|cmd_invite", re.I)
+                         r"redeem_invite|cmd_invite", re.IGNORECASE)
     for path in [*Path("services/production").rglob("*.py"),
                  *Path("services/production").rglob("*.html"), Path("Makefile")]:
         found = pattern.search(path.read_text())
@@ -238,10 +236,8 @@ def test_an_account_made_through_an_invite_still_signs_in(tmp_path, monkeypatch)
     monkeypatch.setenv("SCOPE_DB", db_url)
     monkeypatch.setenv("SCOPE_FILES", str(tmp_path / "files"))
     monkeypatch.setenv("SCOPE_SECRET_KEY", "test-secret-key-at-least-32-chars-long")
-    config = Config("alembic.ini")
-    config.set_main_option("sqlalchemy.url", db_url)
-    command.upgrade(config, "0007")
     engine = make_engine(db_url)
+    run_migrations(engine, "0007")
     now = datetime.now(UTC).isoformat()
     with engine.begin() as conn:
         conn.execute(sa.text(

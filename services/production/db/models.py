@@ -49,15 +49,6 @@ class _InsertOnly:
     """Marker: rows of this table are never updated (design section 3)."""
 
 
-class InviteCode(Base):
-    __tablename__ = "invite_code"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(64), unique=True)
-    created_at: Mapped[datetime] = mapped_column(AwareDateTime)
-    redeemed_by: Mapped[int | None] = mapped_column(ForeignKey("trader.id"))
-    redeemed_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
-
-
 class Trader(Base):
     __tablename__ = "trader"
     id: Mapped[int] = mapped_column(primary_key=True)

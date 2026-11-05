@@ -46,8 +46,6 @@ def a_trader(sess, login_id: str, store: FileStore, content: bytes) -> m.Trader:
                       password_hash="x", created_at=datetime.now(UTC))
     sess.add(trader)
     sess.flush()
-    sess.add(m.InviteCode(code=f"I-{login_id}", created_at=datetime.now(UTC),
-                          redeemed_by=trader.id))
     sess.add(m.ConsentEvent(trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS,
                             scope="v1", terms_version="0-draft", granted=True,
                             at=datetime.now(UTC), method="web",
