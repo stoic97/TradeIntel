@@ -476,7 +476,7 @@ def test_the_card_and_home_keep_their_own_figures():
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
     assert figs["down"]["figure"] == "4"
-    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "busiest day"
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "busiest"
     assert ">4<" in chapter_page(3, DOWN)
 
 
