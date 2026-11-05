@@ -140,6 +140,16 @@ def confirmed_groups(sess: Session, imp: m.Import) -> set[str]:
     ))
 
 
+def still_suspected(sess: Session, imp: m.Import) -> set[str]:
+    """The duplicate groups on this import he has not yet confirmed."""
+    return set(sess.scalars(
+        select(m.ImportRow.dup_group).where(
+            m.ImportRow.import_id == imp.id,
+            m.ImportRow.flag == s.RowFlag.SUSPECTED_DUPLICATE,
+        )
+    ))
+
+
 def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
     """The import with trades that came before this one in the same source account."""
     return sess.scalars(
@@ -154,9 +164,22 @@ def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
 
 
 def same_file(sess: Session, one: m.Import, other: m.Import) -> bool:
-    """Whether two imports read the same bytes. A confirmation writes a new ``RawFile``."""
+    """Whether two imports read the same bytes. Older confirmations each wrote a ``RawFile``."""
     return (sess.get(m.RawFile, one.raw_file_id).sha256
             == sess.get(m.RawFile, other.raw_file_id).sha256)
+
+
+def reads_same_file_as_before(sess: Session, imp: m.Import) -> bool:
+    """Whether the import before this one read the same bytes: no new file came with it."""
+    earlier = earlier_reading(sess, imp)
+    return earlier is not None and same_file(sess, imp, earlier)
+
+
+def set_aside_more(sess: Session, imp: m.Import) -> bool:
+    """Whether this import read the file behind the one before it, with more confirmed."""
+    earlier = earlier_reading(sess, imp)
+    return (earlier is not None and same_file(sess, imp, earlier)
+            and bool(confirmed_groups(sess, imp) - confirmed_groups(sess, earlier)))
 
 
 def read_with_newer_code(sess: Session, imp: m.Import) -> bool:

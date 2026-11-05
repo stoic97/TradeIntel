@@ -14,6 +14,9 @@
   <p class="lead">This is the same file, read with newer code. Your figures may differ from before.</p>
   <p class="body">Trades: <span class="num">{{ imp.trips_reconstructed|count }}</span> now, <span class="num">{{ trades_before|count }}</span> before.</p>
   {%- endif %}
+  {%- if rows_confirmed is defined and rows_confirmed %}
+  <p class="lead">You told us <span class="num">{{ rows_confirmed|count }}</span> {{ "row repeats" if rows_confirmed == 1 else "rows repeat" }} a trade already in the file. {{ "It is" if rows_confirmed == 1 else "They are" }} set aside, and your figures were rebuilt without {{ "it" if rows_confirmed == 1 else "them" }}.</p>
+  {%- endif %}
   <dl class="facts-list">
     <dt>Rows in the file</dt><dd>{{ imp.rows_in|count }}</dd>
     <dt>Rows we could read</dt><dd>{{ imp.rows_parsed|count }}</dd>
@@ -61,10 +64,10 @@
     <h2 class="card-title">Days in this upload</h2>
     {%- if first_upload %}
     <p class="body"><span class="num">{{ days|length|count }}</span> trading days, from <span class="num">{{ days[0].trading_day }}</span> to <span class="num">{{ days[-1].trading_day }}</span>. All of them are new to Scope.</p>
-    {%- elif read_again and not changed_days %}
+    {%- elif (read_again or (same_file is defined and same_file)) and not changed_days %}
     <p class="body">Against the last reading of this file, the row count is the same on every day.</p>
     {%- else %}
-    <p class="body">{{ "Against the last reading of this file" if read_again else "Since your last upload" }}, {% if changed_days %}<span class="num">{{ changed_days|length|count }}</span> {{ "day" if changed_days|length == 1 else "days" }} changed: {% for d in changed_days[:3] %}{{ d|day }}{% if not loop.last %}, {% endif %}{% endfor %}{% if changed_days[3:] %} and {{ changed_days[3:]|length|count }} more{% endif %}{% else %}no day changed{% endif %}.</p>
+    <p class="body">{{ "Against the last reading of this file" if read_again or (same_file is defined and same_file) else "Since your last upload" }}, {% if changed_days %}<span class="num">{{ changed_days|length|count }}</span> {{ "day" if changed_days|length == 1 else "days" }} changed: {% for d in changed_days[:3] %}{{ d|day }}{% if not loop.last %}, {% endif %}{% endfor %}{% if changed_days[3:] %} and {{ changed_days[3:]|length|count }} more{% endif %}{% else %}no day changed{% endif %}.</p>
     {%- endif %}
     {#- A day that lost rows is never silent (day_versions.py), so it stays outside. -#}
     {%- if shrunk_days %}

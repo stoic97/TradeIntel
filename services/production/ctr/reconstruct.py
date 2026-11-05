@@ -74,7 +74,7 @@ from services.shared.schemas.ctr_v1 import (
 from services.shared.schemas.ctr_v2 import RiskUnitSource as RiskUnitSourceV2
 from services.shared.schemas.ctr_v2 import RoundTrip as RoundTripV2
 
-RECONSTRUCTION_VERSION = "1"
+RECONSTRUCTION_VERSION = "2"
 """What a stored import's reading is compared with, to say it is out of date (TICKET-844).
 
 Bump this in the same change, and only then, when the SAME file would now be read to
@@ -87,7 +87,12 @@ Do not bump for a deploy, new wording, a page, or a figure worked out when a pag
 lot sizes included: the page already reads the new code, and a re-read would change nothing.
 ``Import.code_version`` moves every deploy, and ``ctr_v2.SCHEMA_VERSION`` names the record's
 shape and did not move when pairing changed, so neither can do this.
+
+2: a row the trader confirmed as a duplicate leaves before pairing (TICKET-851).
 """
+
+BEFORE_CONFIRMED_ROWS_LEFT = (None, "1")
+"""The versions whose trips still hold the rows he confirmed, so no page may say otherwise."""
 
 _ZERO = Decimal(0)
 _SOURCE_OF = {RoundTrip: RiskUnitSource, RoundTripV2: RiskUnitSourceV2}

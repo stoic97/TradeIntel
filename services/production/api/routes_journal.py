@@ -248,6 +248,7 @@ def journal_page(request: Request, journal_id: int):
             # reading keeps its import, and that import's refusals may no longer be his.
             uncounted=current.trips_refused if current else 0,
             read_again=bool(imp and persist.read_with_newer_code(sess, imp)),
+            set_aside=bool(imp and persist.set_aside_more(sess, imp)),
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
         )
