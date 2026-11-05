@@ -37,7 +37,7 @@ def test_home_has_the_four_chapters_in_order_each_scoping_in():
 def test_each_chapter_leads_with_its_lead_facts_figure():
     view = SF.home_view(FIGS, CTX)
     assert [i["figure"] for i in view["items"]] == [
-        FIGS["share"]["figure"], FIGS["hold"]["figure"], FIGS["down"]["figure"],
+        FIGS["share"]["figure"], FIGS["math"]["figure"], FIGS["down"]["figure"],
         FIGS["unread"]["hub_figure"]]
 
 

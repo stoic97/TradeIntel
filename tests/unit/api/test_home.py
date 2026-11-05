@@ -37,7 +37,7 @@ def test_the_front_door_is_the_kits_navy_door(scope_environment):
     """Handoff 5, screen 0, in the app's own words."""
     page = TestClient(create_app()).get("/").text
     assert '<header class="stage stage--door on-navy">' in page
-    assert '<p class="label label--plain door__note">Invitation only.</p>' in page
+    assert "door__note" not in page
     assert ('<h1 class="title door__title">A record of how you traded, built from your own '
             "tradebook.</h1>") in page
     assert '<a class="link" href="/login">Sign in if you already have an account.</a>' in page

@@ -107,6 +107,7 @@ def delete_trader(
         _delete_where(sess, m.JournalFieldEntry,
                       m.JournalFieldEntry.journal_id.in_(journal_ids), removed)
     _delete_where(sess, m.WtpAnswer, m.WtpAnswer.trader_id == trader_id, removed)
+    _delete_where(sess, m.WtpAsked, m.WtpAsked.trader_id == trader_id, removed)
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
     # What he said about a whole report (TICKET-825), in his own words.
@@ -129,12 +130,10 @@ def delete_trader(
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent, m.RawFile):
+                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent,
+                  m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
-    # His invite is his: leaving the row would point at an account that is gone,
-    # and clearing the trader from it would hand the code back out as unused.
-    _delete_where(sess, m.InviteCode, m.InviteCode.redeemed_by == trader_id, removed)
     _delete_where(sess, m.Trader, m.Trader.id == trader_id, removed)
 
     sess.flush()
@@ -186,8 +185,8 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     so the drill checks the same list twice rather than two different ones.
     """
     found: list[str] = []
-    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
-                  m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
+    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
+                  m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
         if sess.scalars(select(model.id)

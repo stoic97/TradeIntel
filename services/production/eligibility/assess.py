@@ -56,6 +56,18 @@ class Basis(str, Enum):
     """Nothing here counts this one; the figure is absent rather than guessed."""
 
 
+class Waiting(str, Enum):
+    """What a check is waiting on, when that is not the trader's trades.
+
+    The order is the order the eligibility page lists them in.
+    """
+
+    MARKET_CONTEXT = "market_context"
+    STOP = "stop"
+    FINER_PRICES = "finer_prices"
+    RELEASE_CALENDAR = "release_calendar"
+
+
 @dataclass(frozen=True)
 class Verdict:
     test: LibraryTest
@@ -65,6 +77,7 @@ class Verdict:
     need: int | None
     unit: Unit
     reason: str
+    waiting_on: Waiting | None = None
 
     @property
     def not_ruled_out(self) -> bool:
@@ -78,24 +91,28 @@ class Verdict:
         return self.state is s.ResultState.NOT_YET_TESTED
 
 
-def _unavailable(test: LibraryTest) -> str | None:
-    """Why this test cannot run on any history we can read today.
+def _unavailable(test: LibraryTest) -> tuple[Waiting, str] | None:
+    """What this test waits on, and why it cannot run on any history we can read today.
 
     Each reason is a deferral that already exists, named so the answer on the page
     can be traced to a ticket rather than to someone's memory.
     """
     if test.needs == "tick":
-        return ("it needs tick-by-tick prices, and the price history we hold is "
-                "one-minute bars (TD-004)")
+        return (Waiting.FINER_PRICES,
+                ("it needs tick-by-tick prices, and the price history we hold is "
+                 "one-minute bars (TD-004)"))
     if test.requires_class == "conditional_on_stop_orders":
-        return ("it needs the stop that was working when the trade was opened, and "
-                "no broker export we read carries one (TD-003)")
+        return (Waiting.STOP,
+                ("it needs the stop that was working when the trade was opened, and "
+                 "no broker export we read carries one (TD-003)"))
     if test.n_min.unit is Unit.PER_REGIME or "regime" in test.extras:
-        return ("it needs the market-regime labels, which have not reached this "
-                "side as data (TD-011)")
+        return (Waiting.MARKET_CONTEXT,
+                ("it needs the market-regime labels, which have not reached this "
+                 "side as data (TD-011)"))
     if "events" in test.extras:
-        return ("it needs a calendar of the releases it looks at, which has not "
-                "reached this side as data (TD-014)")
+        return (Waiting.RELEASE_CALENDAR,
+                ("it needs a calendar of the releases it looks at, which has not "
+                 "reached this side as data (TD-014)"))
     return None
 
 
@@ -143,8 +160,9 @@ def _need(test: LibraryTest) -> int | None:
 def assess_one(test: LibraryTest, trips: list[Trip]) -> Verdict:
     unavailable = _unavailable(test)
     if unavailable is not None:
+        waiting_on, reason = unavailable
         return Verdict(test, s.ResultState.REQUIRED_DATA_MISSING, Basis.NOT_COUNTED,
-                       None, _need(test), test.n_min.unit, unavailable)
+                       None, _need(test), test.n_min.unit, reason, waiting_on)
 
     need = _need(test)
     if need is None:
@@ -230,6 +248,13 @@ class Eligibility:
         """Waiting on something that is not his trades. Ours to change."""
         return tuple(v for v in self.verdicts
                      if v.state is s.ResultState.REQUIRED_DATA_MISSING)
+
+    @property
+    def waiting_counts(self) -> dict[str, int]:
+        """How many checks wait on each thing, in the page's order. None is left out."""
+        counts = {kind.value: sum(1 for v in self.waiting if v.waiting_on is kind)
+                  for kind in Waiting}
+        return {kind: n for kind, n in counts.items() if n}
 
     @property
     def runnable(self) -> tuple[Verdict, ...]:

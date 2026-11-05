@@ -49,15 +49,6 @@ class _InsertOnly:
     """Marker: rows of this table are never updated (design section 3)."""
 
 
-class InviteCode(Base):
-    __tablename__ = "invite_code"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(64), unique=True)
-    created_at: Mapped[datetime] = mapped_column(AwareDateTime)
-    redeemed_by: Mapped[int | None] = mapped_column(ForeignKey("trader.id"))
-    redeemed_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
-
-
 class Trader(Base):
     __tablename__ = "trader"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -282,6 +273,17 @@ class WtpAnswer(Base, _InsertOnly):
     asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class WtpAsked(Base, _InsertOnly):
+    """Which Journal the willingness-to-pay question was put on. It is asked there and nowhere
+    else: this row is the "asked once" flag, written when the question is first drawn."""
+
+    __tablename__ = "wtp_asked"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"), unique=True)
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
+    asked_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class ChapterFeedback(Base, _InsertOnly):
     """B4: "Does this match your trading?" under chapters 1-3 (handoff 9).
 
@@ -383,6 +385,19 @@ class DwellEvent(Base, _InsertOnly):
     event: Mapped[str] = mapped_column(String(32))
     at: Mapped[datetime] = mapped_column(AwareDateTime)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
+
+
+class ChargeStatement(Base, _InsertOnly):
+    """A second file, the broker's own charges by day (TICKET-828). Kept apart from the
+    trips: ``trip.fees`` and ``fees_available`` go on saying what the tradebook said."""
+
+    __tablename__ = "charge_statement"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    raw_file_id: Mapped[int] = mapped_column(ForeignKey("raw_file.id"))
+    reader: Mapped[str] = mapped_column(String(64))
+    days: Mapped[str] = mapped_column(Text)  # JSON: trading day -> amount, as a string
+    uploaded_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
 class RuleDeclaration(Base, _InsertOnly):

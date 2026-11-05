@@ -14,9 +14,9 @@ comparing the facts about that period (``sections.own_facts``), which is why the
 are stored rather than the prose. A new version also starts unread and with no answers,
 so writing one for a day that did not change costs him what he wrote on it.
 
-**Latest five, with a catch-up list.** A backfill generates every Journal and
-surfaces five. The PRD's own words: a developer who renders sixty entries has built
-a defect.
+**Five, with a catch-up list.** A backfill generates every Journal and surfaces five:
+the days the caller names, or else the latest. The PRD's own words: a developer who
+renders sixty entries has built a defect.
 """
 
 from __future__ import annotations
@@ -166,21 +166,27 @@ def earlier_with_other_trades(sess: Session, journal: m.Journal) -> int | None:
     return None
 
 
-def surface(sess: Session, *, trader: m.Trader) -> Surface:
-    """The latest five, newest first, and the count waiting in the catch-up list."""
-    current = sorted(_current_versions(sess, trader),
-                     key=lambda j: j.period_start, reverse=True)
-    latest = current[:k.JOURNALS_ON_SURFACE]
+def newest_first(sess: Session, *, trader: m.Trader) -> list[m.Journal]:
+    """One Journal per period, its newest version, newest period first."""
+    return sorted(_current_versions(sess, trader), key=lambda j: j.period_start, reverse=True)
+
+
+def surface(sess: Session, *, trader: m.Trader, first: list[m.Journal] | None = None) -> Surface:
+    """The Journals to show (``first``, or the latest five) and the count behind them."""
+    current = newest_first(sess, trader=trader)
+    latest = first or current[:k.JOURNALS_ON_SURFACE]
     return Surface(latest=latest,
                    catch_up_count=max(0, len(current) - len(latest)),
                    total=len(current))
 
 
-def catch_up(sess: Session, *, trader: m.Trader) -> list[m.Journal]:
-    """Everything behind the surface, newest first."""
-    current = sorted(_current_versions(sess, trader),
-                     key=lambda j: j.period_start, reverse=True)
-    return current[k.JOURNALS_ON_SURFACE:]
+def catch_up(
+    sess: Session, *, trader: m.Trader, first: list[m.Journal] | None = None
+) -> list[m.Journal]:
+    """Everything the surface doesn't show, newest first."""
+    current = newest_first(sess, trader=trader)
+    shown = {j.id for j in (first or current[:k.JOURNALS_ON_SURFACE])}
+    return [j for j in current if j.id not in shown]
 
 
 def mark_opened(sess: Session, journal: m.Journal) -> None:

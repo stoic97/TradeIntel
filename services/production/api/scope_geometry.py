@@ -1053,3 +1053,25 @@ def trade_strip(fill_times: list, width: float, height: float | None = None) -> 
         "fillDelays": [i * 40 for i in range(len(xs))],
         "barDelay": len(xs) * 40 + 160,
     }
+
+
+DAY_LINE_W, DAY_LINE_H = 120, 32
+
+
+def day_line(running) -> str:
+    """A day's running result as a small line, first trade to last, with zero marked."""
+    values = [float(v) for v in running]
+    low, high = min(0.0, *values), max(0.0, *values)
+    spread = (high - low) or 1.0
+    steps = max(len(values) - 1, 1)
+
+    def y(v: float) -> str:
+        return fmt((high - v) / spread * (DAY_LINE_H - 4) + 2)
+
+    points = " ".join(f"{fmt(i / steps * DAY_LINE_W)},{y(v)}" for i, v in enumerate(values))
+    return (
+        f'<svg class="day-block__line" viewBox="0 0 {DAY_LINE_W} {DAY_LINE_H}" '
+        f'width="{DAY_LINE_W}" height="{DAY_LINE_H}" aria-hidden="true">'
+        f'<line class="day-block__zero" x1="0" x2="{DAY_LINE_W}" y1="{y(0.0)}" y2="{y(0.0)}"/>'
+        f'<polyline class="day-block__run" fill="none" points="{points}"/></svg>'
+    )

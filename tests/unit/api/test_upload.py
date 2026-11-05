@@ -29,14 +29,10 @@ PNL = b"Symbol,Realised P&L\nWIDGETOIL,1500.00\n"
 
 
 def sign_up(client, engine, code: str, login_id: str, consent: bool = True):
-    from datetime import UTC, datetime
-
-    with make_session(engine) as sess:
-        sess.add(m.InviteCode(code=code, created_at=datetime.now(UTC)))
-        sess.commit()
-    csrf = CSRF.search(client.get(f"/invite/{code}").text).group(1)
+    client.cookies.clear()  # signing up signs in, and two traders can share a test client
+    csrf = CSRF.search(client.get("/signup").text).group(1)
     client.post(
-        f"/invite/{code}",
+        "/signup",
         data={
             "login_id": login_id,
             "display_name": login_id,

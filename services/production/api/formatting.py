@@ -126,7 +126,13 @@ def day(iso_date: str) -> str:
     return f"{dom} {MONTHS[int(month) - 1]} {year}"
 
 
+def book_in_a_sentence(book: str) -> str:
+    """A trade_book name inside a sentence: "were crude options", "were NIFTY options"."""
+    return book[0].lower() + book[1:] if book[1:2].islower() else book
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
     env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, day=day, lots=lots)
     env.filters.update(price=price, signed_percent=signed_percent)
+    env.filters.update(book_in_a_sentence=book_in_a_sentence)

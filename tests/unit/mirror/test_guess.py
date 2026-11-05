@@ -93,4 +93,4 @@ def test_the_reveal_goes_on_to_the_one_number_and_back_to_the_days(client):
     guess(client, "unknown")
     page = client.get("/mirror/reveal").text
     assert 'href="/mirror/fact/worst-days?enter=lens">Show me those days</a>' in page
-    assert 'href="/budget">Continue</a>' in page
+    assert 'href="/budget">Next: what you risk</a>' in page

@@ -10,8 +10,8 @@ It does not name the library's checks in its own words. The framework calls them
 things like ``overall_edge``, and "edge" is on the never-use list (PRD 7.5): the
 product does not tell a trader he has one or has not. Inventing nineteen
 replacement descriptions would be writing research content that is the research
-seat's to write. So each check is named by its identifier and explained by what it
-needs, which is the part we do own.
+seat's to write. So the page counts the checks by what they are waiting on, which is
+the part we do own, and identifiers and minimums sit behind a toggle (TICKET-829).
 
 It does not present a draft framework as a locked one. The thresholds on this page
 are pre-registered -- fixed before anyone looked at a trader's data -- and that is
