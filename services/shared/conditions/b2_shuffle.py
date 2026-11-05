@@ -4,23 +4,19 @@ Chapter 3 may say a direction for trades after two straight losses only if this 
 trader's own file. Production may not import research (methodology Rule 5), and the Bayesian fit
 in research needs packages the server doesn't install, so this is plain numpy.
 
-What it takes from the framework (``framework_v1.yaml``), unchanged: the null N-B, outcomes
-shuffled within each day, 2,000 draws, and B2's minimum of 30 condition and 60 comparison trades.
-The groups are the ones ``b2_condition`` defines.
+The rule is in ``framework_v1.yaml`` under ``production_gates``, and a test holds these constants
+to it: the null N-B, outcomes shuffled within each day, 2,000 draws, B2's minimum of 30 condition
+and 60 comparison trades, and p <= 0.05 one-sided in B2's stated direction, on the two rupee means
+the sentence prints. The groups are the ones ``b2_condition`` defines. There is no 0.25R cutoff:
+most traders have no R, and that cutoff is a Finding's "big enough", which this isn't.
 
-What it had to decide, because the framework states no bar for this null and this isn't one of
-its Findings:
-
-* **Two-sided, p <= 0.05.** The framework's level is 5% and its false-positive band on noise is
-  2% to 8%. B2's row is one-sided, but the sentence says whichever way the means point, so a
-  test of one direction would let the other through untested.
-* **Rupees, the two means the sentence prints,** so the sentence and its test can't disagree.
-* **No 0.25R cutoff.** Most traders have no R, and the sentence prints both figures, so the size
-  is there to be read. That cutoff belongs to a Finding's "big enough", and this isn't a Finding.
+A result in the other direction keeps the gate closed, however strong. Trades after two losses
+doing better than the others isn't this gate opening, and Scope doesn't print a sentence the file
+argues against.
 
 The condition is worked out again on every draw, because it depends on which trades lost, and
 shuffling only the labels would test something else. A closed result says only that this test
-can't separate the two groups. It isn't a finding about the trader.
+didn't find what it looks for. It isn't a finding about the trader.
 """
 
 from __future__ import annotations
@@ -36,6 +32,7 @@ DRAWS = 2000
 MIN_CONDITION = 30
 MIN_COMPARISON = 60
 ALPHA = 0.05
+DIRECTION = "<"  # B2's own: the condition's mean below the comparison's
 SEED = 20260302  # fixed, so one file always gets one answer. Chosen once, before any real file.
 
 
@@ -89,7 +86,7 @@ def _difference(r: np.ndarray, pop: np.ndarray, first: np.ndarray, second: np.nd
 
 
 def shuffle_test(obs: Sequence[Obs], draws: int = DRAWS) -> ShuffleResult:
-    """Would shuffling each day's outcomes open a gap as wide as the file's own, either way?"""
+    """Would shuffling each day's outcomes put the condition this far below the comparison?"""
     if not obs:
         return ShuffleResult(0, 0, None, None, False)
     r = np.array([o.r for o in obs], dtype=float)
@@ -100,10 +97,10 @@ def shuffle_test(obs: Sequence[Obs], draws: int = DRAWS) -> ShuffleResult:
         return ShuffleResult(n_condition, n_comparison, None, None, False)
 
     rng = np.random.default_rng(SEED)
-    wider = 0
+    as_low = 0
     for _ in range(draws):
         moved = shuffle_within_days(r, day, rng)
         simulated, _, _ = _difference(moved, pop, first, second)
-        wider += abs(simulated) >= abs(observed)
-    p = (wider + 1) / (draws + 1)
-    return ShuffleResult(n_condition, n_comparison, observed, p, p <= ALPHA)
+        as_low += simulated <= observed
+    p = (as_low + 1) / (draws + 1)
+    return ShuffleResult(n_condition, n_comparison, observed, p, p <= ALPHA and observed < 0)

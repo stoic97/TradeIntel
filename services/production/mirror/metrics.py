@@ -527,7 +527,7 @@ def _post_loss_gate(obs: tuple[Obs, ...]) -> bool:
 def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
     """May a page state a direction for trades after two straight losses?
 
-    Only if B2's shuffle test passes on this trader's own file (TICKET-832's ruling). Every page
+    Only if B2's shuffle test passes on this trader's own file, in B2's own direction. Every page
     of a record asks, so a file is tested once per process; the test's seed is fixed, so a
     restart gets the same answer. Closed, the page says "No difference we can stand behind."
     beside the same numbers, and that isn't a finding about the trader.

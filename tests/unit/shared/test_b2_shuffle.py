@@ -92,7 +92,7 @@ def gate_in_the_framework() -> dict:
 
 def test_the_bar_is_in_the_framework_not_only_in_the_code():
     gate = gate_in_the_framework()
-    assert gate["null"] == "N-B"
+    assert gate["null_model"] == "N-B"
     assert gate["draws"] == T.DRAWS
     assert gate["bar_p"] == T.ALPHA == 0.05
     assert gate["sided"] == "one"
