@@ -69,14 +69,15 @@ def pages(tmp_path_factory):
 def slices(html: str) -> list[list[tuple[str, str]]]:
     """Every slice's drawn text as (class, words). The name sits on the rim, outside the slice."""
     out = []
-    for block in re.findall(r'<a class="scope__slice.*?</a>', html, flags=re.S):
-        texts = re.findall(r'<text class="scope__([a-z-]+)[^"]*"[^>]*>(.*?)</text>', block, flags=re.S)
-        out.append([(c, unescape(re.sub(r"<[^>]+>", " ", t)).strip()) for c, t in texts])
+    for block in re.findall(r'<a class="scope__slice.*?</a>', html, flags=re.DOTALL):
+        texts = re.findall(r'<text class="scope__([a-z-]+)[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL)
+        words = [unescape(re.sub(r"<[^>]+>", " ", t)).replace(chr(0xA0), " ").strip() for _, t in texts]
+        out.append([(c, w) for (c, _), w in zip(texts, words, strict=True)])
     return out
 
 
 def by_name(html: str) -> dict[str, list[tuple[str, str]]]:
-    blocks = re.findall(r'<a class="scope__slice.*?</a>', html, flags=re.S)
+    blocks = re.findall(r'<a class="scope__slice.*?</a>', html, flags=re.DOTALL)
     names = [unescape(re.search(r'aria-label="\d+\. ([^"]*)\."', b).group(1)) for b in blocks]
     return dict(zip(names, slices(html), strict=True))
 
@@ -138,6 +139,15 @@ def test_the_risk_count_says_what_it_counts():
     if figs["risk"]["state"]:
         figs["risk"] = {**figs["risk"], "state": ""}
     assert figs["risk"]["dial_figure"].endswith(" trades")
+
+
+@pytest.mark.parametrize("figure", ["5 trades", "4 things", "8 of 80 rows read"])
+def test_a_single_digit_stays_with_its_unit_however_narrow_the_slice(figure):
+    figs = {**SF.facts(SF.record_context(TRIPS), IMP)}
+    figs["run"] = {**figs["run"], "dial_figure": figure, "dial_label": ""}
+    drawn = slices(str(D.scope_dial(SF.chapter_view(2, figs))))
+    assert not [w for texts in drawn for _, w in texts if re.fullmatch(r"\d", w)]
+    assert [w for texts in drawn for _, w in texts if w.startswith(figure[0] + " ")], drawn
 
 
 def test_a_figure_in_a_state_shows_the_state_and_no_label():

@@ -23,6 +23,11 @@ may be given as captionLines. The kit always writes "of your result / in five da
 when the share is not a percentage (handoff 7, the second state) that would be false.
 Without captionLines the output is the kit's, byte for byte.
 
+Two more of the same kind (TICKET-843). opts["serials"] = False leaves out the digit the kit
+draws above each slice's figure, because beside a figure it reads as part of the figure. An
+item's "label" is the line under its figure, for a figure that means nothing alone. Neither
+given, the output is still the kit's.
+
 Not ported: scopeInAt and easeInOut, which script frames for the prototype. The live
 motion is CSS (motion.css), and nothing on the server animates.
 """
@@ -295,6 +300,9 @@ def name_label(
     }
 
 
+SERIAL_ROW = 13 + 4  # the serial's line and the gap under it
+
+
 def stacked_split(fig: str) -> list[str] | None:
     """Where a figure breaks when its wedge is too narrow: "[N] of [N]" -> "[N]" over
     "of [N]"; otherwise at the last space; None if it has no space."""
@@ -305,17 +313,18 @@ def stacked_split(fig: str) -> list[str] | None:
     return [fig[:j], fig[j + 1 :]] if j > 0 else None
 
 
-def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
+def slice_block(item: dict, fig_size: float, stacked: bool, serial_row: int = SERIAL_ROW) -> dict:
     """The box a slice's contents take: number, figure head, [tail], mini chart or state."""
     state = item.get("state") or ""
-    split = stacked_split(item["figure"]) if (not state and stacked) else None
+    label = "" if state else (item.get("label") or "")
+    split = stacked_split(item["figure"]) if (not state and stacked and not label) else None
     head = "—" if state else (split[0] if split else item["figure"])
-    tail = split[1] if split else ""
+    tail = label or (split[1] if split else "")
     tight = head.find(" · ") > 0
     head_w = mono_width(head, fig_size) - (2 * 0.45 * fig_size if tight else 0)
     tail_w = mono_width(tail, 11)
     lh = js_round(fig_size * 1.15)
-    row_a = 13 + 4 + lh + (13 if tail else 0)
+    row_a = serial_row + lh + (13 if tail else 0)
     row_b = 28 if state else (14 if item.get("chart") else 0)
     width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
     return {
@@ -359,7 +368,9 @@ def block_clearance(slc: dict, span: float, rc: float, b: dict, rr: dict) -> flo
     return m
 
 
-def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
+def layout_contents(
+    items: list, sec: dict, rr: dict, fig_sizes: list, serial_row: int = SERIAL_ROW
+) -> dict:
     """One figure size per view, the largest that fits. Every slice starts on one line;
     the least clear stacks until all fit; any stacked figure that would now fit on one
     line goes back. One shared radius when every slice fits at it."""
@@ -381,7 +392,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
 
     for si, fs in enumerate(fig_sizes):
         forms = [False] * len(items)
-        blocks = [slice_block(it, fs, False) for it in items]
+        blocks = [slice_block(it, fs, False, serial_row) for it in items]
         r = best(blocks)
         passes = 0
         while passes < 8 and r["score"] < 0:
@@ -394,7 +405,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
             if wi < 0:
                 break
             forms[wi] = True
-            blocks = [slice_block(it, fs, forms[i]) for i, it in enumerate(items)]
+            blocks = [slice_block(it, fs, forms[i], serial_row) for i, it in enumerate(items)]
             r = best(blocks)
             passes += 1
         if r["score"] >= 0:
@@ -403,7 +414,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
                     continue
                 f2 = list(forms)
                 f2[i] = False
-                b2 = [slice_block(x, fs, f2[j]) for j, x in enumerate(items)]
+                b2 = [slice_block(x, fs, f2[j], serial_row) for j, x in enumerate(items)]
                 r2 = best(b2)
                 if r2["score"] >= 0:
                     forms[i], blocks, r = False, b2, r2
@@ -432,7 +443,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     """Every primitive of the dial.
 
     view = {"kind": "home" | "chapter",
-            "items": [{"name", "figure", "href", "chart"?, "state"?, "opened"?}, ...],
+            "items": [{"name", "figure", "label"?, "href", "chart"?, "state"?, "opened"?}, ...],
             "centre": {"figure", "caption"} on home, {"name", "scopeHref"} in a chapter}
     """
     opts = opts or {}
@@ -442,8 +453,14 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     is_home = view["kind"] == "home"
     sec = sectors(len(view["items"]), is_home)
     t = ticks(cx, cy, rr, sec["dividers"], 0)
+    serials = opts.get("serials", True)
+    serial_row = SERIAL_ROW if serials else 0
     lay = layout_contents(
-        view["items"], sec, rr, size["figSizesHome"] if is_home else size["figSizesChapter"]
+        view["items"],
+        sec,
+        rr,
+        size["figSizesHome"] if is_home else size["figSizesChapter"],
+        serial_row,
     )
     slices = []
     for i, sl in enumerate(sec["slices"]):
@@ -498,8 +515,8 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                 "contents": {
                     "x": q[0],
                     "numberY": top,
-                    "headY": top + 17,
-                    "tailY": top + 17 + b["lineHeight"],
+                    "headY": top + serial_row,
+                    "tailY": top + serial_row + b["lineHeight"],
                     "chartY": top + b["rowA"] + 3,
                     "head": b["head"],
                     "tail": b["tail"],
@@ -523,6 +540,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
         "R": size["R"],
         "radii": rr,
         "kind": view["kind"],
+        "serials": serials,
         "centre": view.get("centre") or {},
         "outerRing": circle(cx, cy, rr["outer"]),
         "innerRing": circle(cx, cy, rr["inner"]),
@@ -612,9 +630,10 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 f'<circle class="scope__opened" cx="{fmt(s["openedMark"][0])}" '
                 f'cy="{fmt(s["openedMark"][1])}" r="{js_str(r)}"/>'
             )
-        o.append(
-            _text_block([s["number"]], c["x"], c["numberY"], 13, 11, "center", "scope__number")
-        )
+        if d["serials"]:
+            o.append(
+                _text_block([s["number"]], c["x"], c["numberY"], 13, 11, "center", "scope__number")
+            )
         tight = " scope__figure--tight" if c["tight"] else ""
         o.append(
             _text_block(

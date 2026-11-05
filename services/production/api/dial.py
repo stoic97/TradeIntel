@@ -21,7 +21,9 @@ from markupsafe import Markup, escape
 from services.production.api import scope_geometry as G
 
 MINI_W, MINI_H = 36, 14
-OPTS = {"threeLineNames": G.THREE_LINE_NAMES}
+# No serial on any page: beside a figure it reads as part of the figure. Where order matters the
+# slice's position carries it, and its aria-label still says it (TICKET-843).
+OPTS = {"threeLineNames": G.THREE_LINE_NAMES, "serials": False}
 CRUMB_LIMIT = 44  # characters in "Scope › chapter › fact" on the phone (the kit's path note)
 STRIP_W = 350  # a trade strip's drawing width; the SVG stretches it to the column
 
@@ -49,6 +51,7 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
     for item in view["items"]:
         _text(item["name"], "name")
         _text(item["figure"], "figure")
+        _text(item.get("label") or "", "label")
         kind = item.get("chart") or ""
         if kind and not item.get("state"):
             if "mini" not in item:

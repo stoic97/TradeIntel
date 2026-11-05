@@ -1,7 +1,8 @@
 """The dial on a page (api/dial.py and the dial macro in _components.html).
 
-The geometry is held to the kit by test_scope_geometry.py; this holds the door a page
-draws it through: hrefs escaped once, text that would break an attribute refused, the
+The geometry is held to the kit by test_scope_geometry.py. A page draws it through one door,
+with the kit's serial left out (TICKET-843), so a page is compared with the kit's code given
+that door's options. This holds the door: hrefs escaped once, text that would break an attribute refused, the
 SVG not escaped a second time, and a chapter's mini charts drawn in their slices.
 """
 
@@ -63,15 +64,14 @@ def test_a_page_draws_the_dial_the_kit_draws(key):
             },
         )
     else:
-        want = case["svg"]
+        want = G.render_dial_svg(G.build_dial(case["view"], "phone", dial.OPTS))
     assert page(view) == f'<div class="scope">{want}</div>'
 
 
 def test_the_desktop_dial_is_marked_for_the_desktop_stage():
     case = CASES["home_desktop"]
-    assert page(raw(case["view"]), "desktop") == (
-        f'<div class="scope scope--desktop">{case["svg"]}</div>'
-    )
+    want = G.render_dial_svg(G.build_dial(case["view"], "desktop", dial.OPTS))
+    assert page(raw(case["view"]), "desktop") == f'<div class="scope scope--desktop">{want}</div>'
 
 
 def test_each_slice_draws_its_own_mini_chart():

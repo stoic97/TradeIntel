@@ -13,6 +13,7 @@ its slice and its card - never hidden - and its figure is a dash.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from datetime import timedelta
 
@@ -601,8 +602,16 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     # The chapter's dial says findings (TICKET-827); home's slice and the card keep their figure.
     # After two straight losses is a count: a page may state no direction until research can
     # test one (post_loss_sentence_may_show). A date holds together when its slice stacks.
+    # A figure on a dial means something alone, so one that wouldn't says what it is (TICKET-843).
     if not out["down"]["state"]:
         out["down"]["dial_figure"] = _trades_word(ctx["two_losses"].condition)
+        out["down"]["dial_label"] = "after two losses"
+    out["math"]["dial_label"] = "strike rate"
+    out["clock"]["dial_label"] = "largest result"
+    out["not-told"]["dial_figure"] = f"{NOT_TOLD} things"
+    out["unread"]["dial_figure"] = f"{out['unread']['figure']} read"
+    if not out["risk"]["state"]:
+        out["risk"]["dial_figure"] = f"{out['risk']['figure']} trades"
     if not out["busiest"]["state"]:
         on_day = out["busiest"]["busiest_date"].replace(" ", chr(0xA0))
         out["busiest"]["dial_figure"] = f"{_trades_word(ctx['days'].busiest_trips)}, {on_day}"
@@ -751,6 +760,11 @@ def _clock_view(ctx: dict) -> dict:
     }
 
 
+def _keep_digit_with_its_unit(figure: str) -> str:
+    """A slice breaks a figure that won't fit, and a lone digit reads as a serial (TICKET-843)."""
+    return re.sub(r"^(\d) ", lambda m: f"{m[1]}{chr(0xA0)}", figure)
+
+
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre."""
     c = S.chapter(n)
@@ -759,7 +773,10 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         fig = figs[f.key]
         item = {
             "name": f.title,
-            "figure": fig.get("dial_figure", fig.get("finding", fig["figure"])),
+            "figure": _keep_digit_with_its_unit(
+                fig.get("dial_figure", fig.get("finding", fig["figure"]))
+            ),
+            "label": fig.get("dial_label", ""),
             "href": fig["href"],
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,
