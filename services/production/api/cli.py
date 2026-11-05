@@ -13,7 +13,6 @@ Usage:
 
     python -m services.production.api.cli init-db
     python -m services.production.api.cli create-trader --login-id rikk --name "Rikk"
-    python -m services.production.api.cli invite --code DEV-1
     python -m services.production.api.cli classify --login-id rikk --development-data
     python -m services.production.api.cli import --login-id rikk --file path/to/export.csv
     python -m services.production.api.cli review --import-id 1
@@ -113,7 +112,7 @@ def cmd_classify(args: argparse.Namespace) -> None:
 
     ``create-trader`` could set this at creation and nothing could change it
     afterwards, which is the wrong way round: an account is created through an
-    invite, where nobody is asked this, and the classification is a decision made
+    sign-up, where nobody is asked this, and the classification is a decision made
     about a partner's history after talking to him.
 
     It is not a cosmetic flag. A development-data account may be shown the
@@ -173,28 +172,6 @@ def cmd_delete_trader(args: argparse.Namespace) -> None:
     print("  retained  the consent record and this deletion record")
     print("  backups   roll off within 30 days; check them per the runbook")
 
-
-def cmd_invite(args: argparse.Namespace) -> None:
-    """Mint an invite code and print the URL it opens.
-
-    Access is invite-only (PRD 5.1) and ``create-trader`` cannot produce a trader who
-    can sign in -- it writes a placeholder password hash, because a trader sets his
-    own password through the invite. So without this command the only way to sign up
-    locally was to write the row by hand, which is why every walkthrough so far began
-    by reconstructing one.
-    """
-    engine = make_engine(args.db)
-    run_migrations(engine)
-    with make_session(engine) as sess:
-        taken = sess.scalars(
-            select(m.InviteCode).where(m.InviteCode.code == args.code)
-        ).first()
-        if taken is not None:
-            raise SystemExit(f"invite code {args.code!r} already exists")
-        sess.add(m.InviteCode(code=args.code, created_at=datetime.now(UTC)))
-        _log(sess, os.environ.get("USER", "admin"), "create_invite", args.code)
-        sess.commit()
-    print(f"invite {args.code}: http://127.0.0.1:8000/invite/{args.code}")
 
 
 def cmd_import(args: argparse.Namespace) -> None:
@@ -347,10 +324,6 @@ def main(argv: list[str] | None = None) -> None:
                      action="store_true")
     how.add_argument("--real", dest="development_data", action="store_false")
     classify.set_defaults(func=cmd_classify)
-
-    invite = sub.add_parser("invite")
-    invite.add_argument("--code", required=True)
-    invite.set_defaults(func=cmd_invite)
 
     review = sub.add_parser("review")
     review.add_argument("--import-id", type=int, required=True)

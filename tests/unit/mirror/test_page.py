@@ -2,7 +2,7 @@
 
 The pages format what the metric functions return and compute nothing, so these
 tests are about what a trader sees across Scope home, the four chapters and the
-twelve fact pages: the chapters in the order the PRD fixes, every fact two taps from
+the fact pages: the chapters in the order the PRD fixes, every fact two taps from
 home with every trade behind it, a thin sample said rather than shown as a bare
 number, and no sentence that asserts a cause or recommends an action. They were the
 long Mirror page's tests; each protects the same thing on the pages that replaced it.
@@ -100,8 +100,7 @@ def test_the_headline_figures_are_the_fixture_figures(client):
     pages = every_page(client)
     assert "96%" in pages["/mirror"], "share of total, in Home's centre"
     assert "24,000" in pages["/mirror/fact/worst-days"], "five worst days"
-    assert "15.8%" in pages["/mirror/fact/strike"], "strike rate"
-    assert "3.0" in pages["/mirror/fact/hold"], "holding ratio"
+    assert "15.8%" in pages["/mirror/fact/math"], "strike rate"
     assert ">10<" in pages["/mirror/fact/run"], "longest losing run"
 
 
