@@ -41,7 +41,6 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Where your results came from",
         (
             Fact("worst-days", "Your worst trading days", "worst"),
-            Fact("share", "Share of your losses", "share"),
             Fact("money", "Where the money came from", "money"),
         ),
         feedback=True,
@@ -78,6 +77,10 @@ CHAPTERS: tuple[Chapter, ...] = (
 )
 
 FACTS: dict[str, Fact] = {f.key: f for c in CHAPTERS for f in c.facts}
+
+FIGURES: dict[str, Fact] = {**FACTS, "share": Fact("share", "Share of your losses", "share")}
+"""Everything with a figure. The share has no page of its own now: its one new row is a line on
+the worst-days page, and /mirror/fact/share goes there. Home and the reveal still read it."""
 
 OLD_DWELL_LINES = {
     "worst-days": "worst-days",

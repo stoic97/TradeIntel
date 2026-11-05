@@ -31,6 +31,8 @@ from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
 
+SHARE_MOVED = "share"
+
 
 def load_record(request: Request):
     """The signed-in trader's record, or the page to show instead of it.
@@ -106,6 +108,7 @@ def scope_chapter(request: Request, n: int):
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
+                next_href=SM.chapter_href(2) if n == 1 else None,
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
@@ -171,6 +174,8 @@ def scope_fact(request: Request, key: str):
     figures, then every trade behind it."""
     if key in SM.MOVED_FACTS:
         return _moved(request, key)
+    if key == SHARE_MOVED:  # it was fact 2 of chapter 1; its one new row is on worst days now
+        return RedirectResponse(SM.fact_href("worst-days", lens=False), status_code=303)
     if key not in SM.FACTS:
         return HTMLResponse("", status_code=404)
     early, record = load_record(request)
@@ -181,6 +186,7 @@ def scope_fact(request: Request, key: str):
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
+    flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
     return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
                 enter_class=enter_class(request), body_class="screen__body--fact",
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
@@ -188,7 +194,12 @@ def scope_fact(request: Request, key: str):
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **context)
+                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **context)
+
+
+def _flagged_days(request: Request, imp) -> set[str]:
+    with make_session(request.app.state.engine) as sess:
+        return FB.flagged_days(sess, current_trader(request, sess), imp.id)
 
 
 def _ending(request: Request, imp, fact: dict) -> dict:
@@ -247,6 +258,26 @@ def report_feedback(request: Request, answer: str = Form(None), note: str = Form
             return HTMLResponse("", status_code=400)
         sess.commit()
     return RedirectResponse(f"{SM.fact_href('not-told', lens=False)}#report-check",
+                            status_code=303)
+
+
+@router.post("/mirror/feedback/day", response_class=HTMLResponse)
+def day_feedback(request: Request, trading_day: str = Form(None), note: str = Form(None),
+                 csrf_token: str = Form(None)):
+    """"Is this day wrong?" on one of the five worst days, which it must be."""
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    early, record = load_record(request)
+    if early is not None:
+        return early
+    _trips, imp, context = record
+    if trading_day not in {b.trading_day for b in context["day_blocks"]}:
+        return HTMLResponse("", status_code=400)
+    with make_session(request.app.state.engine) as sess:
+        FB.flag_day(sess, trader=current_trader(request, sess), import_id=imp.id,
+                    trading_day=trading_day, note=note)
+        sess.commit()
+    return RedirectResponse(f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}",
                             status_code=303)
 
 

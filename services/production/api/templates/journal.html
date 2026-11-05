@@ -3,7 +3,7 @@
     stop on the chart) change what is asked, so the app's own questions stay as they
     are; its demo bar's link becomes the plain link back. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import money, uncounted_line %}
+{% from "_components.html" import uncounted_line %}
 {% set nav = "journal" %}
 {% block content %}
   <p class="label label--plain">Journal</p>
@@ -13,10 +13,16 @@
   {%- if journal.id in changed_ids %}
   <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. A later upload changed this period. The <a class="link" href="/journals/{{ earlier_id }}">earlier version</a> is kept.</p>
   {%- endif %}
+  {%- for flag in flags %}
+  <p class="body-small"><a class="link" href="{{ flag.href }}">{{ flag.label }}</a></p>
+  {%- endfor %}
   <section class="journal__section">
     {%- for para in paragraphs %}
     <p class="mirror mirror--card">{{ para }}</p>
     {%- endfor %}
+    {%- if size_line %}
+    <p class="mirror mirror--card">{{ size_line }}</p>
+    {%- endif %}
   </section>
   <form class="journal__section" method="post" action="/journals/{{ journal.id }}/field">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -29,19 +35,19 @@
   </form>
   {%- if rows %}
   <section class="journal__section">
-    <h2 class="card-title">The trades, one at a time</h2>
+    <h2 class="card-title">{{ trades_heading or "The trades, one at a time" }}</h2>
     <p class="body-small">In the order you opened them. Result is {% if fees_available %}net{% else %}gross — your export carries no charges{% endif %}.</p>
     {%- for row in rows %}
-    <form class="card journal-trade" method="post" action="/journals/{{ journal.id }}/field">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="trip_id" value="{{ row.trip_id }}">
-      <p class="journal-trade__head"><span>{{ row.label }}</span> — {{ money(row.net, "label") }}</p>
-      {%- for name, question in prompts %}
-      <label class="field"><span class="field__label">{{ question }}</span><input class="field__input" name="{{ name }}" value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}"></label>
-      {%- endfor %}
-      <button class="btn btn--secondary journal__save" type="submit">Save</button>
-    </form>
+    {% include "_journal_trade.html" %}
     {%- endfor %}
+    {%- if rest_rows %}
+    <details class="journal__rest"{% if rest_answered %} open{% endif %}>
+      <summary class="body-small">The other {{ rest_rows|length|count }} trades</summary>
+      {%- for row in rest_rows %}
+      {% include "_journal_trade.html" %}
+      {%- endfor %}
+    </details>
+    {%- endif %}
   </section>
   {%- endif %}
   {%- if ask_wtp %}

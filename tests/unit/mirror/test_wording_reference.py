@@ -28,6 +28,7 @@ from tests.unit.mirror.wording import (
 )
 
 RETIRED = {
+    "vs your normal day": "said which it compared: now \"your normal day's trades\" on each block",
     "Your record": "the long page's title; Scope home's title is the kit's new one (D9)",
     "That is [N] of your result for the whole period, which was [N].":
         "a share of the net result, which has no floor or ceiling (TICKET-812)",

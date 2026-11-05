@@ -175,7 +175,7 @@ def test_a_trader_with_no_history_is_told_so_not_shown_zeroes(engine):
         data={"login_id": "empty", "password": "a-long-enough-password", "csrf_token": csrf},
         follow_redirects=False,
     )
-    for url in ("/mirror", "/mirror/chapter/1", "/mirror/fact/share"):
+    for url in ("/mirror", "/mirror/chapter/1", "/mirror/fact/worst-days"):
         body = client.get(url).text
         assert "0%" not in body, "a zero is a figure; absence is not"
         assert "upload" in body.lower(), url
