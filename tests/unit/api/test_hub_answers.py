@@ -207,7 +207,7 @@ def fit(figure, label):
     """How far a wedge's words clear the ring, the rim and the dividers, at their best radius."""
     z = G.SIZES["phone"]
     rr, sec = G.radii(z["R"]), G.sectors(4, True)
-    block = G.slice_block({"figure": figure, "label": label}, min(z["figSizesHome"]), False, 0)
+    block = G.slice_block({"figure": figure, "label": label}, min(z["figSizesHome"]), False)
     best, rc = -1e9, rr["ring"]
     while rc <= rr["inner"]:
         best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))
@@ -228,6 +228,13 @@ def test_the_widest_answers_stay_clear_of_the_dials_centre(figure, label):
 def test_every_wedge_on_the_page_stays_clear_of_the_dials_centre():
     for item in wedges():
         assert fit(item["figure"], item["label"]) >= -6, item
+
+
+def test_a_label_is_the_line_under_its_figure_on_the_dial_as_it_shipped():
+    block = G.slice_block({"figure": "12%", "label": "of losses"}, 16, False)
+    assert (block["head"], block["tail"], block["lead"]) == ("12%", "of losses", 0)
+    kit = G.slice_block({"figure": "12%"}, 16, False)
+    assert (kit["tail"], kit["lead"]) == ("", 17), "with no label the kit's layout stands"
 
 
 def test_a_wedge_count_under_ten_is_a_word_so_it_cant_read_as_a_serial():
