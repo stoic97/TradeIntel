@@ -829,7 +829,15 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
 
 
 def _wedge(figure: str, label: str = "", state: str = "") -> dict:
+    """A wedge's answer. A home wedge has room for about three characters over six, and no more
+    on any figure size (measured against block_clearance), so the full answer is in its row."""
     return {"figure": figure, "label": label, "state": state}
+
+
+def _wedge_count(n: int) -> str:
+    """A count in a wedge: a lone digit reads as a serial, so under ten it's a word, as the ruled
+    lines say them. Past that, a figure."""
+    return _number(n) if n <= 9 else formatting.count(n)
 
 
 def _answer_one(ctx: dict) -> dict:
@@ -840,12 +848,13 @@ def _answer_one(ctx: dict) -> dict:
     least = min(d.trips / float(normal) for d in worst.days) if normal else 0
     share = ctx["share"]
     figure = f"{share.share_percent}%" if share.shown_as_percentage else formatting.rupees(worst.sum)
-    label = "of losses · 5 days" if share.shown_as_percentage else "5 worst days"
+    label = "of losses" if share.shown_as_percentage else "5 days"
     return {
         "state": "",
         "days_word": _number(len(worst.days)).capitalize(),
         "share": share,
         "worst_sum": worst.sum,
+        "worst_loss": abs(worst.sum),
         "at_least": int(least) if least >= 2 else None,
         "wedge": _wedge(figure, label),
     }
@@ -858,9 +867,8 @@ def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
     if state:
         return {"state": state, "wedge": _wedge("—", state=state)}
     strike, even = ctx["strike"], ctx["break_even"]
-    label = f"{even.percent}% to break even" if even.percent is not None else ""
     return {"state": "", "strike": strike, "even": even,
-            "wedge": _wedge(f"{strike.rate_percent}% strike", label)}
+            "wedge": _wedge(f"{strike.rate_percent}%", "strike")}
 
 
 def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
@@ -875,7 +883,7 @@ def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
         "story": story,
         "after_two": ctx["two_losses"].condition,
         "says_direction": bool(figs["down"].get("post_loss_sentence")),
-        "wedge": _wedge(_keep_digit_with_its_unit(_trades_word(story["trades"])), "busiest day"),
+        "wedge": _wedge(_wedge_count(story["trades"]), "busiest"),
     }
 
 
@@ -884,9 +892,11 @@ def _answer_four(ctx: dict, figs: dict[str, dict], number: Decimal | None) -> di
     uncapped = figs["risk"]["uncapped_trades"]
     past = ctx["past_number"]
     if number is not None:
-        wedge = _wedge(formatting.rupees(number, signed=False), f"{formatting.count(past.count)} past it")
+        wedge = _wedge(_wedge_count(past.count), "past it")
+    elif uncapped:
+        wedge = _wedge(_wedge_count(uncapped), "uncapped")
     else:
-        wedge = _wedge("no budget", f"{formatting.count(uncapped)} uncapped" if uncapped else "")
+        wedge = _wedge("no", "budget")
     return {"state": "", "number": number, "past": past, "uncapped": uncapped, "wedge": wedge}
 
 

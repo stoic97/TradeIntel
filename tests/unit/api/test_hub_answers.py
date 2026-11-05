@@ -14,6 +14,7 @@ import pytest
 
 from services.production.api import formatting
 from services.production.api import scope_facts as SF
+from services.production.api import scope_geometry as G
 from services.production.mirror import metrics as mx
 from tests.unit.api.templating import template_env
 from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
@@ -67,7 +68,7 @@ def test_row_one_says_the_share_of_losses_with_its_denominators():
     share = CTX["share"]
     row = rows(hub())["Where your results came from"]
     want = (f"Five of your {share.trading_day_count} trading days carried {share.share_percent}% of your "
-            f"losses — {formatting.rupees(CTX['worst_days'].sum, signed=False)}.")
+            f"losses — {formatting.rupees(abs(CTX['worst_days'].sum), signed=False)}.")
     assert want in row
 
 
@@ -180,23 +181,55 @@ def test_row_four_with_a_number_says_it_and_what_lost_more():
 
 def test_the_wedges_carry_the_short_form_of_the_four_answers():
     items = wedges()
-    share, strike, be = CTX["share"], CTX["strike"], CTX["break_even"]
-    assert (items[0]["figure"], items[0]["label"]) == (f"{share.share_percent}%", "of losses · 5 days")
-    assert (items[1]["figure"], items[1]["label"]) == (f"{strike.rate_percent}% strike", f"{be.percent}% to break even")
-    assert (items[2]["figure"].replace(chr(0xA0), " "), items[2]["label"]) == (
-        f"{CTX['days'].busiest_trips} trades", "busiest day")
-    assert items[3]["figure"] == "no budget"
+    share, strike = CTX["share"], CTX["strike"]
+    assert (items[0]["figure"], items[0]["label"]) == (f"{share.share_percent}%", "of losses")
+    assert (items[1]["figure"], items[1]["label"]) == (f"{strike.rate_percent}%", "strike")
+    assert (items[2]["figure"], items[2]["label"]) == (SF._wedge_count(CTX["days"].busiest_trips), "busiest")
+    assert (items[3]["figure"], items[3]["label"]) == ("no", "budget")
 
 
 def test_a_wedge_says_how_many_are_uncapped():
     trips = [mx.replace(x, uncapped=True) if i < 2 else x for i, x in enumerate(FORTY)]
-    assert wedges(trips)[3]["label"] == "2 uncapped"
+    assert (wedges(trips)[3]["figure"], wedges(trips)[3]["label"]) == ("two", "uncapped")
 
 
 def test_a_wedge_with_a_number_says_it():
     item = wedges(number=Decimal(500))[3]
-    assert item["figure"] == "₹500"
-    assert item["label"] == f"{CTX['past_number'].count} past it"
+    assert item["label"] == "past it"
+    assert item["figure"] == SF._wedge_count(CTX["past_number"].count)
+
+
+def fit(figure, label):
+    """How far a wedge's words clear the ring, the rim and the dividers, at their best radius."""
+    z = G.SIZES["phone"]
+    rr, sec = G.radii(z["R"]), G.sectors(4, True)
+    block = G.slice_block({"figure": figure, "label": label}, min(z["figSizesHome"]), False, 0)
+    best, rc = -1e9, rr["ring"]
+    while rc <= rr["inner"]:
+        best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))
+        rc += 0.5
+    return best
+
+
+@pytest.mark.parametrize(("figure", "label"), [
+    ("100%", "of losses"), ("99.5%", "strike"), ("1,999", "busiest"), ("seven", "busiest"),
+    ("1,600", "uncapped"), ("no", "budget"), ("9,999", "past it"),
+])
+def test_the_widest_answers_stay_clear_of_the_dials_centre(figure, label):
+    """Seen in a browser: the ticket's longer short forms clear by -30 px, so the white centre
+    covers them. block_clearance keeps 4 to 5 px spare, so -6 only just touches."""
+    assert fit(figure, label) >= -6
+
+
+def test_every_wedge_on_the_page_stays_clear_of_the_dials_centre():
+    for item in wedges():
+        assert fit(item["figure"], item["label"]) >= -6, item
+
+
+def test_a_wedge_count_under_ten_is_a_word_so_it_cant_read_as_a_serial():
+    assert SF._wedge_count(5) == "five"
+    assert SF._wedge_count(10) == "10"
+    assert SF._wedge_count(1200) == "1,200"
 
 
 def test_no_wedge_says_open_or_read():
