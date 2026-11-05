@@ -48,7 +48,13 @@ def current_trader(request: Request, sess) -> m.Trader | None:
     session = current_session(request)
     if session is None:
         return None
-    return sess.get(m.Trader, session.trader_id)
+    trader = sess.get(m.Trader, session.trader_id)
+    if trader is None:
+        return None
+    # The id alone isn't enough: it can belong to a later account by now.
+    if not auth.session_is_for(session, trader.password_hash, _settings(request).secret_key):
+        return None
+    return trader
 
 
 def page(request: Request, name: str, status_code: int = 200, **context) -> HTMLResponse:
@@ -64,6 +70,10 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
 
 def require_csrf(request: Request, token: str | None) -> bool:
     return auth.csrf_ok(token, current_session(request), _settings(request).secret_key)
+
+
+def _session_for(request: Request, trader: m.Trader) -> auth.Session:
+    return auth.new_session(trader.id, trader.password_hash, _settings(request).secret_key)
 
 
 def _set_session_cookie(response, request: Request, session: auth.Session) -> None:
@@ -181,7 +191,7 @@ def signup(
         request.app.state.signups.add(connection)
 
         response = RedirectResponse(landing_for(sess, trader), status_code=303)
-        _set_session_cookie(response, request, auth.new_session(trader.id))
+        _set_session_cookie(response, request, _session_for(request, trader))
         return response
 
 
@@ -210,7 +220,7 @@ def login(
             return page(request, "login.html", status_code=400, title="Sign in",
                         error=SIGN_IN_FAILED)
 
-        session = auth.new_session(trader.id)
+        session = _session_for(request, trader)
         response = RedirectResponse(landing_for(sess, trader), status_code=303)
         _set_session_cookie(response, request, session)
         return response
