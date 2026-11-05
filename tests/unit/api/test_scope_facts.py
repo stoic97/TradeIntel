@@ -97,7 +97,7 @@ def test_each_fact_says_what_its_trades_are():
     assert "Your best five and worst five, by result." in fact_page("money")
     assert "How long each trade was open, by how it ended." in fact_page("hold")
     assert "Every trade, by the hour you opened it." in fact_page("clock")
-    assert "Every trade opened after two that had already closed at a loss." in fact_page("down")
+    assert "Every trade opened after two earlier trades that day had already closed." in fact_page("down")
 
 
 def test_the_worst_days_table_says_each_day_against_the_normal_day_as_the_mirror_did():
