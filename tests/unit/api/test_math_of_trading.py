@@ -365,14 +365,15 @@ def test_the_exit_line_says_nothing_about_entries():
     assert "It says nothing about the entries." in text
 
 
-def test_the_biggest_losers_are_a_secondary_line_with_their_caveat():
+def test_the_biggest_losers_are_a_secondary_line_that_explains_nothing():
     page = fact_page("math", YEAR_ONE)
     text = readable(page)
     assert "1 trade (3%) lost more than ₹1,000, 63% of this book's losses." in text
     assert "It was 2 lots, the other losers a median 2 lots." in text
     assert "It was open 30 min, the other losers a median 5 min." in text
-    assert "Part of this is arithmetic" in text
-    assert re.search(r'<p class="[^"]*math__secondary[^"]*">[^\n]*Part of this is arithmetic', page)
+    assert "Part of this is arithmetic" not in text
+    assert "more time to lose" not in text
+    assert re.search(r'<p class="[^"]*math__secondary[^"]*">[^\n]*lost more than', page)
 
 
 def test_more_than_one_big_loser_reads_in_the_plural_and_one_lot_in_the_singular():
