@@ -53,7 +53,7 @@
 .clock-book__table td:first-child { white-space: normal; }
 .clock-book__table th { vertical-align: bottom; }
 .clock-book__table a { color: inherit; text-decoration: underline; }
-.num { white-space: nowrap; } /* a minus stays with its figure, on every page */
+.num--gain, .num--loss, .num--plain { white-space: nowrap; } /* a minus stays with its figure; dates and "N of M rows" may still wrap */
 .scope__centre-figure--long { font-size: 18px; }
 .scope__centre-figure--longer { font-size: 15px; }
 .scope__centre-figure--longest { font-size: 13px; }
@@ -99,6 +99,11 @@
 @media (min-width: 900px) {
   .screen--wide { max-width: 1040px; }
   .ranked-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+}
+/* From 1024 px a fact's trades sit in a narrow right-hand column, too tight for two lists until
+   the screen is wide enough. */
+@media (max-width: 1365px) and (min-width: 1024px) {
+  .ranked-lists { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* The math of your trading: a row per book and a table per book, which the kit does not draw.
