@@ -16,6 +16,11 @@
   <p class="body">{{ chapter.facts|length }} facts, counted from your file.</p>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   {{ uncounted_line(imp.trips_refused) }}
+  {%- if chapter.number == 2 %}
+  {%- for line in facts["math"].lead_lines %}
+  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ line.more|rupees(signed=false) }} more per winner.</p>
+  {%- endfor %}
+  {%- endif %}
   <div class="story-list">
   {%- for fact in chapter.facts %}
     {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
@@ -24,8 +29,8 @@
   {%- if chapter.feedback %}
   {% include "scope/_feedback.html" %}
   {%- endif %}
-  {%- if next_href %}
-  <p class="chapter__next">{{ button("Chapter 2: your patterns", next_href) }}</p>
+  {%- if next_step %}
+  <p class="chapter__next">{{ button(next_step.label, next_step.href) }}</p>
   {%- endif %}
   {%- if chapter.number == 3 %}
   {{ chapter_four(facts["busiest"].chapter_four) }}

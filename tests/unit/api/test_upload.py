@@ -394,7 +394,7 @@ def test_a_refusal_through_htmx_keeps_its_status_and_its_words(client):
     htmx_upload(client, GOOD)
     again = htmx_upload(client, GOOD)
     assert again.status_code == 400
-    assert "You have already uploaded this exact file." in again.text
+    assert "You have already uploaded this exact file:" in again.text
 
 
 def test_a_file_that_rebuilds_no_trade_goes_to_its_review(client):

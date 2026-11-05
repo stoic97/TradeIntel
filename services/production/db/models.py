@@ -121,6 +121,8 @@ class Import(Base, _InsertOnly):
     filemap_version: Mapped[str] = mapped_column(String(32))
     profile_versions: Mapped[str | None] = mapped_column(Text)
     code_version: Mapped[str] = mapped_column(String(40))
+    # Empty means read before this was recorded, so older than any current reading.
+    reconstruction_version: Mapped[str | None] = mapped_column(String(32))
     snapshot_digest: Mapped[str | None] = mapped_column(String(64))
     outcome: Mapped[s.ImportOutcome] = mapped_column(EnumText(s.ImportOutcome, 32))
     rejection_text: Mapped[str | None] = mapped_column(Text)

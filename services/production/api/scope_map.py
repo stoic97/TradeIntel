@@ -90,12 +90,14 @@ OLD_DWELL_LINES = {
     "by-hour": "clock",
     "hold": "math",
     "strike": "math",
+    "share": "worst-days",
 }
 """The long Mirror page's dwell keys, and the fact page each is now read on.
 
 Dwell events are keyed by fact page from here on (handoff 9). Events stored before
 the Scope keep their old keys; this is how to read the two together. How long you hold
-and Strike rate were fact pages of their own until they merged, so their keys are here too.
+and Strike rate were fact pages of their own until they merged, and the share was one until its
+line moved to worst days, so their keys are here too.
 """
 
 MOVED_FACTS = {"hold": "math", "strike": "math"}

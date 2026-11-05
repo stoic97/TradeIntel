@@ -19,6 +19,8 @@ class Settings:
     secret_key: str
     file_key: str
     production: bool
+    admin_login_ids: frozenset[str] = frozenset()
+    """Who may see /admin. Empty or unset means nobody: it fails closed, and the app starts."""
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -45,4 +47,9 @@ class Settings:
             secret_key=secret,
             file_key=file_key,
             production=os.environ.get("SCOPE_PRODUCTION", "").lower() in ("1", "true", "yes"),
+            admin_login_ids=frozenset(
+                login_id.strip()
+                for login_id in os.environ.get("ADMIN_LOGIN_IDS", "").split(",")
+                if login_id.strip()
+            ),
         )

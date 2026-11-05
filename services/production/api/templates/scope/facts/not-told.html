@@ -43,9 +43,15 @@
 
   {%- if ending.changed %}
   <section class="ending__changed" aria-labelledby="ending-changed">
+    {%- if ending.changed.same_file %}
+    <h2 class="heading" id="ending-changed">What changed when this file was read again</h2>
+    <p class="body">Trades: <span class="num">{{ ending.changed.trades[0]|count }}</span> now, <span class="num">{{ ending.changed.trades[1]|count }}</span> before.</p>
+    <p class="body">Trading days: <span class="num">{{ ending.changed.days[0]|count }}</span> now, <span class="num">{{ ending.changed.days[1]|count }}</span> before.</p>
+    {%- else %}
     <h2 class="heading" id="ending-changed">What changed since your last file</h2>
     <p class="body">Trades: <span class="num">{{ ending.changed.trades[0]|count }}</span> in this file, <span class="num">{{ ending.changed.trades[1]|count }}</span> in your last file.</p>
     <p class="body">Trading days: <span class="num">{{ ending.changed.days[0]|count }}</span> in this file, <span class="num">{{ ending.changed.days[1]|count }}</span> in your last file.</p>
+    {%- endif %}
   </section>
   {%- endif %}
 

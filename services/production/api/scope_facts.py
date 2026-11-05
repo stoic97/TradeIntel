@@ -227,6 +227,28 @@ def _trades_word(n: int) -> str:
     return f"{formatting.count(n)} {'trade' if n == 1 else 'trades'}"
 
 
+def _next_fact(key: str) -> dict:
+    return {"label": f"Next: {S.FACTS[key].title}", "href": S.fact_href(key)}
+
+
+def _break_even_lines(ctx: dict) -> list[dict]:
+    """What it would have taken each book to break even: the amount per winner, from the same
+    row as the math page's table. A book under the minimum has no row to read, and a book that
+    made back what it lost has nothing to say. Which lever to pull isn't ours to say."""
+    rows = (book.whole for book in ctx["book_math"])
+    return [
+        {"book": row.label, "more": row.winner_gap}
+        for row in rows
+        if row.state is s.ResultState.COUNTED_FACT and row.winner_gap is not None and row.winner_gap > 0
+    ]
+
+
+def chapter_next(n: int) -> dict | None:
+    """The button that ends a chapter's overview, where it has one."""
+    labels = {1: "Chapter 2: your patterns", 2: "Chapter 3, your behaviour: what you did after losing"}
+    return {"label": labels[n], "href": S.chapter_href(n + 1)} if n in labels else None
+
+
 def _chapter_four(ctx: dict) -> dict:
     """The way out of chapter 3, by chapter 4's own title. The number is mentioned only while
     chapter 4 still offers to take it (its risk fact, with no declared budget)."""
@@ -598,10 +620,10 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     out["busiest"]["story"] = _busiest_story(ctx)
     out["busiest"]["chapter_four"] = out["down"]["chapter_four"] = _chapter_four(ctx)
-    out["down"]["next"] = {
-        "label": f"Next: {S.FACTS['busiest'].title}",
-        "href": S.fact_href("busiest"),
-    }
+    out["down"]["next"] = _next_fact("busiest")
+    out["math"]["next"] = _next_fact("run")
+    out["run"]["next"] = _next_fact("clock")
+    out["math"]["lead_lines"] = _break_even_lines(ctx)
     # The chapter's dial says findings (TICKET-827); home's slice and the card keep their figure.
     # After two straight losses is a count: a page may state no direction until research can
     # test one (post_loss_sentence_may_show). A date holds together when its slice stacks.
@@ -626,6 +648,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     out["math"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
+    out["run"]["start_day"] = formatting.day(ctx["run"].days[0]) if ctx["run"].days else None
     out["run"].update(_run_view(ctx))
     for key, fact in S.FIGURES.items():  # the fact page's figure: full width, 96 px
         out[key]["page_chart"] = (

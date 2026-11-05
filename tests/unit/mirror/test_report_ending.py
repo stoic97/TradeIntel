@@ -225,8 +225,12 @@ def _a_later_file(engine, keep: int) -> None:
     """A second import: `keep` of the first file's trades."""
     with make_session(engine) as sess:
         first = sess.scalars(select(m.Import)).first()
+        raw = m.RawFile(trader_id=first.trader_id, sha256="e" * 64, original_name="later.csv",
+                        size=1, stored_path="/tmp/later", uploaded_at=datetime.now(UTC))
+        sess.add(raw)
+        sess.flush()
         later = m.Import(
-            trader_id=first.trader_id, raw_file_id=first.raw_file_id, source_account="A",
+            trader_id=first.trader_id, raw_file_id=raw.id, source_account="A",
             adapter_id=first.adapter_id, adapter_version="1", filemap_version="1",
             code_version="fixturesha", outcome=first.outcome, rows_in=keep, rows_parsed=keep,
             rows_excluded=0, fees_available=False, version_no=2, trips_reconstructed=keep,

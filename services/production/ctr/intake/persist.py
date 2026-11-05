@@ -116,19 +116,85 @@ def write_plan(
     size: int,
     source_account: str = "A",
 ) -> m.Import:
-    """Write the plan and return the import row it produced."""
-    now = datetime.now(UTC)
-
+    """Record the file, write the plan and return the import row it produced."""
     raw = m.RawFile(
         trader_id=trader.id,
         sha256=raw_sha256,
         original_name=original_name,
         size=size,
         stored_path=stored_path,
-        uploaded_at=now,
+        uploaded_at=datetime.now(UTC),
     )
     sess.add(raw)
     sess.flush()
+    return write_reading(sess, trader=trader, plan=plan, raw=raw, source_account=source_account)
+
+
+def confirmed_groups(sess: Session, imp: m.Import) -> set[str]:
+    """The duplicate groups the trader confirmed on this import."""
+    return set(sess.scalars(
+        select(m.ImportRow.dup_group).where(
+            m.ImportRow.import_id == imp.id,
+            m.ImportRow.flag == s.RowFlag.TRADER_CONFIRMED_DUPLICATE,
+        )
+    ))
+
+
+def still_suspected(sess: Session, imp: m.Import) -> set[str]:
+    """The duplicate groups on this import he has not yet confirmed."""
+    return set(sess.scalars(
+        select(m.ImportRow.dup_group).where(
+            m.ImportRow.import_id == imp.id,
+            m.ImportRow.flag == s.RowFlag.SUSPECTED_DUPLICATE,
+        )
+    ))
+
+
+def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
+    """The import with trades that came before this one in the same source account."""
+    return sess.scalars(
+        select(m.Import)
+        .join(m.Trip, m.Trip.import_id == m.Import.id)
+        .where(m.Import.trader_id == imp.trader_id,
+               m.Import.source_account == imp.source_account,
+               m.Import.id < imp.id)
+        .order_by(m.Import.id.desc())
+        .limit(1)
+    ).first()
+
+
+def same_file(sess: Session, one: m.Import, other: m.Import) -> bool:
+    """Whether two imports read the same bytes. Older confirmations each wrote a ``RawFile``."""
+    return (sess.get(m.RawFile, one.raw_file_id).sha256
+            == sess.get(m.RawFile, other.raw_file_id).sha256)
+
+
+def reads_same_file_as_before(sess: Session, imp: m.Import) -> bool:
+    """Whether the import before this one read the same bytes: no new file came with it."""
+    earlier = earlier_reading(sess, imp)
+    return earlier is not None and same_file(sess, imp, earlier)
+
+
+def set_aside_more(sess: Session, imp: m.Import) -> bool:
+    """Whether this import read the file behind the one before it, with more confirmed."""
+    earlier = earlier_reading(sess, imp)
+    return (earlier is not None and same_file(sess, imp, earlier)
+            and bool(confirmed_groups(sess, imp) - confirmed_groups(sess, earlier)))
+
+
+def read_with_newer_code(sess: Session, imp: m.Import) -> bool:
+    """Whether this import read the file behind the one before it, with code that moved."""
+    earlier = earlier_reading(sess, imp)
+    return (earlier is not None and same_file(sess, imp, earlier)
+            and (earlier.reconstruction_version, earlier.adapter_version)
+            != (imp.reconstruction_version, imp.adapter_version))
+
+
+def write_reading(
+    sess: Session, *, trader: m.Trader, plan: ImportPlan, raw: m.RawFile, source_account: str
+) -> m.Import:
+    """Write the plan as a new version, reading ``raw``. Nothing earlier is touched."""
+    now = datetime.now(UTC)
 
     version_no, supersedes = _next_version(sess, trader, source_account)
 
@@ -143,6 +209,7 @@ def write_plan(
         filemap_version=plan.filemap_version or "",
         profile_versions=json.dumps(plan.profile_versions, sort_keys=True),
         code_version=plan.code_version,
+        reconstruction_version=plan.reconstruction_version,
         snapshot_digest=plan.digest(),
         outcome=plan.outcome,
         rejection_text=plan.rejection_text,
