@@ -547,8 +547,8 @@ def test_a_trade_answer_follows_a_trade_that_did_not_change(client, engine, monk
     answer(client, engine, journal_id(engine, "2024-01-03", 1), trip_id=kept.trip_id,
            rationale="Why I took the kept trade")
     read_again(client, old.id)
-    new_page = words(client.get(f"/journals/{journal_id(engine, '2024-01-03', 2)}").text)
-    assert "Why I took the kept trade" in new_page
+    new_page = client.get(f"/journals/{journal_id(engine, '2024-01-03', 2)}").text
+    assert "Why I took the kept trade" in new_page  # it is the value of a form's field
 
 
 def test_a_changed_journal_says_why(client, engine, monkeypatch):  # noqa: F811
@@ -588,7 +588,7 @@ def test_net_still_shows_after_a_reread(client, engine, monkeypatch):  # noqa: F
     assert view.gross == Decimal(-100)
     assert view.net == Decimal(-270)
     assert (view.covered_days, view.trading_days) == (2, 3)
-    assert "Net: −₹270" in words(client.get("/mirror").text).replace("</span>", "")
+    assert "Net of those: −₹270" in words(client.get("/mirror").text)
 
 
 # ---- 5. whole-report feedback

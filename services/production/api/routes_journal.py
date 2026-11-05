@@ -34,6 +34,7 @@ from services.production.api import asking
 from services.production.api import days_worth_a_look as worth
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -197,6 +198,7 @@ def journal_page(request: Request, journal_id: int):
         ]
         trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
+        current = loader.current_import(sess, trader)
         trades = trades_of(trips)
         rows = [
             {"trip_id": t["trip_id"], "label": f"Trade {n}", "net": t["net"]}  # the page writes it
@@ -242,7 +244,10 @@ def journal_page(request: Request, journal_id: int):
             changed_ids=gen.changed_by_upload(sess, trader=trader),
             earlier_id=gen.earlier_with_other_trades(sess, journal),
             prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
-            uncounted=imp.trips_refused if imp else 0,
+            # His record's count, not this Journal's upload: one left alone by a later
+            # reading keeps its import, and that import's refusals may no longer be his.
+            uncounted=current.trips_refused if current else 0,
+            read_again=bool(imp and persist.read_with_newer_code(sess, imp)),
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
         )

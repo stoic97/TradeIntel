@@ -17,6 +17,7 @@ Persistence writes the plan; it decides nothing.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 from services.production.ctr import reconstruct as rc
@@ -66,6 +67,7 @@ class ImportPlan:
     filemap_version: str | None = None
     profile_versions: dict[str, str] = field(default_factory=dict)
     code_version: str = ""
+    reconstruction_version: str | None = None
     rows: tuple[PlannedRow, ...] = ()
     rows_in: int = 0
     rows_parsed: int = 0
@@ -168,6 +170,47 @@ def _density_default(trips: list[RoundTrip], days: list[str]) -> str:
     )
 
 
+def out_of_date(imp) -> bool:
+    """Whether this code would read this stored import's file differently.
+
+    Asks what reconstruction and the broker's file map say, never ``code_version``, which
+    moves on every deploy. An import from before the version was stored has none, so it
+    reads as out of date. Profile versions stay out of it: nothing stored comes from a
+    profile's lot sizes, the pages read those live, so a new one needs no re-read.
+    """
+    if imp.reconstruction_version != rc.RECONSTRUCTION_VERSION:
+        return True
+    adapter = oc.adapter_for(imp.adapter_id)
+    return adapter is None or adapter.file_map().version != imp.adapter_version
+
+
+def with_confirmed_groups(plan: ImportPlan, groups: Iterable[str]) -> ImportPlan:
+    """The plan with these duplicate groups confirmed by the trader. See ``dup.confirm_group``.
+
+    Every read of a stored file passes what he has confirmed through here, because the
+    file itself cannot say: planned afresh, every group comes back only suspected.
+    """
+    classified = dup.Classification(tuple(
+        dup.ClassifiedRow(r.row_no, r.raw_text, r.flag, r.dup_group, r.fill_id)
+        for r in plan.rows
+    ))
+    for group in sorted(groups):
+        classified = dup.confirm_group(classified, group)
+    by_row = {r.row_no: r for r in classified.rows}
+    return plan.with_rows(tuple(
+        PlannedRow(
+            r.row_no,
+            r.raw_text,
+            "EXCLUDED" if by_row[r.row_no].excluded else r.status,
+            r.reason,
+            by_row[r.row_no].flag,
+            r.dup_group,
+            r.fill_id,
+        )
+        for r in plan.rows
+    ))
+
+
 def plan_import(
     text: str, *, context: ImportContext, production: bool = False
 ) -> ImportPlan:
@@ -186,6 +229,7 @@ def plan_import(
             outcome=s.ImportOutcome.REJECTED,
             rejection_text=oc.rejection_for(decision, adapter),
             code_version=context.code_version,
+            reconstruction_version=rc.RECONSTRUCTION_VERSION,
             export_date=context.export_date,
             export_date_source=context.export_date_source,
         )
@@ -265,6 +309,7 @@ def plan_import(
         filemap_version=file_map.version,
         profile_versions=profiles.versions_used(list(used.values())),
         code_version=context.code_version,
+        reconstruction_version=rc.RECONSTRUCTION_VERSION,
         rows=tuple(rows),
         rows_in=parsed.rows_in,
         rows_parsed=len(fills),
