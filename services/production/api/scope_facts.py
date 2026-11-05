@@ -362,7 +362,6 @@ def _run_view(ctx: dict) -> dict:
     closes_with_a_name = not story.same_day or (
         story.after is not None and story.after.trading_day != story.last_day
     )
-    hour = story.start_hour
     opened = story.trades[0].entry_ts.strftime("%H:%M")
     view = {
         "lead": _lead_words(story),
@@ -380,10 +379,6 @@ def _run_view(ctx: dict) -> dict:
         "closed_on": formatting.day(story.last_day) if closes_with_a_name else "That day",
         "last_day_net": story.last_day_net,
         "started": f"on {formatting.day(story.days[0])} at {opened}" if len(story.days) > 1 else f"at {opened}",
-        "hour": {
-            "book": _book_words(hour.book), "label": f"{hour.hour:02d}:00",
-            "net": hour.net, "trades": hour.trips,
-        } if hour else None,
         "axis_from": _axis_label(min(moments), many_dates),
         "axis_to": _axis_label(max(moments), many_dates),
         "has_call": any(p["kind"] == "call" for p in plan["points"]),

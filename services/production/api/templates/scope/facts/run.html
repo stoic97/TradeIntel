@@ -53,7 +53,7 @@
     <p class="mirror">{{ f.story.closed_on }} closed at {{ money(f.story.last_day_net) }}.</p>
   </section>
   <section class="run__next">
-    <p class="mirror">This run started {{ f.story.started }}.{% if f.story.hour %} Your trades in {{ f.story.hour.book }} opened in the {{ f.story.hour.label }} hour came to {{ money(f.story.hour.net) }}, over <span class="num">{{ f.story.hour.trades|count }}</span> {{ "trade" if f.story.hour.trades == 1 else "trades" }}.{% endif %}</p>
+    <p class="mirror">This run started {{ f.story.started }}.</p>
     {{ button("See the clock", facts["clock"].href, block=true) }}
   </section>
   {%- endif %}

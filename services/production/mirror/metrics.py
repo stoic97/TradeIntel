@@ -655,16 +655,6 @@ class BackIn:
 
 
 @dataclass(frozen=True)
-class StartHour:
-    """The hour a run started in, as the clock reads it: same-day trades in the first trade's book."""
-
-    hour: int
-    book: str
-    net: Decimal
-    trips: int
-
-
-@dataclass(frozen=True)
 class RunStory:
     """One losing run, as what happened: when, in what, what it cost, and what came next."""
 
@@ -682,7 +672,6 @@ class RunStory:
     after: Trip | None  # the first trade after the run
     last_day: str
     last_day_net: Decimal
-    start_hour: StartHour | None
     running: list[tuple[Trip, Decimal]]  # the run and the trade after, each as it closed
     lowest: Decimal
     last: Decimal
@@ -751,19 +740,6 @@ def _back_in(gaps: dict[str, int], days: list[str], books: list[str]) -> BackIn 
     return BackIn(within=within, of=len(returns)) if within else None
 
 
-def _start_hour(all_trips: list[Trip], first: Trip) -> StartHour | None:
-    """What the clock has for the hour a run started. A position held past its day is not on
-    the clock, so a run that opened on one has no hour to point at."""
-    if not first.closed_same_day:
-        return None
-    book = trade_book(first)
-    hour = [
-        t for t in same_day_trips(all_trips)
-        if trade_book(t) == book and t.entry_ts.hour == first.entry_ts.hour
-    ]
-    return StartHour(first.entry_ts.hour, book, _run_net(hour), len(hour))
-
-
 def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
     """A run's facts, computed from its own trades. None for no run. States facts, never causes."""
     trades = subset(trips, trip_ids)
@@ -799,7 +775,6 @@ def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
         after=after,
         last_day=days[-1],
         last_day_net=_run_net([t for t in trips if t.trading_day == days[-1]]),
-        start_hour=_start_hour(trips, trades[0]),
         running=running,
         lowest=min(value for _, value in running),
         last=running[-1][1],
