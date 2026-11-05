@@ -49,6 +49,7 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
     for item in view["items"]:
         _text(item["name"], "name")
         _text(item["figure"], "figure")
+        _text(item.get("label") or "", "label")
         kind = item.get("chart") or ""
         if kind and not item.get("state"):
             if "mini" not in item:

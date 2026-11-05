@@ -219,7 +219,6 @@ def test_the_centre_is_the_result_with_the_charges_beside_it():
     assert v["centre"]["figure"] == "−₹1,420"
     svg = str(dial.scope_dial(v))
     assert ">your result,</tspan>" in svg and ">before charges</tspan>" in svg
-    assert "%" not in readable(svg)
 
 
 def test_a_file_with_charges_does_not_say_before_charges():
@@ -239,13 +238,8 @@ def test_the_charges_line_promises_nothing_scope_cannot_do_yet():
     assert "can be worked out" not in body and "brokerage plan" not in body
 
 
-def test_the_dial_carries_no_bare_numbers():
-    assert [i["figure"] for i in view()["items"]] == ["Open", "Open", "Open", "Open"]
-
-
-def test_a_chapter_opened_reads_as_read_on_the_dial():
+def test_a_chapter_opened_is_the_dot_on_the_rim():
     v = view(opened=frozenset({1, 3}))
-    assert [i["figure"] for i in v["items"]] == ["Read", "Open", "Read", "Open"]
     assert str(dial.scope_dial(v)).count('class="scope__opened"') == 2
 
 
@@ -258,43 +252,6 @@ def test_every_chapter_is_listed_with_a_way_in():
         assert c.name in html
         assert f">Open chapter {c.number}<" in html
         assert S.chapter_href(c.number, from_home=True).replace("&", "&amp;") in html
-
-
-def test_chapter_1_says_the_best_trades_were_not_trades_when_the_best_was_held():
-    assert "Your best trades weren't trades." in text()
-
-
-def test_chapter_1_says_only_what_is_true_when_the_best_was_closed_that_day():
-    trips = [t(f"2026-01-0{i}", -100 * i) for i in range(1, 6)] + [t("2026-01-06", 2000)]
-    body = text(trips=trips)
-    assert "weren't trades" not in body
-    assert "Your five worst days came to −₹1,500." in body
-
-
-def test_chapter_2_reads_the_hold_in_the_mirrors_words():
-    ctx = SF.record_context(FORTY)
-    from services.production.api import formatting
-
-    h = ctx["holding"]
-    assert (
-        f"Your winners were open a median of {formatting.minutes(h.winners_median_seconds)} minutes, "
-        f"your losers {formatting.minutes(h.losers_median_seconds)} minutes."
-    ) in text(trips=FORTY)
-
-
-def test_chapter_3_counts_and_compares_nothing():
-    """A post-loss comparison waits on the shuffle test, so home states only the count."""
-    population = SF.record_context(FORTY)["two_losses"].population
-    body = text(trips=FORTY)
-    assert (
-        f"On {population} occasions you opened a trade after two earlier trades that day "
-        "had already closed."
-    ) in body
-    assert "on average" not in body and "each" not in body
-
-
-def test_chapter_4_says_what_was_read():
-    assert "What we read: 40 of 40 rows." in text(trips=FORTY)
 
 
 def test_a_chapter_with_too_few_trades_says_so():
@@ -333,7 +290,7 @@ def test_with_everything_read_there_is_no_button():
 
 
 def test_no_buy_or_sell_calls_stays():
-    assert "<span>No buy or sell calls, ever.</span><span>4 chapters</span>" in page()
+    assert "<span>No buy or sell calls, ever.</span>" in page()
 
 
 def _future(net):

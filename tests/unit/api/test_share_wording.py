@@ -11,7 +11,7 @@ import pytest
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from tests.unit.api.test_reveal_page import reveal
-from tests.unit.api.test_scope_chapters import TRIPS, chapter_page, readable, trips_from
+from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable, trips_from
 from tests.unit.api.test_scope_facts import fact_page
 
 SENTENCE = "5 of your 8 trading days (about 63%) carried about 96% of your losses."
@@ -52,7 +52,7 @@ def test_no_page_calls_it_a_share_of_the_result(page):
 
 def test_scope_home_centre_is_the_result_not_the_share():
     """The share still reads "of your losses" on its own fact; home's centre is the result."""
-    view = SF.home_view(SF.record_context(TRIPS))
+    view = SF.home_view(SF.record_context(TRIPS), IMP)
     assert "of your losses" not in view["centre"]["captionLines"]
 
 

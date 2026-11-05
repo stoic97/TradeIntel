@@ -308,19 +308,22 @@ def stacked_split(fig: str) -> list[str] | None:
 def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
     """The box a slice's contents take: number, figure head, [tail], mini chart or state."""
     state = item.get("state") or ""
-    split = stacked_split(item["figure"]) if (not state and stacked) else None
+    label = "" if state else (item.get("label") or "")  # the line under a hub answer's figure
+    split = stacked_split(item["figure"]) if (not state and stacked and not label) else None
     head = "—" if state else (split[0] if split else item["figure"])
-    tail = split[1] if split else ""
+    tail = label or (split[1] if split else "")
     tight = head.find(" · ") > 0
     head_w = mono_width(head, fig_size) - (2 * 0.45 * fig_size if tight else 0)
     tail_w = mono_width(tail, 11)
     lh = js_round(fig_size * 1.15)
-    row_a = 13 + 4 + lh + (13 if tail else 0)
+    lead = 0 if label else 13 + 4  # the kit's serial row, which a labelled figure has no need of
+    row_a = lead + lh + (13 if tail else 0)
     row_b = 28 if state else (14 if item.get("chart") else 0)
     width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
     return {
         "head": head,
         "tail": tail,
+        "lead": lead,
         "tight": tight,
         "figSize": fig_size,
         "lineHeight": lh,
@@ -510,8 +513,8 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                 "contents": {
                     "x": q[0],
                     "numberY": top,
-                    "headY": top + 17,
-                    "tailY": top + 17 + b["lineHeight"],
+                    "headY": top + b["lead"],
+                    "tailY": top + b["lead"] + b["lineHeight"],
                     "chartY": top + b["rowA"] + 3,
                     "head": b["head"],
                     "tail": b["tail"],

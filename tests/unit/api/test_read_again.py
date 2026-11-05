@@ -412,7 +412,7 @@ def test_the_report_reads_the_new_trades(client, engine, monkeypatch):  # noqa: 
     upload_older(client, monkeypatch)
     assert "1 sold-option trade is not yet counted" in words(client.get("/mirror").text)
     read_again(client, imports(engine)[0].id)
-    assert "sold-option" not in words(client.get("/mirror").text)
+    assert "not yet counted" not in words(client.get("/mirror").text)
     assert "sold-option" not in words(client.get("/mirror/chapter/1").text)
     with make_session(engine) as sess:
         trips, imp = loader.load_for(sess, sess.scalars(select(m.Trader)).one())

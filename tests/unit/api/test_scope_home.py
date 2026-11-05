@@ -26,7 +26,7 @@ def home_page(trips=TRIPS, imp=IMP) -> str:
 
 
 def test_home_has_the_four_chapters_in_order_each_scoping_in():
-    view = SF.home_view(CTX)
+    view = SF.home_view(CTX, IMP)
     assert [i["name"] for i in view["items"]] == [c.name for c in S.CHAPTERS]
     assert [i["href"] for i in view["items"]] == [
         S.chapter_href(c.number, from_home=True) for c in S.CHAPTERS]
@@ -43,7 +43,7 @@ def test_without_caption_lines_the_dial_is_the_kits_byte_for_byte():
 
 
 def test_a_caption_line_cannot_break_out_of_the_dial():
-    view = SF.home_view(CTX)
+    view = SF.home_view(CTX, IMP)
     view["centre"]["captionLines"] = ['a "quoted" line']
     with pytest.raises(ValueError, match="double quote"):
         dial.scope_dial(view)
@@ -55,10 +55,7 @@ def test_home_is_the_kits_page():
     assert '<span class="lockup__name">PlusEV</span>' in page
     assert '<p class="label">Counted from your file</p>' in page
     assert '<h1 class="title fact__title">Your option trades' in page
-    assert ('<span class="num">40</span> trades, <span class="num">8</span> trading days. '
-            "Every figure here is counted from your file. Open any line to see the trades "
-            "behind it.") in page
-    assert "<span>No buy or sell calls, ever.</span><span>4 chapters</span>" in page
+    assert "40 trades · 8 trading days · before charges</span><span>No buy or sell calls, ever.</span>" in page
     assert "every rupee figure below is gross" in page
     assert "Computed from import 7 by Scope version fixturesha" in page
     assert 'aria-current="page">Scope</a>' in page

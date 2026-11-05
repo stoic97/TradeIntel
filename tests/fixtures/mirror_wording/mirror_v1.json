@@ -11,7 +11,7 @@
     {
       "key": "section-1",
       "blocks": [
-        "[N] trades, [N] trading days. Every figure here is counted from your file. Open any line to see the trades behind it.",
+        "[N] of [N] rows read · [N] trades · [N] trading days · before charges",
         "Your export has no charges column, so every rupee figure below is gross — before brokerage and taxes. We do not estimate what is not in your file."
       ]
     },
