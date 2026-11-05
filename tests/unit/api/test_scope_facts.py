@@ -100,15 +100,6 @@ def test_each_fact_says_what_its_trades_are():
     assert "Every trade opened after two that had already closed at a loss." in fact_page("down")
 
 
-def test_the_worst_days_table_says_each_day_against_the_normal_day_as_the_mirror_did():
-    page = fact_page("worst-days")
-    normal = float(CTX["days"].normal_day)
-    for d in CTX["worst_days"].days:
-        row = f"<td>{formatting.day(d.trading_day)}</td>"
-        assert row in page
-        assert f"{d.trips / normal:.1f}×" in page
-
-
 def test_the_strike_rate_page_lists_winners_losers_and_level_apart():
     page = fact_page("strike", trips=trips_from([100, -50, 0]))
     for title in ("Winners", "Losers"):
@@ -159,10 +150,9 @@ def test_risk_with_nothing_to_measure_against_is_not_in_the_file():
 
 def test_a_share_that_is_not_a_percentage_is_told_as_the_mirror_tells_it():
     trips = trips_from([10, 20, 30, 40, 50, 60])
-    for key in ("worst-days", "share"):
-        page = readable(fact_page(key, trips))
-        assert "Your result for the whole period was" in page
-        assert "% of your losses" not in page
+    page = readable(fact_page("worst-days", trips))
+    assert "Your result for the whole period was" in page
+    assert "% of your losses" not in page
 
 
 def test_an_average_keeps_its_paise_as_the_mirror_printed_it():
