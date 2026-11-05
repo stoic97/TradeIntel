@@ -370,11 +370,11 @@
     o.push(`<g class="scope__dividers">${d.dividers.map((p) => `<path class="scope__divider" d="${p}"/>`).join('')}</g>`);
     d.slices.forEach((s) => {
       const c = s.contents;
-      o.push(`<a class="scope__slice${s.state ? ' scope__slice--' + s.state : ''}" href="${s.href}" aria-label="${esc(s.number + '. ' + s.name + '.')}">`);
+      o.push(`<a class="scope__slice${s.state ? ' scope__slice--' + s.state : ''}" href="${s.href}" aria-label="${esc(s.name + '.')}">`);
       o.push(`<path class="scope__hit" d="${s.hit}"/><path class="scope__lift" d="${s.lift}"/><path class="scope__focus" d="${s.focusRing}"/>`);
       if (s.openedMark) o.push(`<circle class="scope__opened" cx="${fmt(s.openedMark[0])}" cy="${fmt(s.openedMark[1])}" r="${d.size === 'phone' ? 2 : 2.5}"/>`);
-      o.push(textBlock([s.number], c.x, c.numberY, 13, 11, 'center', 'scope__number'));
-      o.push(textBlock([c.head], c.x, c.headY, c.lineHeight, c.figSize, 'center', `scope__figure scope__figure--s${c.figSize} scope__figure--${c.tone}${c.tight ? ' scope__figure--tight' : ''}`));
+      // No serial beside the figure (TICKET-843): order is the slice's position and its name.
+      if (c.head) o.push(textBlock([c.head], c.x, c.headY, c.lineHeight, c.figSize, 'center', `scope__figure scope__figure--s${c.figSize} scope__figure--${c.tone}${c.tight ? ' scope__figure--tight' : ''}`));
       if (c.tail) o.push(textBlock([c.tail], c.x, c.tailY, 13, 11, 'center', `scope__figure-tail scope__figure--${c.tone}`));
       if (s.state) o.push(textBlock(s.state === 'not-enough' ? ['not enough', 'trades yet'] : ['not in', 'your file'], c.x, c.chartY, 14, 11, 'center', 'scope__state'));
       else if (c.chart) o.push(`<g class="scope__mini chart chart--on-navy" transform="translate(${fmt(c.x - 18)} ${fmt(c.chartY)})">${miniCharts[c.chart] || ''}</g>`);

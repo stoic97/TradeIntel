@@ -161,7 +161,7 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 - Phone dial 260 px; lens 56 px; desktop dial 440 px in a 640 px stage, story beside it.
 - Bezel: outer tick ring with three weights (major at each divider, mid every 30°, minor between), white hairlines at reduced opacity on navy; a thin inner ring where the ink arc runs. Dividers stop short of the centre and the bezel.
 - **Names are upright and horizontal, never curved.** Each sits outside the bezel at its slice's arc midpoint on a 12 px hairline leader. Right half: left-aligned. Left half: right-aligned. Twelve or six o'clock: centred. On Home they sit in the four corners. Two lines maximum; three allowed only for "Where the money came from", "Where your results came from" and "What we have not told you".
-- **Slice contents** are upright and centred on the bisector: slice number on its own line 4 px above the figure, then the figure, then a mini chart (≤ 24 px, white on navy). Home slice figures ≥ 18 px, never smaller than the names.
+- **Slice contents** are upright and centred on the bisector: the figure (no slice number beside it; order is carried by position and the rim name, TICKET-843, 5 Nov 2026), then a mini chart (≤ 24 px, white on navy). Home slice figures ≥ 18 px, never smaller than the names.
 - **Stacked figures:** one line where the wedge holds it; otherwise the head at figure size with the rest beneath in 11 px mono ("[N]" over "of [N]"; "[N]·[N]" over "min"). Layout must run on real values, which is why the geometry runs on the server.
 - Chapter fact positions after scope-in: 1 fact at twelve; 2 at twelve and six; 3 at twelve, four and eight; 4 on the diagonals.
 - States: pressed (wedge lifts one tone), focus (ring just inside the wedge edge, white on navy), opened (a dot near the rim, reading progress, never a score).
@@ -309,3 +309,4 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 | 27 Oct | Fact page: single measure, figure as hero, pinned day headers, tighter trade records |
 | 27 Oct | Dial names upright and horizontal at arc midpoints; slice numbers on their own line; stacked figures on purpose |
 | 27 Oct | Motion: scope-in rotates the dial like a focus ring; shrink-to-lens collapses the navy upward; no colour crossfades |
+| 5 Nov | Slice numbers off the dial: a digit above a figure read as part of it (founder, FB-0124). Order is position and the rim name; story-card numbers stay. Chapter-dial counts carry their noun; not-told shows its name only (TICKET-843, Rikk's rulings) |
