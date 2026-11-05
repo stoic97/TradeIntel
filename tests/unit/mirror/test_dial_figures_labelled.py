@@ -3,7 +3,7 @@
 Gate, as narrowed by Rikk's rulings of 5 Nov 2026:
 1-3. No serial on any dial (the hub and the four chapters); handoff s.164 records the change (Q1 a).
 4.   Every chapter-dial figure carries its unit or label in its own block. A %, x, rupee sign or
-     hh:mm counts as the unit (Q3 a). down reads "N occasions", unread "N of M rows read",
+     hh:mm counts as the unit (Q3 a). down reads "N trades" (TICKET-827's), unread "N of M rows read",
      risk "N of M trades", not-told shows its name only, no figure (Q2).
 5.   Story-card numbers stay.
 6.   No dial slice holds a lone one-character number.
@@ -17,14 +17,14 @@ import pytest
 
 HUB = "/mirror"
 CHAPTERS = [f"/mirror/chapter/{n}" for n in (1, 2, 3, 4)]
-TEXT = re.compile(r'<text class="([^"]*)"[^>]*>(.*?)</text>', re.S)
-SLICE = re.compile(r'<a class="scope__slice[^"]*"[^>]*>(.*?)</a>', re.S)
+TEXT = re.compile(r'<text class="([^"]*)"[^>]*>(.*?)</text>', re.DOTALL)
+SLICE = re.compile(r'<a class="scope__slice[^"]*"[^>]*>(.*?)</a>', re.DOTALL)
 HANDOFF = Path(__file__).resolve().parents[3] / "docs/product/scope_engineering_handoff_v1.md"
 
 
 def _dial(html: str) -> str:
     start = html.index('class="scope')
-    return re.search(r"<svg.*?</svg>", html[start:], re.S).group(0)
+    return re.search(r"<svg.*?</svg>", html[start:], re.DOTALL).group(0)
 
 
 def _words(body: str) -> str:
@@ -69,7 +69,7 @@ def test_every_chapter_dial_figure_carries_its_unit(client, url):
 
 
 RULED = {
-    3: {"After two straight losses": r"\d[\d,]* occasions"},
+    3: {"After two straight losses": r"\d[\d,]* trades?"},  # TICKET-827's dial_figure
     4: {
         "What we read": r"\d[\d,]* of \d[\d,]* rows read",
         "Trades with a risk figure": r"\d[\d,]* of \d[\d,]* trades",

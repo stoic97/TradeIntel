@@ -600,7 +600,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         state_class = f" scope__slice--{s['state']}" if s["state"] else ""
         o.append(
             f'<a class="scope__slice{state_class}" href="{s["href"]}" '
-            f'aria-label="{_esc(s["number"] + ". " + s["name"] + ".")}">'
+            f'aria-label="{_esc(s["name"] + ".")}">'
         )
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
@@ -612,22 +612,21 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 f'<circle class="scope__opened" cx="{fmt(s["openedMark"][0])}" '
                 f'cy="{fmt(s["openedMark"][1])}" r="{js_str(r)}"/>'
             )
-        o.append(
-            _text_block([s["number"]], c["x"], c["numberY"], 13, 11, "center", "scope__number")
-        )
+        # No serial beside the figure (TICKET-843): order is the slice's position and its name.
         tight = " scope__figure--tight" if c["tight"] else ""
-        o.append(
-            _text_block(
-                [c["head"]],
-                c["x"],
-                c["headY"],
-                c["lineHeight"],
-                c["figSize"],
-                "center",
-                f"scope__figure scope__figure--s{js_str(c['figSize'])} "
-                f"scope__figure--{c['tone']}{tight}",
+        if c["head"]:  # a slice with nothing counted from the file shows its name only
+            o.append(
+                _text_block(
+                    [c["head"]],
+                    c["x"],
+                    c["headY"],
+                    c["lineHeight"],
+                    c["figSize"],
+                    "center",
+                    f"scope__figure scope__figure--s{js_str(c['figSize'])} "
+                    f"scope__figure--{c['tone']}{tight}",
+                )
             )
-        )
         if c["tail"]:
             o.append(
                 _text_block(

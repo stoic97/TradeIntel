@@ -651,6 +651,14 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         )
     if ctx["best"]:
         out["money"]["finding"] = f"Best trade {formatting.rupees(ctx['best'][0].net)}"
+    # TICKET-843 (Rikk, 5 Nov 2026): on the dial each count says what it counts; the cards keep
+    # the bare figure. Built from the figure above, so nothing is counted twice. (down's dial
+    # wording is TICKET-827's dial_figure.)
+    if not out["unread"]["state"]:
+        out["unread"]["finding"] = f"{out['unread']['figure']} read"
+    if not out["risk"]["state"]:
+        out["risk"]["finding"] = f"{out['risk']['figure']} trades"
+    out["not-told"]["finding"] = ""  # NOT_TOLD is a constant, not counted from the file: name only
     out["money"]["pairs"] = [
         {
             "best": b,
