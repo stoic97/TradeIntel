@@ -117,6 +117,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .scope-card__split { display: grid; gap: var(--space-1); margin-top: var(--space-3); }
 .scope-card__split .num { color: inherit; }
 .latest__when .body-small { display: block; }
+.latest__when { padding-block: var(--space-2); }
 
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
