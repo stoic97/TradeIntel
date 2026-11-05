@@ -1,7 +1,7 @@
 {% from "_components.html" import story_card, trades_behind, money %}
 {% call story_card(number, f.title, f.href, f.figure, trades_behind(f.trade_count)) %}
   {%- if not f.state %}
-  <span class="mirror mirror--card">On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed at a loss. On <span class="num">{{ two_losses.condition|count }}</span> of those, the two most recent had both lost.</span>
+  <span class="mirror mirror--card">On <span class="num">{{ two_losses.population|count }}</span> occasions you opened a trade after two earlier trades that day had already closed. On <span class="num">{{ two_losses.condition|count }}</span> of those, the two most recent had both lost.</span>
   <span class="story-card__chart">
     <span class="table-label table-label--card">Table 1</span>
     <table class="table table--card"><thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Net (gross)</th><th class="table__num">Average</th></tr></thead>
