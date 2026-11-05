@@ -18,6 +18,8 @@ be posted in another, so a form stolen from a page the attacker rendered is usel
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import secrets
 from dataclasses import dataclass
 
@@ -41,6 +43,7 @@ class PasswordTooShort(Exception):
 class Session:
     trader_id: int
     csrf_secret: str
+    account: str = ""  # account_mark of the account it was issued for
 
 
 def hash_password(password: str) -> str:
@@ -58,13 +61,29 @@ def verify_password(stored_hash: str, password: str) -> bool:
         return False
 
 
-def new_session(trader_id: int) -> Session:
-    return Session(trader_id=trader_id, csrf_secret=secrets.token_urlsafe(16))
+def account_mark(password_hash: str, secret_key: str) -> str:
+    """What ties a session to one account rather than to its number.
+
+    A trader id can be used again once its account has gone. The salted hash is unique to
+    the account and changes with its password, so a reset ends older sessions too. A signed
+    cookie can be read by whoever holds it, so it carries this, never the hash.
+    """
+    return hmac.new(secret_key.encode(), password_hash.encode(), hashlib.sha256).hexdigest()
+
+
+def new_session(trader_id: int, password_hash: str, secret_key: str) -> Session:
+    return Session(trader_id=trader_id, csrf_secret=secrets.token_urlsafe(16),
+                   account=account_mark(password_hash, secret_key))
+
+
+def session_is_for(session: Session, password_hash: str, secret_key: str) -> bool:
+    return secrets.compare_digest(session.account, account_mark(password_hash, secret_key))
 
 
 def seal_session(session: Session, secret_key: str) -> str:
     serializer = URLSafeSerializer(secret_key, salt=SESSION_SALT)
-    return serializer.dumps({"t": session.trader_id, "c": session.csrf_secret})
+    return serializer.dumps({"t": session.trader_id, "c": session.csrf_secret,
+                             "a": session.account})
 
 
 def open_session(raw: str | None, secret_key: str) -> Session | None:
@@ -75,7 +94,9 @@ def open_session(raw: str | None, secret_key: str) -> Session | None:
         data = serializer.loads(raw)
     except BadSignature:
         return None
-    return Session(trader_id=int(data["t"]), csrf_secret=str(data["c"]))
+    # A cookie from before the mark has none, matches no account, and signs in again.
+    return Session(trader_id=int(data["t"]), csrf_secret=str(data["c"]),
+                   account=str(data.get("a", "")))
 
 
 def csrf_token(session: Session | None, secret_key: str) -> str:

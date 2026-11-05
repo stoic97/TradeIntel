@@ -6,12 +6,12 @@ than the id. Nothing here depends on how ids are handed out.
 
 from __future__ import annotations
 
-import base64
 import json
 import re
 
 import pytest
 from fastapi.testclient import TestClient
+from itsdangerous import URLSafeSerializer
 from sqlalchemy import select, update
 
 from services.production.accounts import auth
@@ -124,16 +124,28 @@ def test_signing_in_again_gives_a_working_session(engine):
     assert first.get("/account").status_code == 200
 
 
+def test_someone_holding_an_old_session_can_still_sign_in(engine):
+    first = sign_up("returning")
+    old_cookie = first.cookies.get(auth.SESSION_COOKIE)
+    delete_account(first)
+    sign_up("returning")
+    client = holding(old_cookie)
+    csrf = CSRF.search(client.get("/login").text).group(1)
+    response = client.post("/login", data={"login_id": "returning", "password": PASSWORD,
+                                           "csrf_token": csrf}, follow_redirects=False)
+    assert response.status_code == 303
+    assert "Signed in as returning." in " ".join(client.get("/account").text.split())
+
+
 def test_the_cookie_carries_no_part_of_the_password_hash(engine):
     """A signed cookie can be read by whoever holds it, so what it carries is a mark."""
     client = sign_up("readable")
     with make_session(engine) as sess:
         stored = sess.scalars(select(m.Trader.password_hash)).one()
-    payload = client.cookies.get(auth.SESSION_COOKIE).split(".")[0]
-    decoded = base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
-    carried = json.loads(decoded)
-    assert all(str(value) not in stored for value in carried.values() if len(str(value)) > 4)
-    assert "argon" not in decoded.decode()
+    carried = URLSafeSerializer(KEY, salt=auth.SESSION_SALT).loads(
+        client.cookies.get(auth.SESSION_COOKIE))
+    assert carried["a"] == auth.account_mark(stored, KEY)
+    assert stored not in json.dumps(carried) and "argon" not in json.dumps(carried)
 
 
 def test_two_accounts_on_one_password_carry_different_marks(engine):
