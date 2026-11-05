@@ -4,6 +4,25 @@
     none, so it is the app's own button under the settings. -#}
 {% extends "layout.html" %}
 {% set nav = "account" %}
+{#- What an upload changed since the last one (TICKET-829): row counts and days, decided
+    in day_versions.upload_change. Same counts do not make a day the same (TICKET-801),
+    so nothing moving is said as a row count. A first upload has no line. -#}
+{% macro upload_change(change) -%}
+<span class="account__change">
+{%- if change.days -%}
+  {%- if change.rows -%}
+    {{ change.rows_sign }}{{ change.rows_size|count }} {{ "row" if change.rows_size == 1 else "rows" }},{{ " " }}
+  {%- endif -%}
+  {{ change.days|length|count }} {{ "day" if change.days|length == 1 else "days" }} changed (
+  {%- for trading_day in change.days_named -%}
+    {{ trading_day|day }}{{ ", " if not loop.last }}
+  {%- endfor -%}
+  {{ " and " ~ change.days_more|count ~ " more" if change.days_more }})
+{%- else -%}
+  Same row count on every day.
+{%- endif -%}
+</span>
+{%- endmacro %}
 {% block content %}
   <p class="label label--plain">Your account</p>
   <h1 class="title fact__title">{{ display_name }}</h1>
@@ -14,7 +33,7 @@
     <table class="table"><thead><tr><th class="table__wide">When</th><th>What we read</th><th></th></tr></thead>
       <tbody>
       {%- for imp in imports %}
-        <tr><td>{{ imp.created_at.strftime('%d %b %Y') }}</td><td class="table__text">{% if imp.outcome.value == "rejected" %}not a tradebook{% else %}{{ imp.rows_in|count }} rows, {{ imp.trips_reconstructed|count }} trades{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ imp.id }}">Open</a></td></tr>
+        <tr><td>{{ imp.created_at.strftime('%d %b %Y') }}</td><td class="table__text">{% if imp.outcome.value == "rejected" %}not a tradebook{% else %}{{ imp.rows_in|count }} rows, {{ imp.trips_reconstructed|count }} trades{% endif %}{% if imp.id in changes %}{{ upload_change(changes[imp.id]) }}{% endif %}</td><td class="table__num"><a class="link" href="/imports/{{ imp.id }}">Open</a></td></tr>
       {%- endfor %}
       </tbody>
     </table>
