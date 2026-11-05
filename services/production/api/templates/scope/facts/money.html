@@ -27,7 +27,7 @@
       {% endif %}
       {% if f.found.evening_told %}<p class="mirror mirror--card">{{ f.found.best_evening }} of the 5 best were opened from 5 pm on, and {% if f.found.worst_mostly_late %}{{ f.found.worst_late }} of the 5 worst from 8 pm on{% else %}{{ f.found.worst_evening }} of the 5 worst from 5 pm on{% endif %}.</p>{% endif %}
       {% if f.found.durations_told %}<p class="mirror mirror--card">Your best five ran a median of {{ f.found.best_median_seconds|hold }}. Your worst five lost a median of {{ f.found.worst_median_loss|rupees(signed=false) }} each, in a median of {{ f.found.worst_median_seconds|hold }}.</p>
-      <p class="mirror mirror--card table-note">This describes what happened, not advice to hold longer. A trade can lose fast simply by being wrong from the start.</p>{% endif %}
+      {% endif %}
     </div>
     {% endif %}
     {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ f.held.count }} position{{ "" if f.held.count == 1 else "s" }}, net {{ f.held.net|rupees }}.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ f.found.top_holding.net|rupees }} of it, the longest held {{ f.found.top_holding.longest_seconds|hold }}.{% endif %}</p>{% endif %}
