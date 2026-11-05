@@ -891,8 +891,10 @@ def _answer_four(ctx: dict, figs: dict[str, dict], number: Decimal | None) -> di
     """What we read: the honest close, which is what no figure can be worked out without."""
     uncapped = figs["risk"]["uncapped_trades"]
     past = ctx["past_number"]
-    if number is not None:
+    if number is not None and past.measured:
         wedge = _wedge(_wedge_count(past.count), "past it")
+    elif number is not None:  # set after these trades: no count, or "0" reads as a clean record
+        wedge = _wedge("set", "number")
     elif uncapped:
         wedge = _wedge(_wedge_count(uncapped), "uncapped")
     else:
