@@ -207,7 +207,18 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
         parts = [(title, [t for t in shown if getattr(t, flag)]) for title, flag in OUTCOMES]
     elif key == "clock":
         hours = sorted({t.entry_ts.hour for t in shown})
-        parts = [(f"{h:02d}:00", [t for t in shown if t.entry_ts.hour == h]) for h in hours]
+        books = sorted({mx.trade_book(t) for t in shown})
+        if len(books) > 1:  # one book per clock, so the list keeps them apart too
+            parts = [
+                (
+                    f"{book} · {h:02d}:00",
+                    [t for t in shown if mx.trade_book(t) == book and t.entry_ts.hour == h],
+                )
+                for book in books
+                for h in hours
+            ]
+        else:
+            parts = [(f"{h:02d}:00", [t for t in shown if t.entry_ts.hour == h]) for h in hours]
     elif key == "risk":
         parts = [
             (title, [t for t in shown if t.risk_unit_source in sources])

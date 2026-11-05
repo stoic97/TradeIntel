@@ -42,8 +42,8 @@ def test_an_hour_with_only_a_holding_is_gone():
     assert not {14, 15, 23} & {h.hour for h in SF.record_context(HELD)["hours"]}
 
 
-def test_the_figure_counts_the_hours_shown():
-    assert SF.facts(SF.record_context(HELD), IMP)["clock"]["figure"] == "2 hours"
+def test_the_figure_names_the_hour_with_the_largest_result():
+    assert SF.facts(SF.record_context(HELD), IMP)["clock"]["figure"] == "09:00"
 
 
 def test_the_trades_listed_are_the_trades_counted():
