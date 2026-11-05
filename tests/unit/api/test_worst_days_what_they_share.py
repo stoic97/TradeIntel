@@ -298,7 +298,7 @@ def test_chapter_one_has_two_facts():
 def test_the_dial_says_findings_not_counts():
     ctx = SF.record_context(FOUR_CRUDE_EVENINGS)
     items = SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
-    assert [i["figure"] for i in items] == ["5 days: −₹2,064", "Best trade +₹20"]
+    assert [i["figure"].replace(chr(0xA0), " ") for i in items] == ["5 days: −₹2,064", "Best trade +₹20"]
 
 
 def _imp():
