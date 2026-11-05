@@ -53,10 +53,11 @@ CONTEXT = {
     "import_review.html#first": {
         "imp": an_import(), "rejected": [row(12, "no price")],
         "groups": {"g1": [row(30), row(31)]}, "excluded": [], "first_upload": True,
+        "changed_days": [], "shrunk_days": [],
         "days": [day("2026-09-07", 0, 120), day("2026-09-08", 0, 90)]},
     "import_review.html#later": {
         "imp": an_import(fees=True), "rejected": [], "groups": {}, "excluded": [],
-        "first_upload": False,
+        "first_upload": False, "changed_days": ["2026-09-08"], "shrunk_days": ["2026-09-08"],
         "days": [day("2026-09-07", 120, 120, diff="unchanged"),
                  day("2026-09-08", 90, 80, shrank=True)]},
     "import_review.html#refused": {
@@ -80,10 +81,10 @@ CONTEXT = {
 
 SAID = {
     "import_review.html#first": (
-        "Your upload What we read Rows in the file 1,240 Rows we could read 1,236 Rows set aside 4 Trades reconstructed 410 See your record — what these trades say, with the trades behind every line. This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file. Rows we could not read (1) Kept, not discarded. Each one says why. Row Why 12 no price Possible duplicates (1 groups) Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell. 2 identical rows 2026-09-07,NIFTY,BUY,50,101.5 This is one trade recorded twice Days in this upload 2 trading days, from 2026-09-07 to 2026-09-08. All of them are new to Scope. Every day, with its row count Day Rows 2026-09-07 120 2026-09-08 90 Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
+        "Your upload What we read Rows in the file 1,240 Rows we could read 1,236 Rows set aside 4 Trades reconstructed 410 See your record — what these trades say, with the trades behind every line. This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file. Rows we could not read (1) Kept, not discarded. Each one says why. Row Why 12 no price Possible duplicates (1 groups) Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell. 2 identical rows 2026-09-07,NIFTY,BUY,50,101.5 This is one trade recorded twice Days in this upload 2 trading days, from 2026-09-07 to 2026-09-08. All of them are new to Scope. Show all 2 days Every day, with its row count Day Rows 2026-09-07 120 2026-09-08 90 Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
     ),
     "import_review.html#later": (
-        "Your upload What we read Rows in the file 1,240 Rows we could read 1,236 Rows set aside 4 Trades reconstructed 410 See your record — what these trades say, with the trades behind every line. Days in this upload Day Rows before Rows now 2026-09-07 120 120 unchanged 2026-09-08 90 80 fewer than before Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
+        "Your upload What we read Rows in the file 1,240 Rows we could read 1,236 Rows set aside 4 Trades reconstructed 410 See your record — what these trades say, with the trades behind every line. Days in this upload Since your last upload, 1 day changed: 08 Sep 2026. 08 Sep 2026 has fewer rows than before. Show all 2 days Day Rows before Rows now 2026-09-07 120 120 unchanged 2026-09-08 90 80 fewer than before Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
     ),
     "import_review.html#refused": (
         "Your upload What we read This looks like a profit-and-loss statement. Upload a different file"
@@ -132,7 +133,7 @@ def test_it_says_what_it_said_before(case):
 def test_the_import_check_does_not_add_up_its_days():
     """It summed rows_before to tell a first upload; the route says so now."""
     source = (TEMPLATES / "import_review.html").read_text()
-    assert "sum" not in source and "first_upload" in source
+    assert "|sum" not in source and "first_upload" in source  # <summary> is not a sum
     route = Path("services/production/api/routes_upload.py").read_text()
     assert "first_upload = sum(d.rows_before for d in days) == 0" in route
 

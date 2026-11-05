@@ -15,6 +15,7 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
@@ -770,6 +771,207 @@ def trade_book(trip: Trip) -> str:
     return "Futures"
 
 
+BOOK_ROW_MINIMUM = 30
+"""Below this a book row, or a year of one, says "not enough trades to say". The framework's
+standard n_min (framework_v1.yaml, B-series), reused rather than invented."""
+
+QUICK_CLOSE_SECONDS = 300
+"""Closed within five minutes, five itself included."""
+
+BIG_LOSS_RUPEES = Decimal(1000)
+"""A loss past this, not at it, is in the biggest-losers line. A plain round line, not a
+figure from anyone's record."""
+
+
+@dataclass(frozen=True)
+class MathRow:
+    """One book, or one year of a book: the sizes, and the two ways to break even.
+
+    Below the minimum only the label, the count and the state are set, so a page has no
+    figure to print by mistake.
+    """
+
+    label: str
+    trades: int
+    state: s.ResultState
+    wins: int = 0
+    losses: int = 0
+    scratches: int = 0
+    decided: int = 0  # winners and losers: a level trade is in neither
+    win_percent: Decimal | None = None
+    average_winner: Decimal | None = None
+    average_loser: Decimal | None = None
+    median_winner: Decimal | None = None
+    median_loser: Decimal | None = None
+    winners_median_seconds: int | None = None
+    losers_median_seconds: int | None = None
+    break_even_percent: Decimal | None = None
+    more_winners: int | None = None
+    winner_needed: Decimal | None = None
+    winner_gap: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class QuickCloses:
+    """How many of a book's losers and winners were closed within five minutes, as shares."""
+
+    losers_percent: int
+    winners_percent: int
+
+
+@dataclass(frozen=True)
+class TopWinners:
+    """The biggest tenth of a book's winners, and their share of what its winners made."""
+
+    count: int
+    winners: int
+    percent: int
+
+
+@dataclass(frozen=True)
+class BiggestLosers:
+    """Losers past the line, against the book's other losers. Each median is its own."""
+
+    above: Decimal
+    count: int
+    trades_percent: int
+    losses_percent: int
+    median_seconds: int
+    others_median_seconds: int | None
+    median_lots: int | None  # options only: a share's "lot" is one share, not a size
+    others_median_lots: int | None
+
+
+@dataclass(frozen=True)
+class BookMath:
+    """A book's row, its years, and the lines under it. Only a counted book has the rest."""
+
+    whole: MathRow
+    years: tuple[MathRow, ...] = ()
+    quick_closes: QuickCloses | None = None
+    top_winners: TopWinners | None = None
+    biggest_losers: BiggestLosers | None = None
+
+
+def _share(part: Decimal | int, whole: Decimal | int) -> int:
+    """A whole percentage. Unlike _whole_percent, nothing at all reads 0, not 1."""
+    return int(_round(Decimal(part) / Decimal(whole) * 100, "1")) if part else 0
+
+
+def _more_winners(row_wins: list[Decimal], row_losses: list[Decimal], be: BreakEven) -> int | None:
+    """Winners that would have to be losers' places for the win rate to reach break-even, with
+    the trades and the averages as they are. None when the book is already at or past it,
+    which is the same as winners having made at least what losers lost. Exact from there on:
+    a book short by less than half a winner still says one."""
+    if sum(row_wins, Decimal(0)) >= sum(row_losses, Decimal(0)):
+        return None
+    rate = be.average_loser / (be.average_winner + be.average_loser)
+    decided = len(row_wins) + len(row_losses)
+    return max(1, int(_round(rate * decided - len(row_wins), "1")))
+
+
+def math_row(label: str, trips: list[Trip]) -> MathRow:
+    """The row for these trades. Break-even is average loser / (average winner + average
+    loser); the average winner needed is the same identity solved for the winner instead,
+    average loser x losers / winners. Both come from the averages break_even() decides."""
+    strike = strike_rate(trips)
+    if len(trips) < BOOK_ROW_MINIMUM or strike.state is not s.ResultState.COUNTED_FACT:
+        return MathRow(label, len(trips), s.ResultState.INSUFFICIENT_SAMPLE)
+    wins = [t.net for t in trips if t.is_win]
+    losses = [-t.net for t in trips if t.is_loss]
+    be = break_even(trips)
+    held = holding_time(trips)
+    balanced = be.percent is not None
+    needed = be.average_loser * len(losses) / len(wins) if balanced else None
+    return MathRow(
+        label=label,
+        trades=len(trips),
+        state=s.ResultState.COUNTED_FACT,
+        wins=strike.wins,
+        losses=strike.losses,
+        scratches=strike.scratches,
+        decided=strike.wins + strike.losses,
+        win_percent=strike.rate_percent,
+        average_winner=sum(wins, Decimal(0)) / len(wins) if wins else None,
+        average_loser=sum(losses, Decimal(0)) / len(losses) if losses else None,
+        median_winner=median(wins) if wins else None,
+        median_loser=median(losses) if losses else None,
+        winners_median_seconds=held.winners_median_seconds,
+        losers_median_seconds=held.losers_median_seconds,
+        break_even_percent=be.percent,
+        more_winners=_more_winners(wins, losses, be) if balanced else None,
+        winner_needed=needed,
+        winner_gap=needed - be.average_winner if balanced else None,
+    )
+
+
+def _quick_closes(trips: list[Trip]) -> QuickCloses:
+    def quick(side: list[Trip]) -> int:
+        closed = sum(1 for t in side if t.holding_seconds <= QUICK_CLOSE_SECONDS)
+        return _share(closed, len(side)) if side else 0
+
+    return QuickCloses(
+        losers_percent=quick([t for t in trips if t.is_loss]),
+        winners_percent=quick([t for t in trips if t.is_win]),
+    )
+
+
+def _top_winners(trips: list[Trip]) -> TopWinners | None:
+    wins = sorted((t.net for t in trips if t.is_win), reverse=True)
+    if not wins:
+        return None
+    count = ceil(len(wins) / 10)
+    return TopWinners(count, len(wins), _share(sum(wins[:count]), sum(wins)))
+
+
+def _biggest_losers(trips: list[Trip]) -> BiggestLosers | None:
+    losers = [t for t in trips if t.is_loss]
+    big = [t for t in losers if -t.net > BIG_LOSS_RUPEES]
+    if not big:
+        return None
+    others = [t for t in losers if -t.net <= BIG_LOSS_RUPEES]
+
+    def lots(side: list[Trip]) -> int | None:
+        sized = [t.lots for t in side if t.is_option]
+        return int(median(sized)) if sized else None
+
+    return BiggestLosers(
+        above=BIG_LOSS_RUPEES,
+        count=len(big),
+        trades_percent=_share(len(big), len(trips)),
+        losses_percent=_share(sum(-t.net for t in big), sum(-t.net for t in losers)),
+        median_seconds=int(median(t.holding_seconds for t in big)),
+        others_median_seconds=int(median(t.holding_seconds for t in others)) if others else None,
+        median_lots=lots(big),
+        others_median_lots=lots(others),
+    )
+
+
+def math_by_book(trips: list[Trip]) -> list[BookMath]:
+    """A book's math, per book by trade_book and per year, biggest book first. Pass the
+    same-day trades: a holding is not a trade the day's decisions made."""
+    books: dict[str, list[Trip]] = {}
+    for trip in trips:
+        books.setdefault(trade_book(trip), []).append(trip)
+    out = []
+    for book, book_trips in sorted(books.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        whole = math_row(book, book_trips)
+        if whole.state is not s.ResultState.COUNTED_FACT:
+            out.append(BookMath(whole))
+            continue
+        years: dict[str, list[Trip]] = {}
+        for trip in book_trips:
+            years.setdefault(trip.trading_day[:4], []).append(trip)
+        out.append(BookMath(
+            whole=whole,
+            years=tuple(math_row(year, years[year]) for year in sorted(years)),
+            quick_closes=_quick_closes(book_trips),
+            top_winners=_top_winners(book_trips),
+            biggest_losers=_biggest_losers(book_trips),
+        ))
+    return out
+
+
 @dataclass(frozen=True)
 class PremiumPaid:
     """What a typical bought option cost in one book, and how much of it a result was."""
@@ -950,10 +1152,6 @@ class FiveDaysRead:
     story: WorstDayStory | None
 
 
-def _day_book(trip: Trip) -> str:
-    return book_of(trip.symbol) if trip.is_option else "equity"
-
-
 def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     """The five worst days named, with what the record says they have in common.
 
@@ -968,7 +1166,7 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     for day in worst:
         ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
         rows.append(WorstDayRow(
-            day.trading_day, tuple(dict.fromkeys(_day_book(t) for t in ordered)), day.trips, day.net,
+            day.trading_day, tuple(dict.fromkeys(trade_book(t) for t in ordered)), day.trips, day.net,
         ))
         rest = sum((t.net for t in ordered[1:]), Decimal(0))
         if ordered[0].is_loss and rest < 0:
@@ -991,6 +1189,66 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
         ),
         story=story,
     )
+
+
+@dataclass(frozen=True)
+class DayBlock:
+    """One of the five worst days, as the worst-days page reads it. Counts only, no cause."""
+
+    trading_day: str
+    books: tuple[str, ...]
+    book: str | None  # the book with the most trades that day; None on a tie
+    trades: int
+    net: Decimal
+    first_in: datetime
+    last_out: datetime
+    running: tuple[Decimal, ...]  # the result after each trade, first to last
+    first_net: Decimal
+    later: int
+    later_lost: int
+    longest_run: int  # the most losses in a row within the day
+
+
+def _longest_run_in(ordered: list[Trip]) -> int:
+    longest = current = 0
+    for trip in ordered:
+        current = current + 1 if trip.is_loss else 0
+        longest = max(longest, current)
+    return longest
+
+
+def _main_book(ordered: list[Trip]) -> str | None:
+    counts = Counter(trade_book(t) for t in ordered).most_common(2)
+    if len(counts) == 2 and counts[0][1] == counts[1][1]:
+        return None
+    return counts[0][0]
+
+
+def worst_day_blocks(trips: list[Trip]) -> tuple[DayBlock, ...]:
+    """The five worst days, worst first, on the entry date as every other page counts them."""
+    by_day = _by_day(trips)
+    blocks = []
+    for day in five_worst_days(trips).days:
+        ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
+        running, total = [], Decimal(0)
+        for trip in ordered:
+            total += trip.net
+            running.append(total)
+        blocks.append(DayBlock(
+            trading_day=day.trading_day,
+            books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
+            book=_main_book(ordered),
+            trades=len(ordered),
+            net=day.net,
+            first_in=ordered[0].entry_ts,
+            last_out=max(t.exit_ts for t in ordered),
+            running=tuple(running),
+            first_net=ordered[0].net,
+            later=len(ordered) - 1,
+            later_lost=sum(t.is_loss for t in ordered[1:]),
+            longest_run=_longest_run_in(ordered),
+        ))
+    return tuple(blocks)
 
 
 def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:

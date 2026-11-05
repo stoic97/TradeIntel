@@ -40,14 +40,10 @@ def app_env(tmp_path, monkeypatch):
 
 @pytest.fixture()
 def signed_in(app_env):
-    from datetime import UTC, datetime
     engine = app_env
-    with make_session(engine) as sess:
-        sess.add(m.InviteCode(code="C-1", created_at=datetime.now(UTC)))
-        sess.commit()
     client = TestClient(create_app())
-    csrf = CSRF.search(client.get("/invite/C-1").text).group(1)
-    client.post("/invite/C-1", data={"login_id": "rikk", "display_name": "Rikk",
+    csrf = CSRF.search(client.get("/signup").text).group(1)
+    client.post("/signup", data={"login_id": "rikk", "display_name": "Rikk",
                                      "password": "a-long-enough-password",
                                      "csrf_token": csrf})
     # Marked BEFORE signing in: sign-in now lands a trader where he has something to
@@ -193,18 +189,14 @@ def test_a_real_account_cannot_see_the_draft_text(app_env, monkeypatch):
     walking the app, not by any test, because this test was the thing asserting it.
     The gate has not moved. What it returns is now a page that says why.
 
-    Every account created through an invite is development_data=False, so this is
+    Every account created through sign-up is development_data=False, so this is
     the path a real partner takes, not an edge case.
     """
-    from datetime import UTC, datetime
     monkeypatch.setattr(cs, "CURRENT", DRAFT)
     engine = app_env
-    with make_session(engine) as sess:
-        sess.add(m.InviteCode(code="REAL-1", created_at=datetime.now(UTC)))
-        sess.commit()
     client = TestClient(create_app(), raise_server_exceptions=False)
-    csrf = CSRF.search(client.get("/invite/REAL-1").text).group(1)
-    client.post("/invite/REAL-1", data={"login_id": "real", "display_name": "Real",
+    csrf = CSRF.search(client.get("/signup").text).group(1)
+    client.post("/signup", data={"login_id": "real", "display_name": "Real",
                                         "password": "a-long-enough-password",
                                         "csrf_token": csrf})
     csrf = CSRF.search(client.get("/login").text).group(1)

@@ -1,4 +1,4 @@
-"""Batch 1 of Phase 4 (handoff 10): account, delete, not found, not open, invite.
+"""Batch 1 of Phase 4 (handoff 10): account, delete, not found, not open, sign-up.
 
 Each page moves onto layout.html and the kit's markup and keeps the app's own words
 (handoff 6, 11). The words are frozen here from the pages as they read before the
@@ -33,7 +33,7 @@ CONTEXT = {
     "delete_done.html": {},
     "404.html": {},
     "not_open.html": {},
-    "invite.html": {"code": "ABC", "error": "That login id is taken."},
+    "signup.html": {"error": "That login id is taken."},
 }
 
 SAID = {
@@ -52,8 +52,8 @@ SAID = {
     "not_open.html": (
         "Scope Scope is not open yet The page that tells you what happens to your tradebook has not been checked yet. Someone other than the people who wrote it has to read it, and the deletion process has to be run end to end and confirmed, before anyone is asked to agree to it. Until both are done, this account cannot upload a file. Nothing is stored for you beyond the account itself, and nothing has been read. If you were expecting to start today, tell us and we will say where this stands."
     ),
-    "invite.html": (
-        "Create your account You were invited to Scope. Choose a login id and a password. That login id is taken. Your name Login id Password At least 12 characters. There is no email on your account, so keep this somewhere safe — a reset has to go through us. Create account"
+    "signup.html": (
+        "Create your account Choose a login id and a password. That login id is taken. Your name Login id Password At least 12 characters. There is no email on your account, so keep this somewhere safe — a reset has to go through us. Create account Sign in if you already have an account."
     ),
 }
 
@@ -106,13 +106,13 @@ def test_delete_keeps_its_field_and_greys_the_button_until_ticked():
     assert '<p class="field__error field__error--block" role="alert">Tick the box to confirm.</p>' in page
 
 
-def test_invite_keeps_its_field_names_and_what_the_browser_needs():
-    page = render("invite.html")
+def test_sign_up_keeps_its_field_names_and_what_the_browser_needs():
+    page = render("signup.html")
     for name, autocomplete in (("display_name", "name"), ("login_id", "username"),
                                ("password", "new-password")):
         assert f'name="{name}"' in page and f'autocomplete="{autocomplete}"' in page
     assert 'minlength="12"' in page
-    assert '<form method="post" action="/invite/ABC">' in page
+    assert '<form method="post" action="/signup">' in page
 
 
 def test_no_page_in_this_batch_has_the_kits_new_lines():

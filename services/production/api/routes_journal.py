@@ -3,13 +3,14 @@
 Three things here are deliberate and would each be easy to get wrong.
 
 **Five on the surface.** An upload that backfills a year generates every Journal and
-shows the latest five, with the rest behind a catch-up link. The PRD says a developer
+shows five: the days the report has already named (``days_worth_a_look``), or the latest
+five if it can't name any, with the rest behind a catch-up link. The PRD says a developer
 who renders sixty entries has built a defect, so the surface is a function
 (``generate.surface``) rather than a slice written at the template.
 
 **Opened is recorded before the question is asked.** The willingness-to-pay trigger
 counts Journals opened, and the Journal being read right now is one of them -- so
-``mark_opened`` runs before ``should_ask``, which is what makes the third opened
+``mark_opened`` runs before ``ask_here``, which is what makes the third opened
 Journal the one that asks.
 
 **No clock times on this page.** The trades are labelled by their order in the
@@ -29,12 +30,17 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import or_, select
 
+from services.production.api import asking
+from services.production.api import days_worth_a_look as worth
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import fields, leaving, prose, wtp
 from services.production.journal import generate as gen
+from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 
 router = APIRouter()
 
@@ -97,13 +103,30 @@ def trades_of(rows: list[m.Trip]) -> list[dict]:
     return list(trades.values())
 
 
+def _record(sess, trader: m.Trader) -> list[mx.Trip]:
+    """His trades as the report reads them. Without a profile they can't be read: no flags."""
+    try:
+        return loader.load_for(sess, trader)[0]
+    except profiles.UnknownInstrument:
+        return []
+
+
+def _flags_on(journal: m.Journal, flags: dict) -> list[worth.Flag]:
+    """A flag is about a day, so a Journal covering longer has none."""
+    if journal.period_start != journal.period_end:
+        return []
+    return flags.get(journal.period_start, [])
+
+
 @router.get("/journals", response_class=HTMLResponse)
 def journal_list(request: Request):
     with make_session(request.app.state.engine) as sess:
         trader, elsewhere = _gate(request, sess)
         if elsewhere is not None:
             return elsewhere
-        surface = gen.surface(sess, trader=trader)
+        flags = worth.flags_by_day(_record(sess, trader))
+        first = worth.to_start_with(gen.newest_first(sess, trader=trader), flags)
+        surface = gen.surface(sess, trader=trader, first=first)
         # The leaving card (B7): once, ever. Drawing it is what marks it shown.
         card = leaving.due(sess, trader, production=request.app.state.settings.production)
         if card:
@@ -111,6 +134,9 @@ def journal_list(request: Request):
             sess.commit()
         return page(request, "journals.html", title="Your Journals",
                     latest=surface.latest, catch_up_count=surface.catch_up_count,
+                    started=len(first),
+                    reasons={j.id: " · ".join(f.label for f in _flags_on(j, flags))
+                             for j in first},
                     changed_ids=gen.changed_by_upload(sess, trader=trader),
                     total=surface.total, leaving_card=leaving if card else None)
 
@@ -145,8 +171,11 @@ def journal_catch_up(request: Request):
         trader, elsewhere = _gate(request, sess)
         if elsewhere is not None:
             return elsewhere
+        flags = worth.flags_by_day(_record(sess, trader))
+        first = worth.to_start_with(gen.newest_first(sess, trader=trader), flags)
         return page(request, "journals_catch_up.html", title="Earlier Journals",
-                    journals=gen.catch_up(sess, trader=trader),
+                    journals=gen.catch_up(sess, trader=trader, first=first),
+                    started=len(first),
                     changed_ids=gen.changed_by_upload(sess, trader=trader))
 
 
@@ -173,6 +202,17 @@ def journal_page(request: Request, journal_id: int):
             {"trip_id": t["trip_id"], "label": f"Trade {n}", "net": t["net"]}  # the page writes it
             for n, t in enumerate(trades, start=1)
         ]
+
+        record = _record(sess, trader)
+        sized = {t.trip_id: t.lots for t in record if t.is_option}
+        for trade in trades:
+            trade["lots"] = sized.get(trade["trip_id"])
+        asks = asking.trades_to_ask(trades)
+        asked = [{**rows[a.index], "why": a.why} for a in asks]
+        chosen = {a.index for a in asks}
+        rest = [row for i, row in enumerate(rows) if i not in chosen]
+        one_day = journal.period_start == journal.period_end
+
         answers = {
             t["trip_id"]: {
                 name: fields.current(sess, journal=journal, field=name,
@@ -181,15 +221,30 @@ def journal_page(request: Request, journal_id: int):
             }
             for t in trades
         }
+        ask_wtp = wtp.ask_here(sess, trader=trader, journal=journal)
+        sess.commit()
         return page(
             request, "journal.html", title=f"Your Journal, {journal.period_start}",
-            journal=journal, paragraphs=paragraphs, rows=rows, answers=answers,
+            journal=journal, paragraphs=paragraphs, rows=asked, answers=answers,
+            rest_rows=rest,
+            rest_answered=any(
+                answers[row["trip_id"]][name] for row in rest for name, _ in PER_TRIP_PROMPTS
+            ),
+            trades_heading=(
+                {1: "One trade worth a minute", 2: "Two trades worth a minute"}[len(asked)]
+                if rest else None
+            ),
+            flags=_flags_on(journal, worth.flags_by_day(record)),
+            size_line=(
+                asking.size_line(journal.period_start, trades, mx.average_lots(record).mean)
+                if one_day else None
+            ),
             changed_ids=gen.changed_by_upload(sess, trader=trader),
             earlier_id=gen.earlier_with_other_trades(sess, journal),
             prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
             uncounted=imp.trips_refused if imp else 0,
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
-            ask_wtp=wtp.should_ask(sess, trader=trader), wtp_question=wtp.QUESTION,
+            ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
         )
 
 

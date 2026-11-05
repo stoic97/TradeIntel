@@ -13,7 +13,10 @@ its slice and its card - never hidden - and its figure is a dash.
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import timedelta
+
+from markupsafe import Markup
 
 from services.production.api import dial, formatting
 from services.production.api import scope_geometry as G
@@ -28,7 +31,6 @@ CARD_H = {
     "worst": 84,
     "share": 56,
     "money": 150,
-    "hold": 80,
     "strike": 40,
     "run": 40,
     "clock": 84,
@@ -54,6 +56,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
     return {
         "worst_days": mx.five_worst_days(trips),
         "share": mx.share_of_losses(trips),
+        "day_blocks": mx.worst_day_blocks(trips),
         "days": mx.day_counts(trips),
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
@@ -71,6 +74,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "five_days": mx.five_days_read(trips),
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
+        "book_math": mx.math_by_book(same_day),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -98,11 +102,6 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_money(
             [_f(t.net) for t in ctx["best"]], [_f(t.net) for t in ctx["worst"]], w, h
         )
-    if kind == "hold":
-        held = mx.holding_series(mx.same_day_trips(trips))  # one holding would blank the axis
-        wins = [x / 60 for x in held.winners_seconds]
-        losses = [x / 60 for x in held.losers_seconds]
-        return G.chart_hold(wins, losses, max([*wins, *losses, 1]), w, h, mini)
     if kind == "strike":
         st = ctx["strike"]
         return G.chart_strike(st.wins, st.losses, st.scratches, w, h, mini)
@@ -146,8 +145,7 @@ def _state(key: str, ctx: dict) -> str:
     metric = {
         "worst-days": "worst_days",
         "share": "share",
-        "hold": "holding",
-        "strike": "strike",
+        "math": "holding",  # both a winner and a loser, or there is nothing to balance
         "run": "run",
         "down": "two_losses",
         "busiest": "days",
@@ -168,14 +166,7 @@ def _figure(key: str, ctx: dict, imp) -> str:
         return formatting.rupees(share.total)  # the second state leads with the whole result
     if key == "money":
         return f"{formatting.count(len(S.trades_behind('money', ctx)))} trades"
-    if key == "hold":
-        h = ctx["holding"]
-        w, lo = (
-            formatting.minutes(h.winners_median_seconds),
-            formatting.minutes(h.losers_median_seconds),
-        )
-        return f"{w} · {lo} min"
-    if key == "strike":
+    if key == "math":
         return f"{ctx['strike'].rate_percent}%"
     if key == "run":
         return f"{formatting.count(ctx['run'].length)} trades"
@@ -221,12 +212,108 @@ def _flagged_days(ctx: dict, figs: dict) -> dict:
     return flagged
 
 
+SHARED_BY_AT_LEAST = 4
+"""The founder's ruling: "in common" only when true of all five days or of four of the five."""
+
+SHORTEST_RUN = 2
+"""One loss is not a run."""
+
+def _part_of_day(hour: int) -> str:
+    """The day as a trader splits it: morning, the NSE afternoon, the crude evening."""
+    if hour < 12:
+        return "before noon"
+    return "between noon and 5 pm" if hour < 17 else "after 5 pm"
+
+
+def _shared(labels: dict[str, str | None]) -> tuple[str, frozenset[str]] | None:
+    """The label that at least four of the five days have, and those days."""
+    counts = Counter(label for label in labels.values() if label is not None)
+    if not counts:
+        return None
+    label, count = counts.most_common(1)[0]
+    if count < SHARED_BY_AT_LEAST:
+        return None
+    return label, frozenset(day for day, value in labels.items() if value == label)
+
+
+def _of_the_five(count: int) -> str:
+    return "All 5 of your worst days" if count == 5 else f"{count} of your 5 worst days"
+
+
+def worst_days_in_common(ctx: dict) -> list[str]:
+    """What the five worst days share, from the ruling's four things only, each said as a count.
+
+    Book, hour of the first trade, number of trades, longest losing run; true of all five or of
+    four. Nothing here is a new number or a cause. An empty list means nothing is shared, and
+    the page says so.
+    """
+    blocks = ctx["day_blocks"]
+    if len(blocks) < 5:
+        return []
+
+    lines = []
+    book = _shared({b.trading_day: b.book for b in blocks})
+    hour = _shared({b.trading_day: _part_of_day(b.first_in.hour) for b in blocks})
+    book_words = formatting.book_in_a_sentence(book[0]) if book else ""
+    if book and hour and book[1] == hour[1]:
+        lines.append(f"{_of_the_five(len(book[1]))} were {book_words}, {hour[0]}.")
+    else:
+        if book:
+            lines.append(f"{_of_the_five(len(book[1]))} were {book_words}.")
+        if hour:
+            lines.append(f"{_of_the_five(len(hour[1]))} began {hour[0]}.")
+
+    normal = ctx["days"].normal_day
+    busier = sum(b.trades > normal for b in blocks)
+    if busier >= SHARED_BY_AT_LEAST:
+        lines.append(f"{_of_the_five(busier)} had more trades than your normal day of {normal}.")
+
+    runs = sorted(b.longest_run for b in blocks)
+    if runs[0] >= SHORTEST_RUN:
+        lines.append(f"{_of_the_five(5)} had at least {runs[0]} losses in a row.")
+    elif runs[1] >= SHORTEST_RUN:
+        lines.append(f"{_of_the_five(4)} had at least {runs[1]} losses in a row.")
+    return lines
+
+
+def _day_span(block: mx.DayBlock) -> str:
+    start = f"{block.first_in:%H:%M}"
+    if block.last_out.date().isoformat() == block.trading_day:
+        return f"{start} to {block.last_out:%H:%M}"
+    return f"{start}, last trade closed {formatting.day(block.last_out.date().isoformat())}"
+
+
+def _day_went(block: mx.DayBlock) -> str:
+    if block.trades == 1:
+        return f"One trade: {formatting.rupees(block.net)}."
+    return (f"First trade {formatting.rupees(block.first_net)}, then {block.later} more; "
+            f"{block.later_lost} lost.")
+
+
+def _day_block(block: mx.DayBlock, ctx: dict) -> dict:
+    normal = ctx["days"].normal_day
+    only = [t for t in ctx["trips"] if t.trading_day == block.trading_day]
+    times = f"{block.trades / float(normal):.1f}".removesuffix(".0") if normal else None
+    return {
+        "iso": block.trading_day,
+        "day": formatting.day(block.trading_day),
+        "books": ", ".join(block.books),
+        "trades": block.trades,
+        "span": _day_span(block),
+        "net": block.net,
+        "went": _day_went(block),
+        "line": Markup(G.day_line(block.running)),
+        "vs_normal": f"{times}× your normal day's trades" if times else None,
+        "groups": S.groups("worst-days", ctx, only=only),
+    }
+
+
 def facts(ctx: dict, imp) -> dict[str, dict]:
     """Every fact's figure, state, card chart, mini chart and the counts its card needs."""
     trips = ctx["trips"]
     series = mx.daily_series(trips)
     out: dict[str, dict] = {}
-    for key, fact in S.FACTS.items():
+    for key, fact in S.FIGURES.items():
         state = _state(key, ctx)
         kind = fact.chart
         behind = len(S.trades_behind(key, ctx))
@@ -266,11 +353,9 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         options_amount=abs(options.net) if options else None,  # the sentence says lost or made
         flagged=_flagged_days(ctx, out),
     )
-    held = mx.holding_series(mx.same_day_trips(trips))
-    out["hold"]["max_seconds"] = max([*held.winners_seconds, *held.losers_seconds, 0])
-    out["hold"]["held"] = ctx["held_past_day"]
+    out["math"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
-    for key, fact in S.FACTS.items():  # the fact page's figure: full width, 96 px
+    for key, fact in S.FIGURES.items():  # the fact page's figure: full width, 96 px
         out[key]["page_chart"] = (
             None if out[key]["state"] else _chart(fact.chart, ctx, imp, PAGE_W, PAGE_H, False)
         )
@@ -286,6 +371,18 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for d in ctx["worst_days"].days
     ]
+    out["worst-days"].update(
+        in_common=worst_days_in_common(ctx),
+        blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
+        next_href=S.fact_href("money", lens=False),
+        all_trades_href=S.see_all_href("worst-days"),
+    )
+    if not out["worst-days"]["state"]:
+        out["worst-days"]["finding"] = (
+            f"{len(ctx['worst_days'].days)} days: {formatting.rupees(ctx['worst_days'].sum)}"
+        )
+    if ctx["best"]:
+        out["money"]["finding"] = f"Best trade {formatting.rupees(ctx['best'][0].net)}"
     out["money"]["pairs"] = [
         {
             "best": b,
@@ -295,9 +392,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for b, w in zip(ctx["best"], ctx["worst"], strict=False)
     ]
-    out["hold"].update(winner_count=len(held.winners_seconds), loser_count=len(held.losers_seconds))
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
-    out["strike"]["held"] = ctx["held_past_day"]
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]
     out["risk"]["sizes"] = ctx["loss_sizes"]
@@ -396,7 +491,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         fig = figs[f.key]
         item = {
             "name": f.title,
-            "figure": fig["figure"],
+            "figure": fig.get("finding", fig["figure"]),
             "href": fig["href"],
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,
@@ -449,7 +544,7 @@ def home_context(ctx: dict, imp, opened: frozenset[int] = frozenset()) -> dict:
     best = max(ctx["trips"], key=lambda t: t.net)
     states = {
         1: "not-enough" if len(ctx["worst_days"].days) < 5 else "",
-        2: figs["hold"]["state"],
+        2: figs["math"]["state"],
         3: figs["down"]["state"],
         4: "",
     }

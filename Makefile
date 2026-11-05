@@ -40,6 +40,3 @@ run: .dev-env ## Start the app on http://127.0.0.1:8000 with reload
 		uvicorn services.production.api.app:create_app --factory \
 			--reload --host 127.0.0.1 --port 8000
 
-dev-seed: .dev-env ## Mint a local invite code (CODE=DEV-1 by default)
-	@set -a && . ./.dev-env && set +a && \
-		python -m services.production.api.cli invite --code $(or $(CODE),DEV-1)
