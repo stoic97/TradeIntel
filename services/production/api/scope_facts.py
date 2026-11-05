@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import timedelta
+from decimal import Decimal
 
 from markupsafe import Markup
 
@@ -827,16 +828,91 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     }
 
 
-def home_view(ctx: dict, *, gross: bool = False, opened: frozenset[int] = frozenset()) -> dict:
-    """Home's dial: the four chapters as ways in, the trader's result in the centre.
+def _wedge(figure: str, label: str = "", state: str = "") -> dict:
+    return {"figure": figure, "label": label, "state": state}
 
-    A slice is too narrow for a finding, and a bare number on it says nothing, so each says
-    whether it has been read; the findings sit in the list under the dial.
-    """
+
+def _answer_one(ctx: dict) -> dict:
+    """Where your results came from: the five days, and how far past a normal day each was."""
+    worst, normal = ctx["worst_days"], ctx["days"].normal_day
+    if len(worst.days) < 5:
+        return {"state": "not-enough", "wedge": _wedge("—", state="not-enough")}
+    least = min(d.trips / float(normal) for d in worst.days) if normal else 0
+    share = ctx["share"]
+    figure = f"{share.share_percent}%" if share.shown_as_percentage else formatting.rupees(worst.sum)
+    label = "of losses · 5 days" if share.shown_as_percentage else "5 worst days"
+    return {
+        "state": "",
+        "days_word": _number(len(worst.days)).capitalize(),
+        "share": share,
+        "worst_sum": worst.sum,
+        "at_least": int(least) if least >= 2 else None,
+        "wedge": _wedge(figure, label),
+    }
+
+
+def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
+    """Your patterns: the strike rate against what it would take, on same-day trades."""
+    too_few = len(mx.same_day_trips(ctx["trips"])) < mx.BOOK_ROW_MINIMUM
+    state = "not-enough" if too_few else figs["math"]["state"]
+    if state:
+        return {"state": state, "wedge": _wedge("—", state=state)}
+    strike, even = ctx["strike"], ctx["break_even"]
+    label = f"{even.percent}% to break even" if even.percent is not None else ""
+    return {"state": "", "strike": strike, "even": even,
+            "wedge": _wedge(f"{strike.rate_percent}% strike", label)}
+
+
+def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
+    """Your behaviour: the busiest day and what followed two losses. It says a direction only
+    where the file's own test lets it (post_loss_sentence_may_show)."""
+    state = figs["busiest"]["state"]
+    if state or not figs["busiest"]["story"]:
+        return {"state": state or "not-enough", "wedge": _wedge("—", state=state or "not-enough")}
+    story = figs["busiest"]["story"]
+    return {
+        "state": "",
+        "story": story,
+        "after_two": ctx["two_losses"].condition,
+        "says_direction": bool(figs["down"].get("post_loss_sentence")),
+        "wedge": _wedge(_keep_digit_with_its_unit(_trades_word(story["trades"])), "busiest day"),
+    }
+
+
+def _answer_four(ctx: dict, figs: dict[str, dict], number: Decimal | None) -> dict:
+    """What we read: the honest close, which is what no figure can be worked out without."""
+    uncapped = figs["risk"]["uncapped_trades"]
+    past = ctx["past_number"]
+    if number is not None:
+        wedge = _wedge(formatting.rupees(number, signed=False), f"{formatting.count(past.count)} past it")
+    else:
+        wedge = _wedge("no budget", f"{formatting.count(uncapped)} uncapped" if uncapped else "")
+    return {"state": "", "number": number, "past": past, "uncapped": uncapped, "wedge": wedge}
+
+
+def hub_answers(ctx: dict, figs: dict[str, dict], number: Decimal | None = None) -> dict[int, dict]:
+    """Each chapter's answer on the hub: the figures its row says and its wedge shortens. All of
+    them are the objects the chapter's own page renders, never worked out again."""
+    return {1: _answer_one(ctx), 2: _answer_two(ctx, figs), 3: _answer_three(ctx, figs),
+            4: _answer_four(ctx, figs, number)}
+
+
+def home_view(
+    ctx: dict,
+    imp,
+    *,
+    gross: bool = False,
+    opened: frozenset[int] = frozenset(),
+    number: Decimal | None = None,
+    answers: dict[int, dict] | None = None,
+) -> dict:
+    """Home's dial: each chapter's answer in its wedge, the trader's result in the centre. Read
+    is the dot on the rim, and no words in the wedge."""
+    answers = answers or hub_answers(ctx, facts(ctx, imp), number)
     items = [
         {
             "name": c.name,
-            "figure": "Read" if c.number in opened else "Open",
+            **answers[c.number]["wedge"],
             "opened": c.number in opened,
             "href": S.chapter_href(c.number, from_home=True),
         }
@@ -856,18 +932,14 @@ def _start(opened: frozenset[int]) -> dict | None:
     return {"label": label, "href": S.chapter_href(unread[0], from_home=True)}
 
 
-def home_context(ctx: dict, imp, opened: frozenset[int] = frozenset()) -> dict:
-    """What Scope home shows: the verdict, the books, a finding per chapter, a way in."""
+def home_context(
+    ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None
+) -> dict:
+    """What Scope home shows: the verdict, the books, each chapter's answer, a way in."""
     figs = facts(ctx, imp)
-    best = max(ctx["trips"], key=lambda t: t.net)
-    states = {
-        1: "not-enough" if len(ctx["worst_days"].days) < 5 else "",
-        2: figs["math"]["state"],
-        3: figs["down"]["state"],
-        4: "",
-    }
+    answers = hub_answers(ctx, figs, number)
     return {
-        "view": home_view(ctx, gross=not imp.fees_available, opened=opened),
+        "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers),
         "verdict": mx.verdict(ctx["trips"]),
         "chapters": [
             {
@@ -875,15 +947,13 @@ def home_context(ctx: dict, imp, opened: frozenset[int] = frozenset()) -> dict:
                 "name": c.name,
                 "href": S.chapter_href(c.number, from_home=True),
                 "opened": c.number in opened,
-                "state": states[c.number],
+                "answer": answers[c.number],
             }
             for c in S.CHAPTERS
         ],
         "start": _start(opened),
-        "best_was_held": best.net > 0 and not best.closed_same_day,
-        "worst_days": ctx["worst_days"],
-        "holding": ctx["holding"],
         "two_losses": ctx["two_losses"],
+        "post_loss": figs["down"],
     }
 
 
