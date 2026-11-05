@@ -25,6 +25,8 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 
+from services.production import demo
+from services.production.accounts import deletion
 from services.production.accounts.file_store import FileStore
 from services.production.api import limits
 from services.production.api.routes_consent import (
@@ -116,44 +118,85 @@ async def upload_file(
                                error="You have already uploaded this exact file. Nothing "
                                      "was added. If you meant to send a newer export, "
                                      "download it again from your broker.")
+        return _ingest(request, sess, trader, content=content,
+                       file_name=file.filename or "tradebook.csv",
+                       export_date=export_date or None, source_account="A")
 
-        stored = _store(request).put(content)
-        text = content.decode("utf-8-sig", errors="replace")
-        existing = persist.existing_days(sess, trader=trader, source_account="A")
-        # In production the pipeline refuses a file whose broker map nobody has
-        # checked, which is right: a rejection built from a guessed map names an
-        # export that may not exist. It refused by raising and nothing caught it,
-        # so an upload from an unchecked broker reached the trader as "Internal
-        # Server Error" -- the same shape as the consent gate's 500, on the
-        # screen that matters most. Dhan is checked now; the second adapter will
-        # not be (TD-027), and this is the path it takes.
-        try:
-            plan = pl.plan_import(
-                text,
-                context=pl.ImportContext(
-                    trader_id=str(trader.id),
-                    source_account="A",
-                    code_version=_code_version(request),
-                    existing_days=existing,
-                    export_date=export_date or None,
-                    export_date_source="trader" if export_date else None,
-                ),
-                production=request.app.state.settings.production,
-            )
-        except filemap.UnverifiedFileMap:
-            return page(request, "upload_closed.html", status_code=503,
-                        title="Not open for your broker yet")
-        imp = persist.write_plan(
-            sess, trader=trader, plan=plan, raw_sha256=stored.sha256,
-            original_name=file.filename or "tradebook.csv",
-            stored_path=str(stored.path), size=stored.size,
+
+@router.post("/upload/demo")
+def upload_demo(request: Request, csrf_token: str = Form(None)):
+    """"Try it with a demo file" (TICKET-842): the synthetic tradebook, as an upload.
+
+    The ordinary path from here on (``_ingest``), under the demo's own source account.
+    A second click opens the demo he already has, and once he has a real record the demo
+    is not taken: it would become the record the report reads and hide his own.
+    """
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        if not has_diagnosis_consent(sess, trader):
+            return RedirectResponse("/consent", status_code=303)
+        if demo.has_real_record(sess, trader):
+            return RedirectResponse("/mirror", status_code=303)
+        loaded = demo.demo_import(sess, trader)
+        if loaded is not None:
+            return RedirectResponse(f"/imports/{loaded.id}", status_code=303)
+        return _ingest(request, sess, trader, content=demo.FILE.read_bytes(),
+                       file_name=demo.FILE_NAME, export_date=demo.EXPORT_DATE,
+                       source_account=demo.ACCOUNT)
+
+
+def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_name: str,
+            export_date: str | None, source_account: str):
+    """Store the file, plan it, write it and its Journals: one path for every upload.
+
+    A real upload that rebuilt trades replaces the demo, if he loaded one, before it is
+    written (TICKET-842): it is then version 1 of its account with nothing behind it.
+    A real file refused outright leaves the demo where it was.
+    """
+    stored = _store(request).put(content)
+    text = content.decode("utf-8-sig", errors="replace")
+    existing = persist.existing_days(sess, trader=trader, source_account=source_account)
+    # In production the pipeline refuses a file whose broker map nobody has
+    # checked, which is right: a rejection built from a guessed map names an
+    # export that may not exist. It refused by raising and nothing caught it,
+    # so an upload from an unchecked broker reached the trader as "Internal
+    # Server Error" -- the same shape as the consent gate's 500, on the
+    # screen that matters most. Dhan is checked now; the second adapter will
+    # not be (TD-027), and this is the path it takes.
+    try:
+        plan = pl.plan_import(
+            text,
+            context=pl.ImportContext(
+                trader_id=str(trader.id),
+                source_account=source_account,
+                code_version=_code_version(request),
+                existing_days=existing,
+                export_date=export_date,
+                export_date_source="trader" if export_date else None,
+            ),
+            production=request.app.state.settings.production,
         )
-        sess.commit()
-        gen.for_import(sess, trader=trader)
-        sess.commit()
-        if request.headers.get("HX-Request") == "true":
-            return _read(request, sess, imp)
-        return RedirectResponse(f"/imports/{imp.id}", status_code=303)
+    except filemap.UnverifiedFileMap:
+        return page(request, "upload_closed.html", status_code=503,
+                    title="Not open for your broker yet")
+    if source_account != demo.ACCOUNT and plan.positions:
+        deletion.remove_demo(sess, _store(request), trader=trader)
+    imp = persist.write_plan(
+        sess, trader=trader, plan=plan, raw_sha256=stored.sha256,
+        original_name=file_name, stored_path=str(stored.path), size=stored.size,
+        source_account=source_account,
+    )
+    sess.commit()
+    gen.for_import(sess, trader=trader)
+    sess.commit()
+    if request.headers.get("HX-Request") == "true":
+        return _read(request, sess, imp)
+    return RedirectResponse(f"/imports/{imp.id}", status_code=303)
 
 
 def _read(request: Request, sess, imp: m.Import):
@@ -239,7 +282,8 @@ def confirm_duplicates(request: Request, import_id: int,
         content = _store(request).get(raw.sha256)
         text = content.decode("utf-8-sig", errors="replace")
 
-        existing = persist.existing_days(sess, trader=trader, source_account="A")
+        existing = persist.existing_days(sess, trader=trader,
+                                         source_account=imp.source_account)
         # The same gate the upload path keeps. A confirmation re-reads the file
         # from the store and re-plans it, so an unchecked broker map has to
         # refuse here too -- otherwise the gate held on upload and let go one
@@ -248,7 +292,7 @@ def confirm_duplicates(request: Request, import_id: int,
             plan = pl.plan_import(
                 text,
                 context=pl.ImportContext(
-                    trader_id=str(trader.id), source_account="A",
+                    trader_id=str(trader.id), source_account=imp.source_account,
                     code_version=_code_version(request), existing_days=existing,
                     export_date=imp.export_date,
                     export_date_source=imp.export_date_source,
@@ -282,7 +326,7 @@ def confirm_duplicates(request: Request, import_id: int,
         new_import = persist.write_plan(
             sess, trader=trader, plan=plan, raw_sha256=raw.sha256,
             original_name=raw.original_name, stored_path=raw.stored_path,
-            size=raw.size,
+            size=raw.size, source_account=imp.source_account,
         )
         sess.commit()
         gen.for_import(sess, trader=trader)

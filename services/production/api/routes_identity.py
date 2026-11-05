@@ -63,9 +63,31 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
     context.setdefault("title", "Scope")
     context["csrf_token"] = auth.csrf_token(session, _settings(request).secret_key)
     context["signed_in"] = session is not None
+    if "demo" not in context:
+        from services.production import demo
+
+        context["demo"] = demo.LINE if _drawn_from_demo(request, session, context) else None
     return _templates(request).TemplateResponse(
         request=request, name=name, context=context, status_code=status_code
     )
+
+
+def _drawn_from_demo(request: Request, session, context: dict) -> bool:
+    """Whether this page is drawn from the demo tradebook (TICKET-842), so it says so.
+
+    A page about one upload says so by that upload; any other page of a signed-in
+    trader, by the record the report reads. A refused real file is his, so its page
+    does not, even while the demo is still his record.
+    """
+    from services.production import demo
+
+    if "imp" in context:
+        return demo.is_demo(context["imp"])
+    if session is None:
+        return False
+    with make_session(request.app.state.engine) as sess:
+        trader = sess.get(m.Trader, session.trader_id)
+        return trader is not None and demo.is_demo(demo.current_import(sess, trader))
 
 
 def require_csrf(request: Request, token: str | None) -> bool:

@@ -62,10 +62,19 @@ def trader_today() -> date:
 
 
 def upload_page(request: Request, status_code: int = 200, error: str | None = None):
-    """The upload form, with its download date starting at today (definitions 1)."""
+    """The upload form, with its download date starting at today (definitions 1).
+
+    Beside it, the demo file (TICKET-842) - unless he already has a record of his own,
+    which the demo would hide.
+    """
+    from services.production import demo
+
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        demo_offered = trader is not None and not demo.has_real_record(sess, trader)
     return page(request, "upload.html", status_code=status_code,
                 title="Upload your tradebook", error=error,
-                today=trader_today().isoformat())
+                today=trader_today().isoformat(), demo_offered=demo_offered)
 
 
 def has_diagnosis_consent(sess, trader: m.Trader) -> bool:
