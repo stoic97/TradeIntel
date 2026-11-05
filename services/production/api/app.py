@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from services.production.api import (
     dial,
     formatting,
+    limits,
     routes_budget,
     routes_charges,
     routes_consent,
@@ -35,6 +36,7 @@ from services.production.api import (
 )
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
+from services.production.journal import constants as k
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -53,6 +55,10 @@ def code_version() -> str:
         return "unknown"
 
 
+def _body_too_large(scope) -> HTMLResponse:
+    return routes_consent.upload_page(Request(scope), status_code=413, error=limits.TOO_LARGE)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings.from_env()
     app = FastAPI(title="Scope", docs_url=None, redoc_url=None, openapi_url=None)
@@ -61,6 +67,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.templates = TEMPLATES
     app.state.engine = make_engine(config.database_url)
     run_migrations(app.state.engine)
+    app.state.signups = limits.HourlyCount(cap=k.SIGNUPS_PER_IP_PER_HOUR)
+    app.add_middleware(limits.BodyCap, refuse=_body_too_large)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
     app.include_router(routes_home.router)

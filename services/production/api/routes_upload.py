@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 
 from services.production.accounts.file_store import FileStore
+from services.production.api import limits
 from services.production.api.routes_consent import (
     has_diagnosis_consent,
     trader_today,
@@ -84,6 +85,13 @@ async def upload_file(
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
 
+        refusal = limits.upload_refusal(request, sess, trader)
+        if refusal is not None:
+            return limits.with_retry_after(
+                upload_page(request, status_code=refusal.status_code, error=refusal.sentence),
+                refusal.retry_after,
+            )
+
         if export_date:
             try:
                 downloaded = date.fromisoformat(export_date)
@@ -96,11 +104,7 @@ async def upload_file(
 
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:
-            megabytes = k.MAX_UPLOAD_BYTES // (1024 * 1024)
-            return upload_page(request, status_code=400,
-                               error=f"That file is larger than {megabytes} MB. Every "
-                                     "tradebook we have seen is far smaller — if yours is "
-                                     "genuinely this big, tell us and we will raise it.")
+            return upload_page(request, status_code=400, error=limits.TOO_LARGE)
 
         digest = hashlib.sha256(content).hexdigest()
         already = sess.scalars(
