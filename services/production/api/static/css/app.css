@@ -12,6 +12,37 @@
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
 
+/* A trade row names the trade (TICKET-822). The kit's label is a faint caption over a trade
+   number; here it is what the trader recognises his trade by, so it reads as text. The
+   prices sit under the row, and wrap rather than push a phone sideways. */
+.trade__label { font-size: 12px; color: var(--color-ink); overflow-wrap: anywhere; }
+.trade__prices { margin-top: 1px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.trade__legs td { white-space: normal; }
+.trade__legs .trade__leg-detail { padding-top: 0; font-size: 11px; color: var(--color-faint); }
+
+/* "See all trades", and the filters on the page it opens (TICKET-822). A select takes the
+   kit's input; two to a row on a phone, and min-width lets a long book name shrink. */
+.evidence__see-all { margin-top: var(--space-4); }
+.evidence--page { margin-top: 0; border-top: 0; padding-top: 0; }
+.trade-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-3); }
+.trade-filters .field__input { width: 100%; min-width: 0; }
+.trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
+.trade-filters__clear { margin-top: var(--space-3); }
+
+/* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
+   phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
+.clock-book { margin-top: var(--space-10); }
+.clock-book__line, .clock-book__note { margin-top: var(--space-3); }
+.clock-book__table td:first-child { white-space: normal; }
+.clock-book__table th { vertical-align: bottom; }
+.clock-book__table a { color: inherit; text-decoration: underline; }
+.clock-book .num { white-space: nowrap; } /* a minus stays with its figure */
+.clock-others { margin-top: var(--space-10); }
+.clock-others summary { cursor: pointer; }
+.clock-next { margin-top: var(--space-10); }
+.clock-card__book, .clock-card__line { display: block; font-size: 12px; line-height: 18px; }
+.clock-card__book { margin-top: var(--space-3); color: var(--color-ink); font-weight: 600; }
+
 /* Calculating's reading state (handoff 7, D1 a). The import runs inside POST /upload,
    so the reading state is the request itself: htmx puts .htmx-request on #upload
    while it is in flight (hx-indicator), and the form gives way to "Reading your file"
@@ -19,6 +50,15 @@
 .upload__reading { display: none; }
 #upload.htmx-request .upload__idle { display: none; }
 #upload.htmx-request .upload__reading { display: block; }
+
+/* A trade's date carries its year (TICKET-808). The kit's columns are drawn for 07 Sep; the
+   width comes out of the two clock columns, so the result column stays as wide as it was. */
+.trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
+
+/* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
+   kit draws the figure there. */
+.fact__title + .mirror { margin-top: var(--space-3); }
+.opening-figure { white-space: nowrap; }
 
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
@@ -29,9 +69,45 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .account__sign-out { margin-top: var(--space-4); }
 .consent__draft { margin-top: var(--space-6); }
 
+/* TICKET-829; the kit draws none of these. What an upload changed sits under what was
+   read, beside Open. The steps number themselves, and a long file name may break. The
+   groups of checks are plain lines, and the toggle is a link the browser opens. */
+.account__change { display: block; margin-top: var(--space-1); }
+.upload__steps-title { margin-top: var(--space-4); }
+.upload__steps { margin-top: var(--space-2); padding-left: var(--space-5); list-style: decimal; }
+.upload__steps li + li { margin-top: var(--space-1); }
+.upload__file-name { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.check-groups { margin-top: var(--space-4); padding: 0; list-style: none; }
+.check-groups li + li { margin-top: var(--space-3); }
+.check-groups .body-small { margin-top: var(--space-1); }
+.curious { margin-top: var(--space-8); }
+.curious summary { cursor: pointer; }
+.curious > .body-small { margin-top: var(--space-3); }
+
+/* The report's ending (TICKET-825); the kit draws no such page. */
+.ending__found, .ending__table, .ending__changed, .ending__steps, .ending__check { margin-top: var(--space-6); }
+.ending__list { margin: var(--space-2) 0 0; padding-left: 20px; display: grid; gap: var(--space-2); }
+.ending__grid { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
+.ending__grid th, .ending__grid td { padding: var(--space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-hairline); }
+.ending__grid + .mirror { margin-top: var(--space-4); }
+.ending__steps .step { display: block; margin-top: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-hairline); border-radius: 10px; color: inherit; text-decoration: none; }
+.ending__check textarea { width: 100%; min-height: 70px; margin-top: var(--space-3); }
+.ending__back { display: inline-block; margin-top: var(--space-6); }
+@media (max-width: 520px) {
+  .ending__grid thead { display: none; }
+  .ending__grid tr, .ending__grid td { display: block; padding-inline: 0; border-bottom: 0; }
+  .ending__grid td:first-child { font-weight: 600; padding-bottom: 0; }
+  .ending__grid tr { padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-hairline); }
+}
+
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
 
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
 .import__days > summary { cursor: pointer; }
+
+/* The five days on the reveal (TICKET-816); the kit's reveal doesn't list them. */
+.reveal__title { margin-top: var(--space-4); }
+.reveal__days { list-style: none; margin: var(--space-6) 0 0; padding: 0; }
+.reveal__day { display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-2); align-items: baseline; padding: var(--space-2) 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }

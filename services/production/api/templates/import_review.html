@@ -17,6 +17,9 @@
     <dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
   </dl>
   <a class="link import__next" href="/guess">See your record — what these trades say, with the trades behind every line.</a>
+  {%- if charges_offered is defined and charges_offered %}
+  <a class="link import__next" href="/imports/{{ imp.id }}/charges">Add charges, if you have them: a file from your broker.</a>
+  {%- endif %}
   {%- if not imp.fees_available %}
   <p class="gross-line">This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file.</p>
   {%- endif %}

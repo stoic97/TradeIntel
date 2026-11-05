@@ -32,6 +32,7 @@ from services.production.api.routes_consent import (
     upload_page,
 )
 from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.charges import statement as charge_statement
 from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import duplicates as dup
 from services.production.ctr.intake import persist
@@ -52,6 +53,11 @@ def _store(request: Request) -> FileStore:
 
 def _code_version(request: Request) -> str:
     return request.app.state.code_version
+
+
+def charges_open(request: Request) -> bool:
+    """Whether a broker's charges file can be taken: not in production on an unchecked shape."""
+    return charge_statement.VERIFIED or not request.app.state.settings.production
 
 
 def _owned_import(sess, trader: m.Trader, import_id: int) -> m.Import | None:
@@ -200,7 +206,9 @@ def import_review(request: Request, import_id: int):
         return page(request, "import_review.html", title="What we read",
                     imp=imp, groups=groups, excluded=excluded, rejected=rejected,
                     days=days, first_upload=first_upload, changed_days=changed_days,
-                    shrunk_days=shrunk_days)
+                    shrunk_days=shrunk_days,
+                    charges_offered=(charges_open(request) and not imp.fees_available
+                                     and imp.trips_reconstructed > 0))
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")

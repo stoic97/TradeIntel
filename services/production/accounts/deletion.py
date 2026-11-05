@@ -109,6 +109,8 @@ def delete_trader(
     _delete_where(sess, m.WtpAnswer, m.WtpAnswer.trader_id == trader_id, removed)
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
+    # What he said about a whole report (TICKET-825), in his own words.
+    _delete_where(sess, m.ReportFeedback, m.ReportFeedback.trader_id == trader_id, removed)
     # His answers to "Does this match your trading?" (B4), reasons first. Before the
     # imports, which each answer points at.
     feedback_ids = _ids(sess, m.ChapterFeedback.id, m.ChapterFeedback.trader_id == trader_id)
@@ -127,7 +129,8 @@ def delete_trader(
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent, m.RawFile):
+                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent,
+                  m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
     # His invite is his: leaving the row would point at an account that is gone,
@@ -184,10 +187,10 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     so the drill checks the same list twice rather than two different ones.
     """
     found: list[str] = []
-    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.RawFile, m.Import,
+    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
-                  m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
+                  m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)

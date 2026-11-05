@@ -94,9 +94,11 @@ def test_the_history_is_written_by_the_filters(client):
     assert "Nothing here is overwritten." in page
 
 
-def test_recorded_the_journey_goes_on_to_the_scope(client):
+def test_recorded_the_page_shows_the_count_and_the_journey_goes_on_from_it(client):
+    """[TICKET-831] The count is on this page, so Record it lands here and links on."""
     r = record_a_number(client)
-    assert (r.status_code, r.headers["location"]) == (303, "/mirror")
+    assert (r.status_code, r.headers["location"]) == (303, "/budget")
+    assert 'href="/mirror">See your record' in client.get("/budget").text
 
 
 def test_a_record_not_yet_walked_through_lands_on_its_import_check(client, engine):

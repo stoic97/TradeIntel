@@ -312,6 +312,25 @@ class ChapterFeedbackReason(Base, _InsertOnly):
     given_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class ReportFeedback(Base, _InsertOnly):
+    """TICKET-825: "Does this match your trading?" about a whole report, with a note.
+
+    One route for what a trader says is wrong: trading_day is empty for the whole
+    report and is there for TICKET-817's "Is this day wrong?". One answer per report,
+    so a new upload, being a new report, asks again.
+    """
+
+    __tablename__ = "report_feedback"
+    __table_args__ = (UniqueConstraint("trader_id", "import_id", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trading_day: Mapped[str] = mapped_column(String(10), default="")
+    answer: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str | None] = mapped_column(Text)
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class GuessAnswer(Base, _InsertOnly):
     """B6: the trader's guess, before the reveal shows him his five worst days.
 
@@ -364,6 +383,19 @@ class DwellEvent(Base, _InsertOnly):
     event: Mapped[str] = mapped_column(String(32))
     at: Mapped[datetime] = mapped_column(AwareDateTime)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
+
+
+class ChargeStatement(Base, _InsertOnly):
+    """A second file, the broker's own charges by day (TICKET-828). Kept apart from the
+    trips: ``trip.fees`` and ``fees_available`` go on saying what the tradebook said."""
+
+    __tablename__ = "charge_statement"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    raw_file_id: Mapped[int] = mapped_column(ForeignKey("raw_file.id"))
+    reader: Mapped[str] = mapped_column(String(64))
+    days: Mapped[str] = mapped_column(Text)  # JSON: trading day -> amount, as a string
+    uploaded_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
 class RuleDeclaration(Base, _InsertOnly):

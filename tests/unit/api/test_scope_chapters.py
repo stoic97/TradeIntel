@@ -107,7 +107,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     )
     assert FIGS["strike"]["figure"] == f"{CTX['strike'].rate_percent}%"
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
-    assert FIGS["clock"]["figure"] == f"{len(CTX['hours'])} hours"
+    assert FIGS["clock"]["figure"] == "10:00"
     assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"
@@ -256,7 +256,7 @@ SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell the
         "Your declared budget",
         "Your stop",
         "Premium paid",
-        "Nothing we could use",
+        "Stocks, ETFs and futures: no premium to measure against",
         "no — recorded, never divided by",
         "Premium paid is the most you could have lost on an option, not what you had at risk,",
         "so it is counted here and used nowhere else.",

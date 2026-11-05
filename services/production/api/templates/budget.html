@@ -3,11 +3,24 @@
     is the app's own table, which the kit's screen does not draw: a new number is a
     new line, never an edit. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import button %}
+{% from "_components.html" import button, uncounted_line %}
 {% block content %}
   <p class="label label--plain">Your account</p>
   <h1 class="title">What you risk</h1>
+  {%- if past_number %}
+  {% include "scope/_past_number.html" %}
+  {%- if not past_number.measured %}
+  <p class="mirror table-note">No same-day trade in your file is on or after your number's date.</p>
+  {%- elif not imp.fees_available %}
+  <p class="gross-line">Your export has no charges column, so these losses are gross — before brokerage and taxes.</p>
+  {%- endif %}
+  {{ uncounted_line(imp.trips_refused) }}
+  {%- endif %}
+  {%- if declarations %}
+  <div class="screen__actions">{{ button("See your record", href="/mirror", kind="text") }}</div>
+  {%- endif %}
   <p class="lead">How much are you willing to lose on a single trade?</p>
+  {% if sizes is defined %}{% include "_loss_sizes.html" %}{% endif %}
   {%- if error %}
   <p class="field__error field__error--block" role="alert">{{ error }}</p>
   {%- endif %}
