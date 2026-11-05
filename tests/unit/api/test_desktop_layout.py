@@ -66,3 +66,8 @@ def test_the_phone_rules_are_left_alone():
 def test_the_layout_adds_no_second_set_of_templates():
     assert not list(TEMPLATES.rglob("desktop*"))
     assert "desk__" not in (TEMPLATES / "layout.html").read_text(encoding="utf-8")
+
+
+def test_the_next_button_is_not_shown_twice_in_a_row():
+    """On a phone the evidence sits between the two. Beside the story, nothing does."""
+    assert "display: none" in rule(".screen__body--fact > .day-blocks__next")
