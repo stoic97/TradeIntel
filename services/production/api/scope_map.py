@@ -1,4 +1,4 @@
-"""The Scope's map: four chapters, twelve facts, and the trades behind each (handoff 4, 5).
+"""The Scope's map: four chapters, eleven facts, and the trades behind each (handoff 4, 5).
 
 The Mirror's nine counted facts, told as a story in four chapters: Home, a chapter,
 a fact - two taps to any fact, never more than three. This module is the one place
@@ -49,8 +49,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         2,
         "Your patterns",
         (
-            Fact("hold", "How long you hold", "hold"),
-            Fact("strike", "Strike rate", "strike"),
+            Fact("math", "The math of your trading", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
         ),
@@ -87,14 +86,20 @@ OLD_DWELL_LINES = {
     "worst-days": "worst-days",
     "best-worst-trades": "money",
     "two-straight-losses": "down",
-    "holding-time": "hold",
+    "holding-time": "math",
     "by-hour": "clock",
+    "hold": "math",
+    "strike": "math",
 }
 """The long Mirror page's dwell keys, and the fact page each is now read on.
 
 Dwell events are keyed by fact page from here on (handoff 9). Events stored before
-the Scope keep their old keys; this is how to read the two together.
+the Scope keep their old keys; this is how to read the two together. How long you hold
+and Strike rate were fact pages of their own until they merged, so their keys are here too.
 """
+
+MOVED_FACTS = {"hold": "math", "strike": "math"}
+"""Fact URLs that have moved, and where to. A bookmark or an old link still arrives."""
 
 
 def chapter(n: int) -> Chapter:
@@ -174,7 +179,7 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in trips if t.trading_day == ctx["days"].busiest_day]
-    if key in ("hold", "strike", "clock"):
+    if key in ("math", "clock"):
         return mx.same_day_trips(trips)
     if key == "risk":
         return list(trips)
@@ -206,7 +211,7 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
     """
     shown = trades_behind(key, ctx) if only is None else only
     numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
-    if key in ("hold", "strike"):
+    if key == "math":
         parts = [(title, [t for t in shown if getattr(t, flag)]) for title, flag in OUTCOMES]
     elif key == "clock":
         hours = sorted({t.entry_ts.hour for t in shown})
