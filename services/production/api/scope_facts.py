@@ -625,6 +625,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     out["math"]["held"] = ctx["held_past_day"]
     out["run"]["day_count"] = len(ctx["run"].days)
+    out["run"]["start_day"] = formatting.day(ctx["run"].days[0]) if ctx["run"].days else None
     out["run"].update(_run_view(ctx))
     for key, fact in S.FIGURES.items():  # the fact page's figure: full width, 96 px
         out[key]["page_chart"] = (
