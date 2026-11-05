@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -21,6 +22,7 @@ from services.production.api import (
     dial,
     formatting,
     limits,
+    routes_admin,
     routes_budget,
     routes_charges,
     routes_consent,
@@ -83,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_journal.router)
     app.include_router(routes_eligibility.router)
     app.include_router(routes_deletion.router)
+    app.include_router(routes_admin.router)
 
     @app.get("/health")
     def health() -> JSONResponse:
@@ -94,5 +97,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request=request, name="404.html", context={"title": "Not found"},
             status_code=404,
         )
+
+    @app.exception_handler(405)
+    async def method_not_allowed(request: Request, exc: Exception):
+        """A 405 at /admin would say something is there, so there it is the same 404."""
+        if routes_admin.is_admin_path(request.url.path):
+            return not_found(request, exc)
+        return await http_exception_handler(request, exc)
 
     return app
