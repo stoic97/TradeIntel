@@ -2,7 +2,7 @@
 # 550 and 650 both live in June 2026 in the first real history: a changeover.
 exchange: NSE
 symbol: HDFCBANK
-version: "2"
+version: "3"
 contract_multiplier: "750"
 tick_size: "0.05"
 currency_per_point: "750"
@@ -13,5 +13,5 @@ session_end: "15:30"
 expiry_rule: from_instrument_name
 lot_sizes:
   - {units: "550", from: "2000-01-01", until: "2026-07-31"}
-  - {units: "650", from: "2026-06-01", until: "2026-12-31"}    # ~ both traded in June 2026; expiries to Dec: Fyers symbol master, 4 Nov 2026
-  - {units: "750", from: "2026-10-01"}                         # ~ Jan 2027 expiry on: Fyers symbol master, 4 Nov 2026; start is a safe earlier bound
+  - {units: "650", from: "2026-06-01", until: "2026-12-31", expiries_until: "2026-12-31"}     # ~ both traded in June 2026; expiries to Dec: Fyers symbol master, 4 Nov 2026
+  - {units: "750", from: "2026-10-01", expiries_from: "2027-01-01"}                           # ~ Jan 2027 expiry on: Fyers symbol master, 4 Nov 2026; start is a safe earlier bound
