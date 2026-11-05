@@ -135,6 +135,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
    read, beside Open. The steps number themselves, and a long file name may break. The
    groups of checks are plain lines, and the toggle is a link the browser opens. */
 .account__change { display: block; margin-top: var(--space-1); }
+.account__read-again .btn { margin-top: var(--space-2); }
 .upload__steps-title { margin-top: var(--space-4); }
 .upload__steps { margin-top: var(--space-2); padding-left: var(--space-5); list-style: decimal; }
 .upload__steps li + li { margin-top: var(--space-1); }
@@ -211,6 +212,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   color: var(--color-ink);
 }
 .upload__demo { margin-top: var(--space-4); }
+.upload__read-again { margin: var(--space-4) 0; }
 .upload__demo-button { background: none; border: 0; padding: 0; font: inherit; color: var(--color-action-blue); cursor: pointer; text-decoration: underline; }
 
 /* Desktop (TICKET-845): the same pages, using the width. components.css stays the kit's, and its

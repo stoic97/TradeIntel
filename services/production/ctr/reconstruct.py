@@ -74,6 +74,21 @@ from services.shared.schemas.ctr_v1 import (
 from services.shared.schemas.ctr_v2 import RiskUnitSource as RiskUnitSourceV2
 from services.shared.schemas.ctr_v2 import RoundTrip as RoundTripV2
 
+RECONSTRUCTION_VERSION = "1"
+"""What a stored import's reading is compared with, to say it is out of date (TICKET-844).
+
+Bump this in the same change, and only then, when the SAME file would now be read to
+different stored output: its trips, positions, refused trades, open positions, rows or
+day counts. That means a change here, in ``services.shared.positions``, in an adapter's
+parsing, in duplicate classification, or in what ``pipeline.plan_import`` asks of them, or a
+profile's timezone. A bump offers every trader whose current import is older a re-read.
+
+Do not bump for a deploy, new wording, a page, or a figure worked out when a page is drawn,
+lot sizes included: the page already reads the new code, and a re-read would change nothing.
+``Import.code_version`` moves every deploy, and ``ctr_v2.SCHEMA_VERSION`` names the record's
+shape and did not move when pairing changed, so neither can do this.
+"""
+
 _ZERO = Decimal(0)
 _SOURCE_OF = {RoundTrip: RiskUnitSource, RoundTripV2: RiskUnitSourceV2}
 """Each schema takes its own enum, strictly."""

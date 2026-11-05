@@ -61,11 +61,13 @@ def trader_today() -> date:
     return datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
 
-def upload_page(request: Request, status_code: int = 200, error: str | None = None):
+def upload_page(request: Request, status_code: int = 200, error: str | None = None,
+                read_again_id: int | None = None):
     """The upload form, with its download date starting at today (definitions 1).
 
     Beside it, the demo file (TICKET-842) - unless he already has a record of his own,
-    which the demo would hide.
+    which the demo would hide. Given an import, the offer to read its file again
+    (TICKET-844), under the refusal that sent him there.
     """
     from services.production import demo
 
@@ -73,7 +75,7 @@ def upload_page(request: Request, status_code: int = 200, error: str | None = No
         trader = current_trader(request, sess)
         demo_offered = trader is not None and not demo.has_real_record(sess, trader)
     return page(request, "upload.html", status_code=status_code,
-                title="Upload your tradebook", error=error,
+                title="Upload your tradebook", error=error, read_again_id=read_again_id,
                 today=trader_today().isoformat(), demo_offered=demo_offered)
 
 

@@ -24,6 +24,7 @@ from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.charges import record as charge_record
+from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -280,6 +281,8 @@ def _ending(request: Request, imp, fact: dict) -> dict:
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
+                # One file read again is not a new file (TICKET-844).
+                "same_file": persist.same_file(sess, imp, earlier),
             },
             "answered": FB.report_answer(sess, trader, imp.id) is not None,
             "answers": FB.ANSWERS,

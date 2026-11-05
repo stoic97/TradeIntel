@@ -23,8 +23,11 @@ from sqlalchemy.exc import IntegrityError
 from services.production.accounts import auth
 from services.production.api import limits
 from services.production.ctr.intake import day_versions as dv
+from services.production.ctr.intake import persist
+from services.production.ctr.intake import pipeline as pl
 from services.production.db import models as m
 from services.production.db.session import make_session
+from services.production.mirror import loader
 
 router = APIRouter()
 
@@ -288,6 +291,10 @@ def account(request: Request):
             .where(m.Import.trader_id == trader.id)
             .order_by(m.Import.id.desc())
         ).all()
+        current = loader.current_import(sess, trader)
         return page(request, "account.html", title="Your account",
                     display_name=trader.display_name, login_id=trader.login_id,
-                    imports=imports, changes=_upload_changes(sess, trader))
+                    imports=imports, changes=_upload_changes(sess, trader),
+                    read_again_id=current.id if current and pl.out_of_date(current) else None,
+                    reads_again={imp.id for imp in imports
+                                 if persist.read_with_newer_code(sess, imp)})

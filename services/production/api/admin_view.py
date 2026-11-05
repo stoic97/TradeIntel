@@ -119,7 +119,7 @@ class _Reader:
 def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     imports = sess.execute(
         select(m.Import.id, m.Import.trader_id, m.Import.outcome, m.Import.code_version,
-               m.Import.rows_in, m.Import.rows_parsed, m.Import.created_at)
+               m.Import.rows_in, m.Import.rows_parsed, m.Import.created_at, m.Import.raw_file_id)
         .order_by(m.Import.id)
     ).all()
     read = []
@@ -266,12 +266,18 @@ def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tupl
                m.Import.outcome == s.ImportOutcome.REJECTED)
         .order_by(m.Import.id.desc()).limit(FEED_LENGTH)
     ).all())
+    # Only a re-read gives a second import to one stored file: it sent nothing new.
+    first_import_of = {}
+    for row in imports:
+        first_import_of.setdefault(row.raw_file_id, row.id)
     lines = []
     for row in imports[-FEED_LENGTH:]:
         who = real[row.trader_id].login_id
         if row.outcome is s.ImportOutcome.REJECTED:
             reason = refusal_reason(rejections.get(row.id))
             text = f"{who} had a file refused: {reason}" if reason else f"{who} had a file refused"
+        elif first_import_of[row.raw_file_id] != row.id:
+            text = f"{who} had a file read again: {_rows_read(row)} rows read"
         else:
             text = f"{who} uploaded a file: {_rows_read(row)} rows read"
         lines.append((row.created_at, text))

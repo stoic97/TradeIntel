@@ -29,6 +29,13 @@
     {%- if error %}
     <p class="field__error field__error--block" role="alert">{{ error }}</p>
     {%- endif %}
+    {%- if read_again_id %}
+    <form class="upload__read-again" method="post" action="/imports/{{ read_again_id }}/read-again">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <p class="body">Scope has changed how it reads a file since then. It can read this one again with the newer code. You don't need a new file, and your figures may change.</p>
+      <button class="btn btn--secondary btn--block" type="submit">Read this file again</button>
+    </form>
+    {%- endif %}
     <form class="upload" method="post" action="/upload" enctype="multipart/form-data" hx-post="/upload" hx-encoding="multipart/form-data" hx-target="body" hx-indicator="#upload">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" id="file" name="file" accept=".csv,.txt" required></label>
