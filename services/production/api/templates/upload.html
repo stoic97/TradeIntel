@@ -19,6 +19,13 @@
     <p class="label label--plain">Your upload</p>
     <h1 class="title">Upload your tradebook</h1>
     <p class="body">The trade-level export from your broker — every executed trade, with the time of day, the price and the quantity. Not the profit-and-loss statement.</p>
+    <p class="body">Works with: Dhan (more coming)</p>
+    <p class="subhead upload__steps-title">To download it from Dhan</p>
+    <ol class="upload__steps body-small">
+      <li>Open Profile, then All Statements, then All Exchange Transactions.</li>
+      <li>Choose the dates, from your first trade to today.</li>
+      <li>Download the CSV. Its name looks like <span class="upload__file-name">TRADE_HISTORY_CSV_&lt;client&gt;_&lt;from&gt;_&lt;to&gt;</span></li>
+    </ol>
     {%- if error %}
     <p class="field__error field__error--block" role="alert">{{ error }}</p>
     {%- endif %}

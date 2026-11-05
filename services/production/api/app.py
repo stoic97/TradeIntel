@@ -21,6 +21,7 @@ from services.production.api import (
     dial,
     formatting,
     routes_budget,
+    routes_charges,
     routes_consent,
     routes_deletion,
     routes_eligibility,
@@ -66,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_identity.router)
     app.include_router(routes_consent.router)
     app.include_router(routes_upload.router)
+    app.include_router(routes_charges.router)
     app.include_router(routes_mirror.router)
     app.include_router(routes_reveal.router)
     app.include_router(routes_events.router)

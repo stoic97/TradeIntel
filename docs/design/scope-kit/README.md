@@ -92,7 +92,7 @@ the motion (see Motion).
 | `screens/16-f05-strike.html` | 16 · Fact · Strike rate | `GET /scope/patterns/strike` |
 | `screens/16-f06-run.html` | 16 · Fact · Longest losing run | `GET /scope/patterns/run` |
 | `screens/16-f07-clock.html` | 16 · Fact · The clock | `GET /scope/patterns/clock` |
-| `screens/16-f08-down.html` | 16 · Fact · Trading on while already down | `GET /scope/behaviour/down` |
+| `screens/16-f08-down.html` | 16 · Fact · After two straight losses | `GET /scope/behaviour/down` |
 | `screens/16-f09-busy.html` | 16 · Fact · Your busiest day | `GET /scope/behaviour/busy` |
 | `screens/16-f10-read.html` | 16 · Fact · What we could not read | `GET /scope/couldnt-read/read` |
 | `screens/16-f11-risk.html` | 16 · Fact · Trades with a risk figure | `GET /scope/couldnt-read/risk` |
