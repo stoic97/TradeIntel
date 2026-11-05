@@ -73,14 +73,37 @@ def _in_common(trips: list[mx.Trip]) -> list[str]:
 
 
 def test_book_and_hour_on_the_same_four_days_read_as_one_sentence():
-    assert _in_common(FOUR_CRUDE_EVENINGS)[0] == "4 of your 5 worst days were crude, after 5 pm."
+    assert _in_common(FOUR_CRUDE_EVENINGS)[0] == "4 of your 5 worst days were crude options, after 5 pm."
 
 
 def test_true_of_all_five_says_all_five():
     trips = [*_day("2025-03-03", "18:05", [-100, -100]), *_day("2025-03-04", "18:30", [-200, -100]),
              *_day("2025-03-05", "19:00", [-300, -100]), *_day("2025-03-06", "17:10", [-400, -100]),
              *_day("2025-03-07", "20:00", [-500, -100]), *QUIET]
-    assert _in_common(trips)[0] == "All 5 of your worst days were crude, after 5 pm."
+    assert _in_common(trips)[0] == "All 5 of your worst days were crude options, after 5 pm."
+
+
+def test_the_book_is_the_one_every_other_page_calls_it():
+    """One definition, trade_book. A share is in Stocks and ETFs; mid-sentence it reads lower-case."""
+    def share(day):
+        entry = datetime.fromisoformat(f"2025-03-0{day}T18:00:00+05:30")
+        return mx.Trip(f"s{day}", "INFY", entry.date().isoformat(), entry,
+                       entry + timedelta(minutes=5), 300, Decimal(-100 * day), 1,
+                       s.RiskUnitSourceV1.UNAVAILABLE, is_option=False,
+                       lines=(mx.TradeLine("INFY", "EQ", "Buy", 1, None, None, Decimal(-100 * day)),))
+
+    trips = [*[share(d) for d in (3, 4, 5, 6, 7)], *QUIET]
+    assert _in_common(trips)[0] == "All 5 of your worst days were stocks and ETFs, after 5 pm."
+    blocks = mx.worst_day_blocks(trips)
+    assert blocks[0].book == "Stocks and ETFs" and blocks[0].books == ("Stocks and ETFs",)
+
+
+def test_the_words_for_a_book_keep_a_name_in_capitals():
+    from services.production.api import formatting
+
+    assert formatting.book_in_a_sentence("NIFTY options") == "NIFTY options"
+    assert formatting.book_in_a_sentence("Crude options") == "crude options"
+    assert formatting.book_in_a_sentence("Futures") == "futures"
 
 
 def test_book_and_hour_on_different_days_are_two_sentences():
@@ -89,7 +112,7 @@ def test_book_and_hour_on_different_days_are_two_sentences():
              *_day("2025-03-05", "19:00", [-300, 1]), *_day("2025-03-06", "17:10", [-400, 1]),
              *_day("2025-03-07", "18:00", [-500, 1], "NIFTY"), *QUIET]
     lines = _in_common(trips)
-    assert "4 of your 5 worst days were crude." in lines
+    assert "4 of your 5 worst days were crude options." in lines
     assert "4 of your 5 worst days began after 5 pm." in lines
 
 
@@ -127,7 +150,7 @@ def test_a_day_of_two_books_counts_for_the_one_with_more_trades():
              *_day("2025-03-04", "18:30", [-200, 1]), *_day("2025-03-05", "19:00", [-300, 1]),
              *_day("2025-03-06", "17:10", [-400, 1]), *_day("2025-03-07", "09:20", [-500, 1], "NIFTY"),
              *QUIET]
-    assert _in_common(trips)[0] == "4 of your 5 worst days were crude, after 5 pm."
+    assert _in_common(trips)[0] == "4 of your 5 worst days were crude options, after 5 pm."
 
 
 def test_nothing_shared_says_so_in_the_founders_words():
@@ -154,7 +177,7 @@ def test_the_line_never_says_pattern_or_tendency():
 
 def test_the_page_leads_with_what_they_share():
     page = readable(fact_page("worst-days", FOUR_CRUDE_EVENINGS))
-    shared = page.index("4 of your 5 worst days were crude, after 5 pm.")
+    shared = page.index("4 of your 5 worst days were crude options, after 5 pm.")
     assert shared < page.index("Your five worst days: −₹2,064")
 
 

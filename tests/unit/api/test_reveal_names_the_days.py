@@ -24,7 +24,7 @@ from tests.unit.api.test_scope_chapters import readable
 
 def t(day, at, net, symbol="CRUDEOIL", is_option=True):
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
-    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None),)
+    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None, Decimal(net)),)
     return mx.Trip(
         f"{day}-{at}", symbol, day, entry, entry + timedelta(minutes=10), 600, Decimal(net), 1,
         s.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
