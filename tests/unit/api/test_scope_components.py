@@ -70,7 +70,7 @@ FACTS = [  # screen, facts in the chapter, which fact, chapter, fact
     ("16-f05-strike", 4, 1, "Your patterns", "Strike rate"),
     ("16-f06-run", 4, 2, "Your patterns", "Longest losing run"),
     ("16-f07-clock", 4, 3, "Your patterns", "The clock"),
-    ("16-f08-down", 2, 0, "Your behaviour", "Trading on while already down"),
+    ("16-f08-down", 2, 0, "Your behaviour", "After two straight losses"),
     ("16-f09-busy", 2, 1, "Your behaviour", "Your busiest day"),
     ("16-f10-read", 3, 0, "What we couldn't read", "What we could not read"),
     ("16-f11-risk", 3, 1, "What we couldn't read", "Trades with a risk figure"),
@@ -117,7 +117,7 @@ def test_on_the_desktop_the_chapter_is_never_cut():
     [
         ("Your patterns", "Longest losing run", ("Your patterns", False)),
         ("Where your results came from", "Share of your result", ("Where your…", True)),
-        ("Your behaviour", "Trading on while already down", ("Your…", True)),  # first word, always
+        ("Your behaviour", "After two straight losses", ("Your…", True)),  # first word, always
     ],
 )
 def test_the_chapter_name_is_cut_to_whole_words(chapter, fact, want):

@@ -24,9 +24,10 @@ from tests.unit.api.test_scope_chapters import readable
 
 def t(day, at, net, symbol="CRUDEOIL", is_option=True):
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
+    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None),)
     return mx.Trip(
         f"{day}-{at}", symbol, day, entry, entry + timedelta(minutes=10), 600, Decimal(net), 1,
-        s.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option,
+        s.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
     )
 
 
@@ -46,11 +47,11 @@ def read():
 
 def test_the_days_come_worst_first_with_their_books():
     assert [(r.trading_day, r.books, r.trades, r.net) for r in read().rows] == [
-        ("2026-01-05", ("NIFTY", "crude"), 3, Decimal(-900)),
-        ("2025-02-06", ("crude",), 2, Decimal(-500)),
-        ("2024-04-08", ("crude",), 1, Decimal(-400)),
-        ("2024-05-09", ("crude", "equity"), 2, Decimal(-300)),
-        ("2025-03-07", ("crude", "NIFTY"), 2, Decimal(-50)),
+        ("2026-01-05", ("NIFTY options", "Crude options"), 3, Decimal(-900)),
+        ("2025-02-06", ("Crude options",), 2, Decimal(-500)),
+        ("2024-04-08", ("Crude options",), 1, Decimal(-400)),
+        ("2024-05-09", ("Crude options", "Stocks and ETFs"), 2, Decimal(-300)),
+        ("2025-03-07", ("Crude options", "NIFTY options"), 2, Decimal(-50)),
     ]
 
 
@@ -59,7 +60,7 @@ def test_it_counts_the_days_a_lost_first_trade_was_followed_by_more_loss():
 
 
 def test_it_names_a_book_every_day_holds():
-    assert read().shared_book == "crude"
+    assert read().shared_book == "Crude options"
 
 
 def test_it_names_no_book_when_a_day_lacks_it():
@@ -100,9 +101,9 @@ def test_the_page_has_the_heading():
 
 
 def test_the_days_are_on_the_page_with_their_year():
-    assert "05 Jan 2026 NIFTY, crude 3 trades −₹900" in page()
-    assert "08 Apr 2024 crude 1 trade −₹400" in page()
-    assert "09 May 2024 crude, equity 2 trades −₹300" in page()
+    assert "05 Jan 2026 NIFTY options, Crude options 3 trades −₹900" in page()
+    assert "08 Apr 2024 Crude options 1 trade −₹400" in page()
+    assert "09 May 2024 Crude options, Stocks and ETFs 2 trades −₹300" in page()
 
 
 def test_the_days_show_above_the_buttons():
@@ -121,7 +122,7 @@ def test_a_first_trade_that_lost_reads_that_way():
 
 def test_the_page_says_what_they_share():
     assert "On 2 of these days your first trade lost and you kept going: ₹450 more was lost after it." in page()
-    assert "Every one of the five includes crude, and 2 ran past 9 pm." in page()
+    assert "Every one of the five includes crude options, and 2 ran past 9 pm." in page()
 
 
 def test_one_day_reads_in_the_singular():
