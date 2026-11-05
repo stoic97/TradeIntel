@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 from html import unescape
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from services.production.api import formatting
+from services.production.api import formatting, limits
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.api.app import create_app
@@ -41,7 +42,7 @@ def lead_lines(trips):
 
 def lead_sentences(trips) -> list[str]:
     text = readable(chapter_page(2, trips))
-    return re.findall(r"In [^.]*? more per winning trade and you'd have broken even\.", text)
+    return re.findall(r"In [^.]*?, break-even takes [^.]*? more per winner\.", text)
 
 
 # ---------- The lead line ----------
@@ -49,7 +50,7 @@ def lead_sentences(trips) -> list[str]:
 
 def test_a_losing_book_gets_a_line():
     assert lead_sentences(losing_book("WIDGET")) == [
-        "In WIDGET options, ₹50 more per winning trade and you'd have broken even."
+        "In WIDGET options, break-even takes ₹50 more per winner."
     ]
 
 
@@ -103,17 +104,17 @@ def test_the_line_names_no_lever():
 
 def test_the_line_comes_before_the_first_fact():
     html = chapter_page(2, losing_book("WIDGET"))
-    assert html.index("more per winning trade") < html.index('class="story-list"')
+    assert html.index("more per winner.") < html.index('class="story-list"')
 
 
 def test_the_line_comes_after_the_sentence_that_says_rupees_below_are_gross():
     html = chapter_page(2, losing_book("WIDGET"))
-    assert html.index("before brokerage and taxes") < html.index("more per winning trade")
+    assert html.index("before brokerage and taxes") < html.index("more per winner.")
 
 
 def test_other_chapters_have_no_such_line():
     for n in (1, 3, 4):
-        assert "more per winning trade" not in chapter_page(n, losing_book("WIDGET"))
+        assert "more per winner." not in chapter_page(n, losing_book("WIDGET"))
 
 
 # ---------- The way on, as served ----------
@@ -122,6 +123,9 @@ def test_other_chapters_have_no_such_line():
 @pytest.fixture(scope="module")
 def pages(tmp_path_factory):
     root = tmp_path_factory.mktemp("two")
+    healthy = shutil._ntuple_diskusage(total=100, used=50, free=50)  # conftest's patch comes later
+    patch = pytest.MonkeyPatch()
+    patch.setattr(limits.shutil, "disk_usage", lambda _path: healthy)
     saved = {k: os.environ.get(k) for k in ("SCOPE_DB", "SCOPE_FILES", "SCOPE_SECRET_KEY", "SCOPE_FILE_KEY")}
     from services.production.accounts.file_store import generate_key
 
@@ -137,6 +141,7 @@ def pages(tmp_path_factory):
             S.fact_href("math"), S.fact_href("run"), S.fact_href("clock"))}
         engine.dispose()
     finally:
+        patch.undo()
         for key, value in saved.items():
             if value is None:
                 os.environ.pop(key, None)
@@ -189,4 +194,4 @@ def test_a_run_with_no_story_still_has_a_way_on():
 
 
 def test_the_overviews_line_on_the_demo_file_is_served(pages):
-    assert "more per winning trade and you'd have broken even." in unescape(pages["/mirror/chapter/2"])
+    assert "more per winner." in unescape(pages["/mirror/chapter/2"])

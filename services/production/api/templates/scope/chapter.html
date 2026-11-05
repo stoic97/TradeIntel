@@ -18,7 +18,7 @@
   {{ uncounted_line(imp.trips_refused) }}
   {%- if chapter.number == 2 %}
   {%- for line in facts["math"].lead_lines %}
-  <p class="mirror">In {{ line.book|book_in_a_sentence }}, {{ line.more|rupees(signed=false) }} more per winning trade and you'd have broken even.</p>
+  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ line.more|rupees(signed=false) }} more per winner.</p>
   {%- endfor %}
   {%- endif %}
   <div class="story-list">
