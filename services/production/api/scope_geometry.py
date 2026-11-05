@@ -872,6 +872,64 @@ def chart_run(
     return _chart(w, h, m)
 
 
+TIMELINE_INSET = 8
+
+
+def chart_run_timeline(
+    start_x: float,
+    points: list,
+    band: tuple,
+    breaks: list,
+    hours: list,
+    w: float,
+    h: float,
+) -> dict:
+    """A run as a running result over time; each trade a marker where it closed.
+
+    Not the kit's and not in CHARTS, which are held to the JavaScript byte for byte: this
+    one is the Scope's own (TICKET-820), written the same way, as paths by role. An x is a
+    share of the width (0 to 1); a point is x, y (the running result in rupees), kind ("call",
+    "put" or "plain") and size (0 to 1 on an option, None without one). band is the run, breaks
+    are where a night is left out, hours are ticks on the axis.
+    """
+    ys = [p["y"] for p in points]
+    top, bottom = max([0, *ys]), min([0, *ys])
+    drop = (top - bottom) or 1
+    inner_w, inner_h = w - 2 * TIMELINE_INSET, h - 2 * TIMELINE_INSET
+
+    def x_at(share: float) -> float:
+        return TIMELINE_INSET + share * inner_w
+
+    def y_at(value: float) -> float:
+        return TIMELINE_INSET + (top - value) / drop * inner_h
+
+    line = f"M{fmt(x_at(start_x))} {fmt(y_at(0))}"
+    marks = {"call": "", "put": "", "plain": ""}
+    for p in points:
+        x, y = x_at(p["x"]), y_at(p["y"])
+        line += f"L{fmt(x)} {fmt(y)}"
+        if p["kind"] == "plain":
+            marks["plain"] += _r2(x - 2.5, y - 2.5, 5, 5)
+        else:
+            size = 0.5 if p["size"] is None else p["size"]
+            marks[p["kind"]] += circle(x, y, 2.5 + 3 * size)
+    axis = f"M0 {fmt(y_at(0))}H{js_str(w)}"
+    axis += "".join(f"M{fmt(x_at(x))} {fmt(h - 4)}V{js_str(h)}" for x in hours)
+    return _chart(
+        w,
+        h,
+        {
+            "band": _r2(x_at(band[0]), 0, (band[1] - band[0]) * inner_w, h),
+            "axis": axis,
+            "dash": "".join(f"M{fmt(x_at(x))} 0V{js_str(h)}" for x in breaks),
+            "stroke": line,
+            "faint": marks["plain"],
+            "ink": marks["call"],
+            "put": marks["put"],
+        },
+    )
+
+
 def chart_clock(hour_net: list, few_hours: list, w: float, h: float) -> dict:
     """Net (gross) by the hour a trade was opened; hours with few trades hatched."""
     n = len(hour_net)
@@ -946,6 +1004,31 @@ def chart_notold(w: float, h: float, mini: bool = False) -> dict:
     for i, v in enumerate([1, 0.86, 0.94, 0.6]):
         light += _r2(0, (i + 0.5) * h / 4 - (0.75 if mini else 2), v * w, 1.5 if mini else 4)
     return _chart(w, h, {"light": light})
+
+
+def chart_call_put(trades: list, w: float, h: float) -> dict:
+    """The option trades of one day, in order: calls on the top row, puts on the bottom, a
+    position of several legs on both. Bar height is the size of the result; a bar that made
+    money is outlined. trades is (side, net), side being CE, PE or both.
+
+    Not in the kit, so not in CHARTS, which the parity test holds to the kit's JavaScript.
+    """
+    gap, bw = 8, w / len(trades)
+    top = (h - gap) / 2
+    tall, biggest = top - 4, max([abs(net) for _, net in trades] + [1])
+    m = {"axis": f"M0 {fmt(top)}H{js_str(w)}M0 {fmt(h)}H{js_str(w)}", "light": "", "call": "", "put": "", "won": ""}
+    for i, (side, net) in enumerate(trades):
+        bh = max(3, abs(net) / biggest * tall)
+        x = i * bw + bw * 0.15
+        above, below = _r2(x, top - bh, bw * 0.7, bh), _r2(x, h - bh, bw * 0.7, bh)
+        if side == "both":
+            m["light"] += above + below
+            continue
+        bar = above if side == "CE" else below
+        m["call" if side == "CE" else "put"] += bar
+        if net > 0:
+            m["won"] += bar
+    return _chart(w, h, m)
 
 
 CHARTS = {

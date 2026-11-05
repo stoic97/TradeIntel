@@ -62,35 +62,35 @@ def test_no_winner_means_no_break_even():
     assert mx.break_even(trips_from([-100, -200])).percent is None
 
 
-@pytest.mark.parametrize("page", [lambda: fact_page("strike", HELD), lambda: chapter_page(2, HELD)])
+@pytest.mark.parametrize("page", [lambda: fact_page("math", HELD), lambda: chapter_page(2, HELD)])
 def test_the_page_gives_the_averages_and_the_break_even(page):
     assert SENTENCE in readable(page())
 
 
-@pytest.mark.parametrize("page", [lambda: fact_page("strike", HELD), lambda: chapter_page(2, HELD)])
+@pytest.mark.parametrize("page", [lambda: fact_page("math", HELD), lambda: chapter_page(2, HELD)])
 def test_the_page_says_what_is_left_out(page):
     assert NOTE in readable(page())
 
 
 def test_one_held_position_reads_in_the_singular():
     one = [t for t in HELD if t.trip_id not in {"h03", "h09", "h11"}]
-    assert "1 position held past the day is not counted here." in readable(fact_page("strike", one))
+    assert "1 position held past the day is not counted here." in readable(fact_page("math", one))
 
 
 def test_with_nothing_held_there_is_no_note():
-    assert "held past the day" not in readable(fact_page("strike", TRIPS))
+    assert "held past the day" not in readable(fact_page("math", TRIPS))
 
 
 def test_the_trades_listed_are_the_trades_counted():
     ctx = SF.record_context(HELD)
-    ids = {t.trip_id for t in S.trades_behind("strike", ctx)}
+    ids = {t.trip_id for t in S.trades_behind("math", ctx)}
     assert not ids & {"h03", "h06", "h09", "h11"}
     assert len(ids) == 10
 
 
 def test_a_history_of_only_held_positions_has_no_strike_rate():
     figs = SF.facts(SF.record_context(ONLY_HELD), IMP)
-    assert figs["strike"]["state"] == "not-enough"
+    assert figs["math"]["state"] == "not-enough"
 
 
 def test_chapter_three_still_compares_every_trade():
@@ -135,5 +135,5 @@ def test_totals_keep_the_whole_rupee_cut():
 )
 def test_a_round_percentage_is_written_as_a_number(trips, shown):
     """5E+1 is what a trimmed 50 came out as, on the page."""
-    assert f"{shown}%" in readable(fact_page("strike", trips))
-    assert "E+" not in readable(fact_page("strike", trips))
+    assert f"{shown}%" in readable(fact_page("math", trips))
+    assert "E+" not in readable(fact_page("math", trips))

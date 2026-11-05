@@ -1,12 +1,14 @@
-"""Invite, login, logout, account.
+"""Sign-up, login, logout, account.
 
 The deliberate choices here are about what the pages do *not* say:
 
 A failed login gives one answer whether the login id is unknown or the password is
 wrong. Distinguishing them tells an attacker which half to keep trying.
 
-An invite code that has been redeemed is a 404, not "already used". Confirming that
-a code once existed is information the holder of a guessed code has not earned.
+Sign-up is open: anyone can make an account, and a new account is signed in straight
+away. Consent and eligibility are what stand between it and a record, and neither
+moved. It has to say a login id is taken, which is the one thing a sign-up can't avoid
+saying, so a login id is not a secret. The password is.
 """
 
 from __future__ import annotations
@@ -16,8 +18,10 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from services.production.accounts import auth
+from services.production.api import limits
 from services.production.ctr.intake import day_versions as dv
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -44,7 +48,13 @@ def current_trader(request: Request, sess) -> m.Trader | None:
     session = current_session(request)
     if session is None:
         return None
-    return sess.get(m.Trader, session.trader_id)
+    trader = sess.get(m.Trader, session.trader_id)
+    if trader is None:
+        return None
+    # The id alone isn't enough: it can belong to a later account by now.
+    if not auth.session_is_for(session, trader.password_hash, _settings(request).secret_key):
+        return None
+    return trader
 
 
 def page(request: Request, name: str, status_code: int = 200, **context) -> HTMLResponse:
@@ -53,13 +63,39 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
     context.setdefault("title", "Scope")
     context["csrf_token"] = auth.csrf_token(session, _settings(request).secret_key)
     context["signed_in"] = session is not None
+    if "demo" not in context:
+        from services.production import demo
+
+        context["demo"] = demo.LINE if _drawn_from_demo(request, session, context) else None
     return _templates(request).TemplateResponse(
         request=request, name=name, context=context, status_code=status_code
     )
 
 
+def _drawn_from_demo(request: Request, session, context: dict) -> bool:
+    """Whether this page is drawn from the demo tradebook (TICKET-842), so it says so.
+
+    A page about one upload says so by that upload; any other page of a signed-in
+    trader, by the record the report reads. A refused real file is his, so its page
+    does not, even while the demo is still his record.
+    """
+    from services.production import demo
+
+    if "imp" in context:
+        return demo.is_demo(context["imp"])
+    if session is None:
+        return False
+    with make_session(request.app.state.engine) as sess:
+        trader = sess.get(m.Trader, session.trader_id)
+        return trader is not None and demo.is_demo(demo.current_import(sess, trader))
+
+
 def require_csrf(request: Request, token: str | None) -> bool:
     return auth.csrf_ok(token, current_session(request), _settings(request).secret_key)
+
+
+def _session_for(request: Request, trader: m.Trader) -> auth.Session:
+    return auth.new_session(trader.id, trader.password_hash, _settings(request).secret_key)
 
 
 def _set_session_cookie(response, request: Request, session: auth.Session) -> None:
@@ -105,69 +141,81 @@ def landing_for(sess, trader: m.Trader) -> str:
     return "/" if walked else f"/imports/{record.id}"
 
 
-@router.get("/invite/{code}", response_class=HTMLResponse)
-def invite_form(request: Request, code: str) -> HTMLResponse:
+LOGIN_ID_MAX = 100
+DISPLAY_NAME_MAX = 200
+
+
+def _signup_refused(request: Request, error: str):
+    return page(request, "signup.html", status_code=400, title="Create your account",
+                error=error)
+
+
+@router.get("/signup", response_class=HTMLResponse)
+def signup_form(request: Request):
     with make_session(request.app.state.engine) as sess:
-        invite = sess.scalars(
-            select(m.InviteCode).where(m.InviteCode.code == code)
-        ).first()
-        if invite is None or invite.redeemed_by is not None:
-            # A redeemed code is a 404, not "already used": confirming that a code
-            # once existed is information a guesser has not earned.
-            return page(request, "404.html", status_code=404, title="Not found")
-    return page(request, "invite.html", title="Create your account", code=code)
+        trader = current_trader(request, sess)
+        if trader is not None:
+            return RedirectResponse(landing_for(sess, trader), status_code=303)
+    return page(request, "signup.html", title="Create your account")
 
 
-@router.post("/invite/{code}")
-def invite_redeem(
+@router.post("/signup")
+def signup(
     request: Request,
-    code: str,
-    login_id: str = Form(...),
-    display_name: str = Form(...),
-    password: str = Form(...),
+    login_id: str = Form(""),
+    display_name: str = Form(""),
+    password: str = Form(""),
     csrf_token: str = Form(None),
 ):
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
+    # Before the password is hashed: hashing is the costly part of a sign-up.
+    connection = limits.connection(request)
+    wait = request.app.state.signups.wait_seconds(connection)
+    if wait:
+        return limits.with_retry_after(
+            page(request, "signup.html", status_code=429, title="Create your account",
+                 error=limits.signups_refused(wait)),
+            wait,
+        )
+
+    login_id, display_name = login_id.strip(), display_name.strip()
+    if not login_id or not display_name:
+        return _signup_refused(request, "A name and a login id are both needed.")
+    if len(login_id) > LOGIN_ID_MAX or len(display_name) > DISPLAY_NAME_MAX:
+        return _signup_refused(request, "That name or login id is too long.")
+    try:
+        password_hash = auth.hash_password(password)
+    except auth.PasswordTooShort as exc:
+        return _signup_refused(request, str(exc))
+
     with make_session(request.app.state.engine) as sess:
-        invite = sess.scalars(
-            select(m.InviteCode).where(m.InviteCode.code == code)
-        ).first()
-        if invite is None or invite.redeemed_by is not None:
-            return HTMLResponse(status_code=404, content="Not found")
+        signed_in = current_trader(request, sess)
+        if signed_in is not None:
+            return RedirectResponse(landing_for(sess, signed_in), status_code=303)
+        taken = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
+        # A listed id nobody holds, or one whose owner deleted himself, is still an admin's:
+        # registering it would make a stranger an admin.
+        if taken is not None or login_id in _settings(request).admin_login_ids:
+            return _signup_refused(request, "That login id is taken.")
 
-        taken = sess.scalars(
-            select(m.Trader).where(m.Trader.login_id == login_id)
-        ).first()
-        if taken is not None:
-            return page(request, "invite.html", status_code=400,
-                        title="Create your account", code=code,
-                        error="That login id is taken.")
-
-        try:
-            password_hash = auth.hash_password(password)
-        except auth.PasswordTooShort as exc:
-            return page(request, "invite.html", status_code=400,
-                        title="Create your account", code=code, error=str(exc))
-
-        trader = m.Trader(
-            display_name=display_name,
-            login_id=login_id,
-            password_hash=password_hash,
-            created_at=datetime.now(UTC),
-        )
+        trader = m.Trader(display_name=display_name, login_id=login_id,
+                          password_hash=password_hash, created_at=datetime.now(UTC))
         sess.add(trader)
-        sess.flush()
-        sess.connection().exec_driver_sql(
-            "update invite_code set redeemed_by = ?, redeemed_at = ? where id = ?",
-            (trader.id, datetime.now(UTC).isoformat(), invite.id),
-        )
-        sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="redeem_invite",
-                               target=code, at=datetime.now(UTC)))
+        try:
+            sess.flush()
+        except IntegrityError:  # two people asked for one login id at once: the first has it
+            sess.rollback()
+            return _signup_refused(request, "That login id is taken.")
+        # No target: an admin action outlives a deletion, and a login id is his.
+        sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="sign_up", target=None,
+                               at=datetime.now(UTC)))
         sess.commit()
+        request.app.state.signups.add(connection)
 
-        response = RedirectResponse("/login", status_code=303)
+        response = RedirectResponse(landing_for(sess, trader), status_code=303)
+        _set_session_cookie(response, request, _session_for(request, trader))
         return response
 
 
@@ -196,7 +244,7 @@ def login(
             return page(request, "login.html", status_code=400, title="Sign in",
                         error=SIGN_IN_FAILED)
 
-        session = auth.new_session(trader.id)
+        session = _session_for(request, trader)
         response = RedirectResponse(landing_for(sess, trader), status_code=303)
         _set_session_cookie(response, request, session)
         return response

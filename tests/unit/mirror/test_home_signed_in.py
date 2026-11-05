@@ -23,10 +23,9 @@ from tests.unit.mirror.conftest import CSRF
 def test_home_opens_the_scope_from_its_headline(client):
     body = client.get("/").text
     assert '<a class="scope-card on-navy" href="/mirror">' in body
-    assert '<span class="num num--hero scope-card__figure">96%</span>' in body
-    assert "of your losses in five days" in body
-    assert re.search(r"Your Scope · Import \d+ · \d\d \w{3} \d{4}</span>", body)
-    assert "Open the Scope" in body
+    assert "of your losses in five days" not in body
+    assert re.search(r"Your report · Import \d+ · \d\d \w{3} \d{4}</span>", body)
+    assert "Open your report" in body
 
 
 def test_home_names_the_trader_and_offers_the_upload(client):
@@ -42,10 +41,11 @@ def test_home_is_no_tab_of_the_three(client):
 
 
 def test_without_journals_there_is_no_empty_journal_list(client):
-    assert "Latest Journals" not in client.get("/").text
+    body = client.get("/").text
+    assert "Latest Journals" not in body and "Days worth a look" not in body
 
 
-def test_the_latest_journals_say_their_day_their_trades_and_their_net(client, engine):
+def test_the_days_say_their_day_their_trades_and_their_net(client, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
         imp = sess.scalars(select(m.Import)).one()
@@ -68,7 +68,7 @@ def test_the_latest_journals_say_their_day_their_trades_and_their_net(client, en
         net = sum(t.net for t in trips)
         count = len(trips)
     body = client.get("/").text
-    assert '<h2 class="card-title">Latest Journals</h2>' in body
+    assert '<h2 class="card-title">Latest Journals</h2>' in body, "this one day isn't one the report named"
     row = re.search(r'<a class="latest__row" href="/journals/\d+">(.*?)</a>', body).group(1)
     assert '<span class="body">01 Sep 2026</span>' in row
     assert f">{count} trades</span>" in row

@@ -2,7 +2,7 @@
 
 Handoff section 6: every Mirror sentence, heading and table label is used word for
 word; only the figures vary. The Scope split the long page into Home, four chapters
-and twelve fact pages, and the page itself is gone. Its words were frozen first, from
+and its fact pages, and the page itself is gone. Its words were frozen first, from
 the page as it rendered on the 40-trip contract fixture, figures out, in
 tests/fixtures/mirror_wording/mirror_v1.json (Phase 0).
 
@@ -32,6 +32,8 @@ RETIRED = {
     "Your record": "the long page's title; Scope home's title is the kit's new one (D9)",
     "That is [N] of your result for the whole period, which was [N].":
         "a share of the net result, which has no floor or ceiling (TICKET-812)",
+    "That is a ratio of [N].":
+        "a bare ratio with nothing beside it; the minutes now sit next to the rupees (TICKET-819)",
 }
 """Mirror lines the Scope does not say, each with why. Nothing else may go."""
 

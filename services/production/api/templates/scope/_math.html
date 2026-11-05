@@ -1,0 +1,46 @@
+{#- The tables of "The math of your trading". Every figure is one metrics.math_by_book
+    decided; here it is only written. A row below the minimum has none, and says so. -#}
+
+{%- macro money_or_dash(value) -%}
+{% if value is none %}—{% else %}{{ value|rupees(signed=false) }}{% endif %}
+{%- endmacro %}
+
+{%- macro minutes_or_dash(seconds) -%}
+{% if seconds is none %}—{% else %}{{ seconds|minutes }} min{% endif %}
+{%- endmacro %}
+
+{%- macro needed_cell(row) -%}
+{% if row.winner_needed is none %}—{% else %}{{ row.winner_needed|rupees(signed=false) }}<span class="math__under">{{ row.winner_gap|rupees }}</span>{% endif %}
+{%- endmacro %}
+
+{#- A row per book, or per year of a book: the win rate and both ways to break even. -#}
+{%- macro math_table(rows, first, name="books", extra="") -%}
+<table class="table math__table{{ extra }}" data-table="{{ name }}">
+  <thead><tr><th>{{ first }}</th><th class="table__num">Trades</th><th class="table__num">You win</th><th class="table__num">Break even at</th><th class="table__num">Or per winner</th></tr></thead>
+  <tbody>
+  {%- for row in rows %}
+    <tr data-state="{{ row.state.name }}"><td class="table__text">{{ row.label }}</td><td class="table__num">{{ row.trades|count }}</td>
+    {%- if row.win_percent is none %}<td class="table__text" colspan="3">not enough trades to say</td>
+    {%- else %}<td class="table__num">{{ row.win_percent }}%</td><td class="table__num">{% if row.break_even_percent is none %}—{% else %}{{ row.break_even_percent }}%{% endif %}</td><td class="table__num">{{ needed_cell(row) }}</td>
+    {%- endif %}</tr>
+  {%- endfor %}
+  </tbody>
+</table>
+{%- endmacro %}
+
+{#- Winners and losers per year: the average, the median, and the minutes beside them. -#}
+{%- macro sizes_table(rows) -%}
+<table class="table math__table" data-table="sizes">
+  <thead><tr><th>Year</th><th></th><th class="table__num">Average</th><th class="table__num">Typical (median)</th><th class="table__num">Open</th></tr></thead>
+  <tbody>
+  {%- for row in rows %}
+    {%- if row.win_percent is none %}
+    <tr data-state="{{ row.state.name }}"><td class="table__text">{{ row.label }}</td><td class="table__text" colspan="4">not enough trades to say</td></tr>
+    {%- else %}
+    <tr><td class="table__text">{{ row.label }}</td><td class="table__text">Winners</td><td class="table__num">{{ money_or_dash(row.average_winner) }}</td><td class="table__num">{{ money_or_dash(row.median_winner) }}</td><td class="table__num">{{ minutes_or_dash(row.winners_median_seconds) }}</td></tr>
+    <tr><td class="table__text">{{ row.label }}</td><td class="table__text">Losers</td><td class="table__num">{{ money_or_dash(row.average_loser) }}</td><td class="table__num">{{ money_or_dash(row.median_loser) }}</td><td class="table__num">{{ minutes_or_dash(row.losers_median_seconds) }}</td></tr>
+    {%- endif %}
+  {%- endfor %}
+  </tbody>
+</table>
+{%- endmacro %}

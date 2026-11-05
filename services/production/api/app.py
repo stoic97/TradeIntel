@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -20,6 +21,8 @@ from fastapi.templating import Jinja2Templates
 from services.production.api import (
     dial,
     formatting,
+    limits,
+    routes_admin,
     routes_budget,
     routes_charges,
     routes_consent,
@@ -35,6 +38,7 @@ from services.production.api import (
 )
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
+from services.production.journal import constants as k
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -53,6 +57,10 @@ def code_version() -> str:
         return "unknown"
 
 
+def _body_too_large(scope) -> HTMLResponse:
+    return routes_consent.upload_page(Request(scope), status_code=413, error=limits.TOO_LARGE)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings.from_env()
     app = FastAPI(title="Scope", docs_url=None, redoc_url=None, openapi_url=None)
@@ -61,6 +69,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.templates = TEMPLATES
     app.state.engine = make_engine(config.database_url)
     run_migrations(app.state.engine)
+    app.state.signups = limits.HourlyCount(cap=k.SIGNUPS_PER_IP_PER_HOUR)
+    app.add_middleware(limits.BodyCap, refuse=_body_too_large)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
     app.include_router(routes_home.router)
@@ -75,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_journal.router)
     app.include_router(routes_eligibility.router)
     app.include_router(routes_deletion.router)
+    app.include_router(routes_admin.router)
 
     @app.get("/health")
     def health() -> JSONResponse:
@@ -86,5 +97,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request=request, name="404.html", context={"title": "Not found"},
             status_code=404,
         )
+
+    @app.exception_handler(405)
+    async def method_not_allowed(request: Request, exc: Exception):
+        """A 405 at /admin would say something is there, so there it is the same 404."""
+        if routes_admin.is_admin_path(request.url.path):
+            return not_found(request, exc)
+        return await http_exception_handler(request, exc)
 
     return app

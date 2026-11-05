@@ -134,9 +134,6 @@ def delete_trader(
                   m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
-    # His invite is his: leaving the row would point at an account that is gone,
-    # and clearing the trader from it would hand the code back out as unused.
-    _delete_where(sess, m.InviteCode, m.InviteCode.redeemed_by == trader_id, removed)
     _delete_where(sess, m.Trader, m.Trader.id == trader_id, removed)
 
     sess.flush()
@@ -158,6 +155,55 @@ def delete_trader(
     sess.add(record)
     sess.flush()
     return record
+
+
+def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed:
+    """Remove his demo upload and everything derived from it (TICKET-842). Caller commits.
+
+    Run when a real upload with trades arrives, before it is written, so the real upload
+    is exactly as if the demo had never been there: version 1 of its own account, with
+    no day versions or Journal versions behind it, and nothing written on a demo Journal
+    carried forward. What is his and not the demo's stays: his account, his consent, his
+    own number, his dwell and his words on the leaving card.
+
+    The same children-before-parents order as ``delete_trader``, narrowed to the demo's
+    imports, and the same rule for the stored file: the demo's bytes are the same for
+    every account that loads it, so the blob stays while anyone else still points at it.
+    """
+    from services.production import demo  # one name for the demo account, kept with it
+
+    removed = Removed()
+    import_ids = _ids(sess, m.Import.id, (m.Import.trader_id == trader.id)
+                      & (m.Import.source_account == demo.ACCOUNT))
+    if not import_ids:
+        return removed
+    raw_ids = _ids(sess, m.Import.raw_file_id, m.Import.id.in_(import_ids))
+    digests = list(sess.scalars(select(m.RawFile.sha256).where(m.RawFile.id.in_(raw_ids))))
+
+    journal_ids = _ids(sess, m.Journal.id, m.Journal.import_id.in_(import_ids))
+    if journal_ids:
+        for model in (m.JournalFieldEntry, m.WtpAnswer, m.WtpAsked):
+            _delete_where(sess, model, model.journal_id.in_(journal_ids), removed)
+        _delete_where(sess, m.Journal, m.Journal.id.in_(journal_ids), removed)
+
+    feedback_ids = _ids(sess, m.ChapterFeedback.id, m.ChapterFeedback.import_id.in_(import_ids))
+    if feedback_ids:
+        _delete_where(sess, m.ChapterFeedbackReason,
+                      m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
+    for model in (m.ChapterFeedback, m.ReportFeedback, m.GuessAnswer, m.Trip,
+                  m.OpenPosition, m.SkippedTrip, m.ImportRow):
+        _delete_where(sess, model, model.import_id.in_(import_ids), removed)
+    _delete_where(sess, m.TradingDayVersion,
+                  (m.TradingDayVersion.trader_id == trader.id)
+                  & (m.TradingDayVersion.source_account == demo.ACCOUNT), removed)
+    # Newest first: a demo version supersedes only an earlier demo version.
+    for import_id in sorted(import_ids, reverse=True):
+        _delete_where(sess, m.Import, m.Import.id == import_id, removed)
+    _delete_where(sess, m.RawFile, m.RawFile.id.in_(raw_ids), removed)
+
+    sess.flush()
+    _remove_files(sess, store, digests, removed)
+    return removed
 
 
 def _remove_files(

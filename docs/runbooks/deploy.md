@@ -5,7 +5,7 @@ product-only account, Caddy and Let's Encrypt in front, systemd behind, daily
 droplet backups. Everything below follows from that.
 
 **First run: 21 October 2026**, on the cheapest Basic droplet (512 MB, 10 GB) in
-BLR1, which is comfortable for a few dozen invited traders. Everything below has
+BLR1, which is comfortable for a few dozen traders. Everything below has
 been done once and the corrections that run produced are folded in. Expect to
 correct a line or two anyway, and commit the correction.
 
@@ -66,6 +66,12 @@ system-wide just to generate one string:
     SCOPE_DB           sqlite:////srv/scope/data/scope.db
     SCOPE_FILES        /srv/scope/data/files
     SCOPE_PRODUCTION   1
+    ADMIN_LOGIN_IDS    <login ids, comma-separated, no spaces>
+
+`ADMIN_LOGIN_IDS` names who may open `/admin`. Unset or empty means nobody: the app
+still starts and the page is a 404 for everyone. A login id on the list cannot be
+taken at sign-up by anyone, because whoever held it would be an admin. So sign up
+first, then add the id here and restart: a change takes effect on restart.
 
 **Put the file key in the password manager before anything is uploaded.** Lose it
 and every stored tradebook is unreadable — Fernet authenticates, so the app
@@ -118,11 +124,8 @@ root-owned, so root reads the file and passes it in:
 
     sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
         .venv/bin/python -m services.production.api.cli init-db
-    sudo -u scope env $(grep -v '^#' /etc/scope/scope.env | xargs) \
-        .venv/bin/python -m services.production.api.cli invite --code <code>
 
-The invite command prints a `127.0.0.1` URL because it has no idea what hostname
-it is reachable at. Substitute the real one.
+Sign-up is open at the site's front door, so there is nothing to mint.
 
 ## 5. Backups and the drill
 
@@ -149,7 +152,17 @@ The release gate, PRD section 10. None of it is optional and none of it is code:
    refuses real accounts on purpose** — a real account reaching `/consent` gets
    the "not open yet" page, by design.
 
+## When uploads are refused
+
+The caps are in `services/production/journal/constants.py`, each with its argument.
+
+- **A trader says uploads are refused for storage:** the disk has passed
+  `UPLOADS_REFUSED_AT_DISK_PERCENT`. Nothing alerts on this. It's only in the log:
+  `journalctl -u scope | grep "uploads refused"`, and `df -h /srv/scope`.
+- **Someone can't sign up behind a shared connection:** the count is in memory, so
+  `systemctl restart scope` clears it.
+
 ## What this does not cover
 
 Postgres (ADR-005, Phase 1), a second app process, log shipping, uptime
-monitoring. Each is additive; none is needed for a handful of invited traders.
+monitoring. Each is additive; none is needed for a handful of traders.

@@ -11,12 +11,9 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime, timedelta
 
-import pytest
-
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from tests.unit.api.test_scope_chapters import chapter_page, trips_from
-from tests.unit.api.test_scope_facts import fact_page
 
 
 def one_day() -> list[mx.Trip]:
@@ -36,9 +33,8 @@ def test_the_comparison_reads_options_only():
     assert (str(ctx["after_lots"].mean), str(ctx["rest_lots"].mean)) == ("3", "1.667")
 
 
-@pytest.mark.parametrize("page", [lambda t: fact_page("down", t), lambda t: chapter_page(3, t)])
-def test_average_lots_is_shown_to_one_decimal(page):
-    html = page(one_day())
+def test_average_lots_is_shown_to_one_decimal():
+    html = chapter_page(3, one_day())
     assert '<td class="table__num">3.0</td></tr>' in html
     assert '<td class="table__num">1.7</td></tr>' in html
     assert "1.667" not in html
@@ -46,6 +42,6 @@ def test_average_lots_is_shown_to_one_decimal(page):
 
 def test_a_side_with_no_option_trade_shows_a_dash():
     """No trade came after two straight losses here."""
-    html = fact_page("down", trips_from([100, 200, 300, 50]))
+    html = chapter_page(3, trips_from([100, 200, 300, 50]))
     assert '<td class="table__num">—</td></tr>' in html
     assert "None" not in html

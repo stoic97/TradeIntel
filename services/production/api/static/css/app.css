@@ -12,6 +12,23 @@
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
 
+/* /admin (TICKET-848) is a working table, not a phone column, so it takes the width. Everything
+   wide scrolls inside its own box and the page itself never does. The selectors are this long
+   so they outrank any later rule for .screen__body, whatever the order. */
+.screen.screen--admin { max-width: none; }
+.screen.screen--admin > .screen__body.admin { max-width: none; min-width: 0; }
+.admin__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--space-3); margin-top: var(--space-6); }
+.admin__head { margin-top: var(--space-10); margin-bottom: var(--space-3); }
+.admin__scroll { overflow-x: auto; max-width: 100%; }
+.admin__table th, .admin__table td { padding-right: var(--space-3); white-space: nowrap; }
+.admin__stale { color: var(--color-loss); font-weight: 600; }
+.admin__note, .admin__notes { margin-top: var(--space-3); max-width: 80ch; color: var(--color-muted); }
+.admin__notes { padding-left: var(--space-4); }
+.admin__feed { list-style: none; margin: 0; padding: 0; overflow-wrap: anywhere; }
+.admin__feed li { padding: var(--space-1) 0; border-bottom: var(--hairline-thin) solid var(--color-hairline); }
+.admin__quiet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-2) var(--space-3); margin: 0; overflow-wrap: anywhere; }
+.admin__quiet dd { margin: 0; }
+
 /* A trade row names the trade (TICKET-822). The kit's label is a faint caption over a trade
    number; here it is what the trader recognises his trade by, so it reads as text. The
    prices sit under the row, and wrap rather than push a phone sideways. */
@@ -55,15 +72,54 @@
    width comes out of the two clock columns, so the result column stays as wide as it was. */
 .trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
 
+/* The math of your trading: a row per book and a table per book, which the kit does not draw.
+   More columns would push a phone sideways, so a table holds five at most, a figure stays
+   whole, only a book's long name may break, and a second figure sits under the first. */
+.math__book { margin-top: var(--space-8); }
+.math__table td.table__text { overflow-wrap: anywhere; }
+.math__under { display: block; color: var(--color-faint); }
+.math__secondary { margin-top: var(--space-4); color: var(--color-faint); }
+
 /* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
    kit draws the figure there. */
 .fact__title + .mirror { margin-top: var(--space-3); }
 .opening-figure { white-space: nowrap; }
 
+/* The call/put strip on the busiest day (TICKET-827), not in the kit: which row says the side,
+   so neither colour has to. An outline only on a trade that made money. */
+.chart__call { fill: var(--color-ink); }
+.chart__put { fill: var(--color-faint); }
+.chart__won { fill: none; stroke: var(--color-gain); stroke-width: 1.5; }
+.strip-note { margin-top: var(--space-2); }
+
+/* Where a chapter-3 page goes next (TICKET-827); the kit's fact pages end at their list. */
+.chapter-next { margin-top: var(--space-10); }
+.chapter-next + .chapter-next { margin-top: var(--space-3); }
+.chapter-next__line { margin-bottom: var(--space-3); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
 button.guess__option { width: 100%; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--color-hairline); font: inherit; text-align: left; cursor: pointer; }
+
+/* The losing run's timeline (TICKET-820), the Scope's own chart: a put is a hollow marker
+   and a call a filled one, so they read apart without colour, and the run is a quiet band.
+   The headline is a sentence, so its rupees take the title's font; a figure never breaks
+   between its minus and its rupee sign, on a phone least of all. */
+.fact__title .num { font: inherit; }
+.fact__title .num, .run__range .num, .run__lines .num, .run__after .num, .run__next .num, .mirror--card .num { white-space: nowrap; }
+.chart__band { fill: var(--color-hairline); fill-opacity: .35; }
+.chart__put { fill: var(--color-page); stroke: var(--color-ink); stroke-width: 1.25; }
+.legend__swatch--put { background: none; box-shadow: inset 0 0 0 1.25px var(--color-ink); }
+.legend__swatch--band { background: var(--color-hairline); opacity: .6; }
+.run__range { margin-top: var(--space-2); }
+.run__lines { margin-top: var(--space-6); }
+.run__lines .body-small + .body-small { margin-top: var(--space-2); }
+.trade__gap { font-size: 12px; line-height: 18px; color: var(--color-faint); }
+.run__after, .run__next { margin-top: var(--space-6); }
+.run__after .trades { margin-top: var(--space-3); }
+.run__after .mirror { margin-top: var(--space-4); }
+.run__next .btn { margin-top: var(--space-4); }
 
 /* Sign out on the Account page (D6); the kit draws no place for it. */
 .account__sign-out { margin-top: var(--space-4); }
@@ -103,6 +159,22 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 /* Trades refused, stated apart from the rows read (TICKET-804); the kit has no place for it. */
 .refused-line { display: block; margin-top: var(--space-2); }
 
+/* Scope home's verdict by book and its chapters (TICKET-823); the kit draws neither. */
+.home__start { margin-top: var(--space-4); }
+.home__heading { margin-top: var(--space-5); }
+.home__books, .home__chapters { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.home__book, .home__chapter { padding: var(--space-3) 0; border-top: 1px solid var(--color-hairline); }
+.home__book-head { display: flex; justify-content: space-between; gap: var(--space-3); }
+.home__chapter--read .label { color: var(--color-muted); }
+
+/* Home after sign-in: the verdict on the card, and why each day is worth a look. */
+.scope-card__verdict { display: block; margin-top: 10px; font-size: var(--font-size-title, 1.5rem); line-height: 1.25; }
+.scope-card__verdict .num { color: inherit; }
+.scope-card__split { display: grid; gap: var(--space-1); margin-top: var(--space-3); }
+.scope-card__split .num { color: inherit; }
+.latest__when .body-small { display: block; }
+.latest__when { padding-block: var(--space-2); }
+
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
 .import__days > summary { cursor: pointer; }
@@ -123,3 +195,49 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .day-block__run { stroke: currentColor; stroke-width: 1.5; }
 .day-block__flag { margin: var(--space-3) 0; }
 .day-blocks__next, .chapter__next { margin-top: var(--space-6); }
+
+/* TICKET-842: the line every page drawn from the demo tradebook carries. */
+.demo-line {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-navy);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.upload__demo { margin-top: var(--space-4); }
+.upload__demo-button { background: none; border: 0; padding: 0; font: inherit; color: var(--color-action-blue); cursor: pointer; text-decoration: underline; }
+
+/* Desktop (TICKET-845): the same pages, using the width. components.css stays the kit's, and its
+   phone column stays what a phone gets. The kit's desktop screens set the shapes: dial beside the
+   story, a fact's trades beside its story, the nav as a header. No markup changes, so a page reads
+   the same at every width. */
+@media (min-width: 1024px) {
+  .screen { max-width: none; }
+  .screen__body { width: 100%; max-width: 960px; margin-inline: auto; padding: var(--space-10) var(--space-16) var(--space-16); }
+  .screen__body:not(.screen__body--with-nav):not(.screen__body--fact) { max-width: 760px; }
+  .screen__body--with-nav { padding-bottom: var(--space-16); }
+
+  .bottom-nav { order: -1; position: sticky; top: 0; max-width: none; width: 100%; height: 72px; margin: 0; padding: 0 var(--space-16); display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); box-shadow: var(--elevation-1); }
+  .bottom-nav::before { content: "PlusEV Scope"; margin-right: auto; font-family: var(--font-sans); font-size: 15px; font-weight: 600; color: var(--color-ink); }
+  .bottom-nav__item { height: 44px; margin-top: 0; padding: 0 14px; border-top: 0; font-size: 15px; color: var(--color-ink); }
+  .bottom-nav__item[aria-current="page"] { border-bottom: 2px solid var(--color-action-blue); }
+
+  .screen:has(> .stage) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 600px) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-8); align-items: start; padding-bottom: var(--space-16); }
+  .screen:has(> .stage) > .bottom-nav { grid-column: 1 / -1; grid-row: 1; }
+  .screen:has(> .stage) > .stage { grid-column: 2; grid-row: 2; position: sticky; top: 104px; margin-top: var(--space-8); padding-bottom: var(--space-6); border-radius: var(--radius-card); }
+  .screen:has(> .stage) > .screen__body { grid-column: 3; grid-row: 2; max-width: none; margin: 0; padding: var(--space-8) 0 0; }
+  .stage .scope { width: min(100%, 460px); }
+
+  .screen__body--fact { max-width: 1312px; display: grid; grid-template-columns: minmax(0, 700px) minmax(0, 520px); grid-template-rows: repeat(14, auto) 1fr; column-gap: var(--space-16); justify-content: center; align-items: start; }
+  .screen__body--fact > * { grid-column: 1; min-width: 0; }
+  .screen__body--fact > .evidence { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
+  .screen__body--fact > .day-blocks__next { display: none; }
+
+  .path { padding-inline: max(var(--space-4), calc((100vw - 1284px) / 2)); }
+
+  .stage__bar--record { justify-content: flex-end; }
+  .stage__bar--record .lockup { display: none; }
+
+  .fact__title { font-size: 40px; line-height: 46px; }
+  .figure .chart, .story-card__chart .chart { width: 100%; }
+}

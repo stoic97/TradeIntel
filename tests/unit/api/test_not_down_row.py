@@ -37,7 +37,6 @@ from services.production.api import formatting
 from services.production.mirror import metrics as mx
 from tests.unit.api.test_chapter_three_describes import DOWN, one_day
 from tests.unit.api.test_scope_chapters import chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
 
 FIXTURE = Path("tests/fixtures/mirror_contract")
 HISTORY = DOWN + one_day([40, 20], "2026-09-02")
@@ -50,8 +49,8 @@ SAYS = (
 VERDICT = re.compile(
     r"\b(better|worse|best|worst|higher|lower|outperform\w*|beats?|improv\w*)\b", re.IGNORECASE
 )
-PAGES = [lambda: fact_page("down", HISTORY), lambda: chapter_page(3, HISTORY)]
-IDS = ["fact page", "card"]
+PAGES = [lambda: chapter_page(3, HISTORY)]
+IDS = ["card"]
 
 
 def section(page: str) -> str:

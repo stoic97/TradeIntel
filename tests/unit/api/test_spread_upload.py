@@ -229,7 +229,9 @@ def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
     assert response.status_code in (200, 303)
 
 
-def test_home_counts_the_spread_as_one_trade(uploaded):
-    page = text(uploaded.get("/").text)
-    assert "2 trades" in page
-    assert "+₹1,500" in page
+def test_home_counts_the_spread_in_the_verdict_and_its_day_as_two_trades(uploaded):
+    """14 Oct made +1,500 from the spread and one trade; 15 Oct -400; 16 Oct +100. Home lists only
+    days the report names, and a winning day isn't one, so the day's count is on its own Journal."""
+    assert "Your option trades made ₹1,200" in text(uploaded.get("/").text)
+    day = re.search(r'/journals/(\d+)"', uploaded.get("/journals/catch-up").text).group(1)
+    assert uploaded.get(f"/journals/{day}").text.count('class="card journal-trade"') == 2
