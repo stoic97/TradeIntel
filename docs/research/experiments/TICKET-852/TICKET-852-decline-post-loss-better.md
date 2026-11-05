@@ -30,4 +30,4 @@ What follows from that:
 - **The production gate is unaffected.** It compares a file with its own shuffles, one-sided.
 - **Not checked:** whether `engine/evidence.py`'s use of the 1.65 shuffle inflation, or the M1 fit, needs to take this into account. That's a question for the research seat, and this draft changes neither.
 
-**Ruling (Pawan):** ______ · date ______
+**Ruling (Pawan):** Declined as a candidate — the direction was chosen after seeing the result, on a single file, and the register holds pre-registered lines, not post-hoc flips. B13 reserved: it reopens if the reverse is pre-registered and tested on a file this one has not seen. The non-centring finding is accepted as recorded and stands on its own. It does **not** touch the TICKET-838 gate, which is one-sided against the same file's shuffles and so absorbs the offset. It may touch `engine/evidence.py`'s 1.65 shuffle inflation and the M1 fit, which assume more about the null than this shows to be true — raise that as its own ticket for the research seat. · date 6 Nov 2026
