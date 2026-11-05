@@ -61,6 +61,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
+        "money_found": mx.money_found(trips),
         "past_number": mx.trades_past_number(trips),
         "two_losses": two_losses,
         "strike": mx.strike_rate(same_day),
@@ -166,7 +167,10 @@ def _figure(key: str, ctx: dict, imp) -> str:
             return f"{share.share_percent}%"
         return formatting.rupees(share.total)  # the second state leads with the whole result
     if key == "money":
-        return f"{formatting.count(len(S.trades_behind('money', ctx)))} trades"
+        found = ctx["money_found"]
+        return formatting.rupees(
+            found.same_day_net if found.same_day_count else ctx["held_past_day"].net
+        )
     if key == "math":
         return f"{ctx['strike'].rate_percent}%"
     if key == "run":
@@ -691,6 +695,21 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for b, w in zip(ctx["best"], ctx["worst"], strict=False)
     ]
+    money_chapter, _ = S.chapter_of("money")
+    next_chapter = S.chapter(money_chapter.number + 1)
+    out["money"].update(
+        found=ctx["money_found"],
+        best_rows=S.ranked(ctx["best"], ctx),
+        worst_rows=S.ranked(ctx["worst"], ctx),
+        held_groups=[]
+        if out["money"]["see_all"]
+        else S.groups("money", ctx, only=ctx["held_past_day"].trips),
+        next={
+            "number": next_chapter.number,
+            "name": next_chapter.name,
+            "href": S.chapter_href(next_chapter.number),
+        },
+    )
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
     out["risk"]["nothing"] = c[s.RiskUnitSourceV1.UNAVAILABLE] + c[s.RiskUnitSourceV1.INFERRED_ATR]

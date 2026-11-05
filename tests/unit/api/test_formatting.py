@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+from services.production.api import formatting
 from services.production.api.formatting import count, indian_grouping, minutes, rupees, tone
 
 MINUS = "\u2212"
@@ -101,6 +102,36 @@ def test_a_count_is_grouped_the_same_way():
 )
 def test_minutes_are_whole_minutes_cut_as_before(seconds, written):
     assert minutes(seconds) == written
+
+
+@pytest.mark.parametrize(
+    ("seconds", "written"),
+    [
+        (0, "0 min"),
+        (59, "0 min"),
+        (60, "1 min"),
+        (22500, "375 min"),
+        (86399, "1,439 min"),  # the last second under a day
+        (86400, "1 day"),
+        (172799, "1 day"),  # a day cuts down, as a minute does
+        (172800, "2 days"),
+        (29 * 86400, "29 days"),
+        (30 * 86400 - 1, "29 days"),
+        (30 * 86400, "1 month"),
+        (31 * 86400, "1 month 1 day"),
+        (32 * 86400, "1 month 2 days"),
+        (59 * 86400, "1 month 29 days"),
+        (60 * 86400, "2 months"),
+        (61 * 86400, "2 months 1 day"),
+        (359 * 86400, "11 months 29 days"),
+        (360 * 86400, "12 months"),
+        (400 * 86400, "13 months 10 days"),
+        (Decimal("5400.0"), "90 min"),
+    ],
+)
+def test_a_hold_reads_in_minutes_then_days_then_months(seconds, written):
+    """Worked by hand: a day is 86,400 seconds, a month is 30 days, and each cuts down."""
+    assert formatting.hold(seconds) == written
 
 
 def test_the_apps_templates_have_the_filters():

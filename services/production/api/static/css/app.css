@@ -76,7 +76,30 @@
 
 /* A trade's date carries its year (TICKET-808). The kit's columns are drawn for 07 Sep; the
    width comes out of the two clock columns, so the result column stays as wide as it was. */
-.trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 54px minmax(0, 1fr); }
+.trades__cols, .trade__row { grid-template-columns: 82px 44px 44px 66px minmax(0, 1fr); }
+/* A hold over a day reads in days and months (TICKET-818): 12 px more from the result's
+   column fits "11 months", and the days wrap under it. */
+.trade__row > span:nth-child(4) { white-space: normal; }
+
+/* "Where the money came from" (TICKET-818): what its lists found, then the two lists. The
+   kit's screen is a phone column; only this fact opens up, to put the lists side by side. */
+.money-headline { margin-top: var(--space-6); font-family: var(--font-serif); font-size: 24px; line-height: 30px; font-weight: 600; }
+.money-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-5) 0 var(--space-3); }
+.money-split__label { font-size: 13px; line-height: 18px; color: var(--color-faint); }
+.ranked-lists { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin-top: var(--space-5); }
+.ranked-list__title { padding-bottom: 7px; border-bottom: var(--hairline-firm) solid var(--color-ink); font-size: 14px; line-height: 20px; font-weight: 600; }
+.ranked { margin: 0; padding: 0; list-style: none; }
+.trade__rank { font-weight: 600; color: var(--color-ink); }
+.money-hook { margin: var(--space-6) 0; }
+.money-hook > * + * { margin-top: var(--space-2); }
+.money-hook__lead { font-family: var(--font-serif); font-size: 18px; line-height: 26px; font-weight: 600; }
+.next-chapter { margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--color-hairline); }
+.next-chapter__hook { margin-bottom: var(--space-4); font-family: var(--font-serif); font-size: 16px; line-height: 24px; }
+.next-chapter__figure { white-space: nowrap; }
+@media (min-width: 900px) {
+  .screen--wide { max-width: 1040px; }
+  .ranked-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+}
 
 /* The math of your trading: a row per book and a table per book, which the kit does not draw.
    More columns would push a phone sideways, so a table holds five at most, a figure stays
