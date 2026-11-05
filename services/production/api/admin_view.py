@@ -38,6 +38,7 @@ from services.shared.schemas import scope_v1 as s
 
 NOT_RECORDED = "—"
 FEED_LENGTH = 40
+MINUTE_MS = 60 * 1000
 ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
@@ -74,7 +75,7 @@ def _when(at: datetime | None) -> str:
 def _span(ms: float | None) -> str:
     if ms is None:
         return NOT_RECORDED
-    return f"{int(ms // 1000)} s" if ms < 60_000 else f"{formatting.count(ms // 60_000)} min"
+    return f"{int(ms // 1000)} s" if ms < MINUTE_MS else f"{formatting.count(ms // MINUTE_MS)} min"
 
 
 def _name(text: str) -> str:
@@ -232,7 +233,7 @@ def _read_journals(sess: Session, real: dict[int, _Reader]) -> None:
 
 def _read_features(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
     """Budget, guess, leaving card and willingness to pay. Returns the answers to the last."""
-    for trader_id in sess.scalars(select(distinct(m.RiskBudgetDeclaration.trader_id))):
+    for trader_id in sess.scalars(select(m.RiskBudgetDeclaration.trader_id).distinct()):
         if trader_id in real:
             real[trader_id].budget = True
     for trader_id in sess.scalars(select(m.GuessAnswer.trader_id)):

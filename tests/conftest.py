@@ -44,6 +44,7 @@ def scope_environment(tmp_path, monkeypatch):
     monkeypatch.setenv("SCOPE_DB", f"sqlite:///{tmp_path / 'scope.db'}")
     monkeypatch.setenv("SCOPE_FILES", str(tmp_path / "files"))
     monkeypatch.delenv("SCOPE_PRODUCTION", raising=False)
+    monkeypatch.delenv("ADMIN_LOGIN_IDS", raising=False)
 
     yield
 
