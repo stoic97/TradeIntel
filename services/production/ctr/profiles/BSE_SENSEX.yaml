@@ -10,6 +10,9 @@ timezone: Asia/Kolkata
 session_start: "09:15"
 session_end: "15:30"
 expiry_rule: from_instrument_name
+# Expiry boundaries measured on the connected Fyers API, 5 Nov 2026: live volume, open interest
+# and traded quantity are whole multiples of 20 through the 31 Dec 2026 expiry. The Jan 2027
+# future's volume and traded quantity are multiples of 25 and not of 20.
 lot_sizes:
   - {units: "10", from: "2000-01-01", until: "2024-12-31"}
   - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01"}                            # ~ Jan 2027 expiry on: Fyers symbol master, 4 Nov 2026; start is a safe earlier bound
