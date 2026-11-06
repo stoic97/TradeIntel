@@ -11,7 +11,7 @@
 
     Every page stands on it: the old base.html and scope.css were deleted when the
     last page moved (Phase 4; test_layout holds it). -#}
-{%- from "_components.html" import bottom_nav -%}
+{%- from "_components.html" import bottom_nav, home_lockup -%}
 <!doctype html>
 <html lang="en"{% if enter_class %} class="{{ enter_class }}"{% endif %}>
 <head>
@@ -34,6 +34,7 @@
 <body>
 <svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
 <div class="screen{% if screen_class %} {{ screen_class }}{% endif %}">
+{% if signed_in and not nav %}<nav class="home-bar" aria-label="Home">{{ home_lockup() }}<a class="home-bar__home" href="/">Home</a></nav>{% endif %}
 {% block stage %}{% endblock %}
 <main class="screen__body{% if nav %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
 {% if demo %}<p class="demo-line" role="note">{{ demo }}</p>{% endif %}

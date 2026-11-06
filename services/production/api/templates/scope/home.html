@@ -3,12 +3,12 @@
     answers in full, then the counts on one line. Every line describes: a post-loss comparison
     shows only where the file's own shuffle test lets it. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line, uncounted_line, lockup, money, button %}
+{% from "_components.html" import dial, gross_line, uncounted_line, home_lockup, money, button %}
 {% set nav = "scope" %}
 {% from "_verdict.html" import came, held, verdict_sentence %}
 {% block stage %}
 <header class="stage stage--home on-navy">
-  <div class="stage__bar">{{ lockup() }}</div>
+  <div class="stage__bar">{{ home_lockup() }}</div>
   <div class="stage__dial">
   {{ dial(view) }}
   </div>
