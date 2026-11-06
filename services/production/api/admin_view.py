@@ -108,10 +108,9 @@ class _Reader:
     latest_read: tuple | None = None  # the latest not refused
     uploads: int = 0
     uploads_refused: int = 0
-    facts: set[str] = field(default_factory=set)
+    fact_ms: dict[str, int] = field(default_factory=dict)  # each fact read, and for how long
     furthest_chapter: int = 0
     dwell_ms: int = 0
-    chapter_four_ms: int = 0
     drawer_opens: int = 0
     chapters: dict[int, str] = field(default_factory=dict)
     said_wrong: bool = False
@@ -157,15 +156,14 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     return read
 
 
-def _read_dwell(sess: Session, real: dict[int, _Reader]) -> tuple[dict, dict]:
-    """Readers per fact, and drawer opens per fact, while filling in each reader."""
+def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
+    """Drawer opens per fact, while filling in what each reader read."""
     rows = sess.execute(
         select(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key, m.DwellEvent.event,
                func.count(), func.sum(m.DwellEvent.duration_ms), func.max(m.DwellEvent.at))
         .group_by(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key,
                   m.DwellEvent.event)
     ).all()
-    readers: dict[str, set[int]] = {key: set() for key in SM.FACTS}
     drawers: dict[str, int] = {}
     for trader_id, surface, key, kind, times, total_ms, last in rows:
         reader = real.get(trader_id)
@@ -180,12 +178,9 @@ def _read_dwell(sess: Session, real: dict[int, _Reader]) -> tuple[dict, dict]:
             reader.drawer_opens += times
             drawers[fact] = drawers.get(fact, 0) + times
         elif kind == "view":
-            reader.facts.add(fact)
-            readers[fact].add(trader_id)
+            reader.fact_ms[fact] = reader.fact_ms.get(fact, 0) + (total_ms or 0)
             reader.dwell_ms += total_ms or 0
-            if CHAPTER_OF[fact] == 4:
-                reader.chapter_four_ms += total_ms or 0
-    return readers, drawers
+    return drawers
 
 
 def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
@@ -399,7 +394,7 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "uploads_refused": reader.uploads_refused,
         "duplicates": duplicates.get(latest.id, 0) if latest else NOT_RECORDED,
         "on_current": _on_current(reader, running_version),
-        "facts_read": f"{len(reader.facts)} of {len(SM.FACTS)}",
+        "facts_read": f"{len(reader.fact_ms)} of {len(SM.FACTS)}",
         "minutes": _span(reader.dwell_ms),
         "drawer_opens": reader.drawer_opens,
         "chapters": [reader.chapters.get(n, NOT_RECORDED) for n in feedback_chapters],
@@ -417,19 +412,39 @@ def _last_seen(reader: _Reader) -> datetime:
     return max(reader.seen, default=NEVER)
 
 
-def _least_read(readers: dict[str, set[int]]) -> str:
-    """The fact the fewest read, every one of them if tied. Empty until anyone read anything."""
-    if not any(readers.values()):
-        return NOT_RECORDED
-    fewest = min(len(who) for who in readers.values())
-    return ", ".join(SM.FACTS[key].title for key, who in readers.items() if len(who) == fewest)
+def _readers_of(key: str, group: list[_Reader]) -> tuple[int, str]:
+    """How many of this group read a fact, and the median time of those who did."""
+    times = [r.fact_ms[key] for r in group if key in r.fact_ms]
+    return len(times), _span(statistics.median(times)) if times else NOT_RECORDED
+
+
+def _covers(real_file: int, on_demo: int) -> str:
+    total = real_file + on_demo
+    noun = "trader" if total == 1 else "traders"
+    return (f"Covers {formatting.count(total)} {noun}: {formatting.count(real_file)} with a "
+            f"real file, {formatting.count(on_demo)} on the demo.")
+
+
+def _fact_table(group_real: list[_Reader], group_demo: list[_Reader]) -> dict:
+    """Every fact in report order, read or not: where readers stop is the point of it."""
+    chapters = []
+    for chapter in SM.CHAPTERS:
+        facts = []
+        for fact in chapter.facts:
+            real_readers, real_median = _readers_of(fact.key, group_real)
+            demo_readers, demo_median = _readers_of(fact.key, group_demo)
+            facts.append({"title": fact.title, "real_readers": real_readers,
+                          "real_median": real_median, "demo_readers": demo_readers,
+                          "demo_median": demo_median})
+        chapters.append({"number": chapter.number, "name": chapter.name, "facts": facts})
+    return {"chapters": chapters, "covers": _covers(len(group_real), len(group_demo))}
 
 
 def _reading(group: list[_Reader]) -> tuple[int, int, int]:
     """How many of these read every fact, stopped early, and read none."""
-    return (sum(1 for r in group if len(r.facts) == len(SM.FACTS)),
-            sum(1 for r in group if 0 < len(r.facts) < len(SM.FACTS)),
-            sum(1 for r in group if not r.facts))
+    return (sum(1 for r in group if len(r.fact_ms) == len(SM.FACTS)),
+            sum(1 for r in group if 0 < len(r.fact_ms) < len(SM.FACTS)),
+            sum(1 for r in group if not r.fact_ms))
 
 
 def _most_opened(drawers: dict[str, int]) -> str:
@@ -468,7 +483,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             .group_by(m.ImportRow.import_id)
         ) if import_id in latest_ids
     }
-    readers, drawers = _read_dwell(sess, real)
+    drawers = _read_dwell(sess, real)
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
     wtp_answers = _read_features(sess, real)
@@ -486,11 +501,10 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     rows = [_row(r, running_version=running_version, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
-    read_all, stopped_early, read_none = _reading(
-        [r for r in real.values() if r.file == FILE_REAL])
-    demo_read_all, demo_stopped_early, demo_read_none = _reading(
-        [r for r in real.values() if r.file == FILE_DEMO])
-    chapter_four = [r.chapter_four_ms for r in real.values() if r.chapter_four_ms]
+    on_real = [r for r in real.values() if r.file == FILE_REAL]
+    on_demo = [r for r in real.values() if r.file == FILE_DEMO]
+    read_all, stopped_early, read_none = _reading(on_real)
+    demo_read_all, demo_stopped_early, demo_read_none = _reading(on_demo)
     return {
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
@@ -515,11 +529,9 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
         },
         "rows": rows,
         "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
+        "fact_table": _fact_table(on_real, on_demo),
         "quiet": {
-            "least_read": _least_read(readers),
             "most_opened": _most_opened(drawers),
-            "chapter_four_median": _span(statistics.median(chapter_four)) if chapter_four
-            else NOT_RECORDED,
             "wtp": wtp_answers,
             "wtp_asked": wtp_asked,
             "deletions": deleted,

@@ -1069,37 +1069,19 @@ def test_feed_lines_for_a_day_and_a_whole_report_say_a_note_exists_and_no_more(a
 # ---------- The quiet panel ----------
 
 
-def test_the_least_read_fact_and_the_most_opened_drawer(app, engine):
+def test_the_most_opened_drawer(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        for key in SM.FACTS:
-            if key != "clock":
-                add_dwell(sess, trader_id, key)
         add_dwell(sess, trader_id, "strike", "drawer_open", ms=None)
         add_dwell(sess, trader_id, "math", "drawer_open", ms=None)
         add_dwell(sess, trader_id, "money", "drawer_open", ms=None)
         sess.commit()
-    quiet = view(app, engine)["quiet"]
-    assert quiet["least_read"] == SM.FACTS["clock"].title
-    assert quiet["most_opened"] == SM.FACTS["math"].title  # strike is math now
+    assert view(app, engine)["quiet"]["most_opened"] == SM.FACTS["math"].title  # strike is math now
 
 
 def test_with_no_reading_at_all_the_panel_is_empty_not_guessed(app, engine):
     add_trader(engine, "someone")
-    quiet = view(app, engine)["quiet"]
-    assert (quiet["least_read"], quiet["most_opened"], quiet["chapter_four_median"]) == ("—", "—", "—")
-
-
-def test_chapter_four_median_is_the_middle_trader_over_its_facts_only(app, engine):
-    ones = [add_trader(engine, n) for n in ("one", "two", "three")]
-    with make_session(engine) as sess:
-        add_dwell(sess, ones[0], "unread", ms=60_000)
-        add_dwell(sess, ones[1], "unread", ms=60_000)
-        add_dwell(sess, ones[1], "risk", ms=60_000)
-        add_dwell(sess, ones[2], "not-told", ms=600_000)
-        add_dwell(sess, ones[2], "money", ms=600_000)  # chapter 1
-        sess.commit()
-    assert view(app, engine)["quiet"]["chapter_four_median"] == "2 min"
+    assert view(app, engine)["quiet"]["most_opened"] == "—"
 
 
 def test_wtp_answers_are_counted_by_answer_with_the_words_left_out(app, engine):
@@ -1119,6 +1101,119 @@ def test_deletions_and_declines_are_counted(app, engine):
     assert (quiet["consent_declines"], quiet["deletions"]) == (1, 1)
 
 
+# ---------- Where readers stop ----------
+
+
+def fact_row(the_view: dict, key: str) -> dict:
+    title = SM.FACTS[key].title
+    return next(f for c in the_view["fact_table"]["chapters"] for f in c["facts"]
+                if f["title"] == title)
+
+
+def test_the_table_is_in_report_order_with_every_fact_even_one_nobody_read(app, engine):
+    # TICKET-870: the order is the map's, so a fact nobody opened is still a row of its own.
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        add_dwell(sess, trader_id, "not-told")  # the last fact, so a sort by reading would show it
+        sess.commit()
+    table = view(app, engine)["fact_table"]
+    assert [(c["number"], c["name"]) for c in table["chapters"]] == [
+        (c.number, c.name) for c in SM.CHAPTERS]
+    assert [[f["title"] for f in c["facts"]] for c in table["chapters"]] == [
+        [f.title for f in c.facts] for c in SM.CHAPTERS]
+    nobody = fact_row(view(app, engine), "worst-days")
+    assert (nobody["real_readers"], nobody["real_median"]) == (0, "—")
+    assert fact_row(view(app, engine), "not-told")["real_readers"] == 1
+
+
+def test_real_and_demo_readers_are_counted_apart_with_a_median_for_each(app, engine):
+    # Real: 1, 2 and 10 minutes, so the middle one is 2 min. Demo: 30 s alone.
+    real = [add_trader(engine, n) for n in ("one", "two", "three")]
+    on_demo = add_trader(engine, "on-demo")
+    with make_session(engine) as sess:
+        for trader_id, ms in zip(real, (60_000, 120_000, 600_000), strict=True):
+            add_record(sess, trader_id)
+            add_dwell(sess, trader_id, "money", ms=ms)
+        add_record(sess, on_demo, source=demo.ACCOUNT)
+        add_dwell(sess, on_demo, "money", ms=30_000)
+        sess.commit()
+    row = fact_row(view(app, engine), "money")
+    assert (row["real_readers"], row["real_median"]) == (3, "2 min")
+    assert (row["demo_readers"], row["demo_median"]) == (1, "30 s")
+
+
+def test_an_old_key_adds_to_the_fact_it_moved_to_for_one_reader(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        add_dwell(sess, trader_id, "strike", ms=60_000)
+        add_dwell(sess, trader_id, "math", ms=60_000)
+        sess.commit()
+    row = fact_row(view(app, engine), "math")
+    assert (row["real_readers"], row["real_median"]) == (1, "2 min")
+
+
+def test_a_drawer_opened_is_no_reader_of_the_fact(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        add_dwell(sess, trader_id, "money", "drawer_open", ms=None)
+        sess.commit()
+    assert fact_row(view(app, engine), "money")["real_readers"] == 0
+
+
+def test_a_trader_with_no_report_is_in_neither_group(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_dwell(sess, trader_id, "money")
+        sess.commit()
+    row = fact_row(view(app, engine), "money")
+    assert (row["real_readers"], row["demo_readers"]) == (0, 0)
+    assert view(app, engine)["fact_table"]["covers"] == "Covers 0 traders: 0 with a real file, 0 on the demo."
+
+
+def test_the_table_says_how_many_traders_it_covers_because_the_group_is_small(app, engine):
+    real, on_demo = add_trader(engine, "real"), add_trader(engine, "on-demo")
+    add_trader(engine, "only-signed-up")
+    with make_session(engine) as sess:
+        add_record(sess, real)
+        add_record(sess, on_demo, source=demo.ACCOUNT)
+        sess.commit()
+    covers = "Covers 2 traders: 1 with a real file, 1 on the demo."
+    assert view(app, engine)["fact_table"]["covers"] == covers
+    assert covers in admin_page(app, engine)
+
+
+def test_one_trader_is_covered_in_the_singular(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        sess.commit()
+    assert view(app, engine)["fact_table"]["covers"] == "Covers 1 trader: 1 with a real file, 0 on the demo."
+
+
+def test_the_table_replaces_the_two_lines_and_keeps_the_floors_note(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        add_dwell(sess, trader_id, "unread", ms=60_000)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "Least-read fact" not in page
+    assert "Chapter 4, median" not in page
+    assert "Where readers stop" in page
+    assert f"Chapter 4 · {SM.chapter(4).name}" in page
+    assert SM.FACTS["not-told"].title in page[page.index("Where readers stop"):]
+    assert page.count("so these are floors") == 1, "the existing note stays as it was"
+    assert "Readers and times here are floors" in page
+    assert "whether that's the people or the measurement" in page
+
+
+def test_the_table_says_reading_is_stored_by_trader_not_by_file(app, engine):
+    assert "before a real upload counts under real" in admin_page(app, engine)
+
+
 # ---------- Development accounts ----------
 
 
@@ -1127,7 +1222,7 @@ def test_deletions_and_declines_are_counted(app, engine):
     ("cards", "read_all"), ("cards", "stopped_early"), ("cards", "read_none"),
     ("cards", "demo_read_all"), ("cards", "demo_stopped_early"), ("cards", "demo_read_none"),
     ("cards", "said_wrong"), ("cards", "said_wrong_demo"),
-    ("quiet", "least_read"), ("quiet", "most_opened"), ("quiet", "chapter_four_median"),
+    ("quiet", "most_opened"), ("fact_table", "chapters"), ("fact_table", "covers"),
     ("quiet", "wtp"), ("quiet", "wtp_asked"), ("quiet", "consent_declines"),
     ("quiet", "deletions"),
 ])
