@@ -1105,7 +1105,7 @@ def add_chapter_answer(sess, trader_id, import_id, chapter, answer, reasons=(), 
     sess.add(row)
     sess.flush()
     for reason in reasons:
-        sess.add(m.ChapterFeedbackReason(feedback_id=row.id, reason=reason))
+        sess.add(m.ChapterFeedbackReason(feedback_id=row.id, reason=reason, given_at=at))
 
 
 def add_report_answer(sess, trader_id, import_id, answer, *, day="", note=None, at=THEN):
@@ -1114,14 +1114,15 @@ def add_report_answer(sess, trader_id, import_id, answer, *, day="", note=None, 
 
 
 def test_chapters_count_answers_with_reasons_and_reach(app, engine):
-    one, two = add_trader(engine, "one"), add_trader(engine, "two")
+    one, two, three = add_trader(engine, "one"), add_trader(engine, "two"), add_trader(engine, "three")
     with make_session(engine) as sess:
         imp = add_import(sess, one)
-        add_chapter_answer(sess, one, imp.id, 3, "wrong", ["wrong_facts", "wrong_reading"])
-        add_chapter_answer(sess, two, imp.id, 3, "not_sure")
+        add_chapter_answer(sess, one, imp.id, 3, "wrong", ["wrong_facts"])
+        add_chapter_answer(sess, two, imp.id, 3, "wrong", ["wrong_reading"])
+        add_chapter_answer(sess, three, imp.id, 3, "not_sure")
         sess.commit()
     row = next(c for c in told(app, engine)["chapters"] if c["chapter"] == 3)
-    assert (row["reached"], row["accurate"], row["not_sure"], row["wrong"]) == (2, 0, 1, 1)
+    assert (row["reached"], row["accurate"], row["not_sure"], row["wrong"]) == (3, 0, 1, 2)
     assert row["reasons"] == "Wrong facts 1, Right facts, wrong reading 1"
 
 

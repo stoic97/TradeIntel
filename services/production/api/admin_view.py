@@ -260,6 +260,54 @@ def _read_features(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
     return answers
 
 
+def _told(sess: Session, real: dict[int, _Reader], chapters: list[int]) -> dict:
+    """What traders said, in counts. Each trader's latest answer counts once. Notes are asked
+    for only as present or not, so no typed word is ever fetched."""
+    latest: dict[tuple[int, int], tuple[int, str]] = {}
+    reasons: dict[int, list[str]] = {}
+    for row_id, trader_id, chapter, answer, reason in sess.execute(
+        select(m.ChapterFeedback.id, m.ChapterFeedback.trader_id, m.ChapterFeedback.chapter,
+               m.ChapterFeedback.answer, m.ChapterFeedbackReason.reason)
+        .outerjoin(m.ChapterFeedbackReason, m.ChapterFeedbackReason.feedback_id == m.ChapterFeedback.id)
+        .order_by(m.ChapterFeedback.id)
+    ):
+        if trader_id in real:
+            latest[trader_id, chapter] = (row_id, answer)
+            if reason in FB.REASONS:
+                reasons.setdefault(row_id, []).append(reason)
+    rows = []
+    for number in chapters:
+        said = [found for (_, chapter), found in latest.items() if chapter == number]
+        why = [reason for row_id, _ in said for reason in reasons.get(row_id, [])]
+        rows.append({
+            "chapter": number,
+            "reached": sum(1 for r in real.values() if r.furthest_chapter >= number),
+            **{key: sum(1 for _, answer in said if answer == key) for key in FB.ANSWERS},
+            "reasons": ", ".join(f"{label} {why.count(key)}" for key, label in FB.REASONS.items()
+                                 if why.count(key)) or NOT_RECORDED,
+        })
+    last_read = sess.scalar(select(func.max(m.AdminAction.at)).where(m.AdminAction.action == "wrong_reports"))
+    whole: dict[int, str] = {}
+    days, waiting = set(), 0
+    for trader_id, answer, day, noted, at in sess.execute(
+        select(m.ReportFeedback.trader_id, m.ReportFeedback.answer, m.ReportFeedback.trading_day,
+               m.ReportFeedback.note.is_not(None), m.ReportFeedback.answered_at)
+        .order_by(m.ReportFeedback.id)
+    ):
+        if trader_id not in real:
+            continue
+        if day == FB.WHOLE_REPORT:
+            whole[trader_id] = answer
+        else:
+            days.add((trader_id, day))
+        if (answer == "wrong" or noted) and (last_read is None or at > last_read):
+            waiting += 1
+    wtp_noted = sum(1 for trader_id, noted in sess.execute(
+        select(m.WtpAnswer.trader_id, m.WtpAnswer.free_text.is_not(None))) if noted and trader_id in real)
+    return {"chapters": rows, "report": {key: list(whole.values()).count(key) for key in FB.ANSWERS},
+            "days_wrong": len(days), "waiting": waiting, "wtp_noted": wtp_noted}
+
+
 def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tuple]) -> list[tuple]:
     rejections = dict(sess.execute(
         select(m.Import.id, m.Import.rejection_text)
@@ -475,6 +523,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
         },
         "rows": rows,
         "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
+        "told": _told(sess, real, feedback_chapters),
         "quiet": {
             "least_read": _least_read(readers),
             "most_opened": _most_opened(drawers),
