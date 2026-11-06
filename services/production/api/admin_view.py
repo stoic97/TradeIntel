@@ -283,12 +283,64 @@ def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tupl
         else:
             text = f"{who} uploaded a file: {_rows_read(row)} rows read"
         lines.append((row.created_at, text))
+    return lines
+
+
+def _code_seen(imports: list[tuple]) -> list[dict]:
+    """Each version the first time an import shows it, newest first. Not a deploy time."""
     first_seen: dict[str, datetime] = {}
     for row in imports:
         if row.code_version != UNKNOWN_VERSION:
             first_seen.setdefault(row.code_version, row.created_at)
-    lines += [(at, f"First import on code {version}") for version, at in first_seen.items()]
+    return [{"version": version, "when": _when(at)} for version, at in
+            sorted(first_seen.items(), key=lambda item: item[1], reverse=True)]
+
+
+def _feed_of_joining(sess: Session, real: dict[int, _Reader], accounts: list[tuple]) -> list[tuple]:
+    """Budget, charges, deletion, consent and sign-up, in the order a tie should read newest first.
+    A budget line fetches no amount. A deleted account has no name left to give."""
+    lines = []
+    for trader_id, at in sess.execute(
+        select(m.RiskBudgetDeclaration.trader_id, m.RiskBudgetDeclaration.declared_at)
+        .where(m.RiskBudgetDeclaration.trader_id.in_(_not_development()))
+        .order_by(m.RiskBudgetDeclaration.id.desc()).limit(FEED_LENGTH)
+    ):
+        lines.append((at, f"{real[trader_id].login_id} set a budget"))
+    for trader_id, at in sess.execute(
+        select(m.ChargeStatement.trader_id, m.ChargeStatement.uploaded_at)
+        .where(m.ChargeStatement.trader_id.in_(_not_development()))
+        .order_by(m.ChargeStatement.id.desc()).limit(FEED_LENGTH)
+    ):
+        lines.append((at, f"{real[trader_id].login_id} added a charges file"))
+    development = {a.id for a in accounts if a.development_data}
+    for trader_id, at in sess.execute(
+        select(m.DeletionRecord.trader_id, m.DeletionRecord.completed_at)
+        .where(m.DeletionRecord.completed_at.is_not(None))
+        .order_by(m.DeletionRecord.id.desc()).limit(FEED_LENGTH)
+    ):
+        if trader_id not in development:
+            lines.append((at, "An account was deleted"))
+    for trader_id, purpose, granted, at in sess.execute(
+        select(m.ConsentEvent.trader_id, m.ConsentEvent.purpose, m.ConsentEvent.granted, m.ConsentEvent.at)
+        .where(m.ConsentEvent.trader_id.in_(_not_development()))
+        .order_by(m.ConsentEvent.id.desc()).limit(FEED_LENGTH)
+    ):
+        said = "gave consent" if granted else "withdrew consent"
+        lines.append((at, f"{real[trader_id].login_id} {said} for {purpose.value.lower().replace('_', ' ')}"))
+    lines += [(a.created_at, f"{real[a.id].login_id} signed up") for a in accounts if a.id in real]
     return lines
+
+
+def _feed(lines: list[tuple]) -> list[dict]:
+    """Newest first and cut off, with an IST day heading on each day's first line."""
+    out, day = [], None
+    for at, text in sorted(lines, key=lambda line: line[0], reverse=True)[:FEED_LENGTH]:
+        local = at.astimezone(ZONE)
+        heading = local.strftime("%d %b %Y")
+        out.append({"when": _when(at), "time": local.strftime("%H:%M"), "text": _name(text),
+                    "day_head": heading if heading != day else None})
+        day = heading
+    return out
 
 
 def _not_development():
@@ -447,8 +499,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     ).one()
 
     feed_lines = (answer_lines + _feed_of_uploads(sess, real, imports)
-                  + _feed_of_reading(sess, real))
-    feed_lines.sort(key=lambda line: line[0], reverse=True)
+                  + _feed_of_reading(sess, real) + _feed_of_joining(sess, real, accounts))
 
     guess_on, leaving_on = GU.ready(production), LC.ready(production)
     feedback_chapters = [c.number for c in SM.CHAPTERS if c.feedback]
@@ -474,7 +525,8 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             "said_wrong": sum(1 for r in real.values() if r.said_wrong),
         },
         "rows": rows,
-        "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
+        "feed": _feed(feed_lines),
+        "code_seen": _code_seen(imports),
         "quiet": {
             "least_read": _least_read(readers),
             "most_opened": _most_opened(drawers),
