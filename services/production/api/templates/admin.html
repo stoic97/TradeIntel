@@ -63,11 +63,26 @@
   </ol>
   <p class="body-small admin__note">There is no deploy table. "First import on code" is the first time an import shows that version, not when it was deployed. A refusal gives its reason only where the sentence is certainly our own words.</p>
 
+  <h2 class="heading admin__head">Where readers stop</h2>
+  <p class="body-small admin__note">{{ fact_table.covers }}</p>
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>Fact</th><th>Real-file readers</th><th>Median time</th><th>Demo readers</th><th>Median time</th></tr></thead>
+      {%- for chapter in fact_table.chapters %}
+      <tbody>
+        <tr><th colspan="5" scope="colgroup">Chapter {{ chapter.number }} · {{ chapter.name }}</th></tr>
+        {%- for fact in chapter.facts %}
+        <tr><td>{{ fact.title }}</td><td>{{ fact.real_readers|count }}</td><td>{{ fact.real_median }}</td><td>{{ fact.demo_readers|count }}</td><td>{{ fact.demo_median }}</td></tr>
+        {%- endfor %}
+      </tbody>
+      {%- endfor %}
+    </table>
+  </div>
+  <p class="body-small admin__note">Readers and times here are floors: a fact closed with its heading still on screen sends nothing. If this shows heavy drop-off, check first whether that's the people or the measurement. Reading is stored by trader, not by file, so what someone read on the demo before a real upload counts under real, here and on the reading cards.</p>
+
   <h2 class="heading admin__head">The quiet panel</h2>
   <dl class="admin__quiet body-small">
-    <dt>Least-read fact</dt><dd>{{ quiet.least_read }}</dd>
     <dt>Most-opened drawer</dt><dd>{{ quiet.most_opened }}</dd>
-    <dt>Chapter 4, median time per reader</dt><dd>{{ quiet.chapter_four_median }}</dd>
     <dt>Would pay</dt><dd>asked {{ quiet.wtp_asked|count }}; yes {{ quiet.wtp.yes|count }}, no {{ quiet.wtp.no|count }}, maybe {{ quiet.wtp.maybe|count }}</dd>
     <dt>Consent declines</dt><dd>{{ quiet.consent_declines|count }}</dd>
     <dt>Deletions</dt><dd>{{ quiet.deletions|count }} (last {{ quiet.last_deletion }})</dd>
