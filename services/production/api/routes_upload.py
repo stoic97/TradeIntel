@@ -90,7 +90,7 @@ def _first_upload(sess, trader: m.Trader, digest: str) -> m.RawFile | None:
 
 
 def _when(raw: m.RawFile) -> str:
-    return raw.uploaded_at.astimezone(limits.INDIA).strftime("%d %b %Y")
+    return formatting.local_day(raw.uploaded_at)
 
 
 def _same_file_again(sess, trader: m.Trader, digest: str) -> tuple[str, int | None]:
