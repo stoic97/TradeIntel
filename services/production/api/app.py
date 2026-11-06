@@ -70,6 +70,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.engine = make_engine(config.database_url)
     run_migrations(app.state.engine)
     app.state.signups = limits.HourlyCount(cap=k.SIGNUPS_PER_IP_PER_HOUR)
+    app.state.login_ids = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    app.state.login_connections = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_IP_PER_HOUR)
     app.add_middleware(limits.BodyCap, refuse=_body_too_large)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 

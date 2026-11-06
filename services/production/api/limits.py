@@ -21,6 +21,9 @@ a body.
 **The disk.** Past a set share, no new files. Nobody else is told, so it also goes in the
 log.
 
+**Failed sign-ins per login id and per connection per hour.** In memory too, so nothing
+is written down, and only a failure counts.
+
 The numbers are in ``journal/constants.py`` with their arguments.
 """
 
@@ -69,6 +72,13 @@ def signups_refused(wait_seconds: int) -> str:
     unit = "minute" if minutes == 1 else "minutes"
     return ("Too many accounts have been made from this connection in the last hour. "
             f"Try again in {minutes} {unit}.")
+
+
+def logins_refused(wait_seconds: int) -> str:
+    """The same words whether or not the login id exists."""
+    minutes = math.ceil(wait_seconds / 60)
+    unit = "minute" if minutes == 1 else "minutes"
+    return f"Too many failed sign-ins. Try again in {minutes} {unit}."
 
 
 def uploads_refused() -> str:

@@ -237,12 +237,24 @@ def login(
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
+    # Before the password is checked, so a guess past the cap learns nothing even if it is right.
+    state, connection = request.app.state, limits.connection(request)
+    wait = max(state.login_ids.wait_seconds(login_id), state.login_connections.wait_seconds(connection))
+    if wait:
+        return limits.with_retry_after(
+            page(request, "login.html", status_code=429, title="Sign in",
+                 error=limits.logins_refused(wait)),
+            wait,
+        )
+
     with make_session(request.app.state.engine) as sess:
         trader = sess.scalars(
             select(m.Trader).where(m.Trader.login_id == login_id)
         ).first()
         ok = trader is not None and auth.verify_password(trader.password_hash, password)
         if not ok or trader is None:
+            state.login_ids.add(login_id)
+            state.login_connections.add(connection)
             # One answer for an unknown login id and a wrong password alike.
             return page(request, "login.html", status_code=400, title="Sign in",
                         error=SIGN_IN_FAILED)
