@@ -24,6 +24,8 @@
 .admin__stale { color: var(--color-loss); font-weight: 600; }
 .admin__note, .admin__notes { margin-top: var(--space-3); max-width: 80ch; color: var(--color-muted); }
 .admin__notes { padding-left: var(--space-4); }
+.admin__journey { white-space: nowrap; }
+.admin__todo { color: var(--color-muted); }
 .admin__feed { list-style: none; margin: 0; padding: 0; overflow-wrap: anywhere; }
 .admin__feed li { padding: var(--space-1) 0; border-bottom: var(--hairline-thin) solid var(--color-hairline); }
 .admin__quiet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-2) var(--space-3); margin: 0; overflow-wrap: anywhere; }

@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 from services.production.api import formatting
 from services.production.api import scope_map as SM
 from services.production.db import models as m
+from services.production.journal import constants as k
 from services.production.journal import leaving as LC
 from services.production.journal import wtp as WTP
 from services.production.mirror import feedback as FB
@@ -108,6 +109,9 @@ class _Reader:
     said_wrong: bool = False
     report: str | None = None
     journals_written: int = 0
+    journals_opened: int = 0
+    first_upload: datetime | None = None
+    days_active: set = field(default_factory=set)
     journal_opened: bool = False
     budget: bool = False
     guess: bool = False
@@ -130,6 +134,7 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
             continue
         read.append(row)
         reader.uploads += 1
+        reader.first_upload = reader.first_upload or row.created_at
         reader.latest_any = row
         reader.seen.append(row.created_at)
         if row.outcome is s.ImportOutcome.REJECTED:
@@ -223,12 +228,13 @@ def _read_journals(sess: Session, real: dict[int, _Reader]) -> None:
             real[trader_id].journals_written = journals
             real[trader_id].seen.append(last)
     opened = sess.execute(
-        select(m.Journal.trader_id, func.max(m.Journal.opened_at))
+        select(m.Journal.trader_id, func.max(m.Journal.opened_at), func.count())
         .where(m.Journal.opened_at.is_not(None)).group_by(m.Journal.trader_id)
     ).all()
-    for trader_id, last in opened:
+    for trader_id, last, times in opened:
         if trader_id in real:
             real[trader_id].journal_opened = True
+            real[trader_id].journals_opened = times
             real[trader_id].seen.append(last)
 
 
@@ -329,20 +335,40 @@ def _rows_read(row) -> str:
     return f"{formatting.count(row.rows_parsed)} of {formatting.count(row.rows_in)}"
 
 
-def _step(reader: _Reader) -> str:
-    """The furthest step with a stored trace, in the order the ticket walks them. The reveal
-    is no step here: reaching it leaves no trace."""
-    if reader.budget:
-        return "budget"
-    if reader.journal_opened or reader.journals_written:
-        return "journal"
-    if reader.furthest_chapter:
-        return f"chapter {reader.furthest_chapter}"
-    if reader.guess:
-        return "guess"
-    if reader.uploads:
-        return "uploaded"
-    return "consented" if reader.consented else "signed up"
+def _read_active_days(sess: Session, real: dict[int, _Reader]) -> None:
+    """India dates with any stored action, one distinct query per table. A visit that writes
+    nothing leaves no date, so this is a floor."""
+    stamps = ((m.Trader.id, m.Trader.created_at), (m.ConsentEvent.trader_id, m.ConsentEvent.at),
+              (m.Import.trader_id, m.Import.created_at), (m.DwellEvent.trader_id, m.DwellEvent.at),
+              (m.ChapterFeedback.trader_id, m.ChapterFeedback.answered_at),
+              (m.ReportFeedback.trader_id, m.ReportFeedback.answered_at),
+              (m.Journal.trader_id, m.Journal.opened_at),
+              (m.RiskBudgetDeclaration.trader_id, m.RiskBudgetDeclaration.declared_at))
+    queries = [select(who, when).distinct() for who, when in stamps]
+    queries.append(select(m.Journal.trader_id, m.JournalFieldEntry.entered_at).distinct()
+                   .join(m.JournalFieldEntry, m.JournalFieldEntry.journal_id == m.Journal.id))
+    for query in queries:
+        for trader_id, at in sess.execute(query):
+            if trader_id in real and at is not None:
+                real[trader_id].days_active.add(at.astimezone(ZONE).date())
+
+
+def _journey(reader: _Reader) -> list[dict]:
+    """Each step on its own, because one word hid the rest. Reaching the reveal leaves no trace."""
+    chapter = f"chapter {reader.furthest_chapter}" if reader.furthest_chapter else "chapter"
+    return [{"label": label, "done": done} for label, done in (
+        ("consent", reader.consented), ("file", bool(reader.uploads)),
+        (chapter, bool(reader.furthest_chapter)),
+        ("journal", reader.journal_opened or bool(reader.journals_written)),
+        ("budget", reader.budget))]
+
+
+def _pay_progress(reader: _Reader, now: datetime) -> str:
+    """How close the would-pay question is, by the rule in wtp.should_ask."""
+    settled = reader.uploads >= 2 or (reader.first_upload is not None and (
+        now - reader.first_upload).days >= k.WTP_DAYS_SINCE_FIRST_UPLOAD)
+    return (f"{reader.journals_opened} of {WTP.JOURNALS_BEFORE_ASKING} journals; "
+            f"settled in: {'yes' if settled else 'no'}")
 
 
 def _on_current(reader: _Reader, running_version: str) -> str:
@@ -367,7 +393,12 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
     return {
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
-        "step": _step(reader),
+        "journey": _journey(reader),
+        "files_uploaded": reader.uploads,
+        "first_upload": _when(reader.first_upload),
+        "days_active": len(reader.days_active),
+        "journals_opened": reader.journals_opened,
+        "pay_progress": _pay_progress(reader, datetime.now(UTC)),
         "rows_read": _rows_read(latest) if latest else NOT_RECORDED,
         # A set-aside row was read and not refused. Older readings counted it in both.
         "rows_refused": (max(0, latest.rows_in - latest.rows_parsed - latest.rows_excluded)
@@ -440,6 +471,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     readers, drawers = _read_dwell(sess, real)
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
+    _read_active_days(sess, real)
     wtp_answers = _read_features(sess, real)
     wtp_asked = sum(1 for t in sess.scalars(select(m.WtpAsked.trader_id)) if t in real)
     deleted, last_deleted = sess.execute(
