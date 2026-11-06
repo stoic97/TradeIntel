@@ -55,10 +55,10 @@ def engine(app):
     return app.state.engine
 
 
-def add_trader(engine, login_id, *, dev=False, name=None) -> int:
+def add_trader(engine, login_id, *, dev=False, name=None, joined=THEN) -> int:
     with make_session(engine) as sess:
         trader = m.Trader(display_name=name or login_id.title(), login_id=login_id,
-                          password_hash="not-a-real-hash", created_at=THEN,
+                          password_hash="not-a-real-hash", created_at=joined,
                           development_data=dev)
         sess.add(trader)
         sess.commit()
@@ -127,6 +127,15 @@ def add_budget(sess, trader_id, at=THEN):
                                      declared_at=at))
 
 
+def add_charges(sess, trader_id, *, days="{}", at=THEN) -> m.ChargeStatement:
+    raw = m.RawFile(trader_id=trader_id, sha256=f"charges-{trader_id}", original_name="charges.csv",
+                    size=1, stored_path="nowhere", uploaded_at=at)
+    sess.add(raw)
+    sess.flush()
+    return m.ChargeStatement(trader_id=trader_id, raw_file_id=raw.id, reader="made-up", days=days,
+                             uploaded_at=at)
+
+
 def add_consent(sess, trader_id, *, granted=True, purpose=s.ConsentPurpose.DIAGNOSIS, at=THEN):
     sess.add(m.ConsentEvent(trader_id=trader_id, purpose=purpose, scope="v1", terms_version="1",
                             granted=granted, at=at, method="web", wording_shown="the words"))
@@ -168,6 +177,7 @@ def seed_everything(engine, trader_id: int) -> None:
                              free_text=f"not at {PLANTED_RUPEES}", uploads_so_far=1,
                              days_since_first_upload=1, asked_at=THEN))
         add_budget(sess, trader_id)
+        sess.add(add_charges(sess, trader_id, days='{"2026-03-02": "55504"}'))
         sess.commit()
 
 
@@ -421,7 +431,8 @@ def test_no_rupee_sign_or_money_field_on_a_page_seeded_with_them(app, engine):
     page = admin_page(app, engine)
     assert "₹" not in page
     assert "98,765" not in page
-    for figure in ("4321", "876543", "55501", "55502", "55503"):  # the budget, the capital, a trade
+    # the budget, the capital, a trade, a day's charges
+    for figure in ("4321", "876543", "55501", "55502", "55503", "55504"):
         assert figure not in page, figure
     for field in ("p&amp;l", "p&l", "pnl", "gross", "capital", "premium"):
         assert field not in page.lower(), field
@@ -725,15 +736,163 @@ def test_budget_shows_that_it_is_set_not_what_it_is(app, engine):
     assert row_of(view(app, engine), "someone")["budget"] == "set"
 
 
-def test_last_seen_is_the_latest_of_dwell_journal_and_upload(app, engine):
+def test_last_activity_is_the_latest_of_dwell_journal_and_upload(app, engine):
     trader_id = add_trader(engine, "someone")
-    assert row_of(view(app, engine), "someone")["last_seen"] == "—"
     with make_session(engine) as sess:
         imp = add_import(sess, trader_id, at=THEN)
         add_dwell(sess, trader_id, "money", at=THEN + timedelta(days=1))
         add_field_entry(sess, add_journal(sess, trader_id, imp.id).id, at=THEN + timedelta(days=2))
         sess.commit()
-    assert row_of(view(app, engine), "someone")["last_seen"] == "04 Mar 2026 10:00"  # 04:30 UTC, in IST
+    assert row_of(view(app, engine), "someone")["last_activity"] == "04 Mar 2026 10:00"  # 04:30 UTC, in IST
+
+
+LATER = THEN + timedelta(days=10)
+LATER_WORDS = "12 Mar 2026 10:00"  # 04:30 UTC, in IST
+"""Each source below is the one thing stored that late, so only it can give this time."""
+
+
+def consent_at(sess, trader_id, imp):
+    add_consent(sess, trader_id, at=LATER)
+
+
+def withdrawal_at(sess, trader_id, imp):
+    add_consent(sess, trader_id, granted=False, at=LATER)
+
+
+def upload_at(sess, trader_id, imp):
+    add_import(sess, trader_id, at=LATER)
+
+
+def reading_at(sess, trader_id, imp):
+    add_dwell(sess, trader_id, "money", at=LATER)
+
+
+def chapter_answer_at(sess, trader_id, imp):
+    sess.add(m.ChapterFeedback(trader_id=trader_id, chapter=1, answer="accurate", import_id=imp.id,
+                               answered_at=LATER))
+
+
+def chapter_reason_at(sess, trader_id, imp):
+    answer = m.ChapterFeedback(trader_id=trader_id, chapter=1, answer="wrong", import_id=imp.id,
+                               answered_at=THEN)
+    sess.add(answer)
+    sess.flush()
+    sess.add(m.ChapterFeedbackReason(feedback_id=answer.id, reason="wrong_facts", given_at=LATER))
+
+
+def report_answer_at(sess, trader_id, imp):
+    sess.add(m.ReportFeedback(trader_id=trader_id, import_id=imp.id, answer="accurate",
+                              answered_at=LATER))
+
+
+def journal_opened_at(sess, trader_id, imp):
+    add_journal(sess, trader_id, imp.id, opened=LATER)
+
+
+def journal_written_at(sess, trader_id, imp):
+    add_field_entry(sess, add_journal(sess, trader_id, imp.id).id, at=LATER)
+
+
+def budget_at(sess, trader_id, imp):
+    add_budget(sess, trader_id, at=LATER)
+
+
+def charges_at(sess, trader_id, imp):
+    sess.add(add_charges(sess, trader_id, at=LATER))
+
+
+def guess_at(sess, trader_id, imp):
+    sess.add(m.GuessAnswer(trader_id=trader_id, answer="unknown", labels_version="x",
+                           import_id=imp.id, answered_at=LATER))
+
+
+def leaving_shown_at(sess, trader_id, imp):
+    sess.add(m.LeavingCardShown(trader_id=trader_id, copy_version="x", shown_at=LATER))
+
+
+def leaving_answered_at(sess, trader_id, imp):
+    sess.add(m.LeavingCardAnswer(trader_id=trader_id, outcome="answered", answer="words",
+                                 copy_version="x", answered_at=LATER))
+
+
+def would_pay_asked_at(sess, trader_id, imp):
+    journal = add_journal(sess, trader_id, imp.id)
+    sess.add(m.WtpAsked(trader_id=trader_id, journal_id=journal.id, asked_at=LATER))
+
+
+def would_pay_answered_at(sess, trader_id, imp):
+    journal = add_journal(sess, trader_id, imp.id)
+    sess.add(m.WtpAnswer(trader_id=trader_id, journal_id=journal.id, answer="no",
+                         uploads_so_far=1, days_since_first_upload=1, asked_at=LATER))
+
+
+@pytest.mark.parametrize("source", [
+    consent_at, withdrawal_at, upload_at, reading_at, chapter_answer_at, chapter_reason_at,
+    report_answer_at, journal_opened_at, journal_written_at, budget_at, charges_at, guess_at,
+    leaving_shown_at, leaving_answered_at, would_pay_asked_at, would_pay_answered_at,
+], ids=lambda source: source.__name__)
+def test_last_activity_counts_every_stored_action_of_his(app, engine, source):
+    # TICKET-866: what needs an import has one at sign-up time, so it cannot give the time.
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=THEN)
+        source(sess, trader_id, imp)
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["last_activity"] == LATER_WORDS
+
+
+def test_a_journal_the_upload_generated_is_no_activity_of_his(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=THEN)
+        journal = add_journal(sess, trader_id, imp.id)
+        assert journal.generated_at == THEN
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["last_activity"] == "02 Mar 2026 10:00"
+
+
+def test_an_account_that_only_signed_up_shows_its_sign_up_time_in_both(app, engine):
+    add_trader(engine, "someone")
+    row = row_of(view(app, engine), "someone")
+    assert row["signed_up"] == row["last_activity"] == "02 Mar 2026 10:00"
+
+
+def test_signed_up_stays_when_later_activity_moves_the_other(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id, at=LATER)
+        sess.commit()
+    row = row_of(view(app, engine), "someone")
+    assert (row["signed_up"], row["last_activity"]) == ("02 Mar 2026 10:00", LATER_WORDS)
+
+
+def test_an_account_stored_before_sign_up_times_were_kept_shows_no_time_and_sorts_last(app, engine):
+    add_trader(engine, "old", joined=None)
+    add_trader(engine, "someone")
+    the_view = view(app, engine)
+    row = row_of(the_view, "old")
+    assert (row["signed_up"], row["last_activity"]) == ("—", "—")
+    assert the_view["rows"][-1]["login_id"] == "old"
+
+
+def test_the_table_sorts_by_last_activity_whatever_the_source(app, engine):
+    add_trader(engine, "signed-up-late", joined=THEN + timedelta(days=2))
+    budget_latest, uploaded = add_trader(engine, "budget-latest"), add_trader(engine, "uploaded")
+    with make_session(engine) as sess:
+        add_import(sess, uploaded, at=THEN + timedelta(days=1))
+        add_budget(sess, budget_latest, at=THEN + timedelta(days=3))
+        sess.commit()
+    assert [r["login_id"] for r in view(app, engine)["rows"]] == [
+        "budget-latest", "signed-up-late", "uploaded"]
+
+
+def test_the_page_names_the_columns_and_says_the_time_is_a_floor(app, engine):
+    add_trader(engine, "someone")
+    page = admin_page(app, engine)
+    assert "<th>Signed up</th><th>Last activity</th>" in page
+    assert "Last seen" not in page
+    assert "<strong>Last activity:</strong>" in page
+    assert "a visit that writes nothing can't show" in page.replace("&#39;", "'")
 
 
 # ---------- On current code ----------
