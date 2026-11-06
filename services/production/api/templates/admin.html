@@ -5,7 +5,7 @@
 {% block head_scripts %}{% endblock %}
 {% block content %}
   <h1 class="title">Admin</h1>
-  <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. Development accounts are left out of everything until their own list at the end.</p>
+  <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. {{ dev_left_out }} of everything until their own list at the end.</p>
 
   <section class="admin__cards">
     <div class="card"><p class="label">Signed up / uploaded</p><p class="heading">{{ cards.signed_up|count }} / {{ cards.uploaded|count }}</p></div>

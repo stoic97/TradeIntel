@@ -407,6 +407,14 @@ def _most_opened(drawers: dict[str, int]) -> str:
     return SM.FACTS[max(drawers, key=lambda key: drawers[key])].title
 
 
+def _left_out(count: int) -> str:
+    """How many accounts the cards do not count, so a low number is not misread."""
+    if count == 0:
+        return "No development accounts are left out"
+    return ("1 development account is left out" if count == 1
+            else f"{formatting.count(count)} development accounts are left out")
+
+
 def build(sess: Session, *, running_version: str, production: bool) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
@@ -486,6 +494,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             "last_deletion": _when(last_deleted),
             "consent_declines": declines,
         },
+        "dev_left_out": _left_out(sum(1 for a in accounts if a.development_data)),
         "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(a.login_id),
                           "joined": _when(a.created_at)}
                          for a in accounts if a.development_data],
