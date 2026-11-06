@@ -16,6 +16,23 @@
   </section>
   <p class="body-small admin__note">The reveal is a plain page view that writes nothing, and every later step can be reached without it, so nothing stored proves it was seen.</p>
 
+  <h2 class="heading admin__head">System health</h2>
+  <dl class="admin__quiet body-small">
+    <dt>Would an upload work right now?</dt><dd>{{ health.upload.answer }}. One account can still reach its cap of {{ health.upload.daily_cap|count }} files in a day.</dd>
+    <dt>Disk</dt><dd>{{ health.disk }}</dd>
+    <dt>Database</dt><dd>{{ health.database_size }}</dd>
+    <dt>Stored files</dt><dd>{{ health.stored_size }}</dd>
+    <dt>Running deploy</dt><dd><span class="num">{{ running_version }}</span>, started {{ health.started }}</dd>
+    <dt>Server errors since restart</dt><dd>{{ health.server_errors|count }}</dd>
+  </dl>
+  <h3 class="label admin__head">Refused since restart</h3>
+  <dl class="admin__quiet body-small">
+  {%- for line in health.refusals %}
+    <dt>{{ line.label }}</dt><dd>{{ line.count|count }}</dd>
+  {%- endfor %}
+  </dl>
+  <p class="body-small admin__note">Read when this page loads. These refusals leave no row, so nothing else here can show them. The counts are held in memory with no trader against them, and a restart sets them back to nothing. A server error is a request that crashed; a refusal is not one. The app can't read backups, so this page says nothing about whether they ran: check them by <code>docs/runbooks/deploy.md</code>, section 5.</p>
+
   <h2 class="heading admin__head">Traders</h2>
   <div class="admin__scroll">
     <table class="table admin__table">

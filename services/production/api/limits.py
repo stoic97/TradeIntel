@@ -129,6 +129,50 @@ class HourlyCount:
             return set(self._seen)
 
 
+SAME_FILE = "Same file again"
+DAILY_CAP = "Daily file cap"
+SIGNUP_CAP = "Sign-up cap"
+FILE_TOO_LARGE = "File too large"
+DISK_FULL = "Disk nearly full"
+UNVERIFIED_MAP = "Unverified broker map"
+REFUSAL_KINDS = (SAME_FILE, DAILY_CAP, SIGNUP_CAP, FILE_TOO_LARGE, DISK_FULL, UNVERIFIED_MAP)
+
+
+class SinceRestart:
+    """Refusals that leave no row, and requests that crashed, for /admin (TICKET-871).
+
+    A count per kind and nothing else, in memory: no trader, no address, no time, and a
+    restart forgets it. A kind outside the list is an error, so a key can't turn into an id.
+    """
+
+    def __init__(self) -> None:
+        self._refusals = dict.fromkeys(REFUSAL_KINDS, 0)
+        self._errors = 0
+        self._lock = threading.Lock()
+
+    def add(self, kind: str) -> None:
+        with self._lock:
+            if kind not in self._refusals:
+                raise KeyError(kind)
+            self._refusals[kind] += 1
+
+    def add_error(self) -> None:
+        with self._lock:
+            self._errors += 1
+
+    def refusals(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._refusals)
+
+    def errors(self) -> int:
+        with self._lock:
+            return self._errors
+
+
+def count_refusal(request: Request, kind: str) -> None:
+    request.app.state.since_restart.add(kind)
+
+
 def network(host: str | None) -> str:
     """The key a connection is counted under: its address, or its /64 on IPv6."""
     if not host:
@@ -158,15 +202,26 @@ def disk_used_percent(path: Path) -> float:
     return usage.used * 100 / (usage.used + usage.free)
 
 
-def _disk_nearly_full(path: Path) -> bool:
+def past_the_line(used: float | None) -> bool:
+    """The refusal line, for the upload path and for /admin's answer about it. A check that
+    can't read the disk says nothing about it, and shutting uploads for that would be the
+    check taking the app down, so no reading is not past it."""
+    return used is not None and used >= k.UPLOADS_REFUSED_AT_DISK_PERCENT
+
+
+def disk_reading(path: Path) -> float | None:
     try:
-        used = disk_used_percent(path)
+        return disk_used_percent(path)
     except OSError:
-        # A check that can't read the disk says nothing about it, and shutting uploads for
-        # that would be the check taking the app down.
+        return None
+
+
+def _disk_nearly_full(path: Path) -> bool:
+    used = disk_reading(path)
+    if used is None:
         logger.warning("could not read the disk under %s; uploads stay open", path)
         return False
-    if used >= k.UPLOADS_REFUSED_AT_DISK_PERCENT:
+    if past_the_line(used):
         logger.warning("uploads refused: disk is %.1f%% full (line is %d%%)",
                        used, k.UPLOADS_REFUSED_AT_DISK_PERCENT)
         return True
@@ -195,8 +250,10 @@ class Refusal:
 def upload_refusal(request: Request, sess, trader: m.Trader) -> Refusal | None:
     """Why this file can't be taken before it is read, or None if it can."""
     if _disk_nearly_full(request.app.state.settings.file_store):
+        count_refusal(request, DISK_FULL)
         return Refusal(503, DISK_NEARLY_FULL, DAY_SECONDS)
     if _files_today(sess, trader) >= k.UPLOADS_PER_ACCOUNT_PER_DAY:
+        count_refusal(request, DAILY_CAP)
         tomorrow = _start_of_today() + timedelta(days=1)
         wait = math.ceil((tomorrow - datetime.now(INDIA)).total_seconds())
         return Refusal(429, uploads_refused(), max(wait, 1))
@@ -210,6 +267,29 @@ def with_retry_after(response, seconds: int):
 
 def plain_refusal(_scope: Scope) -> HTMLResponse:
     return HTMLResponse(TOO_LARGE, status_code=413)
+
+
+def _count_too_large(scope: Scope) -> None:
+    app = scope.get("app")  # this runs ahead of the routes, and can run with no app at all
+    if app is not None:
+        app.state.since_restart.add(FILE_TOO_LARGE)
+
+
+class ErrorCount:
+    """Count a request that crashed, and let it go on to the error page as it would have.
+
+    An unhandled exception only: a refusal is an answer, whatever its status, and a failure
+    a route already catches has told the trader what happened."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await self.app(scope, receive, send)
+        except Exception:
+            scope["app"].state.since_restart.add_error()
+            raise
 
 
 class BodyCap:
@@ -231,6 +311,7 @@ class BodyCap:
         stated = dict(scope["headers"]).get(b"content-length")
         if stated is not None and stated.isdigit():
             if int(stated) > k.MAX_REQUEST_BYTES:
+                _count_too_large(scope)
                 await self.refuse(scope)(scope, receive, send)
                 return
             await self.app(scope, receive, send)
@@ -243,6 +324,7 @@ class BodyCap:
             message = await receive()
             read += len(message.get("body", b""))
             if read > k.MAX_REQUEST_BYTES:
+                _count_too_large(scope)
                 raise HTTPException(status_code=413, detail=TOO_LARGE)
             return message
 

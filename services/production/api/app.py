@@ -10,6 +10,7 @@ accident as well as by intent.
 from __future__ import annotations
 
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -73,6 +74,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.login_ids = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_ID_PER_HOUR)
     app.state.login_connections = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_IP_PER_HOUR)
     app.add_middleware(limits.BodyCap, refuse=_body_too_large)
+    app.state.since_restart = limits.SinceRestart()
+    app.state.started_at = datetime.now(UTC)
+    app.add_middleware(limits.ErrorCount)
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 
     app.include_router(routes_home.router)

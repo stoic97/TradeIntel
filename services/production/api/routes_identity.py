@@ -177,6 +177,7 @@ def signup(
     connection = limits.connection(request)
     wait = request.app.state.signups.wait_seconds(connection)
     if wait:
+        limits.count_refusal(request, limits.SIGNUP_CAP)
         return limits.with_retry_after(
             page(request, "signup.html", status_code=429, title="Create your account",
                  error=limits.signups_refused(wait)),
