@@ -122,7 +122,8 @@ class _Reader:
     guess: bool = False
     leaving: str | None = None
     wtp: str | None = None
-    seen: list[datetime] = field(default_factory=list)
+    signed_up: datetime | None = None
+    seen: list[datetime] = field(default_factory=list)  # every stored action of his, sign-up first
 
 
 def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
@@ -193,14 +194,16 @@ def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     lines = []
     chapter_rows = sess.execute(
         select(m.ChapterFeedback.trader_id, m.ChapterFeedback.chapter, m.ChapterFeedback.answer,
-               m.ChapterFeedbackReason.reason, m.ChapterFeedback.answered_at)
+               m.ChapterFeedbackReason.reason, m.ChapterFeedback.answered_at,
+               m.ChapterFeedbackReason.given_at)
         .outerjoin(m.ChapterFeedbackReason,
                    m.ChapterFeedbackReason.feedback_id == m.ChapterFeedback.id)
     ).all()
-    for trader_id, chapter, answer, reason, at in chapter_rows:
+    for trader_id, chapter, answer, reason, at, reason_at in chapter_rows:
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen += [at, reason_at] if reason_at else [at]
         said = FB.ANSWERS.get(answer, NOT_RECORDED)
         why = FB.REASONS.get(reason)
         reader.chapters[chapter] = f"{said}: {why}" if why else said
@@ -217,6 +220,7 @@ def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen.append(at)
         said = FB.ANSWERS.get(answer, NOT_RECORDED)
         if trading_day == FB.WHOLE_REPORT:
             reader.report = _with_note(said, noted)
@@ -252,26 +256,43 @@ def _read_journals(sess: Session, real: dict[int, _Reader]) -> None:
 
 def _read_features(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
     """Budget, guess, leaving card and willingness to pay. Returns the answers to the last."""
-    for trader_id in sess.scalars(select(m.RiskBudgetDeclaration.trader_id).distinct()):
+    for trader_id, at in sess.execute(
+        select(m.RiskBudgetDeclaration.trader_id, m.RiskBudgetDeclaration.declared_at)
+    ):
         if trader_id in real:
             real[trader_id].budget = True
-    for trader_id in sess.scalars(select(m.GuessAnswer.trader_id)):
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(
+        select(m.ChargeStatement.trader_id, m.ChargeStatement.uploaded_at)
+    ):
+        if trader_id in real:
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(select(m.GuessAnswer.trader_id, m.GuessAnswer.answered_at)):
         if trader_id in real:
             real[trader_id].guess = True
-    for trader_id in sess.scalars(select(m.LeavingCardShown.trader_id)):
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(
+        select(m.LeavingCardShown.trader_id, m.LeavingCardShown.shown_at)
+    ):
         if trader_id in real:
             real[trader_id].leaving = "shown"
-    for trader_id, outcome in sess.execute(
-        select(m.LeavingCardAnswer.trader_id, m.LeavingCardAnswer.outcome)
+            real[trader_id].seen.append(at)
+    for trader_id, outcome, at in sess.execute(
+        select(m.LeavingCardAnswer.trader_id, m.LeavingCardAnswer.outcome,
+               m.LeavingCardAnswer.answered_at)
     ):
         if trader_id in real:
             real[trader_id].leaving = outcome if outcome in (LC.ANSWERED, LC.DISMISSED) else "shown"
+            real[trader_id].seen.append(at)
 
     answers = dict.fromkeys(("yes", "no", "maybe"), 0)
-    for trader_id, answer, noted in sess.execute(
-        select(m.WtpAnswer.trader_id, m.WtpAnswer.answer, m.WtpAnswer.free_text.is_not(None))
+    for trader_id, answer, noted, at in sess.execute(
+        select(m.WtpAnswer.trader_id, m.WtpAnswer.answer, m.WtpAnswer.free_text.is_not(None),
+               m.WtpAnswer.asked_at)
         .order_by(m.WtpAnswer.id)
     ):
+        if trader_id in real:
+            real[trader_id].seen.append(at)
         if trader_id in real and answer in WTP.ANSWERS:
             answers[answer] += 1
             real[trader_id].wtp = _with_note(answer, noted)
@@ -409,7 +430,8 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "guess": "answered" if reader.guess else ("no" if guess_on else NOT_RECORDED),
         "leaving": reader.leaving or ("no" if leaving_on else NOT_RECORDED),
         "wtp": reader.wtp or NOT_RECORDED,
-        "last_seen": _when(max(reader.seen, default=None)),
+        "signed_up": _when(reader.signed_up),
+        "last_activity": _when(max(reader.seen, default=None)),
     }
 
 
@@ -452,16 +474,19 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
                m.Trader.development_data).order_by(m.Trader.id)
     ).all()
-    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id)
+    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id,
+                          signed_up=a.created_at, seen=[a.created_at] if a.created_at else [])
             for a in accounts if not a.development_data}
 
     declines = 0
-    for trader_id, purpose, granted in sess.execute(
-        select(m.ConsentEvent.trader_id, m.ConsentEvent.purpose, m.ConsentEvent.granted)
+    for trader_id, purpose, granted, at in sess.execute(
+        select(m.ConsentEvent.trader_id, m.ConsentEvent.purpose, m.ConsentEvent.granted,
+               m.ConsentEvent.at)
     ):
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen.append(at)
         if not granted:
             declines += 1
         elif purpose is s.ConsentPurpose.DIAGNOSIS:
@@ -480,7 +505,11 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
     wtp_answers = _read_features(sess, real)
-    wtp_asked = sum(1 for t in sess.scalars(select(m.WtpAsked.trader_id)) if t in real)
+    wtp_asked = 0
+    for trader_id, at in sess.execute(select(m.WtpAsked.trader_id, m.WtpAsked.asked_at)):
+        if trader_id in real:
+            wtp_asked += 1
+            real[trader_id].seen.append(at)
     deleted, last_deleted = sess.execute(
         select(func.count(), func.max(m.DeletionRecord.completed_at))
     ).one()

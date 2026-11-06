@@ -22,7 +22,7 @@
       <thead><tr>
         <th>Trader</th><th>Login id</th><th>File</th><th>Furthest step</th><th>Rows read</th><th>Rows refused</th><th>Files refused</th><th>Duplicates flagged</th><th>On current code</th><th>Facts read</th><th>In the report</th><th>Drawer opens</th>
         {%- for n in feedback_chapters %}<th>Chapter {{ n }} match?</th>{% endfor -%}
-        <th>Whole report</th><th>Journals written</th><th>Budget</th><th>Guess</th><th>Leaving card</th><th>Would pay</th><th>Last seen</th>
+        <th>Whole report</th><th>Journals written</th><th>Budget</th><th>Guess</th><th>Leaving card</th><th>Would pay</th><th>Signed up</th><th>Last activity</th>
       </tr></thead>
       <tbody>
       {%- for row in rows %}
@@ -31,7 +31,7 @@
           <td{% if row.on_current == "no" %} class="admin__stale"{% endif %}>{{ row.on_current }}</td>
           <td>{{ row.facts_read }}</td><td>{{ row.minutes }}</td><td>{{ row.drawer_opens }}</td>
           {%- for said in row.chapters %}<td>{{ said }}</td>{% endfor -%}
-          <td>{{ row.report }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td><td>{{ row.guess }}</td><td>{{ row.leaving }}</td><td>{{ row.wtp }}</td><td>{{ row.last_seen }}</td>
+          <td>{{ row.report }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td><td>{{ row.guess }}</td><td>{{ row.leaving }}</td><td>{{ row.wtp }}</td><td>{{ row.signed_up }}</td><td>{{ row.last_activity }}</td>
         </tr>
       {%- else %}
         <tr><td colspan="7">No traders yet.</td></tr>
@@ -46,6 +46,7 @@
     <li><strong>Facts read, in the report:</strong> a fact counts once its heading has been on screen for a second and then left it. A fact page closed with its heading still on screen sends nothing, so these are floors. Old dwell keys count as the fact they moved to.</li>
     <li><strong>Drawer opens:</strong> no page has a drawer now, so this can only be older events.</li>
     <li><strong>Refused, duplicates:</strong> rows are from the latest file read. Files refused counts stored refusals. A byte-identical re-upload is refused before anything is written, so those refusals are not visible here.</li>
+    <li><strong>Last activity:</strong> the latest thing stored about this trader: sign-up, consent, an upload, reading, an answer, a journal opened or written, a budget, a charges file, the guess, the leaving card or would pay. It is a floor: a visit that writes nothing can't show. The table is sorted by it. An account from before sign-up times were kept can show "—".</li>
     <li><strong>Notes:</strong> what a trader typed is not shown, only that a note exists.</li>
     {%- if features_off %}
     <li><strong>Switched off here:</strong> {{ features_off|join(", ") }}. "—" until the trader-facing feature is on.</li>
