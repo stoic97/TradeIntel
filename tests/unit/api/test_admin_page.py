@@ -132,6 +132,15 @@ def add_consent(sess, trader_id, *, granted=True, purpose=s.ConsentPurpose.DIAGN
                             granted=granted, at=at, method="web", wording_shown="the words"))
 
 
+def add_charges(sess, trader_id, *, at=THEN):
+    raw = m.RawFile(trader_id=trader_id, sha256=f"charges-{trader_id}", original_name="charges.csv",
+                    size=1, stored_path="nowhere", uploaded_at=at)
+    sess.add(raw)
+    sess.flush()
+    sess.add(m.ChargeStatement(trader_id=trader_id, raw_file_id=raw.id, reader="made-up", days="{}",
+                               uploaded_at=at))
+
+
 def seed_everything(engine, trader_id: int) -> None:
     """One of every row the page reads, with a rupee figure wherever free text can hold one."""
     with make_session(engine) as sess:
@@ -821,8 +830,61 @@ def test_the_feed_is_newest_first_and_says_who_and_what(app, engine):
         "someone answered Wrong on chapter 2",
         "someone opened a drawer: Where the money came from",
         "someone uploaded a file: 8 of 10 rows read",
-        f"First import on code {RUNNING}",
+        "someone signed up",
     ]
+
+
+def test_the_feed_opens_with_a_trader_signing_up_and_consenting(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id, at=THEN + timedelta(minutes=1))
+        add_consent(sess, trader_id, granted=False, at=THEN + timedelta(minutes=2))
+        sess.commit()
+    assert feed_text(app, engine) == ["someone withdrew consent for diagnosis",
+                                      "someone gave consent for diagnosis", "someone signed up"]
+
+
+def test_a_budget_line_says_one_was_set_and_never_the_amount(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal("98765"),
+                                         effective_from="2026-03-02",
+                                         declared_at=THEN + timedelta(hours=1)))
+        sess.commit()
+    said = feed_text(app, engine)
+    assert said[0] == "someone set a budget"
+    assert "98765" not in " ".join(said)
+
+
+def test_a_charges_file_and_a_deleted_account_each_have_a_line(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_charges(sess, trader_id, at=THEN + timedelta(hours=1))
+        sess.add(m.DeletionRecord(trader_id=9999, requested_at=THEN, completed_at=THEN + timedelta(hours=2)))
+        sess.commit()
+    assert feed_text(app, engine)[:2] == ["An account was deleted", "someone added a charges file"]
+
+
+def test_each_day_is_headed_once_in_ist(app, engine):
+    add_trader(engine, "first")
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id, at=THEN + timedelta(days=1))
+        add_consent(sess, trader_id, at=THEN + timedelta(days=1, minutes=1))
+        sess.commit()
+    heads = [line["day_head"] for line in view(app, engine)["feed"]]
+    assert [bool(h) for h in heads] == [True, False, True, False]
+    assert heads[0] != heads[2]
+
+
+def test_the_page_draws_day_heads_and_the_code_versions_apart_from_the_feed(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, version=OLD)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "admin__feed-day" in page
+    assert "First import on code" in page and OLD in page[page.index("</ol>"):]
 
 
 def test_the_feed_has_a_limit(app, engine):
@@ -881,8 +943,8 @@ def test_a_deploy_can_only_be_the_first_import_on_a_version(app, engine):
         add_import(sess, other, version=RUNNING, at=THEN + timedelta(hours=2))
         add_import(sess, other, version="unknown", at=THEN + timedelta(hours=3))
         sess.commit()
-    versions = [t for t in feed_text(app, engine) if t.startswith("First import on code")]
-    assert versions == [f"First import on code {RUNNING}", f"First import on code {OLD}"]
+    assert [c["version"] for c in view(app, engine)["code_seen"]] == [RUNNING, OLD]
+    assert not [t for t in feed_text(app, engine) if t.startswith("First import on code")]
 
 
 def test_feed_lines_for_a_day_and_a_whole_report_say_a_note_exists_and_no_more(app, engine):
@@ -979,7 +1041,7 @@ def test_a_development_account_has_no_row_and_no_line_and_is_listed_apart(app, e
     seed_everything(engine, add_trader(engine, "tester", dev=True, name="Test Account"))
     the_view = view(app, engine)
     assert [r["login_id"] for r in the_view["rows"]] == ["real"]
-    assert the_view["feed"] == []
+    assert [line["text"] for line in the_view["feed"]] == ["real signed up"]
     assert [(d["login_id"], d["name"]) for d in the_view["dev_accounts"]] == [("tester", "Test Account")]
 
 
