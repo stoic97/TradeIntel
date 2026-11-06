@@ -22,8 +22,8 @@ MAX_UPLOAD_ROWS = 50_000
 MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 1024 * 1024
 
 SIGNUPS_PER_IP_PER_HOUR = 10
-LOGIN_FAILURES_PER_ID_PER_HOUR = 10
-LOGIN_FAILURES_PER_IP_PER_HOUR = 30
+LOGIN_FAILURES_PER_ID_PER_HOUR = 20
+LOGIN_FAILURES_PER_IP_PER_HOUR = 100
 UPLOADS_PER_ACCOUNT_PER_DAY = 20
 UPLOADS_REFUSED_AT_DISK_PERCENT = 85
 
@@ -83,13 +83,13 @@ ARGUMENTS: dict[str, str] = {
     "LOGIN_FAILURES_PER_ID_PER_HOUR": (
         "Enough for a person who has forgotten a password to try everything they use. It "
         "stops guessing one account from many addresses. A stranger can use it to keep an "
-        "owner out for up to an hour, which is the price of the cap. A placeholder until "
-        "the reviewer sets it."
+        "owner out for up to an hour, which is the price of the cap, so it is set high: "
+        "the founder's call, 6 Nov 2026."
     ),
     "LOGIN_FAILURES_PER_IP_PER_HOUR": (
-        "Three times the per-id number, because Indian mobile networks put many people behind "
-        "one address. It stops one connection walking through many login ids. A placeholder "
-        "until the reviewer sets it."
+        "Five times the per-id number, because Indian mobile networks put many people behind "
+        "one address. It stops one connection walking through many login ids. Set high: the "
+        "founder's call, 6 Nov 2026."
     ),
     "UPLOADS_PER_ACCOUNT_PER_DAY": (
         "A trader sends a file, gets the wrong report, sends the right one, and perhaps a "
