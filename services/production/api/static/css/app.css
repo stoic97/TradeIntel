@@ -258,11 +258,18 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   .bottom-nav__item { height: 44px; margin-top: 0; padding: 0 14px; border-top: 0; font-size: 15px; color: var(--color-ink); }
   .bottom-nav__item[aria-current="page"] { border-bottom: 2px solid var(--color-action-blue); }
 
-  .screen:has(> .stage) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 600px) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-8); align-items: start; padding-bottom: var(--space-16); }
-  .screen:has(> .stage) > .bottom-nav { grid-column: 1 / -1; grid-row: 1; }
-  .screen:has(> .stage) > .stage { grid-column: 2; grid-row: 2; position: sticky; top: 104px; margin-top: var(--space-8); padding-bottom: var(--space-6); border-radius: var(--radius-card); }
-  .screen:has(> .stage) > .screen__body { grid-column: 3; grid-row: 2; max-width: none; margin: 0; padding: var(--space-8) 0 0; }
+  /* The dial beside the story: report pages only. The signed-out door has a stage too, and the
+     kit draws it for a phone only (TICKET-857), so it keeps its shape below. */
+  .screen:has(> .stage:not(.stage--door)) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 600px) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-8); align-items: start; padding-bottom: var(--space-16); }
+  .screen:has(> .stage:not(.stage--door)) > .bottom-nav { grid-column: 1 / -1; grid-row: 1; }
+  .screen:has(> .stage:not(.stage--door)) > .stage { grid-column: 2; grid-row: 2; position: sticky; top: 104px; margin-top: var(--space-8); padding-bottom: var(--space-6); border-radius: var(--radius-card); }
+  .screen:has(> .stage:not(.stage--door)) > .screen__body { grid-column: 3; grid-row: 2; max-width: none; margin: 0; padding: var(--space-8) 0 0; }
   .stage .scope { width: min(100%, 460px); }
+
+  /* The door (TICKET-857): the phone's shape at the page's width. The navy band runs edge to
+     edge, its words start where the form's do (the 760px column and its 64px gutter), and the
+     form follows - nothing floats beside it, and no white sits under it. */
+  .stage--door { padding-block: var(--space-10); padding-inline: max(var(--space-5), calc((100% - 760px) / 2 + var(--space-16))); }
 
   .screen__body--fact { max-width: 1312px; display: grid; grid-template-columns: minmax(0, 700px) minmax(0, 520px); grid-template-rows: repeat(14, auto) 1fr; column-gap: var(--space-16); justify-content: center; align-items: start; }
   .screen__body--fact > * { grid-column: 1; min-width: 0; }
