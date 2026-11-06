@@ -87,7 +87,8 @@ def test_an_in_app_page_names_its_tab_and_gets_the_bottom_nav():
                   '{% block content %}<p>Body</p>{% endblock %}')
     items = re.findall(r'<a class="bottom-nav__item" href="([^"]+)"( aria-current="page")?>([^<]+)</a>',
                        html)
-    assert items == [("/mirror", "", "Scope"),
+    assert items == [("/", "", "Home"),  # TICKET-860: a way back to Home on every in-app page
+                     ("/mirror", "", "Scope"),
                      ("/journals", ' aria-current="page"', "Journal"),
                      ("/account", "", "Account")]
     assert 'class="screen__body screen__body--with-nav"' in html
