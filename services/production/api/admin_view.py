@@ -38,10 +38,12 @@ from services.shared.schemas import scope_v1 as s
 
 NOT_RECORDED = "—"
 FEED_LENGTH = 40
+TRAIL_LENGTH = 20
 MINUTE_MS = 60 * 1000
 ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
+VIEW_ACTION = "admin_view"
 MIRROR_LINE = "mirror_line"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
                    s.RowFlag.TRADER_CONFIRMED_DUPLICATE)
@@ -81,6 +83,30 @@ def _span(ms: float | None) -> str:
 def _name(text: str) -> str:
     """A name is free text too, so even here the page keeps its one promise about rupees."""
     return text.replace(formatting.RUPEE, "")
+
+
+def _shown_id(login_id: str) -> str:
+    """A login id that is an email is someone's address, and this page gets screenshotted, so
+    it shows only enough to tell two apart."""
+    local, at, domain = login_id.partition("@")
+    return f"{local[:2]}…@{domain[:1]}…" if at and local and domain else login_id
+
+
+def _trail(sess: Session, accounts: list[tuple]) -> tuple[list[dict], dict]:
+    """What admins did, newest first. Page views would crowd out the rest, so they are a count."""
+    ids = {f"trader:{a.id}": _shown_id(a.login_id) for a in accounts}
+    rows = sess.execute(
+        select(m.AdminAction.actor, m.AdminAction.action, m.AdminAction.target, m.AdminAction.at)
+        .where(m.AdminAction.action != VIEW_ACTION).order_by(m.AdminAction.at.desc(), m.AdminAction.id.desc())
+        .limit(TRAIL_LENGTH)
+    ).all()
+    views, last = sess.execute(
+        select(func.count(), func.max(m.AdminAction.at)).where(m.AdminAction.action == VIEW_ACTION)
+    ).one()
+    return ([{"who": ids.get(actor, _name(actor)), "action": action,
+              "target": _name(_shown_id(target)) if target else NOT_RECORDED, "when": _when(at)}
+             for actor, action, target, at in rows],
+            {"count": views, "last": _when(last)})
 
 
 def _with_note(answer: str, noted: bool) -> str:
@@ -407,13 +433,14 @@ def _most_opened(drawers: dict[str, int]) -> str:
     return SM.FACTS[max(drawers, key=lambda key: drawers[key])].title
 
 
-def build(sess: Session, *, running_version: str, production: bool) -> dict:
+def build(sess: Session, *, running_version: str, production: bool,
+          admin_ids: frozenset[str] = frozenset()) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
                m.Trader.development_data).order_by(m.Trader.id)
     ).all()
-    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id)
+    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=_shown_id(a.login_id))
             for a in accounts if not a.development_data}
 
     declines = 0
@@ -457,7 +484,11 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
     uploaded = [r for r in real.values() if r.uploads]
     chapter_four = [r.chapter_four_ms for r in real.values() if r.chapter_four_ms]
+    trail, admin_views = _trail(sess, accounts)
     return {
+        "admins": sorted(_name(_shown_id(login_id)) for login_id in admin_ids),
+        "trail": trail,
+        "admin_views": admin_views,
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
         "feedback_chapters": feedback_chapters,
@@ -486,7 +517,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             "last_deletion": _when(last_deleted),
             "consent_declines": declines,
         },
-        "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(a.login_id),
+        "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(_shown_id(a.login_id)),
                           "joined": _when(a.created_at)}
                          for a in accounts if a.development_data],
     }

@@ -42,7 +42,8 @@ def admin(request: Request):
                                at=datetime.now(UTC)))
         sess.commit()
         view = admin_view.build(sess, running_version=request.app.state.code_version,
-                                production=config.production)
+                                production=config.production,
+                                admin_ids=config.admin_login_ids)
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
                 body_class="admin", **view)
 
