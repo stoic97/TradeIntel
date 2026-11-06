@@ -1090,3 +1090,18 @@ def test_the_new_styles_are_not_added_at_the_end_of_the_file():
     """The end of app.css is where every open PR adds its rules, so a clash is likeliest there."""
     css = Path("services/production/api/static/css/app.css").read_text()
     assert css.index(".admin__scroll") < css.index(".day-blocks__next")
+
+
+def test_the_page_says_how_many_development_accounts_it_left_out(app, engine):
+    # TICKET-864: a low number on the cards must not be misread as every account there is.
+    assert view(app, engine)["dev_left_out"] == "No development accounts are left out"
+    add_trader(engine, "tester", dev=True)
+    assert view(app, engine)["dev_left_out"] == "1 development account is left out"
+    add_trader(engine, "tester2", dev=True)
+    assert view(app, engine)["dev_left_out"] == "2 development accounts are left out"
+
+
+def test_the_count_of_those_left_out_is_above_the_cards(app, engine):
+    add_trader(engine, "tester", dev=True)
+    page = admin_page(app, engine)
+    assert page.index("1 development account is left out") < page.index("Signed up")
