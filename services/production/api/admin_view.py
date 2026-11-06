@@ -14,6 +14,10 @@ read cannot be drawn. A rejection is shown only through ``refusal_reason``.
 the rows are put together here. Neither loops over traders with a query.
 
 Development accounts are dropped from every count, row and feed line, and listed apart.
+
+**The demo is no upload.** It goes through the same pipeline, so its import looks like any
+other but for its source account (TICKET-865). Whether anyone trusted us with a real
+tradebook is the question this page exists to answer, so the two are told apart everywhere.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
+from services.production import demo
 from services.production.api import formatting
 from services.production.api import scope_map as SM
 from services.production.db import models as m
@@ -43,6 +48,7 @@ ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
 MIRROR_LINE = "mirror_line"
+FILE_REAL, FILE_DEMO, FILE_NONE = "real", "demo", "none"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
                    s.RowFlag.TRADER_CONFIRMED_DUPLICATE)
 ISO_DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -95,6 +101,9 @@ class _Reader:
     name: str
     login_id: str
     consented: bool = False
+    file: str = FILE_NONE  # what his report reads now
+    tried_demo: bool = False
+    brought_real: bool = False  # any file of his own, refused or read
     latest_any: tuple | None = None
     latest_read: tuple | None = None  # the latest not refused
     uploads: int = 0
@@ -120,7 +129,8 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     imports = sess.execute(
         select(m.Import.id, m.Import.trader_id, m.Import.outcome, m.Import.code_version,
                m.Import.rows_in, m.Import.rows_parsed, m.Import.rows_excluded,
-               m.Import.created_at, m.Import.raw_file_id)
+               m.Import.created_at, m.Import.raw_file_id, m.Import.source_account,
+               m.Import.trips_reconstructed)
         .order_by(m.Import.id)
     ).all()
     read = []
@@ -132,10 +142,18 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
         reader.uploads += 1
         reader.latest_any = row
         reader.seen.append(row.created_at)
+        if demo.is_demo(row):
+            reader.tried_demo = True
+        else:
+            reader.brought_real = True
         if row.outcome is s.ImportOutcome.REJECTED:
             reader.uploads_refused += 1
         else:
             reader.latest_read = row
+        # The record a report reads is the newest import with trades (loader.current_import).
+        # The import's own count says so: this page reads no trade, as its limits require.
+        if row.trips_reconstructed:
+            reader.file = FILE_DEMO if demo.is_demo(row) else FILE_REAL
     return read
 
 
@@ -278,6 +296,9 @@ def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tupl
         if row.outcome is s.ImportOutcome.REJECTED:
             reason = refusal_reason(rejections.get(row.id))
             text = f"{who} had a file refused: {reason}" if reason else f"{who} had a file refused"
+        elif demo.is_demo(row):
+            again = first_import_of[row.raw_file_id] != row.id
+            text = f"{who} had the demo read again" if again else f"{who} loaded the demo"
         elif first_import_of[row.raw_file_id] != row.id:
             text = f"{who} had a file read again: {_rows_read(row)} rows read"
         else:
@@ -340,6 +361,8 @@ def _step(reader: _Reader) -> str:
         return f"chapter {reader.furthest_chapter}"
     if reader.guess:
         return "guess"
+    if reader.file == FILE_DEMO:
+        return "loaded the demo"
     if reader.uploads:
         return "uploaded"
     return "consented" if reader.consented else "signed up"
@@ -367,6 +390,7 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
     return {
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
+        "file": reader.file,
         "step": _step(reader),
         "rows_read": _rows_read(latest) if latest else NOT_RECORDED,
         # A set-aside row was read and not refused. Older readings counted it in both.
@@ -399,6 +423,13 @@ def _least_read(readers: dict[str, set[int]]) -> str:
         return NOT_RECORDED
     fewest = min(len(who) for who in readers.values())
     return ", ".join(SM.FACTS[key].title for key, who in readers.items() if len(who) == fewest)
+
+
+def _reading(group: list[_Reader]) -> tuple[int, int, int]:
+    """How many of these read every fact, stopped early, and read none."""
+    return (sum(1 for r in group if len(r.facts) == len(SM.FACTS)),
+            sum(1 for r in group if 0 < len(r.facts) < len(SM.FACTS)),
+            sum(1 for r in group if not r.facts))
 
 
 def _most_opened(drawers: dict[str, int]) -> str:
@@ -463,7 +494,10 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     rows = [_row(r, running_version=running_version, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
-    uploaded = [r for r in real.values() if r.uploads]
+    read_all, stopped_early, read_none = _reading(
+        [r for r in real.values() if r.file == FILE_REAL])
+    demo_read_all, demo_stopped_early, demo_read_none = _reading(
+        [r for r in real.values() if r.file == FILE_DEMO])
     chapter_four = [r.chapter_four_ms for r in real.values() if r.chapter_four_ms]
     return {
         "running_version": running_version,
@@ -473,13 +507,19 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
                          if not on],
         "cards": {
             "signed_up": len(real),
-            "uploaded": len(uploaded),
+            "tried_demo": sum(1 for r in real.values() if r.tried_demo),
+            "uploaded_real": sum(1 for r in real.values() if r.brought_real),
             "reached_reveal": NOT_RECORDED,
             "upload_to_reveal": NOT_RECORDED,
-            "read_all": sum(1 for r in uploaded if len(r.facts) == len(SM.FACTS)),
-            "stopped_early": sum(1 for r in uploaded if 0 < len(r.facts) < len(SM.FACTS)),
-            "read_none": sum(1 for r in uploaded if not r.facts),
+            "read_all": read_all,
+            "stopped_early": stopped_early,
+            "read_none": read_none,
+            "demo_read_all": demo_read_all,
+            "demo_stopped_early": demo_stopped_early,
+            "demo_read_none": demo_read_none,
             "said_wrong": sum(1 for r in real.values() if r.said_wrong),
+            "said_wrong_demo": sum(1 for r in real.values()
+                                   if r.said_wrong and r.file == FILE_DEMO),
         },
         "rows": rows,
         "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
