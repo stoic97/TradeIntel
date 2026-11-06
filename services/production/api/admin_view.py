@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from services.production.api import formatting
 from services.production.api import scope_map as SM
+from services.production.ctr.intake import pipeline
 from services.production.db import models as m
 from services.production.journal import leaving as LC
 from services.production.journal import wtp as WTP
@@ -120,7 +121,8 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     imports = sess.execute(
         select(m.Import.id, m.Import.trader_id, m.Import.outcome, m.Import.code_version,
                m.Import.rows_in, m.Import.rows_parsed, m.Import.rows_excluded,
-               m.Import.created_at, m.Import.raw_file_id)
+               m.Import.created_at, m.Import.raw_file_id, m.Import.reconstruction_version,
+               m.Import.adapter_id, m.Import.adapter_version)
         .order_by(m.Import.id)
     ).all()
     read = []
@@ -345,15 +347,13 @@ def _step(reader: _Reader) -> str:
     return "consented" if reader.consented else "signed up"
 
 
-def _on_current(reader: _Reader, running_version: str) -> str:
-    """The latest file read, against this deploy. A refused file reads nothing, so it neither
-    counts nor hides that what he is looking at was read by an older deploy."""
+def _reads_differently(reader: _Reader) -> str:
+    """Whether today's code would build the latest file read differently: the question the
+    trader's read-again offer asks, never the deploy, which moves on every merge. A refused
+    file reads nothing, so it neither counts nor hides the reading he is still looking at."""
     if reader.latest_read is None:
         return NOT_RECORDED
-    stamped = reader.latest_read.code_version
-    if UNKNOWN_VERSION in (stamped, running_version):
-        return NOT_RECORDED
-    return "yes" if stamped == running_version else "no"
+    return "yes" if pipeline.out_of_date(reader.latest_read) else "no"
 
 
 def _health_from(reader: _Reader):
@@ -361,7 +361,7 @@ def _health_from(reader: _Reader):
     return reader.latest_read or reader.latest_any
 
 
-def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
+def _row(reader: _Reader, *, duplicates: dict[int, int],
          guess_on: bool, leaving_on: bool, feedback_chapters: list[int]) -> dict:
     latest = _health_from(reader)
     return {
@@ -374,7 +374,7 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
                          if latest else NOT_RECORDED),
         "uploads_refused": reader.uploads_refused,
         "duplicates": duplicates.get(latest.id, 0) if latest else NOT_RECORDED,
-        "on_current": _on_current(reader, running_version),
+        "reads_differently": _reads_differently(reader),
         "facts_read": f"{len(reader.facts)} of {len(SM.FACTS)}",
         "minutes": _span(reader.dwell_ms),
         "drawer_opens": reader.drawer_opens,
@@ -452,7 +452,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
 
     guess_on, leaving_on = GU.ready(production), LC.ready(production)
     feedback_chapters = [c.number for c in SM.CHAPTERS if c.feedback]
-    rows = [_row(r, running_version=running_version, duplicates=duplicates, guess_on=guess_on,
+    rows = [_row(r, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
     uploaded = [r for r in real.values() if r.uploads]
