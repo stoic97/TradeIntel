@@ -26,7 +26,7 @@
       <tbody>
       {%- for row in rows %}
         <tr>
-          <td>{{ row.name }}</td><td>{{ row.login_id }}</td><td>{{ row.step }}</td><td>{{ row.rows_read }}</td><td>{{ row.rows_refused }}</td><td>{{ row.uploads_refused }}</td><td>{{ row.duplicates }}</td>
+          <td>{{ row.name }}</td><td><a href="{{ row.href }}">{{ row.login_id }}</a></td><td>{{ row.step }}</td><td>{{ row.rows_read }}</td><td>{{ row.rows_refused }}</td><td>{{ row.uploads_refused }}</td><td>{{ row.duplicates }}</td>
           <td{% if row.on_current == "no" %} class="admin__stale"{% endif %}>{{ row.on_current }}</td>
           <td>{{ row.facts_read }}</td><td>{{ row.minutes }}</td><td>{{ row.drawer_opens }}</td>
           {%- for said in row.chapters %}<td>{{ said }}</td>{% endfor -%}

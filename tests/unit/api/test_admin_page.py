@@ -280,14 +280,15 @@ def test_the_walk_of_the_routes_really_reaches_them(app):
 def test_only_get_routes_exist_under_admin(app):
     found = [r for r in every_route(app.routes)
              if isinstance(r, APIRoute) and r.path.startswith("/admin")]
-    assert {r.path for r in found} == {"/admin", "/admin/"}
+    assert {r.path for r in found} == {"/admin", "/admin/", "/admin/traders/{trader_id}",
+                                       "/admin/traders/{trader_id}/"}
     for route in found:
         assert route.methods <= {"GET"}, route.path
 
 
 def test_no_other_template_links_to_the_page():
     for path in TEMPLATES.rglob("*.html"):
-        if path.name != "admin.html":
+        if path.name not in ("admin.html", "admin_trader.html"):
             assert "/admin" not in path.read_text(), path
 
 
