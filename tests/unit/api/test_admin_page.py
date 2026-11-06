@@ -26,6 +26,8 @@ from services.production.api import scope_map as SM
 from services.production.api.app import create_app
 from services.production.api.settings import Settings
 from services.production.db import models as m
+from services.production.journal import constants as k
+from services.production.journal import wtp as WTP
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
 from tests.conftest import TEST_SECRET_KEY
@@ -589,37 +591,118 @@ def test_minutes_add_up_the_views_and_drawers_are_counted_apart(app, engine):
 # ---------- One row per trader ----------
 
 
-def step_of(app, engine, login_id="someone") -> str:
-    return row_of(view(app, engine), login_id)["step"]
+def done_of(app, engine, login_id="someone") -> list[str]:
+    return [step["label"] for step in row_of(view(app, engine), login_id)["journey"] if step["done"]]
 
 
-def test_the_furthest_step_starts_at_signed_up(app, engine):
+def test_a_new_account_has_no_tick(app, engine):
     add_trader(engine, "someone")
-    assert step_of(app, engine) == "signed up"
+    assert done_of(app, engine) == []
 
 
-def test_each_stored_step_moves_the_furthest_step_on(app, engine):
+def test_each_stored_step_ticks_on_its_own(app, engine):
     trader_id = add_trader(engine, "someone")
 
-    def then(step, write):
+    def then(done, write):
         with make_session(engine) as sess:
             write(sess)
             sess.commit()
-        assert step_of(app, engine) == step
+        assert done_of(app, engine) == done
 
-    then("consented", lambda sess: add_consent(sess, trader_id))
-    then("uploaded", lambda sess: add_import(sess, trader_id))
+    then(["consent"], lambda sess: add_consent(sess, trader_id))
+    then(["consent", "file"], lambda sess: add_import(sess, trader_id))
     with make_session(engine) as sess:
         import_id = sess.scalars(select(m.Import.id)).one()
-    then("guess", lambda sess: sess.add(m.GuessAnswer(
-        trader_id=trader_id, answer="unknown", labels_version="x", import_id=import_id,
-        answered_at=THEN)))
-    then("chapter 2", lambda sess: add_dwell(sess, trader_id, "run"))
-    then("chapter 3", lambda sess: sess.add(m.ChapterFeedback(
+    then(["consent", "file", "chapter 2"], lambda sess: add_dwell(sess, trader_id, "run"))
+    then(["consent", "file", "chapter 3"], lambda sess: sess.add(m.ChapterFeedback(
         trader_id=trader_id, chapter=3, answer="accurate", import_id=import_id, answered_at=THEN)))
-    then("chapter 4", lambda sess: add_dwell(sess, trader_id, "risk"))
-    then("journal", lambda sess: add_journal(sess, trader_id, import_id, opened=THEN))
-    then("budget", lambda sess: add_budget(sess, trader_id))
+    then(["consent", "file", "chapter 3", "journal"],
+         lambda sess: add_journal(sess, trader_id, import_id, opened=THEN))
+    then(["consent", "file", "chapter 3", "journal", "budget"], lambda sess: add_budget(sess, trader_id))
+
+
+def test_a_budget_set_first_hides_nothing_else(app, engine):
+    """The single label read budget here and hid how little else had happened."""
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_budget(sess, trader_id)
+        sess.commit()
+    assert done_of(app, engine) == ["budget"]
+
+
+def test_the_page_draws_the_journey_with_ticks_and_words(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "<th>Journey</th>" in page and "Furthest step" not in page
+    assert "✓ consent" in page
+
+
+def test_files_uploaded_counts_every_import(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id)
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, at=THEN + timedelta(hours=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["files_uploaded"] == 2
+
+
+def test_journals_opened_counts_opens_not_generated_ones(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_journal(sess, trader_id, imp.id, opened=THEN)
+        add_journal(sess, trader_id, imp.id)
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["journals_opened"] == 1
+
+
+def test_days_active_counts_distinct_india_days_across_stored_actions(app, engine):
+    trader_id = add_trader(engine, "someone")  # signed up at THEN
+    late_utc = datetime(2026, 3, 3, 19, 0, tzinfo=UTC)  # already 4 Mar in India
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=THEN + timedelta(minutes=5))  # same day as sign-up
+        add_dwell(sess, trader_id, "run", at=datetime(2026, 3, 3, 5, 0, tzinfo=UTC))
+        add_dwell(sess, trader_id, "run", at=datetime(2026, 3, 3, 6, 0, tzinfo=UTC))  # same day
+        sess.add(m.ChapterFeedback(trader_id=trader_id, chapter=3, answer="accurate", import_id=imp.id,
+                                   answered_at=late_utc))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["days_active"] == 3
+
+
+def test_first_upload_is_the_earliest_file(app, engine):
+    trader_id = add_trader(engine, "someone")
+    assert row_of(view(app, engine), "someone")["first_upload"] == "—"
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=THEN)
+        add_import(sess, trader_id, at=THEN + timedelta(days=2))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["first_upload"].startswith("02 Mar 2026")
+
+
+def test_pay_progress_follows_the_rule_the_question_uses(app, engine):
+    trader_id = add_trader(engine, "someone")
+    recent = datetime.now(UTC) - timedelta(days=1)
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=recent)
+        add_journal(sess, trader_id, imp.id, opened=recent)
+        sess.commit()
+    progress = row_of(view(app, engine), "someone")["pay_progress"]
+    assert progress == f"1 of {WTP.JOURNALS_BEFORE_ASKING} journals; settled in: no"
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=recent + timedelta(hours=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["pay_progress"].endswith("settled in: yes")
+
+
+def test_pay_progress_counts_a_fortnight_as_settled_in(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=datetime.now(UTC) - timedelta(days=k.WTP_DAYS_SINCE_FIRST_UPLOAD))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["pay_progress"].endswith("settled in: yes")
 
 
 def test_a_withdrawn_consent_alone_is_not_consented(app, engine):
@@ -627,7 +710,7 @@ def test_a_withdrawn_consent_alone_is_not_consented(app, engine):
     with make_session(engine) as sess:
         add_consent(sess, trader_id, granted=False)
         sess.commit()
-    assert step_of(app, engine) == "signed up"
+    assert done_of(app, engine) == []
 
 
 def test_a_journal_generated_at_upload_is_no_step_and_none_written(app, engine):
@@ -637,7 +720,7 @@ def test_a_journal_generated_at_upload_is_no_step_and_none_written(app, engine):
         add_journal(sess, trader_id, add_import(sess, trader_id).id)
         sess.commit()
     row = row_of(view(app, engine), "someone")
-    assert row["step"] == "uploaded"
+    assert "journal" not in [step["label"] for step in row["journey"] if step["done"]]
     assert row["journals_written"] == 0
 
 
@@ -652,7 +735,7 @@ def test_journals_written_counts_journals_not_answers(app, engine):
         sess.commit()
     row = row_of(view(app, engine), "someone")
     assert row["journals_written"] == 2
-    assert row["step"] == "journal"
+    assert "journal" in [step["label"] for step in row["journey"] if step["done"]]
 
 
 def test_upload_health_reads_the_latest_file_and_counts_refusals_across_all(app, engine):
