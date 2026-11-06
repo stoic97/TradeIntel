@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
@@ -110,7 +110,7 @@ def scope_chapter(request: Request, n: int):
     try:
         chapter = SM.chapter(n)
     except KeyError:
-        return HTMLResponse("", status_code=404)
+        raise HTTPException(status_code=404) from None  # the Not found page, with its way Home (TICKET-860)
     early, record = load_record(request)
     if early is not None:
         return early
@@ -212,7 +212,7 @@ def scope_fact(request: Request, key: str):
     if key == SHARE_MOVED:  # it was fact 2 of chapter 1; its one new row is on worst days now
         return RedirectResponse(SM.fact_href("worst-days", lens=False), status_code=303)
     if key not in SM.FACTS:
-        return HTMLResponse("", status_code=404)
+        raise HTTPException(status_code=404)  # the Not found page, with its way Home (TICKET-860)
     early, record = load_record(request)
     if early is not None:
         return early
@@ -351,7 +351,7 @@ def scope_fact_trades(request: Request, key: str):
     if key in SM.MOVED_FACTS:
         return _moved(request, key, "/trades")
     if key not in TL.FACTS_WITH_TRADES:
-        return HTMLResponse("", status_code=404)
+        raise HTTPException(status_code=404)  # the Not found page, with its way Home (TICKET-860)
     early, record = load_record(request)
     if early is not None:
         return early

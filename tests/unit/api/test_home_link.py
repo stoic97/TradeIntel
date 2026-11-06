@@ -147,3 +147,15 @@ def test_home_adds_no_way_into_the_scope():
     macro = components.split("{% macro home_lockup", 1)[1].split("{%- endmacro %}", 1)[0]
     bar = layout.split('<nav class="home-bar"', 1)[1].split("</nav>", 1)[0]
     assert set(re.findall(r'href="([^"]+)"', macro + bar)) == {"/"}
+
+
+def test_an_address_with_nothing_at_it_still_has_a_way_home(client):
+    """A dead address is the last place to leave a trader without one: the app's Not found
+    page, and the Scope's own not-found answers (an unknown chapter, an unknown fact, a fact
+    with no list of trades), all say Not found and carry the way back."""
+    for url in ("/no-such-page", "/mirror/chapter/9", "/mirror/fact/nope",
+                "/mirror/fact/unread/trades"):
+        r = client.get(url)
+        assert r.status_code == 404, url
+        assert "Not found" in r.text, url
+        assert_a_way_home(r.text, url)
