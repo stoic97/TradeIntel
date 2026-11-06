@@ -18,8 +18,9 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select
 
+from services.production import demo
 from services.production.accounts import auth
-from services.production.accounts.deletion import delete_trader
+from services.production.accounts.deletion import delete_trader, remove_demo
 from services.production.accounts.file_store import FileStore
 from services.production.api import routes_events
 from services.production.api import scope_map as SM
@@ -87,12 +88,16 @@ def admin_page(app, engine) -> str:
 
 
 def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
-               rejection=None, rows=(10, 8, 2), at=THEN) -> m.Import:
-    raw = m.RawFile(trader_id=trader_id, sha256=f"{trader_id}-{at.isoformat()}-{version}",
-                    original_name="tradebook.csv", size=1, stored_path="nowhere", uploaded_at=at)
-    sess.add(raw)
-    sess.flush()
-    imp = m.Import(trader_id=trader_id, raw_file_id=raw.id, source_account="A",
+               rejection=None, rows=(10, 8, 2), at=THEN, source="A", trips=0,
+               raw_file_id=None) -> m.Import:
+    if raw_file_id is None:
+        raw = m.RawFile(trader_id=trader_id, sha256=f"{trader_id}-{at.isoformat()}-{version}",
+                        original_name="tradebook.csv", size=1, stored_path="nowhere", uploaded_at=at)
+        sess.add(raw)
+        sess.flush()
+        raw_file_id = raw.id
+    imp = m.Import(trader_id=trader_id, raw_file_id=raw_file_id, source_account=source,
+                   trips_reconstructed=trips,
                    adapter_id="made-up", adapter_version="1", filemap_version="1",
                    code_version=version, outcome=outcome, rejection_text=rejection,
                    rows_in=rows[0], rows_parsed=rows[1], rows_excluded=rows[2],
@@ -100,6 +105,11 @@ def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCE
     sess.add(imp)
     sess.flush()
     return imp
+
+
+def add_record(sess, trader_id, *, source="A", at=THEN) -> m.Import:
+    """An upload the report can read: it is the import with trades that a report reads."""
+    return add_import(sess, trader_id, source=source, at=at, trips=1)
 
 
 def add_dwell(sess, trader_id, key, event_name="view", *, ms=60_000, surface="mirror_line", at=THEN):
@@ -472,14 +482,141 @@ def test_a_dwell_key_a_browser_made_up_never_reaches_the_page(app, engine):
 # ---------- The cards ----------
 
 
-def test_the_cards_count_who_signed_up_and_uploaded(app, engine):
+def people_card(app, engine) -> tuple[int, int, int]:
+    cards = view(app, engine)["cards"]
+    return cards["signed_up"], cards["tried_demo"], cards["uploaded_real"]
+
+
+def test_the_top_card_keeps_signing_up_the_demo_and_a_real_file_apart(app, engine):
     add_trader(engine, "only-signed-up")
-    uploaded = add_trader(engine, "uploaded")
+    on_demo, on_real = add_trader(engine, "on-demo"), add_trader(engine, "on-real")
     with make_session(engine) as sess:
-        add_import(sess, uploaded)
+        add_record(sess, on_demo, source=demo.ACCOUNT)
+        add_record(sess, on_real)
+        sess.commit()
+    assert people_card(app, engine) == (3, 1, 1)
+    page = admin_page(app, engine)
+    assert "Signed up / tried the demo / uploaded a real file" in page
+    assert "4 / 1 / 1" in page  # the admin who asks has signed up too
+
+
+def test_a_demo_only_account_has_a_demo_file_and_no_upload_of_a_real_one(app, engine):
+    # TICKET-865: the demo is an upload to the pipeline, and must not read as one here.
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["file"] == "demo"
+    assert people_card(app, engine) == (1, 1, 0)
+
+
+def test_a_real_only_account_has_a_real_file(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id)
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["file"] == "real"
+    assert people_card(app, engine) == (1, 0, 1)
+
+
+def test_the_demo_then_a_real_file_reads_real_because_the_real_upload_replaces_it(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        sess.commit()
+    with make_session(engine) as sess:
+        store = FileStore(root=Path(os.environ["SCOPE_FILES"]), key=os.environ["SCOPE_FILE_KEY"])
+        remove_demo(sess, store, trader=sess.get(m.Trader, trader_id))
+        add_record(sess, trader_id, at=THEN + timedelta(days=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["file"] == "real"
+    # remove_demo leaves no row of the demo, so nothing stored can say he ever tried it.
+    assert people_card(app, engine) == (1, 0, 1)
+
+
+def test_with_no_upload_the_file_is_none(app, engine):
+    add_trader(engine, "someone")
+    assert row_of(view(app, engine), "someone")["file"] == "none"
+
+
+def test_a_refused_real_file_was_brought_but_gives_no_record_to_read(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, rows=(1, 0, 0))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["file"] == "none"
+    assert people_card(app, engine) == (1, 0, 1)
+    cards = view(app, engine)["cards"]
+    assert cards["read_none"] == 0, "with no report there is nothing to have left unread"
+
+
+def test_a_real_file_refused_while_the_demo_stands_leaves_the_report_on_the_demo(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, rows=(1, 0, 0),
+                   at=THEN + timedelta(hours=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["file"] == "demo"
+    assert people_card(app, engine) == (1, 1, 1)
+
+
+def test_the_file_column_is_drawn_for_each_trader(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "<th>File</th>" in page
+    assert "<td>demo</td>" in page
+
+
+def test_the_notes_say_what_the_file_column_and_the_card_cannot_know(app, engine):
+    page = admin_page(app, engine)
+    assert "<strong>File:</strong>" in page
+    assert "A real upload removes the demo" in page
+    assert "a refused file counts" in page
+
+
+def test_a_demo_reader_is_counted_apart_from_a_real_file_reader(app, engine):
+    # TICKET-865: 3 real readers (all, some, none) and 2 demo readers (some, none).
+    every, some, none = (add_trader(engine, n) for n in ("every", "some", "none"))
+    demo_some, demo_none = (add_trader(engine, n) for n in ("demo-some", "demo-none"))
+    with make_session(engine) as sess:
+        for trader_id in (every, some, none):
+            add_record(sess, trader_id)
+        for trader_id in (demo_some, demo_none):
+            add_record(sess, trader_id, source=demo.ACCOUNT)
+        for key in SM.FACTS:
+            add_dwell(sess, every, key)
+        add_dwell(sess, some, "money")
+        add_dwell(sess, demo_some, "money")
         sess.commit()
     cards = view(app, engine)["cards"]
-    assert (cards["signed_up"], cards["uploaded"]) == (2, 1)
+    assert (cards["read_all"], cards["stopped_early"], cards["read_none"]) == (1, 1, 1)
+    assert (cards["demo_read_all"], cards["demo_stopped_early"], cards["demo_read_none"]) == (0, 1, 1)
+
+
+def test_each_reading_card_says_which_group_it_counts(app, engine):
+    page = admin_page(app, engine)
+    assert "Of those who uploaded" not in page
+    assert "Real-file readers: read all" in page
+    assert "Demo readers: read all" in page
+    assert "Of those whose report reads a real file." in page
+    assert "Of those whose report reads the demo." in page
+
+
+def test_said_wrong_says_how_many_of_them_are_on_the_demo(app, engine):
+    on_real, on_demo = add_trader(engine, "on-real"), add_trader(engine, "on-demo")
+    with make_session(engine) as sess:
+        for trader_id, source in ((on_real, "A"), (on_demo, demo.ACCOUNT)):
+            imp = add_record(sess, trader_id, source=source)
+            sess.add(m.ChapterFeedback(trader_id=trader_id, chapter=1, answer="wrong",
+                                       import_id=imp.id, answered_at=THEN))
+        sess.commit()
+    cards = view(app, engine)["cards"]
+    assert (cards["said_wrong"], cards["said_wrong_demo"]) == (2, 1)
+    assert "On the demo: 1." in admin_page(app, engine)
 
 
 def test_said_wrong_counts_traders_not_answers(app, engine):
@@ -564,7 +701,7 @@ def test_read_all_and_stopped_early_split_the_readers(app, engine):
     everything, some, none = (add_trader(engine, n) for n in ("everything", "some", "none"))
     with make_session(engine) as sess:
         for trader_id in (everything, some, none):
-            add_import(sess, trader_id)
+            add_record(sess, trader_id)
         for key in SM.FACTS:
             add_dwell(sess, everything, key)
         add_dwell(sess, some, "money")
@@ -620,6 +757,14 @@ def test_each_stored_step_moves_the_furthest_step_on(app, engine):
     then("chapter 4", lambda sess: add_dwell(sess, trader_id, "risk"))
     then("journal", lambda sess: add_journal(sess, trader_id, import_id, opened=THEN))
     then("budget", lambda sess: add_budget(sess, trader_id))
+
+
+def test_the_furthest_step_of_a_demo_only_account_is_no_upload(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        sess.commit()
+    assert step_of(app, engine) == "loaded the demo"
 
 
 def test_a_withdrawn_consent_alone_is_not_consented(app, engine):
@@ -825,6 +970,28 @@ def test_the_feed_is_newest_first_and_says_who_and_what(app, engine):
     ]
 
 
+def test_a_feed_line_says_the_demo_was_loaded_not_that_a_file_was_uploaded(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_record(sess, trader_id, source=demo.ACCOUNT)
+        sess.commit()
+    lines = feed_text(app, engine)
+    assert "someone loaded the demo" in lines
+    assert not [line for line in lines if "uploaded" in line]
+
+
+def test_reading_the_demo_again_is_not_a_read_of_his_file(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        first = add_record(sess, trader_id, source=demo.ACCOUNT)
+        add_import(sess, trader_id, source=demo.ACCOUNT, at=THEN + timedelta(days=1), trips=1,
+                   raw_file_id=first.raw_file_id)
+        sess.commit()
+    lines = feed_text(app, engine)
+    assert "someone loaded the demo" in lines
+    assert "someone had the demo read again" in lines
+
+
 def test_the_feed_has_a_limit(app, engine):
     from services.production.api import admin_view
 
@@ -956,8 +1123,10 @@ def test_deletions_and_declines_are_counted(app, engine):
 
 
 @pytest.mark.parametrize("path", [
-    ("cards", "signed_up"), ("cards", "uploaded"), ("cards", "read_all"),
-    ("cards", "stopped_early"), ("cards", "read_none"), ("cards", "said_wrong"),
+    ("cards", "signed_up"), ("cards", "tried_demo"), ("cards", "uploaded_real"),
+    ("cards", "read_all"), ("cards", "stopped_early"), ("cards", "read_none"),
+    ("cards", "demo_read_all"), ("cards", "demo_stopped_early"), ("cards", "demo_read_none"),
+    ("cards", "said_wrong"), ("cards", "said_wrong_demo"),
     ("quiet", "least_read"), ("quiet", "most_opened"), ("quiet", "chapter_four_median"),
     ("quiet", "wtp"), ("quiet", "wtp_asked"), ("quiet", "consent_declines"),
     ("quiet", "deletions"),
@@ -965,12 +1134,16 @@ def test_deletions_and_declines_are_counted(app, engine):
 def test_a_development_account_moves_no_count(app, engine, path):
     real = add_trader(engine, "real")
     with make_session(engine) as sess:  # a real reader, so a dev account has something to move
-        add_import(sess, real)
+        add_record(sess, real)
         add_dwell(sess, real, "money", ms=60_000)
         sess.commit()
     section, name = path
     before = view(app, engine)[section][name]
-    seed_everything(engine, add_trader(engine, "tester", dev=True))
+    tester = add_trader(engine, "tester", dev=True)
+    seed_everything(engine, tester)
+    with make_session(engine) as sess:  # and it holds a demo as well as a real file
+        add_record(sess, tester, source=demo.ACCOUNT, at=THEN + timedelta(days=1))
+        sess.commit()
     assert view(app, engine)[section][name] == before
 
 
