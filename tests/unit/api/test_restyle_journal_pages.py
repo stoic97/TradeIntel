@@ -90,7 +90,7 @@ SAID = {
         "Your upload What we read This looks like a profit-and-loss statement. Upload a different file"
     ),
     "journals.html": (
-        "Journals Your Journals One for every complete trading day in what you have uploaded — 8 so far. Each one is written from your trades and needs nothing from you. 2026-09-08 version 2 unread 2026-09-07 You have 3 earlier Journals. Read them one at a time, or go to your record."
+        "Journals Your Journals One for every complete trading day in what you have uploaded — 8 Journals so far. Each one is written from your trades and needs nothing from you. 2026-09-08 version 2 unread 2026-09-07 You have 3 earlier Journals. Read them one at a time, or go to your record."
     ),
     "journals.html#none": (
         "Journals Your Journals Your Journals start with your first upload. Send us a tradebook and one is written for every complete trading day in it."
