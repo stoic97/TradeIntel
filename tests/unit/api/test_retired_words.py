@@ -162,14 +162,14 @@ def test_an_entry_is_a_word_its_status_and_what_replaced_it():
 
 def test_the_starting_list_is_the_dials_words_and_the_list_only_grows():
     assert {e.word for e in GL.retired(GL.DIAL)} >= STARTING_LIST
-    assert "Net (gross)" in {e.word for e in GL.retired(GL.MONEY_PAGES)}
+    assert "Net (gross)" in {e.word for e in GL.GLOSSARY if e.status == GL.RETIRED}
 
 
 def test_nothing_is_retired_beyond_the_surfaces_that_have_landed():
     """Retired only as its surface lands, or the test rewords pages nobody has ruled on."""
     for entry in GL.GLOSSARY:
         if entry.status == GL.RETIRED:
-            assert entry.where in SURFACES or entry.where in SURFACE_PAGES, entry.word
+            assert entry.where is None or entry.where in SURFACES or entry.where in SURFACE_PAGES, entry.word
 
 
 def test_every_retired_word_says_what_replaced_it():

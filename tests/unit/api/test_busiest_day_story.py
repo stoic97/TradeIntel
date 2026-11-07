@@ -374,7 +374,7 @@ def test_the_down_page_says_only_the_opening_sentence_of_its_card():
     assert len(said) == 2
     for sentence in said[1:]:
         assert sentence not in page, sentence
-    for table_line in ("Table 1", "Table 2", "Your other trades that qualified", "Every other trade",
+    for table_line in ("Table 1", "Table 2", "Your other trades after two had closed", "Every other trade",
                        "A scratch trade ends the run."):
         assert table_line not in page, table_line
 
@@ -472,7 +472,7 @@ def test_the_card_and_home_keep_their_own_figures():
     """Only the chapter's dial changes: home's slice says the busiest day, and a card's figure
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
-    assert figs["down"]["figure"] == "4"
+    assert figs["down"]["figure"] == "4 trades"
     assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "on your\nbusiest day"
     assert ">4<" in chapter_page(3, DOWN)
 

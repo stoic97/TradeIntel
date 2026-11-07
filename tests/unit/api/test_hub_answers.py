@@ -105,8 +105,10 @@ def test_row_one_when_the_share_is_not_a_percentage_says_the_sum():
 
 def test_row_two_says_the_strike_rate_and_break_even():
     row = rows(hub())["Your patterns"]
-    assert f"Strike rate on same-day trades: {CTX['strike'].rate_percent}%." in row
-    assert f"Break-even at your average winner and loser: {CTX['break_even'].percent}%." in row
+    made = formatting.out_of_a_hundred(CTX["strike"].rate_percent)
+    assert f"{made} same-day trades made money." in row
+    even = formatting.out_of_a_hundred(CTX["break_even"].percent)
+    assert f"Break-even at your average winner and loser: {even}." in row
 
 
 def test_row_two_doesnt_use_hold_times_or_the_word_won():
@@ -188,7 +190,7 @@ def test_the_wedges_carry_the_short_form_of_the_four_answers():
     share, strike = CTX["share"], CTX["strike"]
     words = [(i["figure"], i["label"].replace("\n", " ")) for i in items]
     assert words[0] == ("5 days", f"lost {share.share_percent}% of all you lost")
-    assert words[1] == (SF._out_of_a_hundred(strike.rate_percent), "trades made money")
+    assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent), "trades made money")
     assert words[2] == (f"{CTX['days'].busiest_trips} trades", "on your busiest day")
     assert words[3] == ("no number", "is set yet")
 

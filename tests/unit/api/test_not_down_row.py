@@ -111,7 +111,7 @@ def test_on_the_appendix_a_fixture_the_third_row_is_the_hand_calculated_one():
 def test_table_one_has_a_third_row_with_its_count_money_and_average(page):
     rows = table_one(page())
     assert len(rows) == 3
-    assert [r[0] for r in rows[:2]] == ["After two straight losses", "Your other trades that qualified"]
+    assert [r[0] for r in rows[:2]] == ["After two straight losses", "Your other trades after two had closed"]
     assert rows[2] == [
         NOT_DOWN,
         "4",

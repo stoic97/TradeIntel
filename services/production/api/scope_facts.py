@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from markupsafe import Markup
 
@@ -159,6 +159,10 @@ def _state(key: str, ctx: dict) -> str:
     return ""
 
 
+def _trades_said(n: int) -> str:
+    return f"{formatting.count(n)} {'trade' if n == 1 else 'trades'}"
+
+
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
     if key == "worst-days":
@@ -174,19 +178,19 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
             found.same_day_net if found.same_day_count else ctx["held_past_day"].net
         ), "rupees")
     if key == "math":
-        return Figure(f"{ctx['strike'].rate_percent}%", "percent")
+        return Figure(f'{formatting.out_of_a_hundred(ctx["strike"].rate_percent)} trades', "trades")
     if key == "run":
         return Figure(f"{formatting.count(ctx['run'].length)} trades", "trades")
     if key == "clock":  # the hour with the largest result across the books: what happened there
         return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
     if key == "down":
-        return Figure(formatting.count(ctx["two_losses"].population), "trades")
+        return Figure(_trades_said(ctx["two_losses"].population), "trades")
     if key == "busiest":
         return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
         return Figure(f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows", "rows")
     if key == "risk":
-        return Figure(f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))}",
+        return Figure(f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))} trades",
                       "trades")
     return Figure(str(NOT_TOLD), "things we have not told you")
 
@@ -792,7 +796,7 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                       shown=formatting.rupees(ctx["best"][0].net))
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
-                      shown=_out_of_a_hundred(ctx["strike"].rate_percent))
+                      shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
     if key == "run":
         n = ctx["run"].length
         return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of="in a row"),
@@ -811,7 +815,7 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         read, _, whole = fig["figure"].removesuffix(" rows").partition(" of ")
         return _wedge(Figure(read, "rows", of=f"of {whole} rows read"), shown=read)
     if key == "risk":
-        measured, _, whole = fig["figure"].partition(" of ")
+        measured, _, whole = fig["figure"].removesuffix(" trades").partition(" of ")
         return _wedge(Figure(measured, "trades", of=f"of {whole} trades have a risk figure"),
                       phone=f"of {whole}\ntrades", shown=measured)
     if key == "not-told":
@@ -898,12 +902,6 @@ def _of(figure: Figure, of: str) -> Figure:
     return Figure(figure.value, figure.noun, of=of)
 
 
-def _out_of_a_hundred(rate) -> str:
-    """A rate as a count: "46 of 100". Rounded as a person says it, half up."""
-    whole = Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
-    return f"{whole} of 100"
-
-
 def _answer_one(ctx: dict) -> dict:
     """Where your results came from: the five days, and how far past a normal day each was."""
     worst, normal = ctx["worst_days"], ctx["days"].normal_day
@@ -938,7 +936,7 @@ def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
     strike, even = ctx["strike"], ctx["break_even"]
     return {"state": "", "strike": strike, "even": even,
             "wedge": _wedge(Figure(strike.rate_percent, "trades", of="trades made money"),
-                            phone="made money", shown=_out_of_a_hundred(strike.rate_percent))}
+                            phone="made money", shown=formatting.out_of_a_hundred(strike.rate_percent))}
 
 
 def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:

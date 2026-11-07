@@ -134,6 +134,11 @@ def price(value) -> str:
     return f"{indian_grouping(int(whole))}.{paise}"
 
 
+def out_of_a_hundred(rate) -> str:
+    """A rate as a count: 45.8 is "46 of 100". Rounded as a person says it, half up."""
+    return f"{Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP)} of 100"
+
+
 def signed_percent(value) -> str:
     """A result against what was paid, to one decimal, signed as a result is: +3.9%, −4.5%."""
     cut = Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
@@ -173,7 +178,8 @@ def book_in_a_sentence(book: str) -> str:
 
 _FIGURE_FILTERS = {
     write.__name__: through_figure(write)
-    for write in (rupees_on_a_trade, rupees, count, minutes, hold, lots, price, signed_percent)
+    for write in (rupees_on_a_trade, rupees, count, minutes, hold, lots, price, signed_percent,
+                  out_of_a_hundred)
 }
 """One of each, so every environment holds the same filter."""
 

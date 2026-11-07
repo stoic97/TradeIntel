@@ -44,7 +44,11 @@ GLOSSARY: tuple[Entry, ...] = (
     Entry("uncapped", RETIRED, "trades we could not size", DIAL),
     Entry("of losses", RETIRED, "lost N% of all you lost", DIAL),
     Entry("past it", RETIRED, "past your number", DIAL),
-    Entry("Net (gross)", RETIRED, "Result", MONEY_PAGES),
+    Entry("Net (gross)", RETIRED, "Result"),
+    Entry("strike rate", RETIRED, "N of 100 trades made money, or win rate"),
+    Entry("qualified", RETIRED, "after two had closed"),
+    Entry("qualifying", RETIRED, "after two had closed"),
+    Entry("the math", RETIRED, "Your wins and losses"),
 )
 
 
