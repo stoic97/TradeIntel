@@ -239,7 +239,7 @@ def test_a_block_is_collapsed_and_opens_on_its_trades():
 
 @pytest.mark.parametrize("words", [
     "07 Mar 2025", "NIFTY", "2 trades", "09:20 to 09:35", "−₹600",
-    "First trade −₹300, then 1 more; 1 lost.",
+    "First trade −₹300, then 1 more trade; 1 lost.",
 ])
 def test_a_block_says_the_day_at_a_glance(words):
     summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
@@ -298,7 +298,8 @@ def test_chapter_one_has_two_facts():
 def test_the_dial_says_findings_not_counts():
     ctx = SF.record_context(FOUR_CRUDE_EVENINGS)
     items = SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
-    assert [i["figure"].replace(chr(0xA0), " ") for i in items] == ["5 days: −₹2,064", "Best trade +₹20"]
+    assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
+        ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
 
 
 def _imp():

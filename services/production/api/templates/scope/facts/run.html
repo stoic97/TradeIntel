@@ -6,7 +6,7 @@
 {% from "scope/_next.html" import next_fact %}
 {% block fact_title %}{% if f.story %}{{ f.story.lead }}: {{ f.story.when }}, {{ f.story.what }}, {{ money(f.story.net) }}.{% else %}{{ fact.title }}{% endif %}{% endblock %}
 {% block head %}
-    <p class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ f.day_count|count }}</span> days{% endif %}.</p>
+    <p class="mirror">Your longest run of consecutive losers was <span class="num">{{ Figure(run.length, "losses")|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ Figure(f.day_count, "days")|count }}</span> days{% endif %}.</p>
 {% endblock %}
 {% block body %}
   {% call figure(1, "The run, trade by trade", f.timeline) %}
@@ -30,7 +30,7 @@
     <p class="mirror">{{ f.story.size_words }}</p>
     {%- endif %}
     {%- if f.story.back_in %}
-    <p class="mirror"><span class="num">{{ f.story.back_in.within|count }}</span> of <span class="num">{{ f.story.back_in.of|count }}</span> {{ "time" if f.story.back_in.of == 1 else "times" }}, you were back in within 2 minutes.</p>
+    <p class="mirror"><span class="num">{{ Figure(f.story.back_in.within, "times")|count }}</span> of <span class="num">{{ Figure(f.story.back_in.of, "times")|count }}</span> {{ "time" if f.story.back_in.of == 1 else "times" }}, you were back in within 2 minutes.</p>
     {%- endif %}
   </div>
   {%- endif %}
@@ -55,7 +55,7 @@
   </section>
   <section class="run__next">
     {%- if run_journal_href is defined and run_journal_href %}
-    <p class="mirror">You lost <span class="num">{{ run.length|count }}</span> in a row on {{ f.start_day }}. What do you remember?</p>
+    <p class="mirror">You lost <span class="num">{{ Figure(run.length, "losses")|count }}</span> in a row on {{ f.start_day }}. What do you remember?</p>
     {{ button("Your journal for " ~ f.start_day, run_journal_href, "secondary", block=true) }}
     {%- endif %}
     <p class="mirror">This run started {{ f.story.started }}.</p>

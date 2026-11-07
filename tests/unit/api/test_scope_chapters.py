@@ -103,7 +103,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["money"]["figure"] == formatting.rupees(CTX["money_found"].same_day_net)
     assert FIGS["math"]["figure"] == f"{CTX['strike'].rate_percent}%"
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
-    assert FIGS["clock"]["figure"] == "10:00"
+    assert FIGS["clock"]["figure"] == "10:00 hour"
     assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"

@@ -43,7 +43,7 @@ def test_an_hour_with_only_a_holding_is_gone():
 
 
 def test_the_figure_names_the_hour_with_the_largest_result():
-    assert SF.facts(SF.record_context(HELD), IMP)["clock"]["figure"] == "09:00"
+    assert SF.facts(SF.record_context(HELD), IMP)["clock"]["figure"] == "09:00 hour"
 
 
 def test_the_trades_listed_are_the_trades_counted():
