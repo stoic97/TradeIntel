@@ -1519,6 +1519,100 @@ def test_the_new_styles_are_not_added_at_the_end_of_the_file():
     assert css.index(".admin__scroll") < css.index(".day-blocks__next")
 
 
+# ---------- What traders told us [TICKET-876] ----------
+
+
+def told(app, engine) -> dict:
+    return view(app, engine)["told"]
+
+
+def add_chapter_answer(sess, trader_id, import_id, chapter, answer, reasons=(), at=THEN):
+    row = m.ChapterFeedback(trader_id=trader_id, chapter=chapter, answer=answer, import_id=import_id,
+                            answered_at=at)
+    sess.add(row)
+    sess.flush()
+    for reason in reasons:
+        sess.add(m.ChapterFeedbackReason(feedback_id=row.id, reason=reason, given_at=at))
+
+
+def add_report_answer(sess, trader_id, import_id, answer, *, day="", note=None, at=THEN):
+    sess.add(m.ReportFeedback(trader_id=trader_id, import_id=import_id, answer=answer, trading_day=day,
+                              note=note, answered_at=at))
+
+
+def test_chapters_count_answers_with_reasons_and_reach(app, engine):
+    one, two, three = add_trader(engine, "one"), add_trader(engine, "two"), add_trader(engine, "three")
+    with make_session(engine) as sess:
+        imp = add_import(sess, one)
+        add_chapter_answer(sess, one, imp.id, 3, "wrong", ["wrong_facts"])
+        add_chapter_answer(sess, two, imp.id, 3, "wrong", ["wrong_reading"])
+        add_chapter_answer(sess, three, imp.id, 3, "not_sure")
+        sess.commit()
+    row = next(c for c in told(app, engine)["chapters"] if c["chapter"] == 3)
+    assert (row["reached"], row["accurate"], row["not_sure"], row["wrong"]) == (3, 0, 1, 2)
+    assert row["reasons"] == "Wrong facts 1, Right facts, wrong reading 1"
+
+
+def test_the_whole_report_and_days_said_to_look_wrong_are_counted(app, engine):
+    one, two = add_trader(engine, "one"), add_trader(engine, "two")
+    with make_session(engine) as sess:
+        imp = add_import(sess, one)
+        later = add_import(sess, one, at=THEN + timedelta(hours=1))
+        add_report_answer(sess, one, imp.id, "wrong")
+        add_report_answer(sess, one, later.id, "accurate")  # his latest is the one counted
+        add_report_answer(sess, two, imp.id, "wrong")
+        add_report_answer(sess, one, imp.id, "wrong", day="2026-03-02")
+        add_report_answer(sess, one, later.id, "wrong", day="2026-03-02")  # the same day again
+        add_report_answer(sess, two, imp.id, "wrong", day="2026-03-02")
+        sess.commit()
+    said = told(app, engine)
+    assert (said["report"]["accurate"], said["report"]["not_sure"], said["report"]["wrong"]) == (1, 0, 1)
+    assert said["days_wrong"] == 2
+
+
+def test_reports_waiting_are_those_since_wrong_reports_last_ran(app, engine):
+    trader_id = add_trader(engine, "one")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_report_answer(sess, trader_id, imp.id, "accurate", note="a note", at=THEN)
+        add_report_answer(sess, trader_id, add_import(sess, trader_id).id, "accurate", at=THEN)
+        add_report_answer(sess, trader_id, imp.id, "wrong", day="2026-03-02", at=THEN)
+        sess.commit()
+    assert told(app, engine)["waiting"] == 2
+    with make_session(engine) as sess:
+        sess.add(m.AdminAction(actor="admin", action="wrong_reports", target=None, at=THEN + timedelta(hours=1)))
+        sess.commit()
+    assert told(app, engine)["waiting"] == 0
+    with make_session(engine) as sess:
+        add_report_answer(sess, trader_id, imp.id, "wrong", day="2026-03-03", at=THEN + timedelta(hours=2))
+        sess.commit()
+    assert told(app, engine)["waiting"] == 1
+
+
+def test_a_development_account_moves_nothing_here(app, engine):
+    add_trader(engine, "real")
+    before = told(app, engine)
+    seed_everything(engine, add_trader(engine, "tester", dev=True))
+    assert told(app, engine) == before
+
+
+def test_would_pay_counts_those_with_a_note(app, engine):
+    seed_everything(engine, add_trader(engine, "someone"))
+    assert told(app, engine)["wtp_noted"] == 1
+
+
+def test_the_panel_draws_counts_and_the_command_and_no_typed_word(app, engine):
+    trader_id = add_trader(engine, "one")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_report_answer(sess, trader_id, imp.id, "wrong", note="MARKER-TYPED-WORDS")
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "What traders told us" in page
+    assert "wrong-reports" in page and "1 waiting" in page
+    assert "MARKER-TYPED-WORDS" not in page
+    assert page.index("What traders told us") < page.index("Would pay</dt>")
+
 def test_the_page_says_how_many_development_accounts_it_left_out(app, engine):
     # TICKET-864: a low number on the cards must not be misread as every account there is.
     assert view(app, engine)["dev_left_out"] == "No development accounts are left out"

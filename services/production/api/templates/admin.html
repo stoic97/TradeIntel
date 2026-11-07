@@ -96,11 +96,27 @@
     </table>
   </div>
   <p class="body-small admin__note">Readers and times here are floors: a fact closed with its heading still on screen sends nothing. If this shows heavy drop-off, check first whether that's the people or the measurement. Reading is stored by trader, not by file, so what someone read on the demo before a real upload counts under real, here and on the reading cards.</p>
+  <h2 class="heading admin__head">What traders told us</h2>
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>Where</th><th>Reached</th><th>Accurate</th><th>Not sure</th><th>Wrong</th><th>Reasons given</th></tr></thead>
+      <tbody>
+      {%- for row in told.chapters %}
+        <tr><td>Chapter {{ row.chapter }}</td><td>{{ row.reached }}</td><td>{{ row.accurate }}</td><td>{{ row.not_sure }}</td><td>{{ row.wrong }}</td><td>{{ row.reasons }}</td></tr>
+      {%- endfor %}
+        <tr><td>Whole report</td><td>—</td><td>{{ told.report.accurate }}</td><td>{{ told.report.not_sure }}</td><td>{{ told.report.wrong }}</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <dl class="admin__quiet body-small">
+    <dt>Days said to look wrong</dt><dd>{{ told.days_wrong|count }}</dd>
+    <dt>Reports to read</dt><dd>{{ told.waiting|count }} waiting since the last read. Run <code>wrong-reports</code> in the admin command line: what a trader typed stays off this page.</dd>
+    <dt>Would pay</dt><dd>asked {{ quiet.wtp_asked|count }}; yes {{ quiet.wtp.yes|count }}, no {{ quiet.wtp.no|count }}, maybe {{ quiet.wtp.maybe|count }}; {{ told.wtp_noted|count }} with a note</dd>
+  </dl>
 
   <h2 class="heading admin__head">The quiet panel</h2>
   <dl class="admin__quiet body-small">
     <dt>Most-opened drawer</dt><dd>{{ quiet.most_opened }}</dd>
-    <dt>Would pay</dt><dd>asked {{ quiet.wtp_asked|count }}; yes {{ quiet.wtp.yes|count }}, no {{ quiet.wtp.no|count }}, maybe {{ quiet.wtp.maybe|count }}</dd>
     <dt>Consent declines</dt><dd>{{ quiet.consent_declines|count }}</dd>
     <dt>Deletions</dt><dd>{{ quiet.deletions|count }} (last {{ quiet.last_deletion }})</dd>
   </dl>
