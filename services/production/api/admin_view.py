@@ -111,7 +111,6 @@ class _Reader:
     fact_ms: dict[str, int] = field(default_factory=dict)  # each fact read, and for how long
     furthest_chapter: int = 0
     dwell_ms: int = 0
-    drawer_opens: int = 0
     chapters: dict[int, str] = field(default_factory=dict)
     said_wrong: bool = False
     report: str | None = None
@@ -157,15 +156,14 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     return read
 
 
-def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
-    """Drawer opens per fact, while filling in what each reader read."""
+def _read_dwell(sess: Session, real: dict[int, _Reader]) -> None:
+    """What each reader read, and for how long."""
     rows = sess.execute(
         select(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key, m.DwellEvent.event,
                func.count(), func.sum(m.DwellEvent.duration_ms), func.max(m.DwellEvent.at))
         .group_by(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key,
                   m.DwellEvent.event)
     ).all()
-    drawers: dict[str, int] = {}
     for trader_id, surface, key, kind, times, total_ms, last in rows:
         reader = real.get(trader_id)
         if reader is None:
@@ -176,12 +174,10 @@ def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
             continue
         reader.furthest_chapter = max(reader.furthest_chapter, CHAPTER_OF[fact])
         if kind == "drawer_open":
-            reader.drawer_opens += times
-            drawers[fact] = drawers.get(fact, 0) + times
-        elif kind == "view":
+            continue
+        if kind == "view":
             reader.fact_ms[fact] = reader.fact_ms.get(fact, 0) + (total_ms or 0)
             reader.dwell_ms += total_ms or 0
-    return drawers
 
 
 def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
@@ -400,12 +396,28 @@ def _health_from(reader: _Reader):
     return reader.latest_read or reader.latest_any
 
 
+def _times(n: int, one: str, many: str, flagged: str = "refused") -> str | None:
+    return f"{formatting.count(n)} {one if n == 1 else many} {flagged}" if n else None
+
+
+def _issues(reader: _Reader, duplicates: dict[int, int]) -> tuple[str, int]:
+    """Files refused, rows refused and duplicates, in words, and how many in all. Empty when
+    there are none, so a real problem stands out in its column."""
+    latest = _health_from(reader)
+    rows = max(0, latest.rows_in - latest.rows_parsed - latest.rows_excluded) if latest else 0
+    repeats = duplicates.get(latest.id, 0) if latest else 0
+    said = (_times(reader.uploads_refused, "file", "files"), _times(rows, "row", "rows"),
+            _times(repeats, "duplicate", "duplicates", "flagged"))
+    return ", ".join(s for s in said if s), reader.uploads_refused + rows + repeats
+
+
 def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
          guess_on: bool, leaving_on: bool, feedback_chapters: list[int]) -> dict:
     latest = _health_from(reader)
     return {
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
+        "issues": _issues(reader, duplicates)[0],
         "file": reader.file,
         "step": _step(reader),
         "rows_read": _rows_read(latest) if latest else NOT_RECORDED,
@@ -417,7 +429,6 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "on_current": _on_current(reader, running_version),
         "facts_read": f"{len(reader.fact_ms)} of {len(SM.FACTS)}",
         "minutes": _span(reader.dwell_ms),
-        "drawer_opens": reader.drawer_opens,
         "chapters": [reader.chapters.get(n, NOT_RECORDED) for n in feedback_chapters],
         "report": reader.report or NOT_RECORDED,
         "journals_written": reader.journals_written,
@@ -469,10 +480,21 @@ def _reading(group: list[_Reader]) -> tuple[int, int, int]:
             sum(1 for r in group if not r.fact_ms))
 
 
-def _most_opened(drawers: dict[str, int]) -> str:
-    if not drawers:
-        return NOT_RECORDED
-    return SM.FACTS[max(drawers, key=lambda key: drawers[key])].title
+SORTS = {
+    "name": (lambda r, _d: r.name.lower(), False),
+    "file": (lambda r, _d: r.file, False),
+    "step": (lambda r, _d: _step(r), False),
+    "facts": (lambda r, _d: len(r.fact_ms), True),
+    "minutes": (lambda r, _d: r.dwell_ms, True),
+    "issues": (lambda r, d: _issues(r, d)[1], True),
+    "activity": (lambda r, _d: _last_seen(r), True),
+}
+"""What the table can sort by, and whether the most comes first. A plain link says which."""
+
+
+def _sort_links(all_columns: bool) -> dict[str, str]:
+    start = "/admin?columns=all&sort=" if all_columns else "/admin?sort="
+    return {key: f"{start}{key}" for key in SORTS}
 
 
 def _left_out(count: int) -> str:
@@ -483,7 +505,8 @@ def _left_out(count: int) -> str:
             else f"{formatting.count(count)} development accounts are left out")
 
 
-def build(sess: Session, *, running_version: str, production: bool) -> dict:
+def build(sess: Session, *, running_version: str, production: bool, sort: str | None = None,
+          all_columns: bool = False) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
@@ -516,7 +539,7 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             .group_by(m.ImportRow.import_id)
         ) if import_id in latest_ids
     }
-    drawers = _read_dwell(sess, real)
+    _read_dwell(sess, real)
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
     wtp_answers = _read_features(sess, real)
@@ -534,10 +557,11 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     feed_lines.sort(key=lambda line: line[0], reverse=True)
 
     guess_on, leaving_on = GU.ready(production), LC.ready(production)
+    by, most_first = SORTS.get(sort, SORTS["activity"])
     feedback_chapters = [c.number for c in SM.CHAPTERS if c.feedback]
     rows = [_row(r, running_version=running_version, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
-            for r in sorted(real.values(), key=_last_seen, reverse=True)]
+            for r in sorted(real.values(), key=lambda r: by(r, duplicates), reverse=most_first)]
     on_real = [r for r in real.values() if r.file == FILE_REAL]
     on_demo = [r for r in real.values() if r.file == FILE_DEMO]
     read_all, stopped_early, read_none = _reading(on_real)
@@ -546,6 +570,10 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
         "feedback_chapters": feedback_chapters,
+        "all_columns": all_columns,
+        "sort_links": _sort_links(all_columns),
+        "guess_on": guess_on,
+        "leaving_on": leaving_on,
         "features_off": [name for name, on in (("guess", guess_on), ("leaving card", leaving_on))
                          if not on],
         "cards": {
@@ -568,7 +596,6 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
         "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
         "fact_table": _fact_table(on_real, on_demo),
         "quiet": {
-            "most_opened": _most_opened(drawers),
             "wtp": wtp_answers,
             "wtp_asked": wtp_asked,
             "deletions": deleted,
