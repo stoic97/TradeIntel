@@ -1,2 +1,2 @@
 {#- Trades refused, apart from the rows read (TICKET-804). Nothing refused, nothing said. -#}
-{%- if imp.trips_refused %}<span class="body-small refused-line"><span class="num">{{ imp.trips_refused|count }}</span> {{ "trade" if imp.trips_refused == 1 else "trades" }} we couldn't use.</span>{% endif -%}
+{%- if imp.trips_refused %}<span class="body-small refused-line"><span class="num">{{ Figure(imp.trips_refused, "trades")|count }}</span> {{ "trade" if imp.trips_refused == 1 else "trades" }} we couldn't use.</span>{% endif -%}

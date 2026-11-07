@@ -11,5 +11,5 @@ No difference we can stand behind.
 {%- endmacro %}
 
 {% macro busiest_sentence(days) -%}
-Your busiest day had <span class="num">{{ days.busiest_trips|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ days.normal_day }}</span> on your normal day.
+Your busiest day had <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ Figure(days.normal_day, "trades") }}</span> on your normal day.
 {%- endmacro %}

@@ -8,14 +8,14 @@
 {% block content %}
   <p class="label">Before you look</p>
   {%- if checkable %}
-  <p class="check-line">Your history lets us check <span class="num">{{ checkable[0]|count }}</span> of <span class="num">{{ checkable[1]|count }}</span> things. <a class="link" href="/eligibility">What we can check</a></p>
+  <p class="check-line">Your history lets us check <span class="num">{{ Figure(checkable[0], "checks")|count }}</span> of <span class="num">{{ Figure(checkable[1], "checks")|count }}</span> things. <a class="link" href="/eligibility">What we can check</a></p>
   {%- endif %}
   <h1 class="heading guess__question">{{ question }}</h1>
   <form method="post" action="/guess">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="guess" role="list">
       {%- for value, label in labels.items() %}
-      <button class="guess__option" role="listitem" type="submit" name="answer" value="{{ value }}"><span class="guess__index">{{ loop.index }}</span><span class="guess__label">{{ label }}</span></button>
+      <button class="guess__option" role="listitem" type="submit" name="answer" value="{{ value }}"><span class="guess__index">{{ Figure(loop.index, "option") }}</span><span class="guess__label">{{ label }}</span></button>
       {%- endfor %}
     </div>
     <button class="btn btn--text" type="submit" name="answer" value="{{ unknown }}">{{ unknown_label }}</button>

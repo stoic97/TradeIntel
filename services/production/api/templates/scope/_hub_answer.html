@@ -7,27 +7,27 @@
 Not enough trades yet.
 {%- elif c.number == 1 -%}
   {%- if a.share.shown_as_percentage -%}
-{{ a.days_word }} of your <span class="num">{{ a.share.trading_day_count|count }}</span> trading days carried <span class="num">{{ a.share.share_percent }}</span>% of your losses — {{ money(a.worst_loss, signed=false) }}.
+{{ a.days_word }} of your <span class="num">{{ Figure(a.share.trading_day_count, "days")|count }}</span> trading days carried <span class="num">{{ Figure(a.share.share_percent, "percent") }}</span>% of your losses — {{ money(a.worst_loss, signed=false) }}.
   {%- else -%}
 Your five worst days came to {{ money(a.worst_sum) }}.
   {%- endif -%}
-  {%- if a.at_least %} On each of them you traded at least <span class="num">{{ a.at_least }}</span>× your normal day.{% endif -%}
+  {%- if a.at_least %} On each of them you traded at least <span class="num">{{ Figure(a.at_least, "times") }}</span>× your normal day.{% endif -%}
 {%- elif c.number == 2 -%}
-Strike rate on same-day trades: <span class="num">{{ a.strike.rate_percent }}</span>%.
-  {%- if a.even.percent is not none %} Break-even at your average winner and loser: <span class="num">{{ a.even.percent }}</span>%.{% endif -%}
+Strike rate on same-day trades: <span class="num">{{ Figure(a.strike.rate_percent, "percent") }}</span>%.
+  {%- if a.even.percent is not none %} Break-even at your average winner and loser: <span class="num">{{ Figure(a.even.percent, "percent") }}</span>%.{% endif -%}
 {%- elif c.number == 3 -%}
   {%- if a.says_direction -%}
 {{ down_sentence(post_loss, two_losses) }}
   {%- else -%}
-Your busiest day: <span class="num">{{ a.story.trades|count }}</span> {{ "trade" if a.story.trades == 1 else "trades" }} on {{ a.story.day }}, {{ money(a.story.net) }}.
-    {%- if a.after_two %} After two straight losses you opened <span class="num">{{ a.after_two|count }}</span> {{ "trade" if a.after_two == 1 else "trades" }}.{% endif -%}
+Your busiest day: <span class="num">{{ Figure(a.story.trades, "trades")|count }}</span> {{ "trade" if a.story.trades == 1 else "trades" }} on {{ a.story.day }}, {{ money(a.story.net) }}.
+    {%- if a.after_two %} After two straight losses you opened <span class="num">{{ Figure(a.after_two, "trades")|count }}</span> {{ "trade" if a.after_two == 1 else "trades" }}.{% endif -%}
   {%- endif -%}
 {%- else -%}
   {%- if a.number is not none -%}
 Your number is {{ money(a.number, signed=false) }}
-    {%- if a.past.measured %}; <span class="num">{{ a.past.count|count }}</span> {{ "trade" if a.past.count == 1 else "trades" }} lost more than it{% endif %}.
+    {%- if a.past.measured %}; <span class="num">{{ Figure(a.past.count, "trades")|count }}</span> {{ "trade" if a.past.count == 1 else "trades" }} lost more than it{% endif %}.
   {%- elif a.uncapped -%}
-<span class="num">{{ a.uncapped|count }}</span> sold-option {{ "trade has" if a.uncapped == 1 else "trades have" }} no risk cap, and no budget is set, so there is no risk figure yet.
+<span class="num">{{ Figure(a.uncapped, "trades")|count }}</span> sold-option {{ "trade has" if a.uncapped == 1 else "trades have" }} no risk cap, and no budget is set, so there is no risk figure yet.
   {%- else -%}
 No budget is set, so there is no risk figure yet.
   {%- endif -%}
