@@ -116,3 +116,11 @@ def test_the_trades_listed_are_captioned_as_the_trades_listed(client):
     text = words(client.get("/mirror/fact/down").text)
     assert "Every trade you opened right after two straight losses." in text
     assert "Every trade opened after two earlier trades that day had already closed." not in text
+
+
+def test_the_count_under_the_caption_is_said_once(client):
+    """"65 trades. 65 of 227 trades." read as a stutter: the second says only where they come from."""
+    text = words(client.get("/mirror/fact/down").text)
+    assert re.search(r"right after two straight losses\. [\d,]+ trades\. From the [\d,]+ trades counted above\. "
+                     r"Listed in the order you opened them\.", text)
+    assert not re.search(r"[\d,]+ of [\d,]+ trades\. Listed", text)
