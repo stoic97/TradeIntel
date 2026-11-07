@@ -13,7 +13,7 @@
   {%- else %}
   {%- if read_again %}
   <p class="lead">This is the same file, read with newer code. Your figures may differ from before.</p>
-  <p class="body"><span class="num">{{ counted(imp.trips_reconstructed, "trade", "trades") }}</span> now, <span class="num">{{ Figure(trades_before, "trades")|count }}</span> before.</p>
+  <p class="body"><span class="num">{{ Figure(imp.trips_reconstructed, "trades")|count }}</span> {{ "trade" if imp.trips_reconstructed == 1 else "trades" }} now, <span class="num">{{ Figure(trades_before, "trades")|count }}</span> before.</p>
   {%- endif %}
   {%- if rows_confirmed is defined and rows_confirmed %}
   <p class="lead">You told us <span class="num">{{ Figure(rows_confirmed, "rows")|count }}</span> {{ "row repeats" if rows_confirmed == 1 else "rows repeat" }} a trade already in the file. {{ "It is" if rows_confirmed == 1 else "They are" }} set aside, and your figures were rebuilt without {{ "it" if rows_confirmed == 1 else "them" }}.</p>
@@ -33,7 +33,7 @@
   {%- endif %}
   {%- if rejected %}
   <section class="import__section">
-    <h2 class="card-title"><span class="num">{{ counted(rejected|length, "row", "rows") }}</span> we could not read</h2>
+    <h2 class="card-title"><span class="num">{{ Figure(rejected|length, "rows")|count }}</span> {{ "row" if rejected|length == 1 else "rows" }} we could not read</h2>
     <p class="body-small">Kept, not discarded. Each one says why.</p>
     <table class="table"><thead><tr><th class="table__day">Row</th><th>Why</th></tr></thead>
       <tbody>
