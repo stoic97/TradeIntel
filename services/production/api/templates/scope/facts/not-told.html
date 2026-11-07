@@ -14,15 +14,15 @@
     <h2 class="heading" id="ending-found">What your file showed</h2>
     <ol class="ending__list">
       {%- if f.options %}
-      <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options_amount, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ f.options.held_gain_days|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
+      <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options_amount, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ Figure(f.options.held_gain_days, "days")|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
       {%- elif not facts["worst-days"].state %}
       <li class="mirror">Your five worst days came to {{ money(worst_days.sum) }}.</li>
       {%- endif %}
       {%- if not facts["run"].state %}
-      <li class="mirror">Your longest run of consecutive losers was <span class="num">{{ run.length|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ facts["run"].day_count|count }}</span> days{% endif %}.</li>
+      <li class="mirror">Your longest run of consecutive losers was <span class="num">{{ Figure(run.length, "losses")|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ Figure(facts["run"].day_count, "days")|count }}</span> days{% endif %}.</li>
       {%- endif %}
       {%- if not facts["busiest"].state %}
-      <li class="mirror">Your normal day is <span class="num">{{ days.normal_day }}</span> trades. Your busiest was <span class="num">{{ facts["busiest"].busiest_date }}</span>, at <span class="num">{{ days.busiest_trips|count }}</span>.</li>
+      <li class="mirror">Your normal day is <span class="num">{{ Figure(days.normal_day, "trades") }}</span> trades. Your busiest was <span class="num">{{ facts["busiest"].busiest_date }}</span>, at <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}.</li>
       {%- endif %}
     </ol>
   </section>
@@ -45,12 +45,12 @@
   <section class="ending__changed" aria-labelledby="ending-changed">
     {%- if ending.changed.same_file %}
     <h2 class="heading" id="ending-changed">What changed when this file was read again</h2>
-    <p class="body">Trades: <span class="num">{{ ending.changed.trades[0]|count }}</span> now, <span class="num">{{ ending.changed.trades[1]|count }}</span> before.</p>
-    <p class="body">Trading days: <span class="num">{{ ending.changed.days[0]|count }}</span> now, <span class="num">{{ ending.changed.days[1]|count }}</span> before.</p>
+    <p class="body">Trades: <span class="num">{{ Figure(ending.changed.trades[0], "trades")|count }}</span> now, <span class="num">{{ Figure(ending.changed.trades[1], "trades")|count }}</span> before.</p>
+    <p class="body">Trading days: <span class="num">{{ Figure(ending.changed.days[0], "days")|count }}</span> now, <span class="num">{{ Figure(ending.changed.days[1], "days")|count }}</span> before.</p>
     {%- else %}
     <h2 class="heading" id="ending-changed">What changed since your last file</h2>
-    <p class="body">Trades: <span class="num">{{ ending.changed.trades[0]|count }}</span> in this file, <span class="num">{{ ending.changed.trades[1]|count }}</span> in your last file.</p>
-    <p class="body">Trading days: <span class="num">{{ ending.changed.days[0]|count }}</span> in this file, <span class="num">{{ ending.changed.days[1]|count }}</span> in your last file.</p>
+    <p class="body">Trades: <span class="num">{{ Figure(ending.changed.trades[0], "trades")|count }}</span> in this file, <span class="num">{{ Figure(ending.changed.trades[1], "trades")|count }}</span> in your last file.</p>
+    <p class="body">Trading days: <span class="num">{{ Figure(ending.changed.days[0], "days")|count }}</span> in this file, <span class="num">{{ Figure(ending.changed.days[1], "days")|count }}</span> in your last file.</p>
     {%- endif %}
   </section>
   {%- endif %}
@@ -58,13 +58,13 @@
   <section class="ending__steps" aria-labelledby="ending-steps">
     <h2 class="heading" id="ending-steps">Where to look next</h2>
     {%- if f.flagged.run %}
-    <a class="step" href="{{ facts["run"].href }}">Your {{ f.flagged.run.day }} — <span class="num">{{ f.flagged.run.losses|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ f.flagged.run.day_count|count }}</span> days{% endif %}.</a>
+    <a class="step" href="{{ facts["run"].href }}">{{ f.flagged.run.day }} — <span class="num">{{ Figure(f.flagged.run.losses, "losses")|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ Figure(f.flagged.run.day_count, "days")|count }}</span> days{% endif %}.</a>
     {%- endif %}
     {%- if not facts["worst-days"].state %}
     <a class="step" href="{{ facts["worst-days"].href }}">Your five worst days — {{ money(worst_days.sum) }}.</a>
     {%- endif %}
     {%- if f.flagged.worst %}
-    <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your five worst days: <span class="num">{{ f.flagged.worst.trades|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
+    <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your five worst days: <span class="num">{{ Figure(f.flagged.worst.trades, "trades")|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
     {%- else %}
     <a class="step" href="{{ ending.journal_href }}">Your journals.</a>
     {%- endif %}

@@ -9,26 +9,26 @@
 {%- set st = f.story %}
 {%- set between %}between <span class="opening-figure"><span class="num">{{ st.started }}</span></span> and <span class="opening-figure"><span class="num">{{ st.ended }}</span></span>{% endset %}
 {%- set holding %}{% if st.holding_each %}, holding each {{ st.holding_each }}{% endif %}{% endset %}
-    <p class="mirror"><span class="num">{{ st.day }}</span>: <span class="num">{{ st.trades|count }}</span> {{ "trade" if st.trades == 1 else "trades" }}.
+    <p class="mirror"><span class="num">{{ st.day }}</span>: <span class="num">{{ Figure(st.trades, "trades")|count }}</span> {{ "trade" if st.trades == 1 else "trades" }}.
     {%- if st.trades == 1 %} That was the only trade that day.
     {%- elif not st.book %} No one book made up more than half of them.
-    {%- else %} {% if st.book_trades == st.trades %}All {% endif %}<span class="num">{{ st.book_trades|count }}</span> were {{ st.book }}
-      {%- if st.strike %}, all on the <span class="num">{{ st.strike }}</span> strike{% elif st.strikes > 1 %}, on <span class="num">{{ st.strikes }}</span> strikes{% endif %}
-      {%- if st.lots == 1 %}, one lot each{% elif st.lots %}, <span class="num">{{ st.lots|count }}</span> lots each{% elif st.lots_low %}, <span class="num">{{ st.lots_low|count }}</span> to <span class="num">{{ st.lots_high|count }}</span> lots each{% endif %}.
+    {%- else %} {% if st.book_trades == st.trades %}All {% endif %}<span class="num">{{ Figure(st.book_trades, "trades")|count }}</span> were {{ st.book }}
+      {%- if st.strike %}, all on the <span class="num">{{ Figure(st.strike, "strike price") }}</span> strike{% elif st.strikes > 1 %}, on <span class="num">{{ Figure(st.strikes, "strikes") }}</span> strikes{% endif %}
+      {%- if st.lots == 1 %}, one lot each{% elif st.lots %}, <span class="num">{{ Figure(st.lots, "lots")|count }}</span> lots each{% elif st.lots_low %}, <span class="num">{{ Figure(st.lots_low, "lots")|count }}</span> to <span class="num">{{ Figure(st.lots_high, "lots")|count }}</span> lots each{% endif %}.
     {%- endif %}</p>
     {%- if st.book %}
     <p class="mirror">
       {%- if st.only_positions %}These were positions of several legs, so there is no call or put to follow. {% endif %}
-      {%- if st.switches %}You switched between {{ "the call and the put" if st.strike else "calls and puts" }} <span class="num">{{ st.switches|count }}</span> {{ "time" if st.switches == 1 else "times" }} {{ between }}{{ holding }}.
-      {%- elif st.one_side %}All <span class="num">{{ st.book_trades|count }}</span> were {{ st.one_side }}, {{ between }}{{ holding }}.
+      {%- if st.switches %}You switched between {{ "the call and the put" if st.strike else "calls and puts" }} <span class="num">{{ Figure(st.switches, "switches")|count }}</span> {{ "time" if st.switches == 1 else "times" }} {{ between }}{{ holding }}.
+      {%- elif st.one_side %}All <span class="num">{{ Figure(st.book_trades, "trades")|count }}</span> were {{ st.one_side }}, {{ between }}{{ holding }}.
       {%- else %}You traded them {{ between }}{{ holding }}.{% endif %}
       {%- if st.median_hold %} You held them {{ st.median_hold }} at the median, and {{ st.longest_hold }} at the longest.{% endif %}
-      {%- if st.held_past_day %} <span class="num">{{ st.held_past_day|count }}</span> stayed open past that day.{% endif %}</p>
+      {%- if st.held_past_day %} <span class="num">{{ Figure(st.held_past_day, "trades")|count }}</span> stayed open past that day.{% endif %}</p>
     {%- endif %}
     <p class="mirror">
     {%- if st.trades == 1 %}That trade: {{ result(st.net) }}.
-    {%- elif st.book and st.book_trades < st.trades %}{{ st.book }} that day: {{ result(st.book_net) }}. All <span class="num">{{ st.trades|count }}</span> trades that day, every book: {{ result(st.net) }}.
-    {%- else %}All <span class="num">{{ st.trades|count }}</span> trades that day: {{ result(st.net) }}.{% endif %}</p>
+    {%- elif st.book and st.book_trades < st.trades %}{{ st.book }} that day: {{ result(st.book_net) }}. All <span class="num">{{ Figure(st.trades, "trades")|count }}</span> trades that day, every book: {{ result(st.net) }}.
+    {%- else %}All <span class="num">{{ Figure(st.trades, "trades")|count }}</span> trades that day: {{ result(st.net) }}.{% endif %}</p>
 {% endblock %}
 {% block body %}
   {%- if f.story.strip %}

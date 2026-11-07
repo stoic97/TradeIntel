@@ -12,6 +12,7 @@ Synthetic trades, expected values worked by hand:
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -206,7 +207,8 @@ def test_a_single_trade_reads_in_the_singular():
 
 
 def test_the_books_say_no_more_than_the_record():
-    body = text().lower()
+    # The dial is out of this: "trades made money" is its agreed count, not a claim about a book.
+    body = readable(re.sub(r"<svg\b.*?</svg>", " ", page(), flags=re.DOTALL)).lower()
     for word in ("your worst hour", "almost half", "made money", "every other price", "held about a year"):
         assert word not in body, word
 

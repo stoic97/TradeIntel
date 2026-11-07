@@ -3,14 +3,14 @@
     answers in full, then the counts on one line. Every line describes: a post-loss comparison
     shows only where the file's own shuffle test lets it. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import dial, gross_line, uncounted_line, lockup, money, button %}
+{% from "_components.html" import dial, dials, gross_line, uncounted_line, lockup, money, button %}
 {% set nav = "scope" %}
 {% from "_verdict.html" import came, held, verdict_sentence %}
 {% block stage %}
 <header class="stage stage--home on-navy">
   <div class="stage__bar">{{ lockup() }}</div>
   <div class="stage__dial">
-  {{ dial(view) }}
+  {{ dials(view) }}
   </div>
   {%- if start %}
   <div class="home__start">{{ button(start.label, href=start.href, kind="on-navy", block=true) }}</div>
@@ -24,7 +24,7 @@
   <p class="label label--plain home__heading">Your books</p>
   <ul class="home__books">
     {%- for b in verdict.books %}
-    <li class="home__book"><span class="home__book-head"><span>{{ b.label }}</span> {{ money(b.net) }}</span> <span class="body-small"><span class="num">{{ b.trades|count }}</span> trade{{ "" if b.trades == 1 else "s" }}.
+    <li class="home__book"><span class="home__book-head"><span>{{ b.label }}</span> {{ money(b.net) }}</span> <span class="body-small"><span class="num">{{ Figure(b.trades, "trades")|count }}</span> trade{{ "" if b.trades == 1 else "s" }}.
       {%- if b.standout %} {{ b.standout.symbol }} made {{ money(b.standout.net, signed=false) }}{{ held(b.standout) }}.
       {%- elif b.worst_day %} Worst day: {{ b.worst_day|day }}, {{ money(b.worst_net) }}.{% endif %}</span></li>
     {%- endfor %}
@@ -32,14 +32,14 @@
   <p class="label label--plain home__heading">Four chapters</p>
   <ol class="home__chapters">
     {%- for c in chapters %}
-    <li class="home__chapter{% if c.opened %} home__chapter--read{% endif %}"><span class="label">{{ c.number }} · {{ c.name }}{% if c.opened %} · Read{% endif %}</span>
+    <li class="home__chapter{% if c.opened %} home__chapter--read{% endif %}"><span class="label">{{ Figure(c.number, "chapter") }} · {{ c.name }}{% if c.opened %} · Read{% endif %}</span>
       <p class="body">{% include "scope/_hub_answer.html" %}</p>
       {{ button("Open chapter " ~ c.number, href=c.href, kind="text") }}
     </li>
     {%- endfor %}
   </ol>
   {{ uncounted_line(imp.trips_refused) }}
-  <p class="label label--plain home__foot"><span>{{ imp.rows_parsed|count }} of {{ imp.rows_in|count }} rows read · {{ trade_count|count }} trades · {{ trading_day_count|count }} trading days{% if not imp.fees_available %} · before charges{% endif %}</span><span>No buy or sell calls, ever.</span></p>
+  <p class="label label--plain home__foot"><span>{{ Figure(imp.rows_parsed, "rows")|count }} of {{ Figure(imp.rows_in, "rows")|count }} rows read · {{ Figure(trade_count, "trades")|count }} trades · {{ Figure(trading_day_count, "days")|count }} trading days{% if not imp.fees_available %} · before charges{% endif %}</span><span>No buy or sell calls, ever.</span></p>
   {% include "scope/_refused.html" %}
   {% include "scope/_lineage.html" %}
 {% endblock %}
