@@ -190,14 +190,12 @@ def test_a_hold_under_a_minute_is_not_called_zero_minutes():
     assert "0 minutes" not in story
 
 
-def test_a_trade_held_past_the_day_leaves_the_holds_out_and_says_why():
-    """Its exit is another date, so "between ... and ..." reads the entries instead."""
+def test_a_trade_held_past_the_day_is_not_in_the_story():
+    """TICKET-855: Chapter 3 reads same-day trades, so the page is what it is without it."""
     held_over = option("09:30", "PE", 50)
     held_over = replace(held_over, exit_ts=held_over.entry_ts + timedelta(days=2), holding_seconds=172800)
-    story = story_of([option("09:20", "CE", 50), held_over, *QUIET])
-    assert "between 9:20 am and 9:30 am." in story
-    assert "holding" not in story
-    assert "1 stayed open past that day." in story
+    same_day = [option("09:20", "CE", 50), *QUIET]
+    assert story_of([same_day[0], held_over, *QUIET]) == story_of(same_day)
 
 
 def test_a_day_of_shares_tells_no_strike_lots_or_switches_and_draws_no_strip():
