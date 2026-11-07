@@ -68,6 +68,7 @@ async def add_file(request: Request, import_id: int,
             return early
         trader, imp = found
         if not charges_open(request):
+            limits.count_refusal(request, limits.UNVERIFIED_MAP)
             return page(request, "upload_closed.html", status_code=503,
                         title="Not open for your broker yet")
 
@@ -84,6 +85,7 @@ async def add_file(request: Request, import_id: int,
 
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:
+            limits.count_refusal(request, limits.FILE_TOO_LARGE)
             return refuse("That file is larger than we take.")
         try:
             days = statement.parse(content)
@@ -94,6 +96,7 @@ async def add_file(request: Request, import_id: int,
         digest = hashlib.sha256(content).hexdigest()
         if sess.scalars(select(m.RawFile).where(m.RawFile.trader_id == trader.id,
                                                 m.RawFile.sha256 == digest)).first():
+            limits.count_refusal(request, limits.SAME_FILE)
             return refuse("You have already uploaded this exact file. Nothing was added.")
 
         stored = _store(request).put(content)
