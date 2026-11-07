@@ -3,8 +3,8 @@
 Three things decide the shape of this module.
 
 **Only what is stored.** Nothing here estimates. A step that leaves no row (the reveal, a
-chapter being opened, a byte-identical upload being refused) is shown as "—", or counted
-only by what truly proves it, and the page says which.
+chapter being opened, a byte-identical upload being refused) is left off, or counted only
+by what truly proves it, and the page says which.
 
 **No free text and no money.** Queries name their columns, so a note, a journal answer, a
 stored row of a file, a budget or a trade's result is never fetched at all: what was never
@@ -552,8 +552,6 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             "signed_up": len(real),
             "tried_demo": sum(1 for r in real.values() if r.tried_demo),
             "uploaded_real": sum(1 for r in real.values() if r.brought_real),
-            "reached_reveal": NOT_RECORDED,
-            "upload_to_reveal": NOT_RECORDED,
             "read_all": read_all,
             "stopped_early": stopped_early,
             "read_none": read_none,
