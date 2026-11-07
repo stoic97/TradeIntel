@@ -121,4 +121,23 @@
   {%- else %}
   <p class="body-small">None.</p>
   {%- endif %}
+
+  <h2 class="heading admin__head">Who can open this page</h2>
+  <p class="body-small">{{ admins|join(", ") or "Nobody" }}. Page opened {{ admin_views.count|count }} times, last {{ admin_views.last }}.</p>
+
+  <h2 class="heading admin__head">What admins have done</h2>
+  {%- if trail %}
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>When</th><th>Who</th><th>What</th><th>About</th></tr></thead>
+      <tbody>
+      {%- for line in trail %}
+        <tr><td>{{ line.when }}</td><td>{{ line.who }}</td><td>{{ line.action }}</td><td>{{ line.target }}</td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  {%- else %}
+  <p class="body-small">Nothing yet.</p>
+  {%- endif %}
 {% endblock %}
