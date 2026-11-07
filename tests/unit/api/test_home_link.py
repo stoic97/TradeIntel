@@ -118,6 +118,16 @@ def test_every_signed_in_page_links_to_home(engine, client):
             assert_a_way_home(r.text, f"{url} -> {r.url.path}")
 
 
+def test_the_pages_with_no_other_way_out_each_have_a_way_home(engine, client):
+    """Named, because these three had no link out at all (T-001, round 2)."""
+    with make_session(engine) as sess:
+        imp = sess.scalars(select(m.Import.id)).first()
+    for url in ("/upload", "/budget", f"/imports/{imp}"):
+        r = client.get(url, follow_redirects=False)
+        assert r.status_code == 200, url
+        assert_a_way_home(r.text, url)
+
+
 def test_a_trader_before_consent_has_a_way_home_too(engine):
     c = sign_up(TestClient(create_app()), engine, "H-2", "notyet", consent=False)
     for url in ("/consent", "/upload", "/account"):
