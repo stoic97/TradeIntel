@@ -507,3 +507,83 @@ def test_an_ordinary_trader_doing_ordinary_things_never_meets_a_cap(app, engine)
     assert not [a.status_code for a in answers if a.status_code in capped]
     assert len(good) < k.MAX_UPLOAD_BYTES
     assert raw_files(engine) < k.UPLOADS_PER_ACCOUNT_PER_DAY
+
+
+# ---------- Failed sign-ins [TICKET-872] ----------
+
+
+def try_login(client, login_id, password):
+    csrf = CSRF.search(client.get("/login").text).group(1)
+    return client.post("/login", data={"login_id": login_id, "password": password, "csrf_token": csrf},
+                       follow_redirects=False)
+
+
+def from_network(app, n) -> TestClient:
+    return TestClient(app, client=(f"{n % 200 + 1}.{n // 200 + 1}.0.9", 50000))
+
+
+def fail_id(app, login_id, times):
+    for n in range(times):
+        assert try_login(from_network(app, n), login_id, "wrong").status_code == 400
+
+
+def test_a_login_id_is_refused_past_its_cap_from_any_connection_even_with_the_right_password(app):
+    sign_up(TestClient(app), "owner")
+    fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    refused = try_login(from_network(app, 900), "owner", PASSWORD)
+    assert refused.status_code == 429
+    assert auth_cookie_absent(refused)
+
+
+def auth_cookie_absent(response) -> bool:
+    return "set-cookie" not in {key.lower() for key in response.headers}
+
+
+def test_one_connection_is_refused_past_its_cap_across_login_ids(app):
+    client = TestClient(app)
+    for n in range(k.LOGIN_FAILURES_PER_IP_PER_HOUR):
+        assert try_login(client, f"guess{n}", "wrong").status_code == 400
+    assert try_login(client, "guess-another", "wrong").status_code == 429
+
+
+def test_a_refusal_says_what_happened_and_when_to_try_again(app):
+    fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    refused = try_login(from_network(app, 900), "owner", "wrong")
+    assert "Too many failed sign-ins" in refused.text
+    assert re.search(r"Try again in \d+ minutes?\.", refused.text)
+    assert 0 < int(refused.headers["Retry-After"]) <= 3600
+    assert 'role="alert"' in refused.text
+
+
+def test_a_known_and_an_unknown_id_get_the_same_refusal(app):
+    sign_up(TestClient(app), "owner")
+    fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    fail_id(app, "nobody", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    known = try_login(from_network(app, 900), "owner", "wrong")
+    unknown = try_login(from_network(app, 901), "nobody", "wrong")
+    strip = lambda text: CSRF.sub("", re.sub(r"\d+ minutes?", "", text))
+    assert (known.status_code, strip(known.text)) == (unknown.status_code, strip(unknown.text))
+
+
+def test_a_correct_password_under_the_cap_works_and_counts_nothing(app):
+    sign_up(TestClient(app), "owner")
+    fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR - 1)
+    for n in range(3):
+        assert try_login(from_network(app, 500 + n), "owner", PASSWORD).status_code == 303
+    assert try_login(from_network(app, 900), "owner", PASSWORD).status_code == 303
+
+
+def test_the_right_password_works_again_after_the_wait(app):
+    now = [0.0]
+    app.state.login_ids = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_ID_PER_HOUR, clock=lambda: now[0])
+    sign_up(TestClient(app), "owner")
+    fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    assert try_login(from_network(app, 900), "owner", PASSWORD).status_code == 429
+    now[0] = limits.HOUR_SECONDS + 1
+    assert try_login(from_network(app, 900), "owner", PASSWORD).status_code == 303
+
+
+def test_a_capped_id_leaves_other_accounts_alone(app):
+    sign_up(TestClient(app), "owner")
+    fail_id(app, "someone-else", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
+    assert try_login(from_network(app, 900), "owner", PASSWORD).status_code == 303

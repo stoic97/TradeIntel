@@ -5,32 +5,50 @@
 {% block head_scripts %}{% endblock %}
 {% block content %}
   <h1 class="title">Admin</h1>
-  <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. Development accounts are left out of everything until their own list at the end.</p>
+  <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. {{ dev_left_out }} of everything until their own list at the end.</p>
 
   <section class="admin__cards">
-    <div class="card"><p class="label">Signed up / uploaded</p><p class="heading">{{ cards.signed_up|count }} / {{ cards.uploaded|count }}</p></div>
+    <div class="card"><p class="label">Signed up / tried the demo / uploaded a real file</p><p class="heading">{{ cards.signed_up|count }} / {{ cards.tried_demo|count }} / {{ cards.uploaded_real|count }}</p></div>
     <div class="card"><p class="label">Reached the reveal</p><p class="heading">{{ cards.reached_reveal }}</p><p class="body-small">Median minutes, upload to reveal: {{ cards.upload_to_reveal }}</p></div>
-    <div class="card"><p class="label">Read all {{ fact_total }} facts / stopped early / read none</p><p class="heading">{{ cards.read_all|count }} / {{ cards.stopped_early|count }} / {{ cards.read_none|count }}</p><p class="body-small">Of those who uploaded.</p></div>
-    <div class="card"><p class="label">Said Wrong on any chapter</p><p class="heading">{{ cards.said_wrong|count }}</p></div>
+    <div class="card"><p class="label">Real-file readers: read all {{ fact_total }} facts / stopped early / read none</p><p class="heading">{{ cards.read_all|count }} / {{ cards.stopped_early|count }} / {{ cards.read_none|count }}</p><p class="body-small">Of those whose report reads a real file.</p></div>
+    <div class="card"><p class="label">Demo readers: read all {{ fact_total }} facts / stopped early / read none</p><p class="heading">{{ cards.demo_read_all|count }} / {{ cards.demo_stopped_early|count }} / {{ cards.demo_read_none|count }}</p><p class="body-small">Of those whose report reads the demo.</p></div>
+    <div class="card"><p class="label">Said Wrong on any chapter</p><p class="heading">{{ cards.said_wrong|count }}</p><p class="body-small">On the demo: {{ cards.said_wrong_demo|count }}.</p></div>
   </section>
   <p class="body-small admin__note">The reveal is a plain page view that writes nothing, and every later step can be reached without it, so nothing stored proves it was seen.</p>
+
+  <h2 class="heading admin__head">System health</h2>
+  <dl class="admin__quiet body-small">
+    <dt>Would an upload work right now?</dt><dd>{{ health.upload.answer }}. One account can still reach its cap of {{ health.upload.daily_cap|count }} files in a day.</dd>
+    <dt>Disk</dt><dd>{{ health.disk }}</dd>
+    <dt>Database</dt><dd>{{ health.database_size }}</dd>
+    <dt>Stored files</dt><dd>{{ health.stored_size }}</dd>
+    <dt>Running deploy</dt><dd><span class="num">{{ running_version }}</span>, started {{ health.started }}</dd>
+    <dt>Server errors since restart</dt><dd>{{ health.server_errors|count }}</dd>
+  </dl>
+  <h3 class="label admin__head">Refused since restart</h3>
+  <dl class="admin__quiet body-small">
+  {%- for line in health.refusals %}
+    <dt>{{ line.label }}</dt><dd>{{ line.count|count }}</dd>
+  {%- endfor %}
+  </dl>
+  <p class="body-small admin__note">Read when this page loads. These refusals leave no row, so nothing else here can show them. The counts are held in memory with no trader against them, and a restart sets them back to nothing. A server error is a request that crashed; a refusal is not one. The app can't read backups, so this page says nothing about whether they ran: check them by <code>docs/runbooks/deploy.md</code>, section 5.</p>
 
   <h2 class="heading admin__head">Traders</h2>
   <div class="admin__scroll">
     <table class="table admin__table">
       <thead><tr>
-        <th>Trader</th><th>Login id</th><th>Furthest step</th><th>Rows read</th><th>Rows refused</th><th>Files refused</th><th>Duplicates flagged</th><th>On current code</th><th>Facts read</th><th>In the report</th><th>Drawer opens</th>
+        <th>Trader</th><th>Login id</th><th>File</th><th>Furthest step</th><th>Rows read</th><th>Rows refused</th><th>Files refused</th><th>Duplicates flagged</th><th>On current code</th><th>Facts read</th><th>In the report</th><th>Drawer opens</th>
         {%- for n in feedback_chapters %}<th>Chapter {{ n }} match?</th>{% endfor -%}
-        <th>Whole report</th><th>Journals written</th><th>Budget</th><th>Guess</th><th>Leaving card</th><th>Would pay</th><th>Last seen</th>
+        <th>Whole report</th><th>Journals written</th><th>Budget</th><th>Guess</th><th>Leaving card</th><th>Would pay</th><th>Signed up</th><th>Last activity</th>
       </tr></thead>
       <tbody>
       {%- for row in rows %}
         <tr>
-          <td>{{ row.name }}</td><td>{{ row.login_id }}</td><td>{{ row.step }}</td><td>{{ row.rows_read }}</td><td>{{ row.rows_refused }}</td><td>{{ row.uploads_refused }}</td><td>{{ row.duplicates }}</td>
+          <td>{{ row.name }}</td><td>{{ row.login_id }}</td><td>{{ row.file }}</td><td>{{ row.step }}</td><td>{{ row.rows_read }}</td><td>{{ row.rows_refused }}</td><td>{{ row.uploads_refused }}</td><td>{{ row.duplicates }}</td>
           <td{% if row.on_current == "no" %} class="admin__stale"{% endif %}>{{ row.on_current }}</td>
           <td>{{ row.facts_read }}</td><td>{{ row.minutes }}</td><td>{{ row.drawer_opens }}</td>
           {%- for said in row.chapters %}<td>{{ said }}</td>{% endfor -%}
-          <td>{{ row.report }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td><td>{{ row.guess }}</td><td>{{ row.leaving }}</td><td>{{ row.wtp }}</td><td>{{ row.last_seen }}</td>
+          <td>{{ row.report }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td><td>{{ row.guess }}</td><td>{{ row.leaving }}</td><td>{{ row.wtp }}</td><td>{{ row.signed_up }}</td><td>{{ row.last_activity }}</td>
         </tr>
       {%- else %}
         <tr><td colspan="7">No traders yet.</td></tr>
@@ -39,11 +57,13 @@
     </table>
   </div>
   <ul class="admin__notes body-small">
+    <li><strong>File:</strong> what the trader's report reads now: real, demo or none. A real upload removes the demo, so someone who tried it and moved on counts as real only, and "tried the demo" is a floor. On the top card a refused file counts as a real file brought, though it gives no report to read.</li>
     <li><strong>On current code:</strong> "no" says the latest file read was not read by this deploy, which is true of every import after any deploy, even a copy change. It says not read by this deploy, not that the figures are wrong. A trader is offered a re-read only when reconstruction itself changed, so a "no" here can have no offer behind it.</li>
     <li><strong>Furthest step:</strong> the last step with a stored trace. The reveal cannot show here. Opening a chapter writes nothing, so chapter N is the furthest chapter with a fact read or an answer given. A Journal is generated by the upload, so the journal step takes one opened or written.</li>
     <li><strong>Facts read, in the report:</strong> a fact counts once its heading has been on screen for a second and then left it. A fact page closed with its heading still on screen sends nothing, so these are floors. Old dwell keys count as the fact they moved to.</li>
     <li><strong>Drawer opens:</strong> no page has a drawer now, so this can only be older events.</li>
     <li><strong>Refused, duplicates:</strong> rows are from the latest file read. Files refused counts stored refusals. A byte-identical re-upload is refused before anything is written, so those refusals are not visible here.</li>
+    <li><strong>Last activity:</strong> the latest thing stored about this trader: sign-up, consent, an upload, reading, an answer, a journal opened or written, a budget, a charges file, the guess, the leaving card or would pay. It is a floor: a visit that writes nothing can't show. The table is sorted by it. An account from before sign-up times were kept can show "—".</li>
     <li><strong>Notes:</strong> what a trader typed is not shown, only that a note exists.</li>
     {%- if features_off %}
     <li><strong>Switched off here:</strong> {{ features_off|join(", ") }}. "—" until the trader-facing feature is on.</li>
@@ -60,6 +80,22 @@
   </ol>
   <p class="body-small admin__note">There is no deploy table. "First import on code" is the first time an import shows that version, not when it was deployed. A refusal gives its reason only where the sentence is certainly our own words.</p>
 
+  <h2 class="heading admin__head">Where readers stop</h2>
+  <p class="body-small admin__note">{{ fact_table.covers }}</p>
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>Fact</th><th>Real-file readers</th><th>Median time</th><th>Demo readers</th><th>Median time</th></tr></thead>
+      {%- for chapter in fact_table.chapters %}
+      <tbody>
+        <tr><th colspan="5" scope="colgroup">Chapter {{ chapter.number }} · {{ chapter.name }}</th></tr>
+        {%- for fact in chapter.facts %}
+        <tr><td>{{ fact.title }}</td><td>{{ fact.real_readers|count }}</td><td>{{ fact.real_median }}</td><td>{{ fact.demo_readers|count }}</td><td>{{ fact.demo_median }}</td></tr>
+        {%- endfor %}
+      </tbody>
+      {%- endfor %}
+    </table>
+  </div>
+  <p class="body-small admin__note">Readers and times here are floors: a fact closed with its heading still on screen sends nothing. If this shows heavy drop-off, check first whether that's the people or the measurement. Reading is stored by trader, not by file, so what someone read on the demo before a real upload counts under real, here and on the reading cards.</p>
   <h2 class="heading admin__head">What traders told us</h2>
   <div class="admin__scroll">
     <table class="table admin__table">
@@ -80,9 +116,7 @@
 
   <h2 class="heading admin__head">The quiet panel</h2>
   <dl class="admin__quiet body-small">
-    <dt>Least-read fact</dt><dd>{{ quiet.least_read }}</dd>
     <dt>Most-opened drawer</dt><dd>{{ quiet.most_opened }}</dd>
-    <dt>Chapter 4, median time per reader</dt><dd>{{ quiet.chapter_four_median }}</dd>
     <dt>Consent declines</dt><dd>{{ quiet.consent_declines|count }}</dd>
     <dt>Deletions</dt><dd>{{ quiet.deletions|count }} (last {{ quiet.last_deletion }})</dd>
   </dl>
