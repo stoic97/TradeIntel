@@ -4,6 +4,7 @@
     compares each day with what was there before. -#}
 {% extends "layout.html" %}
 {% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
   <p class="label label--plain">Your upload</p>
   <h1 class="title">What we read</h1>
   {%- if imp.outcome.value == "rejected" %}
