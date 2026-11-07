@@ -21,13 +21,13 @@
   </form>
   {%- endif %}
   {%- if latest %}
-  <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ total|count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
+  <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ Figure(total, "journals")|count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
   {%- if started %}
-  <h2 class="card-title">{% if started == 1 %}Start with this day{% else %}Start with these {{ started|count }} days{% endif %}</h2>
+  <h2 class="card-title">{% if started == 1 %}Start with this day{% else %}Start with these {{ Figure(started, "days")|count }} days{% endif %}</h2>
   {%- endif %}
   {% include "_journal_index.html" with context %}
   {%- if catch_up_count %}
-  <p class="body journal__earlier">You have <span class="num">{{ catch_up_count|count }}</span> earlier Journals. <a class="link" href="/journals/catch-up">Read them one at a time</a>, or <a class="link" href="/mirror">go to your record</a>.</p>
+  <p class="body journal__earlier">You have <span class="num">{{ Figure(catch_up_count, "journals")|count }}</span> earlier Journals. <a class="link" href="/journals/catch-up">Read them one at a time</a>, or <a class="link" href="/mirror">go to your record</a>.</p>
   {%- endif %}
   {%- else %}
   <p class="body">Your Journals start with your first upload. <a class="link" href="/upload">Send us a tradebook</a> and one is written for every complete trading day in it.</p>

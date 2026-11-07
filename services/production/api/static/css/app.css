@@ -11,6 +11,13 @@
    the screen, only the SVG's empty margin is outside it. Found in the 390 px browser
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
+/* A page draws both of the kit's dials and one shows. Below 1366 px the desktop dial would be
+   scaled down until its 11 px words can't be read, so the phone's drawing, scaled up, stays. */
+.stage .scope.scope--desktop { display: none; }
+@media (min-width: 1366px) {
+  .stage .scope:not(.scope--desktop) { display: none; }
+  .stage .scope.scope--desktop { display: block; width: min(100%, var(--stage-desktop-w)); }
+}
 
 /* /admin (TICKET-848) is a working table, not a phone column, so it takes the width. Everything
    wide scrolls inside its own box and the page itself never does. The selectors are this long

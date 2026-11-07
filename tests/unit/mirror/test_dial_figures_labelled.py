@@ -69,11 +69,11 @@ def test_every_chapter_dial_figure_carries_its_unit(client, url):
 
 
 RULED = {
-    3: {"After two straight losses": r"\d[\d,]* trades?"},  # TICKET-827's dial_figure
+    3: {"After two straight losses": r"\d[\d,]* trades? right after two losses"},
     4: {
         "What we read": r"\d[\d,]* of \d[\d,]* rows read",
         "Trades with a risk figure": r"\d[\d,]* of \d[\d,]* trades",
-        "What we have not told you": r"",
+        "What we have not told you": r"\d+ items not told",
     },
 }
 
