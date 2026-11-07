@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from services.production.api import admin_view
+from services.production.api import admin_health, admin_view
 from services.production.api.routes_identity import current_trader, page
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -45,7 +45,7 @@ def admin(request: Request):
                                 production=config.production,
                                 admin_ids=config.admin_login_ids)
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
-                body_class="admin", **view)
+                body_class="admin", health=admin_health.build(request.app), **view)
 
 
 @router.get(f"{PATH}/", response_class=HTMLResponse, include_in_schema=False)

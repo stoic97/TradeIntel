@@ -73,6 +73,9 @@ still starts and the page is a 404 for everyone. A login id on the list cannot b
 taken at sign-up by anyone, because whoever held it would be an admin. So sign up
 first, then add the id here and restart: a change takes effect on restart.
 
+A team member's new account is classified the same day, so `/admin` counts traders only:
+`.venv/bin/python -m services.production.api.cli --db <SCOPE_DB> classify --login-id <login id> --development-data`.
+
 **Put the file key in the password manager before anything is uploaded.** Lose it
 and every stored tradebook is unreadable — Fernet authenticates, so the app
 refuses them rather than returning rubbish, which is correct and no comfort.
