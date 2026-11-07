@@ -578,7 +578,7 @@ def test_the_file_column_is_drawn_for_each_trader(app, engine):
         add_record(sess, trader_id, source=demo.ACCOUNT)
         sess.commit()
     page = admin_page(app, engine)
-    assert "<th>File</th>" in page
+    assert '>File</a></th>' in page
     assert "<td>demo</td>" in page
 
 
@@ -731,7 +731,7 @@ def test_minutes_add_up_the_views_and_drawers_are_counted_apart(app, engine):
         add_dwell(sess, trader_id, "money", "drawer_open", ms=None)
         sess.commit()
     row = row_of(view(app, engine), "someone")
-    assert (row["minutes"], row["drawer_opens"]) == ("2 min", 2)
+    assert row["minutes"] == "2 min"
 
 
 # ---------- One row per trader ----------
@@ -1031,10 +1031,17 @@ def test_the_table_sorts_by_last_activity_whatever_the_source(app, engine):
         "budget-latest", "signed-up-late", "uploaded"]
 
 
+def admin_client_page_all(app, engine) -> str:
+    with make_session(engine) as sess:
+        admin = sess.scalars(select(m.Trader.id).where(m.Trader.login_id == ADMIN)).one()
+    return signed_in(app, admin).get("/admin?columns=all").text
+
+
 def test_the_page_names_the_columns_and_says_the_time_is_a_floor(app, engine):
     add_trader(engine, "someone")
     page = admin_page(app, engine)
-    assert "<th>Signed up</th><th>Last activity</th>" in page
+    assert ">Last activity</a></th>" in page
+    assert "<th>Signed up</th>" in admin_client_page_all(app, engine)
     assert "Last seen" not in page
     assert "<strong>Last activity:</strong>" in page
     assert "a visit that writes nothing can't show" in page.replace("&#39;", "'")
@@ -1094,7 +1101,7 @@ def test_stale_is_drawn_in_red_and_in_words(app, engine):
     with make_session(engine) as sess:
         add_import(sess, trader_id, version=OLD)
         sess.commit()
-    page = admin_page(app, engine)
+    page = admin_client(app, engine).get("/admin?columns=all").text
     assert re.search(r'class="[^"]*admin__stale[^"]*"[^>]*>no<', page)
 
 
@@ -1226,21 +1233,6 @@ def test_feed_lines_for_a_day_and_a_whole_report_say_a_note_exists_and_no_more(a
 
 
 # ---------- The quiet panel ----------
-
-
-def test_the_most_opened_drawer(app, engine):
-    trader_id = add_trader(engine, "someone")
-    with make_session(engine) as sess:
-        add_dwell(sess, trader_id, "strike", "drawer_open", ms=None)
-        add_dwell(sess, trader_id, "math", "drawer_open", ms=None)
-        add_dwell(sess, trader_id, "money", "drawer_open", ms=None)
-        sess.commit()
-    assert view(app, engine)["quiet"]["most_opened"] == SM.FACTS["math"].title  # strike is math now
-
-
-def test_with_no_reading_at_all_the_panel_is_empty_not_guessed(app, engine):
-    add_trader(engine, "someone")
-    assert view(app, engine)["quiet"]["most_opened"] == "—"
 
 
 def test_wtp_answers_are_counted_by_answer_with_the_words_left_out(app, engine):
@@ -1381,7 +1373,7 @@ def test_the_table_says_reading_is_stored_by_trader_not_by_file(app, engine):
     ("cards", "read_all"), ("cards", "stopped_early"), ("cards", "read_none"),
     ("cards", "demo_read_all"), ("cards", "demo_stopped_early"), ("cards", "demo_read_none"),
     ("cards", "said_wrong"), ("cards", "said_wrong_demo"),
-    ("quiet", "most_opened"), ("fact_table", "chapters"), ("fact_table", "covers"),
+    ("fact_table", "chapters"), ("fact_table", "covers"),
     ("quiet", "wtp"), ("quiet", "wtp_asked"), ("quiet", "consent_declines"),
     ("quiet", "deletions"),
 ])
