@@ -7,7 +7,7 @@
 {% set nav = "journal" %}
 {% block content %}
   <p class="label label--plain">Journal</p>
-  <h1 class="title num-title">{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
+  <h1 class="title num-title">{{ journal.period_start|day }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end|day }}{% endif %}</h1>
   <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
   {{ uncounted_line(uncounted) }}
   {%- if journal.id in changed_ids %}
