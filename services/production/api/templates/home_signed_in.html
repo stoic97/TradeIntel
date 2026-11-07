@@ -2,11 +2,11 @@
     look, and the upload. The sentence is Scope home's own (_verdict.html); the days are the first
     of the Journal tab's list. No tab is current: home is none of the three. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import lockup, money, uncounted_line %}
+{% from "_components.html" import home_lockup, money, uncounted_line %}
 {% from "_verdict.html" import verdict_sentence %}
 {% set nav = "home" %}
 {% block content %}
-  <div class="stage__bar stage__bar--record">{{ lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
+  <div class="stage__bar stage__bar--record">{{ home_lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
   <a class="scope-card on-navy" href="/mirror">
     <span class="label label--soft">Your report · Import {{ imp.id }} · {{ imported }}</span>
     <span class="scope-card__verdict">{{ verdict_sentence(verdict) }}</span>

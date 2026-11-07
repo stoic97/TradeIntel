@@ -99,10 +99,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(404)
     def not_found(request: Request, _exc: Exception) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse(
-            request=request, name="404.html", context={"title": "Not found"},
-            status_code=404,
-        )
+        # Through page() so a signed-in trader on a dead address still has his way back
+        # to Home (TICKET-860). demo=None: a missing page is drawn from no file.
+        from services.production.api.routes_identity import page
+
+        return page(request, "404.html", status_code=404, title="Not found", demo=None)
 
     @app.exception_handler(405)
     async def method_not_allowed(request: Request, exc: Exception):

@@ -4,8 +4,8 @@
 {#- The in-app nav: Scope · Journal · Account, the current tab marked for the eye and
     for a screen reader. No sign out here (D6: it is on the Account page). -#}
 {% macro bottom_nav(active) -%}
-<nav class="bottom-nav" aria-label="Main">
-{%- for key, label, href in [("scope", "Scope", "/mirror"), ("journal", "Journal", "/journals"), ("account", "Account", "/account")] %}<a class="bottom-nav__item" href="{{ href }}"{% if key == active %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
+<nav class="bottom-nav" aria-label="Main">{{ home_lockup("bottom-nav__mark") }}
+{%- for key, label, href in [("home", "Home", "/"), ("scope", "Scope", "/mirror"), ("journal", "Journal", "/journals"), ("account", "Account", "/account")] %}<a class="bottom-nav__item" href="{{ href }}"{% if key == active %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
 </nav>
 {%- endmacro %}
 
@@ -14,6 +14,12 @@
     the kit's icons/mark.svg exactly: never redrawn, respaced or recoloured. -#}
 {% macro lockup() -%}
 <span class="lockup"><svg class="lockup__mark" viewBox="0 0 30 24" aria-hidden="true"><path d="M9.5 3 H3.5 V21 H9.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><path d="M20.5 3 H26.5 V21 H20.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><circle cx="15" cy="7" r="1.9" fill="currentColor"/><circle cx="15" cy="11.8" r="1.9" fill="currentColor"/><circle cx="15" cy="18" r="1.9" fill="currentColor"/></svg><span class="lockup__name">PlusEV</span><span class="lockup__sub">Scope</span></span>
+{%- endmacro %}
+
+{#- The lockup as the way back to Home (TICKET-860): on every signed-in page it links to /.
+    A way out, never a way in (handoff 4): it goes to / and nowhere else. -#}
+{% macro home_lockup(extra="") -%}
+<a class="lockup-link{% if extra %} {{ extra }}{% endif %}" href="/" aria-label="PlusEV Scope, Home">{{ lockup() }}</a>
 {%- endmacro %}
 
 {% macro chip(text, on_navy=false) -%}
