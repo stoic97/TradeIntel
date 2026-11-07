@@ -49,7 +49,7 @@
   <p class="mirror mirror--card">On <span class="num">{{ Figure(five_days.first_lost_days, "days")|count }}</span> of these days your first trade lost and you kept going: {{ Figure(five_days.lost_after_first, "rupees")|rupees(signed=false) }} more was lost after it.</p>
   {%- endif %}
   {%- if five_days.shared_book or five_days.past_nine %}
-  <p class="mirror mirror--card">{% if five_days.shared_book %}Every one of the five includes {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "trades")|count }}</span> ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "trades")|count }}</span> of the five ran past 9 pm.{% endif %}</p>
+  <p class="mirror mirror--card">{% if five_days.shared_book %}Every one of the five includes {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the five ran past 9 pm.{% endif %}</p>
   {%- endif %}
   {%- endif %}
   <div class="screen__actions">

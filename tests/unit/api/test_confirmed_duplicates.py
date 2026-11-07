@@ -507,8 +507,8 @@ def test_the_review_says_what_happened_with_three_rows_and_counts_them(client, e
         response = confirm_named(client, engine, name)
     page = words(client.get(response.headers["location"]).text)
     assert SET_ASIDE_THREE in page
-    assert ("Rows in the file 21 Rows we could read 18 Rows set aside 3 "
-            "Trades reconstructed 9") in page
+    assert ("Rows in the file 21 rows Rows we could read 18 rows Rows set aside 3 rows "
+            "Trades rebuilt 9 trades") in page
 
 
 def test_a_review_with_nothing_confirmed_says_nothing_of_it(client, engine):  # noqa: F811

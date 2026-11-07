@@ -25,7 +25,8 @@ STARTING_LIST = {"strike", "uncapped", "of losses", "past it"}
 """The dial's words, the first retired. The list only grows, so this stays in it."""
 
 DIAL = re.compile(r'<div class="scope[^"]*">.*?</svg>', flags=re.DOTALL)
-SURFACES = {GL.DIAL: DIAL}
+HOME_CARD = re.compile(r'<a class="scope-card on-navy".*?</a>', flags=re.DOTALL)
+SURFACES = {GL.DIAL: DIAL, GL.HOME_CARD: HOME_CARD}
 """A surface in `where`, as the part of a page it is. An entry with no `where` is every page."""
 
 

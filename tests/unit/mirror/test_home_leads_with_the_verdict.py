@@ -90,8 +90,8 @@ def test_the_card_goes_to_the_report_and_says_so(client):
     assert "Open the Scope" not in card
 
 
-def test_the_card_says_which_import_it_read(client):
-    assert re.search(r"Your report · Import \d+ · \d\d \w{3} \d{4}", _readable(_card(client)))
+def test_the_card_says_which_upload_it_read(client):
+    assert re.search(r"Your report · Upload \d+ · \d\d \w{3} \d{4}", _readable(_card(client)))
 
 
 def test_the_card_splits_options_from_the_rest_only_when_both_exist(client):
