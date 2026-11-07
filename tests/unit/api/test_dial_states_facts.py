@@ -213,5 +213,5 @@ def test_the_kit_stylesheet_is_untouched():
 
     from tests.unit.api.test_figures import KIT_SHA
 
-    css = Path("services/production/api/static/css/components.css").read_bytes()
+    css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(css).hexdigest() == KIT_SHA
