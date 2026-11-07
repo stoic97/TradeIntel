@@ -33,7 +33,7 @@ OLD_TITLE = "Trading on while already down"
 TITLE = "After two straight losses"
 BETTER = (
     "After two straight losses, your next trades averaged +₹137.5. "
-    "Your other trades that qualified averaged −₹100.5."
+    "Your other trades after two had closed averaged −₹100.5."
 )
 
 
@@ -158,7 +158,7 @@ def test_open_the_sentence_says_it_whichever_way_the_table_points():
     _, sentence = head_of(fact_page("down", trips))
     assert sentence == (
         "After two straight losses, your next trades averaged −₹125. "
-        "Your other trades that qualified averaged −₹10."
+        "Your other trades after two had closed averaged −₹10."
     )
 
 

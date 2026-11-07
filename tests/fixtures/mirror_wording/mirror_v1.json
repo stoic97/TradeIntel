@@ -20,7 +20,7 @@
       "blocks": [
         "Your worst trading days",
         "Day",
-        "Net (gross)",
+        "Result",
         "Trades",
         "vs your normal day",
         "Those five days came to [N]. That is [N] of your result for the whole period, which was [N].",
@@ -42,11 +42,11 @@
         "After two straight losses",
         "On [N] occasions you opened a trade after two earlier trades that day had already closed. On [N] of those, the two most recent had both lost.",
         "Trades",
-        "Net (gross)",
+        "Result",
         "Average",
         "After two straight losses",
-        "Your other trades that qualified",
-        "Strike rate",
+        "Your other trades after two had closed",
+        "Win rate",
         "Average lots",
         "After two straight losses",
         "Every other trade",
@@ -58,7 +58,7 @@
       "blocks": [
         "How long you hold",
         "Your winners were open a median of [N] minutes, your losers [N] minutes. That is a ratio of [N].",
-        "Your strike rate was [N] — [N] winners against [N] losers. [N] trades finished level and are in neither count. Your longest run of consecutive losers was [N] trades, running across [N] days."
+        "[N] trades made money: [N] winners against [N] losers. [N] trades finished level and are in neither count. Your longest run of consecutive losers was [N] trades, running across [N] days."
       ]
     },
     {
@@ -66,7 +66,7 @@
       "blocks": [
         "The clock",
         "Hour you opened",
-        "Net (gross)",
+        "Result",
         "Trades",
         "[N] — few trades",
         "[N] — few trades"

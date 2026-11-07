@@ -6,15 +6,15 @@
 {%- if f.state == "not-in-file" %}
 <a class="story-card story-card--state story-card--dashed" href="{{ f.href }}">
   <span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-dashed"/></svg>Not in your file</span>
-  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
+  <span class="story-card__head"><span class="story-card__num">{{ Figure(number, "card") }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
   <span class="body">Your export has no stop column, and no budget is set. We do not estimate what is not in your file.</span>
-  {% if f.uncapped_trades %}<span class="body">{{ f.uncapped_trades|count }} {{ "trade was a sold option" if f.uncapped_trades == 1 else "trades were sold options" }} with no cap on {{ "its" if f.uncapped_trades == 1 else "their" }} loss, so {{ "it has" if f.uncapped_trades == 1 else "they have" }} no risk figure. {{ "Its" if f.uncapped_trades == 1 else "Their" }} rupees are counted.</span>{% endif %}
+  {% if f.uncapped_trades %}<span class="body">{{ Figure(f.uncapped_trades, "trades")|count }} {{ "trade was a sold option" if f.uncapped_trades == 1 else "trades were sold options" }} with no cap on {{ "its" if f.uncapped_trades == 1 else "their" }} loss, so {{ "it has" if f.uncapped_trades == 1 else "they have" }} no risk figure. {{ "Its" if f.uncapped_trades == 1 else "Their" }} rupees are counted.</span>{% endif %}
   <span class="story-card__foot"><span>What is missing, in full</span><span aria-hidden="true">›</span></span>
 </a>
 {%- else %}
 <a class="story-card story-card--state" href="{{ f.href }}">
   <span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span>
-  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
-  <span class="story-card__foot"><span><span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }} so far</span><span aria-hidden="true">›</span></span>
+  <span class="story-card__head"><span class="story-card__num">{{ Figure(number, "card") }}</span><span class="story-card__title">{{ f.title }}</span><span class="story-card__figure story-card__figure--state">—</span></span>
+  <span class="story-card__foot"><span><span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }} so far</span><span aria-hidden="true">›</span></span>
 </a>
 {%- endif %}

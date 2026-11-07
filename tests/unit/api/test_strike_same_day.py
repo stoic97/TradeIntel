@@ -30,7 +30,7 @@ HELD = mx.load_trips(
 ONLY_HELD = [t for t in HELD if t.trip_id in {"h03", "h06", "h09", "h11"}]
 SENTENCE = (
     "Your average winner was ₹310 and your average loser ₹270. "
-    "At those sizes, break-even is a strike rate of 46.6%."
+    "At those sizes, you break even at 47 of 100."
 )
 NOTE = (
     "These are trades you closed the day you opened them. "
@@ -135,5 +135,7 @@ def test_totals_keep_the_whole_rupee_cut():
 )
 def test_a_round_percentage_is_written_as_a_number(trips, shown):
     """5E+1 is what a trimmed 50 came out as, on the page."""
-    assert f"{shown}%" in readable(fact_page("math", trips))
+    page = readable(fact_page("math", trips))
+    assert f"{shown} of 100 trades made money" in page
+    assert "E+" not in page
     assert "E+" not in readable(fact_page("math", trips))

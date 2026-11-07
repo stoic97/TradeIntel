@@ -1,4 +1,4 @@
-"""The math of your trading: strike rate and hold time as one fact, per book (TICKET-819).
+"""Your wins and losses: strike rate and hold time as one fact, per book (TICKET-819).
 
 Synthetic, every expected value worked by hand here, none from anyone's record.
 
@@ -38,6 +38,7 @@ from pathlib import Path
 
 import pytest
 
+from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
@@ -321,7 +322,7 @@ def cells(html: str) -> str:
 
 
 def test_the_fact_has_its_new_name(text):
-    assert "The math of your trading" in text
+    assert "Your wins and losses" in text
 
 
 def test_a_book_row_shows_the_win_rate_and_both_ways_to_break_even(page):
@@ -459,4 +460,4 @@ def test_the_chapter_reads_same_day_only():
 def test_the_facts_figure_is_the_strike_rate():
     context = SF.record_context(BOTH)
     figs = SF.facts(context, IMP)
-    assert figs["math"]["figure"] == f"{context['strike'].rate_percent}%"
+    assert figs["math"]["figure"] == f'{formatting.out_of_a_hundred(context["strike"].rate_percent)} trades'

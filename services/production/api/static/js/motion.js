@@ -155,7 +155,7 @@
       var slice = link;
       if (link.classList.contains("story-card")) {
         slice = Array.prototype.filter.call(doc.querySelectorAll("a.scope__slice"), function (s) {
-          return s.getAttribute("href") === href;
+          return s.getAttribute("href") === href && s.getClientRects().length;  // the dial on show
         })[0];
       }
       var dial = slice && slice.closest(".scope");

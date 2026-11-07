@@ -4,7 +4,7 @@
     <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
     <p class="mirror">The largest result in any one hour: {{ money(f.lead.net) }} at <span class="num">{{ f.lead_label }}</span>, in {{ f.lead_book }}.</p>
     {%- if f.held.count %}
-    <p class="mirror">These are trades you closed the day you opened them. {{ f.held.count|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
+    <p class="mirror">These are trades you closed the day you opened them. {{ Figure(f.held.count, "positions")|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
     {%- endif %}
 {% endblock %}
 {% block body %}
@@ -13,7 +13,7 @@
   {%- endfor %}
   {%- if f.other_clocks %}
   <details class="clock-others">
-    <summary class="body-small"><span class="num">{{ f.other_clocks|length }}</span> more {{ "book" if f.other_clocks|length == 1 else "books" }}, under <span class="num">{{ f.rate_minimum }}</span> same-day trades{{ "" if f.other_clocks|length == 1 else " each" }}.</summary>
+    <summary class="body-small"><span class="num">{{ Figure(f.other_clocks|length, "books") }}</span> more {{ "book" if f.other_clocks|length == 1 else "books" }}, under <span class="num">{{ f.rate_minimum }}</span> same-day trades{{ "" if f.other_clocks|length == 1 else " each" }}.</summary>
     {%- for c in f.other_clocks %}
     {% with c=c, with_chart=false, minimum=f.rate_minimum %}{% include "scope/_clock_book.html" %}{% endwith %}
     {%- endfor %}

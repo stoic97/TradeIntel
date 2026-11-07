@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
+from services.production.api.figures import Figure, through_figure
+
 MINUS = "\u2212"
 RUPEE = "\u20b9"
 
@@ -132,6 +134,11 @@ def price(value) -> str:
     return f"{indian_grouping(int(whole))}.{paise}"
 
 
+def out_of_a_hundred(rate) -> str:
+    """A rate as a count: 45.8 is "46 of 100". Rounded as a person says it, half up."""
+    return f"{Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP)} of 100"
+
+
 def signed_percent(value) -> str:
     """A result against what was paid, to one decimal, signed as a result is: +3.9%, −4.5%."""
     cut = Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
@@ -169,8 +176,16 @@ def book_in_a_sentence(book: str) -> str:
     return book[0].lower() + book[1:] if book[1:2].islower() else book
 
 
+_FIGURE_FILTERS = {
+    write.__name__: through_figure(write)
+    for write in (rupees_on_a_trade, rupees, count, minutes, hold, lots, price, signed_percent,
+                  out_of_a_hundred)
+}
+"""One of each, so every environment holds the same filter."""
+
+
 def register(env) -> None:
-    """Make the filters available to every template the app renders."""
-    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, hold=hold, day=day, lots=lots)
-    env.filters.update(price=price, signed_percent=signed_percent)
-    env.filters.update(book_in_a_sentence=book_in_a_sentence)
+    """Make the filters available to every template the app renders. A figure goes through the
+    same filter as a plain value, so writing one changes nothing on the page."""
+    env.filters.update(tone=tone, day=day, book_in_a_sentence=book_in_a_sentence, **_FIGURE_FILTERS)
+    env.globals["Figure"] = Figure
