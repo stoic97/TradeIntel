@@ -23,6 +23,8 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+from services.production.api import formatting
+
 WORDS = {
     0: "No", 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
     7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
@@ -48,9 +50,8 @@ def _plural(n: Decimal | int, word: str) -> str:
 
 
 def _rupees(amount: str | Decimal) -> str:
-    value = Decimal(str(amount))
-    sign = "−" if value < 0 else ""
-    return f"{sign}₹{abs(value):,.0f}"
+    """As every other page writes a total, so one day can't read as two figures (TICKET-858)."""
+    return formatting.rupees(Decimal(str(amount)))
 
 
 def _clock(hour: int) -> str:
@@ -74,9 +75,7 @@ def _heading(facts: dict[str, Any]) -> str:
 
 
 def _date(iso: str) -> str:
-    # Not strftime's %-d: it does not exist on Windows.
-    day = date.fromisoformat(iso)
-    return f"{day.day} {day.strftime('%B %Y')}"
+    return formatting.day(iso)
 
 
 def _later(days: int) -> str:
