@@ -178,7 +178,7 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
     if key == "run":
         return Figure(f"{formatting.count(ctx['run'].length)} trades", "trades")
     if key == "clock":  # the hour with the largest result across the books: what happened there
-        return Figure(_hour_words(mx.lead_clock(ctx["clocks"]).largest.hour), "hour")
+        return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
     if key == "down":
         return Figure(formatting.count(ctx["two_losses"].population), "trades")
     if key == "busiest":
@@ -564,7 +564,7 @@ def _day_span(block: mx.DayBlock) -> str:
 def _day_went(block: mx.DayBlock) -> str:
     if block.trades == 1:
         return f"One trade: {formatting.rupees(block.net)}."
-    return (f"First trade {formatting.rupees(block.first_net)}, then {block.later} more; "
+    return (f"First trade {formatting.rupees(block.first_net)}, then {block.later} more {'trade' if block.later == 1 else 'trades'}; "
             f"{block.later_lost} lost.")
 
 
@@ -798,8 +798,9 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of="in a row"),
                       phone_shown=f"{formatting.count(n)} lost")
     if key == "clock":
-        return _wedge(Figure(str(fig["figure"]), "hour", of="the hour of your largest result"),
-                      phone="largest\nhour", shown=str(fig["figure"]))
+        hour = fig["figure"].removesuffix(" hour")
+        return _wedge(Figure(hour, "hour", of="the hour of your largest result"),
+                      phone="largest\nhour", shown=hour)
     if key == "down":
         return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
     if key == "busiest":

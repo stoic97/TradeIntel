@@ -172,7 +172,7 @@
 {% macro ranked_trades(title, rows) -%}
 <section class="ranked-list">
       <h3 class="ranked-list__title">{{ title }}</h3>
-      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Net (gross)</span></div>
+      <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Result</span></div>
       <ol class="ranked">{% for t in rows %}<li>{{ trade(t, rank=loop.index) }}</li>{% endfor %}</ol>
     </section>
 {%- endmacro %}

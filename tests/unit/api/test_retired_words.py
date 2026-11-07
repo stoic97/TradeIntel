@@ -29,6 +29,11 @@ SURFACES = {GL.DIAL: DIAL}
 """A surface in `where`, as the part of a page it is. An entry with no `where` is every page."""
 
 
+SURFACE_PAGES = {GL.MONEY_PAGES: ("/mirror/fact/money", "/mirror/fact/worst-days",
+                                  "/mirror/fact/busiest", "/mirror/fact/clock")}
+"""A surface in `where` that is whole pages: a word is held to those and left alone elsewhere."""
+
+
 def shown(html: str) -> str:
     """What a trader reads or hears: the text, and the labels a screen reader says."""
     labels = " ".join(re.findall(r'aria-label="([^"]*)"', html))
@@ -38,7 +43,7 @@ def shown(html: str) -> str:
 
 
 def surface_of(html: str, where: str | None) -> str:
-    if where is None:
+    if where is None or where in SURFACE_PAGES:
         return shown(html)
     return " ".join(shown(part) for part in SURFACES[where].findall(html))
 
@@ -51,6 +56,9 @@ def retired_words_on(page: str, html: str, entries) -> list[str]:
     """One line per word found: which page, which word, where it is retired, what to say instead."""
     found = []
     for entry in entries:
+        pages = SURFACE_PAGES.get(entry.where)
+        if pages and not any(path in page for path in pages):
+            continue
         if entry.status == GL.RETIRED and is_said(entry.word, surface_of(html, entry.where)):
             place = f"the {entry.where}" if entry.where else "this page"
             found.append(f'{page}: "{entry.word}" is retired from {place}. '
@@ -154,13 +162,14 @@ def test_an_entry_is_a_word_its_status_and_what_replaced_it():
 
 def test_the_starting_list_is_the_dials_words_and_the_list_only_grows():
     assert {e.word for e in GL.retired(GL.DIAL)} >= STARTING_LIST
+    assert "Net (gross)" in {e.word for e in GL.retired(GL.MONEY_PAGES)}
 
 
 def test_nothing_is_retired_beyond_the_surfaces_that_have_landed():
     """Retired only as its surface lands, or the test rewords pages nobody has ruled on."""
     for entry in GL.GLOSSARY:
         if entry.status == GL.RETIRED:
-            assert entry.where in SURFACES, entry.word
+            assert entry.where in SURFACES or entry.where in SURFACE_PAGES, entry.word
 
 
 def test_every_retired_word_says_what_replaced_it():
