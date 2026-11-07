@@ -17,9 +17,10 @@ import re
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from services.production import demo
+from services.production.api import admin_view
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -182,6 +183,32 @@ def test_once_he_has_a_real_record_the_demo_is_not_offered_or_taken(client, engi
     r = try_the_demo(client)
     assert r.status_code == 303 and r.headers["location"] == "/mirror"
     assert [i.source_account for i in imports(engine)] == ["A"]
+
+
+# ---------- What /admin makes of it, through the real upload paths (TICKET-865) ----------
+
+def admin_row_and_cards(engine) -> tuple[dict, dict]:
+    with make_session(engine) as sess:
+        sess.execute(update(m.Trader).values(development_data=False))
+        sess.commit()
+    with make_session(engine) as sess:
+        built = admin_view.build(sess, running_version="x", production=False)
+    return next(r for r in built["rows"] if r["login_id"] == "visitor"), built["cards"]
+
+
+def test_admin_reads_a_loaded_demo_as_the_demo(client, engine):
+    try_the_demo(client)
+    row, cards = admin_row_and_cards(engine)
+    assert row["file"] == "demo"
+    assert (cards["tried_demo"], cards["uploaded_real"]) == (1, 0)
+
+
+def test_admin_reads_a_real_upload_after_the_demo_as_real(client, engine):
+    try_the_demo(client)
+    upload(client, REAL)
+    row, cards = admin_row_and_cards(engine)
+    assert row["file"] == "real"
+    assert (cards["tried_demo"], cards["uploaded_real"]) == (0, 1)
 
 
 # ---------- 5. Journals on demo days; nothing carried ----------

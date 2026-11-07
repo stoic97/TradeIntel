@@ -14,6 +14,10 @@ read cannot be drawn. A rejection is shown only through ``refusal_reason``.
 the rows are put together here. Neither loops over traders with a query.
 
 Development accounts are dropped from every count, row and feed line, and listed apart.
+
+**The demo is no upload.** It goes through the same pipeline, so its import looks like any
+other but for its source account (TICKET-865). Whether anyone trusted us with a real
+tradebook is the question this page exists to answer, so the two are told apart everywhere.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
+from services.production import demo
 from services.production.api import formatting
 from services.production.api import scope_map as SM
 from services.production.db import models as m
@@ -44,6 +49,7 @@ ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
 MIRROR_LINE = "mirror_line"
+FILE_REAL, FILE_DEMO, FILE_NONE = "real", "demo", "none"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
                    s.RowFlag.TRADER_CONFIRMED_DUPLICATE)
 ISO_DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -96,14 +102,16 @@ class _Reader:
     name: str
     login_id: str
     consented: bool = False
+    file: str = FILE_NONE  # what his report reads now
+    tried_demo: bool = False
+    brought_real: bool = False  # any file of his own, refused or read
     latest_any: tuple | None = None
     latest_read: tuple | None = None  # the latest not refused
     uploads: int = 0
     uploads_refused: int = 0
-    facts: set[str] = field(default_factory=set)
+    fact_ms: dict[str, int] = field(default_factory=dict)  # each fact read, and for how long
     furthest_chapter: int = 0
     dwell_ms: int = 0
-    chapter_four_ms: int = 0
     drawer_opens: int = 0
     chapters: dict[int, str] = field(default_factory=dict)
     said_wrong: bool = False
@@ -111,20 +119,24 @@ class _Reader:
     journals_written: int = 0
     journals_opened: int = 0
     first_upload: datetime | None = None
+    own_files: int = 0  # the demo is no upload, so these leave it out
+    first_own_file: datetime | None = None
     days_active: set = field(default_factory=set)
     journal_opened: bool = False
     budget: bool = False
     guess: bool = False
     leaving: str | None = None
     wtp: str | None = None
-    seen: list[datetime] = field(default_factory=list)
+    signed_up: datetime | None = None
+    seen: list[datetime] = field(default_factory=list)  # every stored action of his, sign-up first
 
 
 def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     imports = sess.execute(
         select(m.Import.id, m.Import.trader_id, m.Import.outcome, m.Import.code_version,
                m.Import.rows_in, m.Import.rows_parsed, m.Import.rows_excluded,
-               m.Import.created_at, m.Import.raw_file_id)
+               m.Import.created_at, m.Import.raw_file_id, m.Import.source_account,
+               m.Import.trips_reconstructed)
         .order_by(m.Import.id)
     ).all()
     read = []
@@ -137,22 +149,31 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
         reader.first_upload = reader.first_upload or row.created_at
         reader.latest_any = row
         reader.seen.append(row.created_at)
+        if demo.is_demo(row):
+            reader.tried_demo = True
+        else:
+            reader.brought_real = True
+            reader.own_files += 1
+            reader.first_own_file = reader.first_own_file or row.created_at
         if row.outcome is s.ImportOutcome.REJECTED:
             reader.uploads_refused += 1
         else:
             reader.latest_read = row
+        # The record a report reads is the newest import with trades (loader.current_import).
+        # The import's own count says so: this page reads no trade, as its limits require.
+        if row.trips_reconstructed:
+            reader.file = FILE_DEMO if demo.is_demo(row) else FILE_REAL
     return read
 
 
-def _read_dwell(sess: Session, real: dict[int, _Reader]) -> tuple[dict, dict]:
-    """Readers per fact, and drawer opens per fact, while filling in each reader."""
+def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
+    """Drawer opens per fact, while filling in what each reader read."""
     rows = sess.execute(
         select(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key, m.DwellEvent.event,
                func.count(), func.sum(m.DwellEvent.duration_ms), func.max(m.DwellEvent.at))
         .group_by(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key,
                   m.DwellEvent.event)
     ).all()
-    readers: dict[str, set[int]] = {key: set() for key in SM.FACTS}
     drawers: dict[str, int] = {}
     for trader_id, surface, key, kind, times, total_ms, last in rows:
         reader = real.get(trader_id)
@@ -167,12 +188,9 @@ def _read_dwell(sess: Session, real: dict[int, _Reader]) -> tuple[dict, dict]:
             reader.drawer_opens += times
             drawers[fact] = drawers.get(fact, 0) + times
         elif kind == "view":
-            reader.facts.add(fact)
-            readers[fact].add(trader_id)
+            reader.fact_ms[fact] = reader.fact_ms.get(fact, 0) + (total_ms or 0)
             reader.dwell_ms += total_ms or 0
-            if CHAPTER_OF[fact] == 4:
-                reader.chapter_four_ms += total_ms or 0
-    return readers, drawers
+    return drawers
 
 
 def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
@@ -180,14 +198,16 @@ def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     lines = []
     chapter_rows = sess.execute(
         select(m.ChapterFeedback.trader_id, m.ChapterFeedback.chapter, m.ChapterFeedback.answer,
-               m.ChapterFeedbackReason.reason, m.ChapterFeedback.answered_at)
+               m.ChapterFeedbackReason.reason, m.ChapterFeedback.answered_at,
+               m.ChapterFeedbackReason.given_at)
         .outerjoin(m.ChapterFeedbackReason,
                    m.ChapterFeedbackReason.feedback_id == m.ChapterFeedback.id)
     ).all()
-    for trader_id, chapter, answer, reason, at in chapter_rows:
+    for trader_id, chapter, answer, reason, at, reason_at in chapter_rows:
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen += [at, reason_at] if reason_at else [at]
         said = FB.ANSWERS.get(answer, NOT_RECORDED)
         why = FB.REASONS.get(reason)
         reader.chapters[chapter] = f"{said}: {why}" if why else said
@@ -204,6 +224,7 @@ def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen.append(at)
         said = FB.ANSWERS.get(answer, NOT_RECORDED)
         if trading_day == FB.WHOLE_REPORT:
             reader.report = _with_note(said, noted)
@@ -240,26 +261,43 @@ def _read_journals(sess: Session, real: dict[int, _Reader]) -> None:
 
 def _read_features(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
     """Budget, guess, leaving card and willingness to pay. Returns the answers to the last."""
-    for trader_id in sess.scalars(select(m.RiskBudgetDeclaration.trader_id).distinct()):
+    for trader_id, at in sess.execute(
+        select(m.RiskBudgetDeclaration.trader_id, m.RiskBudgetDeclaration.declared_at)
+    ):
         if trader_id in real:
             real[trader_id].budget = True
-    for trader_id in sess.scalars(select(m.GuessAnswer.trader_id)):
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(
+        select(m.ChargeStatement.trader_id, m.ChargeStatement.uploaded_at)
+    ):
+        if trader_id in real:
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(select(m.GuessAnswer.trader_id, m.GuessAnswer.answered_at)):
         if trader_id in real:
             real[trader_id].guess = True
-    for trader_id in sess.scalars(select(m.LeavingCardShown.trader_id)):
+            real[trader_id].seen.append(at)
+    for trader_id, at in sess.execute(
+        select(m.LeavingCardShown.trader_id, m.LeavingCardShown.shown_at)
+    ):
         if trader_id in real:
             real[trader_id].leaving = "shown"
-    for trader_id, outcome in sess.execute(
-        select(m.LeavingCardAnswer.trader_id, m.LeavingCardAnswer.outcome)
+            real[trader_id].seen.append(at)
+    for trader_id, outcome, at in sess.execute(
+        select(m.LeavingCardAnswer.trader_id, m.LeavingCardAnswer.outcome,
+               m.LeavingCardAnswer.answered_at)
     ):
         if trader_id in real:
             real[trader_id].leaving = outcome if outcome in (LC.ANSWERED, LC.DISMISSED) else "shown"
+            real[trader_id].seen.append(at)
 
     answers = dict.fromkeys(("yes", "no", "maybe"), 0)
-    for trader_id, answer, noted in sess.execute(
-        select(m.WtpAnswer.trader_id, m.WtpAnswer.answer, m.WtpAnswer.free_text.is_not(None))
+    for trader_id, answer, noted, at in sess.execute(
+        select(m.WtpAnswer.trader_id, m.WtpAnswer.answer, m.WtpAnswer.free_text.is_not(None),
+               m.WtpAnswer.asked_at)
         .order_by(m.WtpAnswer.id)
     ):
+        if trader_id in real:
+            real[trader_id].seen.append(at)
         if trader_id in real and answer in WTP.ANSWERS:
             answers[answer] += 1
             real[trader_id].wtp = _with_note(answer, noted)
@@ -284,6 +322,9 @@ def _feed_of_uploads(sess: Session, real: dict[int, _Reader], imports: list[tupl
         if row.outcome is s.ImportOutcome.REJECTED:
             reason = refusal_reason(rejections.get(row.id))
             text = f"{who} had a file refused: {reason}" if reason else f"{who} had a file refused"
+        elif demo.is_demo(row):
+            again = first_import_of[row.raw_file_id] != row.id
+            text = f"{who} had the demo read again" if again else f"{who} loaded the demo"
         elif first_import_of[row.raw_file_id] != row.id:
             text = f"{who} had a file read again: {_rows_read(row)} rows read"
         else:
@@ -357,7 +398,7 @@ def _journey(reader: _Reader) -> list[dict]:
     """Each step on its own, because one word hid the rest. Reaching the reveal leaves no trace."""
     chapter = f"chapter {reader.furthest_chapter}" if reader.furthest_chapter else "chapter"
     return [{"label": label, "done": done} for label, done in (
-        ("consent", reader.consented), ("file", bool(reader.uploads)),
+        ("consent", reader.consented), ("demo" if reader.file == FILE_DEMO else "file", bool(reader.uploads)),
         (chapter, bool(reader.furthest_chapter)),
         ("journal", reader.journal_opened or bool(reader.journals_written)),
         ("budget", reader.budget))]
@@ -393,9 +434,10 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
     return {
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
+        "file": reader.file,
         "journey": _journey(reader),
-        "files_uploaded": reader.uploads,
-        "first_upload": _when(reader.first_upload),
+        "files_uploaded": reader.own_files,
+        "first_upload": _when(reader.first_own_file),
         "days_active": len(reader.days_active),
         "journals_opened": reader.journals_opened,
         "pay_progress": _pay_progress(reader, datetime.now(UTC)),
@@ -406,7 +448,7 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "uploads_refused": reader.uploads_refused,
         "duplicates": duplicates.get(latest.id, 0) if latest else NOT_RECORDED,
         "on_current": _on_current(reader, running_version),
-        "facts_read": f"{len(reader.facts)} of {len(SM.FACTS)}",
+        "facts_read": f"{len(reader.fact_ms)} of {len(SM.FACTS)}",
         "minutes": _span(reader.dwell_ms),
         "drawer_opens": reader.drawer_opens,
         "chapters": [reader.chapters.get(n, NOT_RECORDED) for n in feedback_chapters],
@@ -416,7 +458,8 @@ def _row(reader: _Reader, *, running_version: str, duplicates: dict[int, int],
         "guess": "answered" if reader.guess else ("no" if guess_on else NOT_RECORDED),
         "leaving": reader.leaving or ("no" if leaving_on else NOT_RECORDED),
         "wtp": reader.wtp or NOT_RECORDED,
-        "last_seen": _when(max(reader.seen, default=None)),
+        "signed_up": _when(reader.signed_up),
+        "last_activity": _when(max(reader.seen, default=None)),
     }
 
 
@@ -424,12 +467,39 @@ def _last_seen(reader: _Reader) -> datetime:
     return max(reader.seen, default=NEVER)
 
 
-def _least_read(readers: dict[str, set[int]]) -> str:
-    """The fact the fewest read, every one of them if tied. Empty until anyone read anything."""
-    if not any(readers.values()):
-        return NOT_RECORDED
-    fewest = min(len(who) for who in readers.values())
-    return ", ".join(SM.FACTS[key].title for key, who in readers.items() if len(who) == fewest)
+def _readers_of(key: str, group: list[_Reader]) -> tuple[int, str]:
+    """How many of this group read a fact, and the median time of those who did."""
+    times = [r.fact_ms[key] for r in group if key in r.fact_ms]
+    return len(times), _span(statistics.median(times)) if times else NOT_RECORDED
+
+
+def _covers(real_file: int, on_demo: int) -> str:
+    total = real_file + on_demo
+    noun = "trader" if total == 1 else "traders"
+    return (f"Covers {formatting.count(total)} {noun}: {formatting.count(real_file)} with a "
+            f"real file, {formatting.count(on_demo)} on the demo.")
+
+
+def _fact_table(group_real: list[_Reader], group_demo: list[_Reader]) -> dict:
+    """Every fact in report order, read or not: where readers stop is the point of it."""
+    chapters = []
+    for chapter in SM.CHAPTERS:
+        facts = []
+        for fact in chapter.facts:
+            real_readers, real_median = _readers_of(fact.key, group_real)
+            demo_readers, demo_median = _readers_of(fact.key, group_demo)
+            facts.append({"title": fact.title, "real_readers": real_readers,
+                          "real_median": real_median, "demo_readers": demo_readers,
+                          "demo_median": demo_median})
+        chapters.append({"number": chapter.number, "name": chapter.name, "facts": facts})
+    return {"chapters": chapters, "covers": _covers(len(group_real), len(group_demo))}
+
+
+def _reading(group: list[_Reader]) -> tuple[int, int, int]:
+    """How many of these read every fact, stopped early, and read none."""
+    return (sum(1 for r in group if len(r.fact_ms) == len(SM.FACTS)),
+            sum(1 for r in group if 0 < len(r.fact_ms) < len(SM.FACTS)),
+            sum(1 for r in group if not r.fact_ms))
 
 
 def _most_opened(drawers: dict[str, int]) -> str:
@@ -438,22 +508,33 @@ def _most_opened(drawers: dict[str, int]) -> str:
     return SM.FACTS[max(drawers, key=lambda key: drawers[key])].title
 
 
+def _left_out(count: int) -> str:
+    """How many accounts the cards do not count, so a low number is not misread."""
+    if count == 0:
+        return "No development accounts are left out"
+    return ("1 development account is left out" if count == 1
+            else f"{formatting.count(count)} development accounts are left out")
+
+
 def build(sess: Session, *, running_version: str, production: bool) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
                m.Trader.development_data).order_by(m.Trader.id)
     ).all()
-    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id)
+    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id,
+                          signed_up=a.created_at, seen=[a.created_at] if a.created_at else [])
             for a in accounts if not a.development_data}
 
     declines = 0
-    for trader_id, purpose, granted in sess.execute(
-        select(m.ConsentEvent.trader_id, m.ConsentEvent.purpose, m.ConsentEvent.granted)
+    for trader_id, purpose, granted, at in sess.execute(
+        select(m.ConsentEvent.trader_id, m.ConsentEvent.purpose, m.ConsentEvent.granted,
+               m.ConsentEvent.at)
     ):
         reader = real.get(trader_id)
         if reader is None:
             continue
+        reader.seen.append(at)
         if not granted:
             declines += 1
         elif purpose is s.ConsentPurpose.DIAGNOSIS:
@@ -468,12 +549,16 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             .group_by(m.ImportRow.import_id)
         ) if import_id in latest_ids
     }
-    readers, drawers = _read_dwell(sess, real)
+    drawers = _read_dwell(sess, real)
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
     _read_active_days(sess, real)
     wtp_answers = _read_features(sess, real)
-    wtp_asked = sum(1 for t in sess.scalars(select(m.WtpAsked.trader_id)) if t in real)
+    wtp_asked = 0
+    for trader_id, at in sess.execute(select(m.WtpAsked.trader_id, m.WtpAsked.asked_at)):
+        if trader_id in real:
+            wtp_asked += 1
+            real[trader_id].seen.append(at)
     deleted, last_deleted = sess.execute(
         select(func.count(), func.max(m.DeletionRecord.completed_at))
     ).one()
@@ -487,8 +572,10 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
     rows = [_row(r, running_version=running_version, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
-    uploaded = [r for r in real.values() if r.uploads]
-    chapter_four = [r.chapter_four_ms for r in real.values() if r.chapter_four_ms]
+    on_real = [r for r in real.values() if r.file == FILE_REAL]
+    on_demo = [r for r in real.values() if r.file == FILE_DEMO]
+    read_all, stopped_early, read_none = _reading(on_real)
+    demo_read_all, demo_stopped_early, demo_read_none = _reading(on_demo)
     return {
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
@@ -497,27 +584,32 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
                          if not on],
         "cards": {
             "signed_up": len(real),
-            "uploaded": len(uploaded),
+            "tried_demo": sum(1 for r in real.values() if r.tried_demo),
+            "uploaded_real": sum(1 for r in real.values() if r.brought_real),
             "reached_reveal": NOT_RECORDED,
             "upload_to_reveal": NOT_RECORDED,
-            "read_all": sum(1 for r in uploaded if len(r.facts) == len(SM.FACTS)),
-            "stopped_early": sum(1 for r in uploaded if 0 < len(r.facts) < len(SM.FACTS)),
-            "read_none": sum(1 for r in uploaded if not r.facts),
+            "read_all": read_all,
+            "stopped_early": stopped_early,
+            "read_none": read_none,
+            "demo_read_all": demo_read_all,
+            "demo_stopped_early": demo_stopped_early,
+            "demo_read_none": demo_read_none,
             "said_wrong": sum(1 for r in real.values() if r.said_wrong),
+            "said_wrong_demo": sum(1 for r in real.values()
+                                   if r.said_wrong and r.file == FILE_DEMO),
         },
         "rows": rows,
         "feed": [{"when": _when(at), "text": _name(text)} for at, text in feed_lines[:FEED_LENGTH]],
+        "fact_table": _fact_table(on_real, on_demo),
         "quiet": {
-            "least_read": _least_read(readers),
             "most_opened": _most_opened(drawers),
-            "chapter_four_median": _span(statistics.median(chapter_four)) if chapter_four
-            else NOT_RECORDED,
             "wtp": wtp_answers,
             "wtp_asked": wtp_asked,
             "deletions": deleted,
             "last_deletion": _when(last_deleted),
             "consent_declines": declines,
         },
+        "dev_left_out": _left_out(sum(1 for a in accounts if a.development_data)),
         "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(a.login_id),
                           "joined": _when(a.created_at)}
                          for a in accounts if a.development_data],
