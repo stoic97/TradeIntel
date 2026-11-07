@@ -159,10 +159,12 @@ async def upload_file(
 
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:
+            limits.count_refusal(request, limits.FILE_TOO_LARGE)
             return upload_page(request, status_code=400, error=limits.TOO_LARGE)
 
         digest = hashlib.sha256(content).hexdigest()
         if _first_upload(sess, trader, digest) is not None:
+            limits.count_refusal(request, limits.SAME_FILE)
             sentence, offered = _same_file_again(sess, trader, digest)
             return upload_page(request, status_code=400, error=sentence, read_again_id=offered)
         return _ingest(request, sess, trader, content=content,
@@ -229,6 +231,7 @@ def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_na
             production=request.app.state.settings.production,
         )
     except filemap.UnverifiedFileMap:
+        limits.count_refusal(request, limits.UNVERIFIED_MAP)
         return page(request, "upload_closed.html", status_code=503,
                     title="Not open for your broker yet")
     if source_account != demo.ACCOUNT and plan.positions:
@@ -349,6 +352,7 @@ def confirm_duplicates(request: Request, import_id: int,
             logger.exception("import %s: the stored file could not be opened", current.id)
             return _not_read_again(request, 503, COULD_NOT_OPEN)
         except filemap.UnverifiedFileMap:
+            limits.count_refusal(request, limits.UNVERIFIED_MAP)
             return page(request, "upload_closed.html", status_code=503,
                         title="Not open for your broker yet")
 
@@ -394,6 +398,7 @@ def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
             logger.exception("import %s: the stored file could not be opened", current.id)
             return _not_read_again(request, 503, COULD_NOT_OPEN)
         except filemap.UnverifiedFileMap:
+            limits.count_refusal(request, limits.UNVERIFIED_MAP)
             return page(request, "upload_closed.html", status_code=503,
                         title="Not open for your broker yet")
         except Exception:  # an unforeseen failure must still leave his record as it was
