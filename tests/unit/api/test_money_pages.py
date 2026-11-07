@@ -74,3 +74,8 @@ def test_nothing_starts_estimating_or_advising(client, path):
     text = words(client.get(path).text).lower()
     for phrase in NEVER:
         assert phrase not in text, phrase
+
+
+def test_the_clocks_card_says_result_too(client):
+    """A card renders on its chapter's page, which no fact page's check reads."""
+    assert "net (gross)" not in words(client.get("/mirror/chapter/2").text).split("The clock")[1].lower()
