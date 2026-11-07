@@ -66,7 +66,7 @@ def home(request: Request):
             title="Home",
             trader_name=trader.display_name,
             imp=imp,
-            imported=formatting.day(imp.created_at.date().isoformat()),
+            imported=formatting.local_day(imp.created_at),
             verdict=mx.verdict(trips),
             latest=latest,
             days_heading="Days worth a look" if named else "Latest Journals",

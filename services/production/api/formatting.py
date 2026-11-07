@@ -17,7 +17,9 @@ printed as ₹0 is not coloured as a loss.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo
 
 MINUS = "\u2212"
 RUPEE = "\u20b9"
@@ -164,6 +166,23 @@ def day(iso_date: str) -> str:
     return f"{dom} {MONTHS[int(month) - 1]} {year}"
 
 
+TRADER_ZONE = ZoneInfo("Asia/Kolkata")
+"""Where every trader is. The database keeps instants in UTC (db.types.AwareDateTime)."""
+
+
+def local_day(at: datetime) -> str:
+    """The day an instant fell on in India, as day() writes it (TICKET-862).
+
+    A row's own timestamp - when a file was read, a consent given, a number declared - is
+    stored in UTC, and anything after 18:30 UTC is already the next day for the trader.
+    Rendering it as stored dated it by the server's day, a day out from the trades on the
+    same page. A naive value is refused, as the database refuses one (ctr_v1 4.3).
+    """
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise ValueError("a timestamp must carry its zone to be dated")
+    return day(at.astimezone(TRADER_ZONE).date().isoformat())
+
+
 def book_in_a_sentence(book: str) -> str:
     """A trade_book name inside a sentence: "were crude options", "were NIFTY options"."""
     return book[0].lower() + book[1:] if book[1:2].islower() else book
@@ -171,6 +190,6 @@ def book_in_a_sentence(book: str) -> str:
 
 def register(env) -> None:
     """Make the filters available to every template the app renders."""
-    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, hold=hold, day=day, lots=lots)
+    env.filters.update(rupees_on_a_trade=rupees_on_a_trade, rupees=rupees, tone=tone, count=count, minutes=minutes, hold=hold, day=day, local_day=local_day, lots=lots)
     env.filters.update(price=price, signed_percent=signed_percent)
     env.filters.update(book_in_a_sentence=book_in_a_sentence)
