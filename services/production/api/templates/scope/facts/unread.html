@@ -8,9 +8,9 @@
   {{ figure(1, "Rows read and set aside", f.page_chart) }}
   <p class="table-label">Table 1</p>
   <dl class="facts-list">
-    <dt>Rows in your file</dt><dd>{{ imp.rows_in|count }}</dd><dt>Rows we read</dt><dd>{{ imp.rows_parsed|count }}</dd>
-    <dt>Rows set aside</dt><dd>{{ imp.rows_excluded|count }}</dd><dt>Trades reconstructed</dt><dd>{{ imp.trips_reconstructed|count }}</dd>
-    <dt>Trades refused</dt><dd>{{ imp.trips_refused|count }}</dd><dt>Charges in the file</dt><dd class="facts-list__note">{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd>
+    <dt>Rows in your file</dt><dd>{{ Figure(imp.rows_in, "rows")|count }}</dd><dt>Rows we read</dt><dd>{{ Figure(imp.rows_parsed, "rows")|count }}</dd>
+    <dt>Rows set aside</dt><dd>{{ Figure(imp.rows_excluded, "rows")|count }}</dd><dt>Trades reconstructed</dt><dd>{{ Figure(imp.trips_reconstructed, "trades")|count }}</dd>
+    <dt>Trades refused</dt><dd>{{ Figure(imp.trips_refused, "trades")|count }}</dd><dt>Charges in the file</dt><dd class="facts-list__note">{% if imp.fees_available %}yes{% else %}no — figures are gross{% endif %}</dd>
   </dl>
   {% include "scope/_refused.html" %}
 {% endblock %}
@@ -20,18 +20,18 @@
 {% block evidence %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The rows behind this</h2>
-    <p class="evidence__caption">Every row we set aside, and why. <span class="num">{{ excluded|length|count }}</span> rows.</p>
+    <p class="evidence__caption">Every row we set aside, and why. <span class="num">{{ Figure(excluded|length, "rows")|count }}</span> rows.</p>
     {%- if excluded %}
     <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why it was set aside</th></tr></thead>
-      <tbody>{% for number, reason in excluded %}<tr><td>{{ number|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+      <tbody>{% for number, reason in excluded %}<tr><td>{{ Figure(number, "rows")|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
     {%- endif %}
     {%- if rejected %}
-    <p class="evidence__caption evidence__caption--gap">Rows we could not read. Kept, not discarded. Each one says why. <span class="num">{{ rejected|length|count }}</span> rows.</p>
+    <p class="evidence__caption evidence__caption--gap">Rows we could not read. Kept, not discarded. Each one says why. <span class="num">{{ Figure(rejected|length, "rows")|count }}</span> rows.</p>
     <table class="table"><thead><tr><th class="table__wide">Row in your file</th><th>Why</th></tr></thead>
-      <tbody>{% for number, reason in rejected %}<tr><td>{{ number|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
+      <tbody>{% for number, reason in rejected %}<tr><td>{{ Figure(number, "rows")|count }}</td><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
     {%- endif %}
     {%- if refused %}
-    <p class="evidence__caption evidence__caption--gap">Every trade refused. <span class="num">{{ refused|length|count }}</span> trades.</p>
+    <p class="evidence__caption evidence__caption--gap">Every trade refused. <span class="num">{{ Figure(refused|length, "trades")|count }}</span> trades.</p>
     <table class="table"><thead><tr><th>Why it was refused</th></tr></thead>
       <tbody>{% for reason in refused %}<tr><td class="table__text">{{ reason }}</td></tr>{% endfor %}</tbody></table>
     {%- endif %}

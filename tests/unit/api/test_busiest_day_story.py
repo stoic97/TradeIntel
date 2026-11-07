@@ -445,13 +445,10 @@ def dial_figures(trips) -> dict:
 
 
 def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
-    assert dial_figures(DAY)["Your busiest day"] == "6 trades, 02 Sep 2026"
-
-
-def test_the_busiest_figure_breaks_before_its_date_when_it_stacks():
     figs = SF.facts(SF.record_context(DAY), IMP)
-    figure = SF.chapter_view(3, figs)["items"][1]["figure"]
-    assert [x.replace("\xa0", " ") for x in G.stacked_split(figure)] == ["6 trades,", "02 Sep 2026"]
+    item = SF.chapter_view(3, figs)["items"][1]
+    assert (item["figure"], item["label"].replace("\xa0", " ")) == (
+        "6 trades", "on your\nbusiest day,\n02 Sep 2026")
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
@@ -476,7 +473,7 @@ def test_the_card_and_home_keep_their_own_figures():
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
     assert figs["down"]["figure"] == "4"
-    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "busiest"
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "on your\nbusiest day"
     assert ">4<" in chapter_page(3, DOWN)
 
 

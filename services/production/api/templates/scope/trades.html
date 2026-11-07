@@ -19,7 +19,7 @@
       <div class="trade-filters__go">{{ button("Show trades", kind="secondary", block=true) }}</div>
     </form>
     {%- endif %}
-    <p class="evidence__caption">{% if listing.filtered %}<span class="num">{{ listing.shown|count }}</span> of <span class="num">{{ listing.total|count }}</span>{% else %}<span class="num">{{ listing.total|count }}</span>{% endif %} {{ "trade" if listing.total == 1 else "trades" }}.</p>
+    <p class="evidence__caption">{% if listing.filtered %}<span class="num">{{ Figure(listing.shown, "trades")|count }}</span> of <span class="num">{{ Figure(listing.total, "trades")|count }}</span>{% else %}<span class="num">{{ Figure(listing.total, "trades")|count }}</span>{% endif %} {{ "trade" if listing.total == 1 else "trades" }}.</p>
     {%- if listing.filtered %}
     <p class="trade-filters__clear"><a href="{{ listing.clear_href }}">Clear filters</a></p>
     {%- endif %}
