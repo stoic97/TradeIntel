@@ -81,6 +81,12 @@
 <div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}</div>
 {%- endmacro %}
 
+{#- A page's dial at both of the kit's sizes, and CSS shows the one that fits: its words differ
+    (a phone's wedge says the same fact in fewer), so a scaled drawing can't do for both. -#}
+{% macro dials(view) -%}
+{{ dial(view) }}{{ dial(view, "desktop") }}
+{%- endmacro %}
+
 {#- A chart from scope_geometry.CHARTS (each part a path, its role a .chart__ class).
     Its size is the chart's own: 350 x 96 on a fact page, 302 wide in a story card. -#}
 {% macro chart(c, cls="") -%}
