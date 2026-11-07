@@ -643,16 +643,30 @@ def test_said_wrong_counts_traders_not_answers(app, engine):
     assert view(app, engine)["cards"]["said_wrong"] == 1
 
 
-def test_the_reveal_cards_stay_empty_whatever_later_steps_are_stored(app, engine):
-    """/mirror/reveal writes nothing, and the budget and chapters are reachable without it."""
+def test_the_reveal_has_no_card_and_no_median(app, engine):
+    """A blank that can never fill teaches the reader to skip the top of the page [TICKET-878]."""
     seed_everything(engine, add_trader(engine, "someone"))
     cards = view(app, engine)["cards"]
-    assert cards["reached_reveal"] == "—"
-    assert cards["upload_to_reveal"] == "—"
+    assert "reached_reveal" not in cards and "upload_to_reveal" not in cards
+    page = admin_page(app, engine)
+    assert "Reached the reveal" not in page and "upload to reveal" not in page
+
+
+def test_the_page_says_plainly_that_visits_are_not_known(app, engine):
+    page = admin_page(app, engine)
+    assert "Visits aren't known" in page
+    assert "came back and read nothing leaves no trace" in page
+    assert "Reaching the reveal writes nothing either" in page
+
+
+def test_no_new_event_was_added_to_record_a_visit():
+    """Recording visits is a consent question first (Consent v1 says "Nothing else about you")."""
+    assert not re.search(r"\b(visit|came_back|reveal)\b",
+                         Path("services/production/api/routes_events.py").read_text())
 
 
 def test_the_reveal_route_is_still_a_get_that_stores_nothing():
-    """If it starts leaving a trace, the "—" above can become a count."""
+    """If it starts leaving a trace, it could be counted; until then the page shows nothing."""
     source = Path("services/production/api/routes_reveal.py").read_text()
     body = source[source.index('@router.get("/mirror/reveal"'):]
     assert "sess.add" not in body and "commit" not in body
