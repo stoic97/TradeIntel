@@ -907,8 +907,8 @@ def test_the_admin_page_does_not_call_a_reread_an_upload(client, engine, monkeyp
     assert "rikk had a file read again" in text
 
 
-def test_on_current_code_stays_a_comparison_with_the_deploy(client, engine, monkeypatch):  # noqa: F811
-    client.app.state.code_version = "the-deploy"
+def test_a_re_read_clears_would_read_differently(client, engine, monkeypatch):  # noqa: F811
     upload_older(client, monkeypatch)
+    assert admin_view_of(engine)["rows"][0]["reads_differently"] == "yes"
     read_again(client, imports(engine)[0].id)
-    assert admin_view_of(engine)["rows"][0]["on_current"] == "yes"
+    assert admin_view_of(engine)["rows"][0]["reads_differently"] == "no"
