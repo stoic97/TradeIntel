@@ -32,7 +32,7 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from services.production import demo
-from services.production.api import formatting
+from services.production.api import admin_ladder, formatting
 from services.production.api import scope_map as SM
 from services.production.db import models as m
 from services.production.journal import leaving as LC
@@ -462,13 +462,6 @@ def _fact_table(group_real: list[_Reader], group_demo: list[_Reader]) -> dict:
     return {"chapters": chapters, "covers": _covers(len(group_real), len(group_demo))}
 
 
-def _reading(group: list[_Reader]) -> tuple[int, int, int]:
-    """How many of these read every fact, stopped early, and read none."""
-    return (sum(1 for r in group if len(r.fact_ms) == len(SM.FACTS)),
-            sum(1 for r in group if 0 < len(r.fact_ms) < len(SM.FACTS)),
-            sum(1 for r in group if not r.fact_ms))
-
-
 def _most_opened(drawers: dict[str, int]) -> str:
     if not drawers:
         return NOT_RECORDED
@@ -483,7 +476,8 @@ def _left_out(count: int) -> str:
             else f"{formatting.count(count)} development accounts are left out")
 
 
-def build(sess: Session, *, running_version: str, production: bool) -> dict:
+def build(sess: Session, *, running_version: str, production: bool, now: datetime | None = None,
+          last_looked: datetime | None = None) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
@@ -540,9 +534,11 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
     on_real = [r for r in real.values() if r.file == FILE_REAL]
     on_demo = [r for r in real.values() if r.file == FILE_DEMO]
-    read_all, stopped_early, read_none = _reading(on_real)
-    demo_read_all, demo_stopped_early, demo_read_none = _reading(on_demo)
     return {
+        "new_since": {"last_looked": _when(last_looked) if last_looked else None,
+                      "lines": admin_ladder.new_since(sess, real, imports, last_looked)},
+        "ladder": admin_ladder.ladder(sess, real, imports, now=now or datetime.now(UTC),
+                                      fact_of=fact_of),
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
         "feedback_chapters": feedback_chapters,
@@ -552,14 +548,6 @@ def build(sess: Session, *, running_version: str, production: bool) -> dict:
             "signed_up": len(real),
             "tried_demo": sum(1 for r in real.values() if r.tried_demo),
             "uploaded_real": sum(1 for r in real.values() if r.brought_real),
-            "reached_reveal": NOT_RECORDED,
-            "upload_to_reveal": NOT_RECORDED,
-            "read_all": read_all,
-            "stopped_early": stopped_early,
-            "read_none": read_none,
-            "demo_read_all": demo_read_all,
-            "demo_stopped_early": demo_stopped_early,
-            "demo_read_none": demo_read_none,
             "said_wrong": sum(1 for r in real.values() if r.said_wrong),
             "said_wrong_demo": sum(1 for r in real.values()
                                    if r.said_wrong and r.file == FILE_DEMO),

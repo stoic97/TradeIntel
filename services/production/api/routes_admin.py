@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from sqlalchemy import func, select
 
 from services.production.api import admin_health, admin_view
 from services.production.api.routes_identity import current_trader, page
@@ -38,11 +39,15 @@ def admin(request: Request):
         trader = current_trader(request, sess)
         if trader is None or trader.login_id not in config.admin_login_ids:
             raise HTTPException(status_code=404)
+        last_looked = sess.scalar(
+            select(func.max(m.AdminAction.at))
+            .where(m.AdminAction.actor == f"trader:{trader.id}", m.AdminAction.action == "admin_view")
+        )
         sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="admin_view", target=None,
                                at=datetime.now(UTC)))
         sess.commit()
         view = admin_view.build(sess, running_version=request.app.state.code_version,
-                                production=config.production)
+                                production=config.production, last_looked=last_looked)
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
                 body_class="admin", health=admin_health.build(request.app), **view)
 
