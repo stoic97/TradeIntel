@@ -38,6 +38,11 @@ class Figure:
     def __str__(self) -> str:
         return str(self.value)
 
+    @property
+    def with_noun(self) -> str:
+        """As a sentence says it: "8 trades"."""
+        return f"{self.value} {self.noun}"
+
 
 def through_figure(write):
     """A filter that takes a Figure, and writes its value as the filter always wrote it."""

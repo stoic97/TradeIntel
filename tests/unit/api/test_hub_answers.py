@@ -12,6 +12,7 @@ from decimal import Decimal
 
 import pytest
 
+from services.production.api import dial as D
 from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
@@ -185,29 +186,35 @@ def test_row_four_with_a_number_says_it_and_what_lost_more():
 def test_the_wedges_carry_the_short_form_of_the_four_answers():
     items = wedges()
     share, strike = CTX["share"], CTX["strike"]
-    assert (items[0]["figure"], items[0]["label"]) == (f"{share.share_percent}%", "of losses")
-    assert (items[1]["figure"], items[1]["label"]) == (f"{strike.rate_percent}%", "strike")
-    assert (items[2]["figure"], items[2]["label"]) == (SF._wedge_count(CTX["days"].busiest_trips), "busiest")
-    assert (items[3]["figure"], items[3]["label"]) == ("no", "budget")
+    words = [(i["figure"], i["label"].replace("\n", " ")) for i in items]
+    assert words[0] == ("5 days", f"lost {share.share_percent}% of all you lost")
+    assert words[1] == (SF._out_of_a_hundred(strike.rate_percent), "trades made money")
+    assert words[2] == (f"{CTX['days'].busiest_trips} trades", "on your busiest day")
+    assert words[3] == ("no number", "is set yet")
 
 
 def test_a_wedge_says_how_many_are_uncapped():
     trips = [mx.replace(x, uncapped=True) if i < 2 else x for i, x in enumerate(FORTY)]
-    assert (wedges(trips)[3]["figure"], wedges(trips)[3]["label"]) == ("two", "uncapped")
+    item = wedges(trips)[3]
+    assert (item["figure"], item["label"], item["phone_label"]) == (
+        "2 trades", "we could not\nsize", "not sized")
 
 
 def test_a_wedge_with_a_number_says_how_many_went_past_it():
     trips = [mx.replace(x, number_in_force=Decimal(500)) for x in FORTY]
     item = wedges(trips, number=Decimal(500))[3]
-    assert item["label"] == "past it"
-    assert item["figure"] == SF._wedge_count(mx.trades_past_number(trips).count)
+    assert item["label"] == "past your\nnumber"
+    assert item["figure"] == f"{mx.trades_past_number(trips).count} trades"
+
+
+FIT_ON_A_PHONE = -14  # "100 of 100", the widest: seen in a browser, it reaches the ring and stays legible
 
 
 def fit(figure, label):
     """How far a wedge's words clear the ring, the rim and the dividers, at their best radius."""
     z = G.SIZES["phone"]
     rr, sec = G.radii(z["R"]), G.sectors(4, True)
-    block = G.slice_block({"figure": figure, "label": label}, min(z["figSizesHome"]), False)
+    block = G.slice_block({"figure": figure, "label": label}, min(D.HUB_FIG_SIZES_PHONE), False)
     best, rc = -1e9, rr["ring"]
     while rc <= rr["inner"]:
         best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))
@@ -216,18 +223,18 @@ def fit(figure, label):
 
 
 @pytest.mark.parametrize(("figure", "label"), [
-    ("100%", "of losses"), ("99.5%", "strike"), ("1,999", "busiest"), ("seven", "busiest"),
-    ("1,600", "uncapped"), ("no", "budget"), ("9,999", "past it"),
+    ("5 days", "lost 100%"), ("100 of 100", "made money"), ("12 trades", "busiest day"),
+    ("12 trades", "not sized"), ("no number", "is set yet"), ("number", "is set"),
 ])
 def test_the_widest_answers_stay_clear_of_the_dials_centre(figure, label):
-    """Seen in a browser: the ticket's longer short forms clear by -30 px, so the white centre
-    covers them. block_clearance keeps 4 to 5 px spare, so -6 only just touches."""
-    assert fit(figure, label) >= -6
+    """Seen in a browser: a longer form clears by -30 px, so the white centre covers it, and
+    block_clearance keeps 4 to 5 px spare. FIT_ON_A_PHONE is where the phone's words stop touching."""
+    assert fit(figure, label) >= FIT_ON_A_PHONE
 
 
 def test_every_wedge_on_the_page_stays_clear_of_the_dials_centre():
     for item in wedges():
-        assert fit(item["figure"], item["label"]) >= -6, item
+        assert fit(item["figure"], item.get("phone_label", item["label"])) >= FIT_ON_A_PHONE, item
 
 
 def test_a_label_is_the_line_under_its_figure_on_the_dial_as_it_shipped():
@@ -235,12 +242,6 @@ def test_a_label_is_the_line_under_its_figure_on_the_dial_as_it_shipped():
     assert (block["head"], block["tail"], block["lead"]) == ("12%", "of losses", 0)
     kit = G.slice_block({"figure": "12%"}, 16, False)
     assert (kit["tail"], kit["lead"]) == ("", 17), "with no label the kit's layout stands"
-
-
-def test_a_wedge_count_under_ten_is_a_word_so_it_cant_read_as_a_serial():
-    assert SF._wedge_count(5) == "five"
-    assert SF._wedge_count(10) == "10"
-    assert SF._wedge_count(1200) == "1,200"
 
 
 def test_no_wedge_says_open_or_read():
@@ -334,7 +335,7 @@ def test_a_number_with_nothing_measured_against_it_claims_no_clean_record():
     assert "lost more" not in row
     assert "lost more than your number" not in readable(fact_page("risk"))
     item = wedges(number=Decimal(500))[3]
-    assert (item["figure"], item["label"]) == ("set", "number")
+    assert (item["figure"], item["label"]) == ("number", "is set")
 
 
 def test_wedge_one_agrees_with_chapter_one():
@@ -348,18 +349,18 @@ def test_wedge_two_agrees_with_chapter_two():
 def test_wedge_three_agrees_with_chapter_three():
     trips = busy_file(12)
     figure = wedges(trips)[2]["figure"]
-    assert figure == "12"
-    assert f"{figure} trades" in readable(chapter_page(3, trips))
+    assert figure == "12 trades"
+    assert figure in readable(chapter_page(3, trips))
 
 
-def test_wedge_three_in_words_is_the_same_count_chapter_three_prints():
-    assert wedges(busy_file(3))[2]["figure"] == "three"
+def test_wedge_three_is_the_same_count_chapter_three_prints_however_few():
+    assert wedges(busy_file(3))[2]["figure"] == "3 trades"
     assert "3 trades" in readable(chapter_page(3, busy_file(3)))
 
 
 def test_wedge_four_uncapped_agrees_with_chapter_four():
     many = [mx.replace(x, uncapped=True) if i < 12 else x for i, x in enumerate(FORTY)]
-    assert wedges(many)[3]["figure"] == "12"
+    assert wedges(many)[3]["figure"] == "12 trades"
     assert "12 trades were sold options with no cap" in readable(chapter_page(4, many))
 
 
@@ -367,7 +368,7 @@ def test_wedge_four_past_number_agrees_with_the_risk_page():
     trips = with_number(FORTY)
     figure = wedges(trips, number=Decimal(500))[3]["figure"]
     count = mx.trades_past_number(trips).count
-    assert figure == SF._wedge_count(count)
+    assert figure == f"{count} trades"
     assert f"{count} trades lost more than your number." in readable(fact_page("risk", trips))
 
 

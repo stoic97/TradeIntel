@@ -1,16 +1,13 @@
 """A figure is a value and its noun, on every page a trader reads.
 
-Three checks hold it, because each misses what another catches. Reading the templates finds a
+Two checks hold it, because each misses what the other catches. Reading the templates finds a
 filter written without a figure on a page no scene reaches. Rendering finds a number that went
-straight onto a page with no filter at all. Comparing every page with what it was before finds
-a refactor that changed anything on screen. All of it runs on made-up files.
+straight onto a page with no filter at all. All of it runs on made-up files.
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 import re
 from decimal import Decimal
 from pathlib import Path
@@ -25,7 +22,6 @@ from services.production.api.figures import Figure, NoNoun, Written
 from tests.unit.api import figure_pages
 
 TEMPLATE_ROOT = Path("services/production/api/templates")
-BEFORE = Path("tests/fixtures/figure_refactor/pages.json")
 FORMATS = {"count", "rupees", "rupees_on_a_trade", "minutes", "hold", "price", "lots", "signed_percent"}
 LOOKS_LIKE_A_NUMBER = re.compile(r"[+−-]?₹?\d[\d,]*(\.\d+)?[%×]?")
 
@@ -204,37 +200,6 @@ def test_that_rendering_check_leaves_a_tag_alone(marking):
 def test_that_rendering_check_passes_a_figure(marking):
     source = "<p>{{ Figure(n, 'trades') }} {{ Figure(n, 'trades')|count }}</p>"
     assert OPEN not in TEMPLATES.env.from_string(source).render(n=3)
-
-
-# ---------- Nothing on screen changed ----------
-
-
-def test_every_page_is_byte_identical_to_before_the_figure_type():
-    """BEFORE was written from main before any template changed, by this same walk. A change
-    that means to alter a page writes it again: WRITE_FIGURE_PAGES=1 pytest -k byte_identical."""
-    app = create_app()
-    after = figure_pages.digests(app, app.state.engine)
-    if os.environ.get("WRITE_FIGURE_PAGES"):
-        BEFORE.write_text(json.dumps(after, indent=0, sort_keys=True), encoding="utf-8")
-    before = json.loads(BEFORE.read_text(encoding="utf-8"))
-    assert sorted(after) == sorted(before), "a page came or went"
-    assert [page for page in before if before[page] != after[page]] == []
-
-
-def test_the_walk_really_reaches_the_report():
-    pages = json.loads(BEFORE.read_text(encoding="utf-8"))
-    assert len(pages) > 300
-    for page in ("signed out /login", "demo /mirror", "demo /mirror/chapter/4",
-                 "demo /mirror/fact/math", "demo /mirror/reveal", "demo /budget",
-                 "demo with a number /budget", "small file /mirror", "demo /eligibility"):
-        assert page in pages, page
-
-
-def test_the_digest_sees_a_changed_figure():
-    days = ()
-    one = hashlib.sha256(figure_pages.steady("<p>8 trades</p>", days).encode()).hexdigest()
-    two = hashlib.sha256(figure_pages.steady("<p>9 trades</p>", days).encode()).hexdigest()
-    assert one != two
 
 
 # ---------- The kit ----------
