@@ -98,11 +98,13 @@ def test_the_shipped_calendar_loads_and_every_entry_has_a_kind_and_a_reason():
 
 
 def _manifest(**over) -> ms.SeriesManifest:
-    base = dict(underlying="CRUDEOIL", serves=("CRUDEOIL", "CRUDEOILM"), file="crude_1m_current.csv",
-                sha256="ab" * 32, rows=10, first_bar=datetime(2026, 1, 5, 9, 0),
-                last_bar=datetime(2026, 3, 6, 23, 54), as_of=date(2026, 3, 6), source="made up",
-                roll=ms.ROLL_CONVENTION, clock=ms.CLOCK, interval="1 minute", built=date(2026, 3, 9),
-                extended_from=date(2026, 2, 1), sessions=("2026-03-03 evening only: a reason",))
+    base = {"underlying": "CRUDEOIL", "serves": ("CRUDEOIL", "CRUDEOILM"), "file": "crude_1m_current.csv",
+            "sha256": "ab" * 32, "rows": 10,
+            "first_bar": datetime(2026, 1, 5, 9, 0),  # noqa: DTZ001 - naive IST, as the series
+            "last_bar": datetime(2026, 3, 6, 23, 54),  # noqa: DTZ001
+            "as_of": date(2026, 3, 6), "source": "made up", "roll": ms.ROLL_CONVENTION, "clock": ms.CLOCK,
+            "interval": "1 minute", "built": date(2026, 3, 9), "extended_from": date(2026, 2, 1),
+            "sessions": ("2026-03-03 evening only: a reason",)}
     base.update(over)
     return ms.SeriesManifest(**base)
 

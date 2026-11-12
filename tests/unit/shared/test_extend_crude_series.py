@@ -20,7 +20,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 def session(day: date, price: int) -> list[list]:
     """One made-up full session: 09:00 to 23:29, the close stepping by one point a minute."""
-    out, t = [], datetime(day.year, day.month, day.day, 9, 0)
+    out, t = [], datetime(day.year, day.month, day.day, 9, 0)  # noqa: DTZ001 - naive IST, as the series
     for i in range(14 * 60 + 30):
         p = price + i % 7
         out.append([t + timedelta(minutes=i), p, p + 2, p - 1, p + 1, 10])
@@ -76,7 +76,8 @@ def test_extending_appends_only_finished_sessions_and_keeps_the_old_bytes(tmp_pa
     m = ext.extend(base, out, FakeFyers(rows), today=today, calendar=CAL, built=today)
     data = out.read_bytes()
     assert data.startswith(old_bytes), "the bars already held are kept byte for byte"
-    kept = {datetime.strptime(r["timestamp"], "%Y-%m-%d %H:%M:%S").date() for r in csv.DictReader(out.open())}
+    kept = {datetime.strptime(r["timestamp"], "%Y-%m-%d %H:%M:%S").date()  # noqa: DTZ007 - naive IST
+            for r in csv.DictReader(out.open())}
     assert max(kept) == date(2026, 3, 5)
     assert date(2026, 3, 3) not in kept
     assert m.as_of == date(2026, 3, 5)
@@ -129,3 +130,14 @@ def test_a_run_with_nothing_new_writes_nothing_and_says_so(tmp_path):
     with pytest.raises(ext.Refused, match="nothing new"):
         ext.extend(base, tmp_path / "o.csv", FakeFyers(rows), today=date(2026, 3, 7), calendar=CAL,
                    built=date(2026, 3, 7))
+
+
+def test_held_rows_with_single_digit_hours_are_read(tmp_path):
+    rows = market()
+    base = tmp_path / "base.csv"
+    write_series(base, [r for r in rows if r[0].date() <= date(2026, 2, 27)])
+    text = base.read_text().replace(" 09:", " 9:")  # how the oldest rows of the real file are written
+    base.write_text(text)
+    m = ext.extend(base, tmp_path / "o.csv", FakeFyers(rows), today=date(2026, 3, 6), calendar=CAL,
+                   built=date(2026, 3, 6))
+    assert m.as_of == date(2026, 3, 5) and (tmp_path / "o.csv").read_text().startswith(text)
