@@ -38,7 +38,7 @@ HOME_ENTRY = re.compile(r'<a class="(?:bottom-nav__item|home-bar__home)" href="/
 
 SIGNED_OUT = {"/login", "/signup", "/health"}
 """Pages for someone not signed in. The door ("/") is walked signed out below."""
-NOT_A_TRADER_PAGE = {"/admin", "/admin/"}
+NOT_A_TRADER_PAGE = {"/admin", "/admin/", "/admin/traders/{trader_id}", "/admin/traders/{trader_id}/"}
 """The operator's page: a trader gets the 404 (test_admin_page), and nothing links there."""
 
 
