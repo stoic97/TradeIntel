@@ -73,12 +73,16 @@
   <h2 class="heading admin__head">Latest events</h2>
   <ol class="admin__feed body-small">
   {%- for line in feed %}
-    <li><span class="num">{{ line.when }}</span> {{ line.text }}</li>
+    {%- if line.day_head %}
+    <li class="admin__feed-day">{{ line.day_head }}</li>
+    {%- endif %}
+    <li><span class="num">{{ line.time }}</span> {{ line.text }}</li>
   {%- else %}
     <li>Nothing yet.</li>
   {%- endfor %}
   </ol>
-  <p class="body-small admin__note">There is no deploy table. "First import on code" is the first time an import shows that version, not when it was deployed. A refusal gives its reason only where the sentence is certainly our own words.</p>
+  <p class="body-small admin__note">A refusal gives its reason only where the sentence is certainly our own words.</p>
+  <p class="body-small admin__note">There is no deploy table. First import on code is the first time an import shows a version, not when it was deployed{% if code_seen %}: {% for code in code_seen %}<span class="num">{{ code.version }}</span> {{ code.when }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}.</p>
 
   <h2 class="heading admin__head">Where readers stop</h2>
   <p class="body-small admin__note">{{ fact_table.covers }}</p>
