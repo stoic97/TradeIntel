@@ -1,0 +1,24 @@
+{#- /admin/traders/<id> (TICKET-875): the trail around one trader's report, read-only. Every line
+    arrives written out from trader_trail.py; nothing is worked out here. Internal wording. -#}
+{% extends "layout.html" %}
+{% block head_scripts %}{% endblock %}
+{% block content %}
+  <p class="body-small"><a href="/admin">Back to Admin</a></p>
+  {%- if trader_name %}
+  <h1 class="title">{{ trader_name }}</h1>
+  <p class="body-small">Login id: {{ login_id }}{% if development %}. A development account{% endif %}. Times are IST.</p>
+  {%- else %}
+  <h1 class="title">A deleted account</h1>
+  <p class="body-small">This account was deleted, so only its deletion is kept. Times are IST.</p>
+  {%- endif %}
+
+  <h2 class="heading admin__head">What happened, oldest first</h2>
+  <ol class="admin__feed body-small">
+  {%- for line in lines %}
+    <li><span class="num">{{ line.when }}</span> {{ line.text }}</li>
+  {%- else %}
+    <li>Nothing stored yet.</li>
+  {%- endfor %}
+  </ol>
+  <p class="body-small admin__note">This is the trail around the report: what happened and when, never trades, figures, journal text, typed notes, the budget amount or a file's name. Opening this page is on the record. It is a floor: a visit that writes nothing doesn't show, a fact closed with its heading still on screen sends nothing, and a real upload removes the demo with what was answered on it.</p>
+{% endblock %}

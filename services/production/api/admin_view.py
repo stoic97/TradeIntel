@@ -457,6 +457,7 @@ def _row(reader: _Reader, *, duplicates: dict[int, int],
          guess_on: bool, leaving_on: bool, feedback_chapters: list[int]) -> dict:
     latest = _health_from(reader)
     return {
+        "href": f"/admin/traders/{reader.id}",
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
         "file": reader.file,
