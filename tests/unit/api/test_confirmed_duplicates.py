@@ -539,7 +539,7 @@ def test_the_report_counts_rows_read_as_the_rows_that_remain(client, engine):  #
     for name in "ABC":
         confirm_named(client, engine, name)
     page = words(client.get("/mirror/fact/unread").text)
-    assert "Rows in your file 21 Rows we read 18 Rows set aside 3" in page
+    assert "Rows in your file 21 rows Rows we read 18 rows Rows set aside 3 rows" in page
 
 
 def test_admin_does_not_call_a_set_aside_row_refused(client, engine):  # noqa: F811

@@ -22,7 +22,7 @@
       <li class="mirror">Your longest run of consecutive losers was <span class="num">{{ Figure(run.length, "losses")|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ Figure(facts["run"].day_count, "days")|count }}</span> days{% endif %}.</li>
       {%- endif %}
       {%- if not facts["busiest"].state %}
-      <li class="mirror">Your normal day is <span class="num">{{ Figure(days.normal_day, "trades") }}</span> trades. Your busiest was <span class="num">{{ facts["busiest"].busiest_date }}</span>, at <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span>.</li>
+      <li class="mirror">Your normal day is <span class="num">{{ Figure(days.normal_day, "trades") }}</span> trades. Your busiest was <span class="num">{{ facts["busiest"].busiest_date }}</span>, at <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}.</li>
       {%- endif %}
     </ol>
   </section>
@@ -58,7 +58,7 @@
   <section class="ending__steps" aria-labelledby="ending-steps">
     <h2 class="heading" id="ending-steps">Where to look next</h2>
     {%- if f.flagged.run %}
-    <a class="step" href="{{ facts["run"].href }}">Your {{ f.flagged.run.day }} — <span class="num">{{ Figure(f.flagged.run.losses, "losses")|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ Figure(f.flagged.run.day_count, "days")|count }}</span> days{% endif %}.</a>
+    <a class="step" href="{{ facts["run"].href }}">{{ f.flagged.run.day }} — <span class="num">{{ Figure(f.flagged.run.losses, "losses")|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ Figure(f.flagged.run.day_count, "days")|count }}</span> days{% endif %}.</a>
     {%- endif %}
     {%- if not facts["worst-days"].state %}
     <a class="step" href="{{ facts["worst-days"].href }}">Your five worst days — {{ money(worst_days.sum) }}.</a>

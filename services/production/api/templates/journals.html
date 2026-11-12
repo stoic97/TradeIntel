@@ -21,7 +21,7 @@
   </form>
   {%- endif %}
   {%- if latest %}
-  <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ Figure(total, "journals")|count }}</span> so far. Each one is written from your trades and needs nothing from you.</p>
+  <p class="body">One for every complete trading day in what you have uploaded — <span class="num">{{ Figure(total, "journals")|count }}</span> {{ "Journal" if total == 1 else "Journals" }} so far. Each one is written from your trades and needs nothing from you.</p>
   {%- if started %}
   <h2 class="card-title">{% if started == 1 %}Start with this day{% else %}Start with these {{ Figure(started, "days")|count }} days{% endif %}</h2>
   {%- endif %}
