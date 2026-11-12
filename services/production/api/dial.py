@@ -24,6 +24,7 @@ MINI_W, MINI_H = 36, 14
 OPTS = {"threeLineNames": G.THREE_LINE_NAMES}
 CRUMB_LIMIT = 44  # characters in "Scope › chapter › fact" on the phone (the kit's path note)
 STRIP_W = 350  # a trade strip's drawing width; the SVG stretches it to the column
+HUB_FIG_SIZES_PHONE = [22, 18, 15]  # a hub wedge's figure has a noun now, and needs the smallest
 
 
 def _text(value: str, what: str) -> str:
@@ -46,7 +47,12 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
     items, minis = [], {}
+    if view["kind"] == "home" and size == "phone" and any("phone_label" in i for i in view["items"]):
+        view = {**view, "figSizes": HUB_FIG_SIZES_PHONE}  # all of them the kit's own classes
     for item in view["items"]:
+        if size == "phone":  # a phone's wedge can say the same fact in fewer words
+            item = {**item, "figure": item.get("phone_figure", item["figure"]),
+                    "label": item.get("phone_label", item.get("label", ""))}
         _text(item["name"], "name")
         _text(item["figure"], "figure")
         _text(item.get("label") or "", "label")
