@@ -11,14 +11,14 @@
 </header>
 {% endblock %}
 {% block content %}
-  <p class="label">CHAPTER {{ chapter.number }} OF 4</p>
+  <p class="label">CHAPTER {{ Figure(chapter.number, "chapter") }} OF 4</p>
   <h1 class="title fact__title">{{ chapter.name }}</h1>
-  <p class="body">{{ chapter.facts|length }} facts, counted from your file.</p>
+  <p class="body">{{ Figure(chapter.facts|length, "facts") }} facts, counted from your file.</p>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   {{ uncounted_line(imp.trips_refused) }}
   {%- if chapter.number == 2 %}
   {%- for line in facts["math"].lead_lines %}
-  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ line.more|rupees(signed=false) }} more per winner.</p>
+  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ Figure(line.more, "rupees")|rupees(signed=false) }} more per winner.</p>
   {%- endfor %}
   {%- endif %}
   <div class="story-list">

@@ -1,7 +1,7 @@
 {#- Beside the result, for a trader who added his broker's file (TICKET-828). A record: every
     charge here is as his file states it. Everything below stays gross, and says so. -#}
-<p class="gross-line">Before charges: <span class="num">{{ charges.gross|rupees }}</span>. Less charges from your broker's file: <span class="num">{{ charges.charges|rupees(signed=false) }}</span>
-{%- if charges.covers_every_day %}. Net: <span class="num">{{ charges.net|rupees }}</span>.
-{%- else %}, for <span class="num">{{ charges.covered_days|count }}</span> of the <span class="num">{{ charges.trading_days|count }}</span> days in your upload. Net of those: <span class="num">{{ charges.net|rupees }}</span>.
+<p class="gross-line">Before charges: <span class="num">{{ Figure(charges.gross, "rupees")|rupees }}</span>. Less charges from your broker's file: <span class="num">{{ Figure(charges.charges, "rupees")|rupees(signed=false) }}</span>
+{%- if charges.covers_every_day %}. Net: <span class="num">{{ Figure(charges.net, "rupees")|rupees }}</span>.
+{%- else %}, for <span class="num">{{ Figure(charges.covered_days, "days")|count }}</span> of the <span class="num">{{ Figure(charges.trading_days, "days")|count }}</span> days in your upload. Net of those: <span class="num">{{ Figure(charges.net, "rupees")|rupees }}</span>.
 {%- endif %}
-{%- if charges.unmatched_days %} <span class="num">{{ charges.unmatched_days|count }}</span> {{ "day" if charges.unmatched_days == 1 else "days" }} in your broker's file {{ "has" if charges.unmatched_days == 1 else "have" }} no trade in this upload and {{ "is" if charges.unmatched_days == 1 else "are" }} not counted.{% endif %}</p>
+{%- if charges.unmatched_days %} <span class="num">{{ Figure(charges.unmatched_days, "days")|count }}</span> {{ "day" if charges.unmatched_days == 1 else "days" }} in your broker's file {{ "has" if charges.unmatched_days == 1 else "have" }} no trade in this upload and {{ "is" if charges.unmatched_days == 1 else "are" }} not counted.{% endif %}</p>

@@ -25,7 +25,7 @@
     <thead><tr><th>When</th><th>Purpose</th><th>Decision</th><th class="table__num">Version</th></tr></thead>
     <tbody>
     {%- for event in events %}
-      <tr><td>{{ event.at|local_day }}</td><td class="table__text">{{ event.purpose.value.replace('_', ' ') }}</td><td>{{ "granted" if event.granted else "withdrawn" }}</td><td class="table__num">{{ event.terms_version }}</td></tr>
+      <tr><td>{{ event.at|local_day }}</td><td class="table__text">{{ event.purpose.value.replace('_', ' ') }}</td><td>{{ "granted" if event.granted else "withdrawn" }}</td><td class="table__num">{{ Figure(event.terms_version, "version") }}</td></tr>
     {%- endfor %}
     </tbody>
   </table>
