@@ -3,13 +3,13 @@
 {% from "scope/_math.html" import math_table, sizes_table %}
 {% from "scope/_next.html" import next_fact %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ Figure(strike.rate_percent, "percent") }}%</span></div>
-    <p class="mirror">Your strike rate was <span class="num">{{ Figure(strike.rate_percent, "percent") }}</span>% — <span class="num">{{ Figure(strike.wins, "trades")|count }}</span> winners against <span class="num">{{ Figure(strike.losses, "trades")|count }}</span> losers.</p>
+    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    <p class="mirror"><span class="num">{{ Figure(strike.rate_percent, "percent")|out_of_a_hundred }}</span> trades made money: <span class="num">{{ Figure(strike.wins, "trades")|count }}</span> winners against <span class="num">{{ Figure(strike.losses, "trades")|count }}</span> losers.</p>
     {%- if strike.scratches %}
     <p class="mirror"><span class="num">{{ Figure(strike.scratches, "trades")|count }}</span> trades finished level and are in neither count.</p>
     {%- endif %}
     {%- if break_even.percent is not none %}
-    <p class="mirror">Your average winner was {{ Figure(break_even.average_winner, "rupees")|rupees(signed=false) }} and your average loser {{ Figure(break_even.average_loser, "rupees")|rupees(signed=false) }}. At those sizes, break-even is a strike rate of <span class="num">{{ Figure(break_even.percent, "percent") }}</span>%.</p>
+    <p class="mirror">Your average winner was {{ Figure(break_even.average_winner, "rupees")|rupees(signed=false) }} and your average loser {{ Figure(break_even.average_loser, "rupees")|rupees(signed=false) }}. At those sizes, you break even at <span class="num">{{ Figure(break_even.percent, "percent")|out_of_a_hundred }}</span>.</p>
     {%- endif %}
     <p class="mirror">Your winners were open a median of <span class="num">{{ Figure(holding.winners_median_seconds, "seconds")|minutes }}</span> minutes, your losers <span class="num">{{ Figure(holding.losers_median_seconds, "seconds")|minutes }}</span> minutes.</p>
     {%- if f.held.count %}

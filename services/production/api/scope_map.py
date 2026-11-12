@@ -49,7 +49,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         2,
         "Your patterns",
         (
-            Fact("math", "The math of your trading", "strike"),
+            Fact("math", "Your wins and losses", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
         ),

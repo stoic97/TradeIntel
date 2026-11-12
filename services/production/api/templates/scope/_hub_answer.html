@@ -13,8 +13,8 @@ Your five worst days came to {{ money(a.worst_sum) }}.
   {%- endif -%}
   {%- if a.at_least %} On each of them you traded at least <span class="num">{{ Figure(a.at_least, "times") }}</span>× your normal day.{% endif -%}
 {%- elif c.number == 2 -%}
-Strike rate on same-day trades: <span class="num">{{ Figure(a.strike.rate_percent, "percent") }}</span>%.
-  {%- if a.even.percent is not none %} Break-even at your average winner and loser: <span class="num">{{ Figure(a.even.percent, "percent") }}</span>%.{% endif -%}
+<span class="num">{{ Figure(a.strike.rate_percent, "percent")|out_of_a_hundred }}</span> same-day trades made money.
+  {%- if a.even.percent is not none %} Break-even at your average winner and loser: <span class="num">{{ Figure(a.even.percent, "percent")|out_of_a_hundred }}</span>.{% endif -%}
 {%- elif c.number == 3 -%}
   {%- if a.says_direction -%}
 {{ down_sentence(post_loss, two_losses) }}

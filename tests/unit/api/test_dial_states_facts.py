@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from services.production.api import dial as D
+from services.production.api import formatting
 from services.production.api import glossary as GL
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
@@ -118,7 +119,7 @@ def test_a_uncapped_wedge_reads_as_agreed():
     ("0", "0 of 100"),
 ])
 def test_a_rate_is_a_count_out_of_a_hundred(rate, said):
-    assert SF._out_of_a_hundred(rate) == said
+    assert formatting.out_of_a_hundred(rate) == said
 
 
 def test_a_wide_count_stands_alone_over_the_short_words_on_a_phone():
