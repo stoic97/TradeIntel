@@ -7,14 +7,29 @@
   <h1 class="title">Admin</h1>
   <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. {{ dev_left_out }} of everything until their own list at the end.</p>
 
-  <section class="admin__cards">
-    <div class="card"><p class="label">Signed up / tried the demo / uploaded a real file</p><p class="heading">{{ cards.signed_up|count }} / {{ cards.tried_demo|count }} / {{ cards.uploaded_real|count }}</p></div>
-    <div class="card"><p class="label">Reached the reveal</p><p class="heading">{{ cards.reached_reveal }}</p><p class="body-small">Median minutes, upload to reveal: {{ cards.upload_to_reveal }}</p></div>
-    <div class="card"><p class="label">Real-file readers: read all {{ fact_total }} facts / stopped early / read none</p><p class="heading">{{ cards.read_all|count }} / {{ cards.stopped_early|count }} / {{ cards.read_none|count }}</p><p class="body-small">Of those whose report reads a real file.</p></div>
-    <div class="card"><p class="label">Demo readers: read all {{ fact_total }} facts / stopped early / read none</p><p class="heading">{{ cards.demo_read_all|count }} / {{ cards.demo_stopped_early|count }} / {{ cards.demo_read_none|count }}</p><p class="body-small">Of those whose report reads the demo.</p></div>
-    <div class="card"><p class="label">Said Wrong on any chapter</p><p class="heading">{{ cards.said_wrong|count }}</p><p class="body-small">On the demo: {{ cards.said_wrong_demo|count }}.</p></div>
-  </section>
-  <p class="body-small admin__note">The reveal is a plain page view that writes nothing, and every later step can be reached without it, so nothing stored proves it was seen.</p>
+  <h2 class="heading admin__head">{% if new_since.last_looked %}New since you last looked, {{ new_since.last_looked }}{% else %}This is your first look{% endif %}</h2>
+  {%- if new_since.lines %}
+  <dl class="admin__quiet body-small">
+  {%- for line in new_since.lines %}
+    <dt>{{ line.label }}</dt><dd>{{ line.count|count }}</dd>
+  {%- endfor %}
+  </dl>
+  {%- else %}
+  <p class="body-small admin__note">From your next visit, this says what came in since this one.</p>
+  {%- endif %}
+
+  <h2 class="heading admin__head">Who came and how far</h2>
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>Traders who</th><th class="table__num">All time</th><th class="table__num">Last 7 days</th></tr></thead>
+      <tbody>
+      {%- for line in ladder %}
+        <tr><td>{{ line.label }}</td><td class="table__num">{{ line.all_time|count }}</td><td class="table__num">{{ line.last_7_days|count }}</td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="body-small admin__note">Traders, not events: each counts once a line, whether on the demo or a real file, and "Where readers stop" keeps those apart. A real upload removes the demo, so "Tried the demo" is a floor. A refused file counts as a real file brought. Said Wrong on any chapter: {{ cards.said_wrong|count }}, {{ cards.said_wrong_demo|count }} of them on the demo.</p>
 
   <h2 class="heading admin__head">System health</h2>
   <dl class="admin__quiet body-small">

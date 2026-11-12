@@ -510,8 +510,7 @@ def test_the_top_card_keeps_signing_up_the_demo_and_a_real_file_apart(app, engin
         sess.commit()
     assert people_card(app, engine) == (3, 1, 1)
     page = admin_page(app, engine)
-    assert "Signed up / tried the demo / uploaded a real file" in page
-    assert "4 / 1 / 1" in page  # the admin who asks has signed up too
+    assert "Tried the demo" in page and "Uploaded a real file" in page
 
 
 def test_a_demo_only_account_has_a_demo_file_and_no_upload_of_a_real_one(app, engine):
@@ -560,8 +559,6 @@ def test_a_refused_real_file_was_brought_but_gives_no_record_to_read(app, engine
         sess.commit()
     assert row_of(view(app, engine), "someone")["file"] == "none"
     assert people_card(app, engine) == (1, 0, 1)
-    cards = view(app, engine)["cards"]
-    assert cards["read_none"] == 0, "with no report there is nothing to have left unread"
 
 
 def test_a_real_file_refused_while_the_demo_stands_leaves_the_report_on_the_demo(app, engine):
@@ -592,34 +589,6 @@ def test_the_notes_say_what_the_file_column_and_the_card_cannot_know(app, engine
     assert "a refused file counts" in page
 
 
-def test_a_demo_reader_is_counted_apart_from_a_real_file_reader(app, engine):
-    # TICKET-865: 3 real readers (all, some, none) and 2 demo readers (some, none).
-    every, some, none = (add_trader(engine, n) for n in ("every", "some", "none"))
-    demo_some, demo_none = (add_trader(engine, n) for n in ("demo-some", "demo-none"))
-    with make_session(engine) as sess:
-        for trader_id in (every, some, none):
-            add_record(sess, trader_id)
-        for trader_id in (demo_some, demo_none):
-            add_record(sess, trader_id, source=demo.ACCOUNT)
-        for key in SM.FACTS:
-            add_dwell(sess, every, key)
-        add_dwell(sess, some, "money")
-        add_dwell(sess, demo_some, "money")
-        sess.commit()
-    cards = view(app, engine)["cards"]
-    assert (cards["read_all"], cards["stopped_early"], cards["read_none"]) == (1, 1, 1)
-    assert (cards["demo_read_all"], cards["demo_stopped_early"], cards["demo_read_none"]) == (0, 1, 1)
-
-
-def test_each_reading_card_says_which_group_it_counts(app, engine):
-    page = admin_page(app, engine)
-    assert "Of those who uploaded" not in page
-    assert "Real-file readers: read all" in page
-    assert "Demo readers: read all" in page
-    assert "Of those whose report reads a real file." in page
-    assert "Of those whose report reads the demo." in page
-
-
 def test_said_wrong_says_how_many_of_them_are_on_the_demo(app, engine):
     on_real, on_demo = add_trader(engine, "on-real"), add_trader(engine, "on-demo")
     with make_session(engine) as sess:
@@ -630,7 +599,7 @@ def test_said_wrong_says_how_many_of_them_are_on_the_demo(app, engine):
         sess.commit()
     cards = view(app, engine)["cards"]
     assert (cards["said_wrong"], cards["said_wrong_demo"]) == (2, 1)
-    assert "On the demo: 1." in admin_page(app, engine)
+    assert "1 of them on the demo" in admin_page(app, engine)
 
 
 def test_said_wrong_counts_traders_not_answers(app, engine):
@@ -644,14 +613,6 @@ def test_said_wrong_counts_traders_not_answers(app, engine):
                                    import_id=other.id, answered_at=THEN))
         sess.commit()
     assert view(app, engine)["cards"]["said_wrong"] == 1
-
-
-def test_the_reveal_cards_stay_empty_whatever_later_steps_are_stored(app, engine):
-    """/mirror/reveal writes nothing, and the budget and chapters are reachable without it."""
-    seed_everything(engine, add_trader(engine, "someone"))
-    cards = view(app, engine)["cards"]
-    assert cards["reached_reveal"] == "—"
-    assert cards["upload_to_reveal"] == "—"
 
 
 def test_the_reveal_route_is_still_a_get_that_stores_nothing():
@@ -709,19 +670,6 @@ def test_what_is_no_fact_is_not_counted(app, engine):
         add_dwell(sess, trader_id, "money", "drawer_open", ms=None)
         sess.commit()
     assert row_of(view(app, engine), "someone")["facts_read"] == f"0 of {len(SM.FACTS)}"
-
-
-def test_read_all_and_stopped_early_split_the_readers(app, engine):
-    everything, some, none = (add_trader(engine, n) for n in ("everything", "some", "none"))
-    with make_session(engine) as sess:
-        for trader_id in (everything, some, none):
-            add_record(sess, trader_id)
-        for key in SM.FACTS:
-            add_dwell(sess, everything, key)
-        add_dwell(sess, some, "money")
-        sess.commit()
-    cards = view(app, engine)["cards"]
-    assert (cards["read_all"], cards["stopped_early"], cards["read_none"]) == (1, 1, 1)
 
 
 def test_minutes_add_up_the_views_and_drawers_are_counted_apart(app, engine):
@@ -1442,8 +1390,6 @@ def test_the_table_says_reading_is_stored_by_trader_not_by_file(app, engine):
 
 @pytest.mark.parametrize("path", [
     ("cards", "signed_up"), ("cards", "tried_demo"), ("cards", "uploaded_real"),
-    ("cards", "read_all"), ("cards", "stopped_early"), ("cards", "read_none"),
-    ("cards", "demo_read_all"), ("cards", "demo_stopped_early"), ("cards", "demo_read_none"),
     ("cards", "said_wrong"), ("cards", "said_wrong_demo"),
     ("quiet", "most_opened"), ("fact_table", "chapters"), ("fact_table", "covers"),
     ("quiet", "wtp"), ("quiet", "wtp_asked"), ("quiet", "consent_declines"),
@@ -1549,6 +1495,7 @@ def statements_for_one_load(app, engine, client) -> list[str]:
 
 def test_a_load_runs_the_same_queries_for_three_traders_as_for_thirty(app, engine):
     client = admin_client(app, engine)
+    client.get("/admin")  # a later look also asks what's new since the last one
     for i in range(3):
         seed_everything(engine, add_trader(engine, f"trader-{i}"))
     few = len(statements_for_one_load(app, engine, client))
