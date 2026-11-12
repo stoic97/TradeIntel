@@ -3,9 +3,10 @@
 Each entry is a word, whether it is in use or retired, and the word that replaced it. A word
 is retired by the page that stopped using it, so the list starts with the dial and only ever
 grows, and a retired word can't come back on a page that has given it up. `where` says which
-pages have, because a word can be gone from the dial and still live copy elsewhere.
+pages have, because a word can be gone from the dial and still live copy elsewhere; with no
+`where`, it is gone from every page. test_retired_words holds rendered pages to this list.
 
-Adding a word is one line.
+Adding a word is one line, in the commit that rewords its pages.
 """
 
 from __future__ import annotations
