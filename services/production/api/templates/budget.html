@@ -45,7 +45,7 @@
     <thead><tr><th>From</th><th class="table__num">Number</th><th>Recorded</th></tr></thead>
     <tbody>
     {%- for d in declarations %}
-      <tr><td>{{ d.effective_from }}</td><td class="table__num">{% if d.unit == "INR" %}{{ d.value|rupees(signed=false) }}{% else %}{{ d.value }}% of {{ d.capital_amount|rupees(signed=false) }}{% endif %}</td><td class="table__text">{{ d.declared_at.strftime('%d %b %Y') }}{% if d.retrospective %} — about a period that had already passed{% endif %}</td></tr>
+      <tr><td>{{ d.effective_from }}</td><td class="table__num">{% if d.unit == "INR" %}{{ d.value|rupees(signed=false) }}{% else %}{{ d.value }}% of {{ d.capital_amount|rupees(signed=false) }}{% endif %}</td><td class="table__text">{{ d.declared_at|local_day }}{% if d.retrospective %} — about a period that had already passed{% endif %}</td></tr>
     {%- endfor %}
     </tbody>
   </table>
