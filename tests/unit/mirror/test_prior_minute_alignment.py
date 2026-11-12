@@ -273,3 +273,12 @@ def test_a_series_not_stamped_at_the_start_of_the_minute_is_refused_by_name(name
 def test_bars_with_no_zone_never_match_a_trade_so_the_book_is_unmeasured_not_shifted():
     naive = table({k.replace(tzinfo=None): v for k, v in NEIGHBOURS.bars.items()})
     assert before(ist(DAY, "10:15", 30), naive) == (0, 0, [pm.Reason.NO_BAR])
+
+# ---- Gate 3 again: the day a trade is covered on is its IST day, not its UTC day -------------
+def test_the_day_a_trade_is_covered_on_is_its_ist_day():
+    # 00:30 IST on DAY is 19:00 UTC the day before. These bars cover DAY only.
+    night = table({ist(DAY, "00:29"): UP, ist(DAY, "00:30"): UP})
+    assert before(ist(DAY, "00:30", 20), night) == (1, 1, [])
+    # A series that stops the day before does not cover DAY, whatever the UTC date says.
+    stale = table({ist(PREV_DAY, "23:28"): UP, ist(PREV_DAY, "23:29"): UP})
+    assert before(ist(DAY, "00:00", 20), stale) == (0, 0, [pm.Reason.NOT_COVERED])
