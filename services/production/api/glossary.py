@@ -16,6 +16,7 @@ from dataclasses import dataclass
 IN_USE, RETIRED = "in use", "retired"
 DIAL = "dial"
 MONEY_PAGES = "the money pages"
+HOME_CARD = "home card"
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ GLOSSARY: tuple[Entry, ...] = (
     Entry("qualified", RETIRED, "after two had closed"),
     Entry("qualifying", RETIRED, "after two had closed"),
     Entry("the math", RETIRED, "Your wins and losses"),
+    Entry("Import", RETIRED, "Upload", HOME_CARD),
 )
 
 

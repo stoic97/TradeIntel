@@ -47,7 +47,7 @@ def test_the_legs_are_all_kept_behind_that_count(uploaded, engine):  # noqa: F81
 
 def test_the_upload_review_page_states_the_record_count(uploaded, engine):  # noqa: F811
     page = text(uploaded.get(f"/imports/{_import_id(engine)}").text)
-    assert f"Trades reconstructed {TRADES}" in page
+    assert f"Trades rebuilt {TRADES} trades" in page
 
 
 def test_the_account_page_states_the_record_count(uploaded):

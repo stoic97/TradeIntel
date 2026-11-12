@@ -323,7 +323,7 @@ def test_after_it_the_page_says_so(client, engine, monkeypatch):  # noqa: F811
     page = words(client.get(response.headers["location"]).text)
     assert READ_WITH_NEWER_CODE in page
     assert FIGURES_MAY_DIFFER in page
-    assert "Trades: 6 now, 5 before." in page
+    assert "6 trades now, 5 before." in page
 
 
 def test_an_ordinary_upload_says_no_such_thing(client):  # noqa: F811

@@ -3,6 +3,7 @@
     (T7). A first upload's days are all new, so its list is plain; a later one
     compares each day with what was there before. -#}
 {% extends "layout.html" %}
+{% macro counted(n, one, many) %}{{ Figure(n, many)|count }} {{ one if n == 1 else many }}{% endmacro %}
 {% block content %}
   <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
   <p class="label label--plain">Your upload</p>
@@ -13,16 +14,16 @@
   {%- else %}
   {%- if read_again %}
   <p class="lead">This is the same file, read with newer code. Your figures may differ from before.</p>
-  <p class="body">Trades: <span class="num">{{ Figure(imp.trips_reconstructed, "trades")|count }}</span> now, <span class="num">{{ Figure(trades_before, "trades")|count }}</span> before.</p>
+  <p class="body"><span class="num">{{ Figure(imp.trips_reconstructed, "trades")|count }}</span> {{ "trade" if imp.trips_reconstructed == 1 else "trades" }} now, <span class="num">{{ Figure(trades_before, "trades")|count }}</span> before.</p>
   {%- endif %}
   {%- if rows_confirmed is defined and rows_confirmed %}
   <p class="lead">You told us <span class="num">{{ Figure(rows_confirmed, "rows")|count }}</span> {{ "row repeats" if rows_confirmed == 1 else "rows repeat" }} a trade already in the file. {{ "It is" if rows_confirmed == 1 else "They are" }} set aside, and your figures were rebuilt without {{ "it" if rows_confirmed == 1 else "them" }}.</p>
   {%- endif %}
   <dl class="facts-list">
-    <dt>Rows in the file</dt><dd>{{ Figure(imp.rows_in, "rows")|count }}</dd>
-    <dt>Rows we could read</dt><dd>{{ Figure(imp.rows_parsed, "rows")|count }}</dd>
-    <dt>Rows set aside</dt><dd>{{ Figure(imp.rows_excluded, "rows")|count }}</dd>
-    <dt>Trades reconstructed</dt><dd>{{ Figure(imp.trips_reconstructed, "trades")|count }}</dd>
+    <dt>Rows in the file</dt><dd>{{ counted(imp.rows_in, "row", "rows") }}</dd>
+    <dt>Rows we could read</dt><dd>{{ counted(imp.rows_parsed, "row", "rows") }}</dd>
+    <dt>Rows set aside</dt><dd>{{ counted(imp.rows_excluded, "row", "rows") }}</dd>
+    <dt>Trades rebuilt</dt><dd>{{ counted(imp.trips_reconstructed, "trade", "trades") }}</dd>
   </dl>
   <a class="link import__next" href="/guess">See your record — what these trades say, with the trades behind every line.</a>
   {%- if charges_offered is defined and charges_offered %}
@@ -33,7 +34,7 @@
   {%- endif %}
   {%- if rejected %}
   <section class="import__section">
-    <h2 class="card-title">Rows we could not read (<span class="num">{{ Figure(rejected|length, "rows")|count }}</span>)</h2>
+    <h2 class="card-title"><span class="num">{{ Figure(rejected|length, "rows")|count }}</span> {{ "row" if rejected|length == 1 else "rows" }} we could not read</h2>
     <p class="body-small">Kept, not discarded. Each one says why.</p>
     <table class="table"><thead><tr><th class="table__day">Row</th><th>Why</th></tr></thead>
       <tbody>
@@ -45,7 +46,7 @@
   {%- endif %}
   {%- if groups %}
   <section class="import__section">
-    <h2 class="card-title">Possible duplicates (<span class="num">{{ Figure(groups|length, "groups")|count }}</span> groups)</h2>
+    <h2 class="card-title">Possible duplicates (<span class="num">{{ Figure(groups|length, "groups")|count }}</span> {{ "group" if groups|length == 1 else "groups" }})</h2>
     <p class="body-small">Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell.</p>
     {%- for group, rows in groups.items() %}
     <div class="card duplicate">

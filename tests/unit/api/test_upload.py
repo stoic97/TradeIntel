@@ -378,8 +378,8 @@ def test_an_htmx_upload_answers_with_the_final_counts_once(client, engine):
         imp = sess.scalars(select(m.Import)).one()
         rows, read, trades = imp.rows_in, imp.rows_parsed, imp.trips_reconstructed
     assert '<h1 class="title" aria-live="polite">Your file is read.</h1>' in r.text
-    assert f'<dd class="ledger__value">{read} of {rows}</dd>' in r.text
-    assert f'<dd class="ledger__value">{trades}</dd>' in r.text
+    assert f'<dd class="ledger__value">{read} of {rows} rows</dd>' in r.text
+    assert f'<dd class="ledger__value">{trades} trades</dd>' in r.text
     assert "Every row is accounted for on the next screen." in r.text
     assert f'href="/imports/{imp.id}">Continue</a>' in r.text
     assert "The latest trade, from its first fill to its last" in r.text

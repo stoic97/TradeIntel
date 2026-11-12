@@ -207,7 +207,7 @@ def test_that_rendering_check_passes_a_figure(marking):
 
 def test_the_kit_stylesheet_is_untouched():
     """Its digest on main before this work: a figure changes nothing about how a page is drawn."""
-    css = Path("services/production/api/static/css/components.css").read_bytes()
+    css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(css).hexdigest() == KIT_SHA
 
 
