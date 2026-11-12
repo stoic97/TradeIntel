@@ -2,7 +2,7 @@
 {%- if f.found.best_were_holdings -%}
 Your best trades weren't trades.
 {%- elif f.found.same_day_count -%}
-Your best five came to {{ Figure(f.found.best_net, "rupees")|rupees }}. Your worst five came to {{ Figure(f.found.worst_net, "rupees")|rupees }}.
+Your best five trades came to {{ Figure(f.found.best_net, "rupees")|rupees }}. Your worst five trades came to {{ Figure(f.found.worst_net, "rupees")|rupees }}.
 {%- elif f.held.count -%}
 Every position in your file was held past the day.
 {%- endif -%}

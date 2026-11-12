@@ -239,7 +239,7 @@ def test_a_block_is_collapsed_and_opens_on_its_trades():
 
 @pytest.mark.parametrize("words", [
     "07 Mar 2025", "NIFTY", "2 trades", "09:20 to 09:35", "−₹600",
-    "First trade −₹300, then 1 more; 1 lost.",
+    "First trade −₹300, then 1 more trade; 1 lost.",
 ])
 def test_a_block_says_the_day_at_a_glance(words):
     summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
