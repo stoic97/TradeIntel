@@ -30,6 +30,7 @@ from services.production.db import models as m
 from services.production.journal import constants as k
 
 ANSWERS = frozenset({"yes", "no", "maybe"})
+JOURNALS_BEFORE_ASKING = 3
 
 QUESTION = (
     f"We are deciding what to charge. Would you pay ₹{k.WTP_PRICE_INR} a month for "
@@ -80,7 +81,7 @@ def should_ask(sess: Session, *, trader: m.Trader) -> bool:
     """Whether this trader may be asked, right now."""
     if _already_answered(sess, trader):
         return False
-    if _journals_opened(sess, trader) < 3:
+    if _journals_opened(sess, trader) < JOURNALS_BEFORE_ASKING:
         return False
     settled_in = (
         _upload_count(sess, trader) >= 2
