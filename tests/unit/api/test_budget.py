@@ -189,3 +189,77 @@ def test_the_budget_needs_consent(engine):
 def test_with_no_history_uploaded_the_date_starts_at_today(client):
     today = _today().isoformat()
     assert f'value="{today}"' in client.get("/budget").text
+
+
+# ---------- Capital is kept whatever unit the number is in [TICKET-856] ----------
+
+CAPITAL_INPUT = re.compile(r'<input[^>]*name="capital_amount"[^>]*>')
+
+
+def capital_shown(client) -> str | None:
+    found = re.search(r'value="([^"]*)"', CAPITAL_INPUT.search(client.get("/budget").text)[0])
+    return found[1] if found else None
+
+
+def declare(client, **fields):
+    return client.post("/budget", data={"value": "3000", "unit": "INR",
+                                        "effective_from": "2026-09-01",
+                                        "csrf_token": token(client), **fields})
+
+
+def test_capital_typed_with_a_number_in_rupees_is_stored(client, engine):
+    declare(client, capital_amount="150000")
+    with make_session(engine) as sess:
+        stored = sess.scalars(select(m.RiskBudgetDeclaration)).one()
+    assert (str(stored.value), stored.unit, str(stored.capital_amount)) == ("3000", "INR", "150000")
+
+
+def test_capital_is_still_there_when_budget_is_reopened(client):
+    declare(client, capital_amount="150000")
+    assert capital_shown(client) == "150000"
+
+
+def test_with_no_capital_typed_none_is_stored_or_shown(client, engine):
+    declare(client)
+    with make_session(engine) as sess:
+        assert sess.scalars(select(m.RiskBudgetDeclaration)).one().capital_amount is None
+    assert not capital_shown(client)
+
+
+def test_capital_does_not_change_what_a_rupee_number_is_worth(client, engine):
+    from services.production.accounts import risk_budget
+    declare(client, capital_amount="150000")
+    with make_session(engine) as sess:
+        assert str(risk_budget.rupees(sess.scalars(select(m.RiskBudgetDeclaration)).one())) == "3000"
+
+
+def test_a_new_number_without_capital_keeps_the_last_capital_and_edits_no_row(client, engine):
+    declare(client, capital_amount="150000")
+    declare(client, value="5000", effective_from="2026-10-01")
+    assert capital_shown(client) == "150000"
+    with make_session(engine) as sess:
+        rows = sess.scalars(
+            select(m.RiskBudgetDeclaration).order_by(m.RiskBudgetDeclaration.id)).all()
+    assert [r.capital_amount is None for r in rows] == [False, True]
+
+
+def test_the_newest_capital_is_the_one_shown(client):
+    declare(client, capital_amount="150000")
+    declare(client, capital_amount="200000", effective_from="2026-08-01")
+    assert capital_shown(client) == "200000"
+
+
+def test_capital_that_is_not_a_number_is_refused_not_dropped(client, engine):
+    for bad in ("lots", "-5", "0", "NaN"):
+        response = declare(client, capital_amount=bad)
+        assert response.status_code == 400, bad
+        assert "capital" in response.text.lower()
+    with make_session(engine) as sess:
+        assert sess.scalars(select(m.RiskBudgetDeclaration)).all() == []
+
+
+def test_a_refused_form_still_shows_the_stored_capital(client):
+    declare(client, capital_amount="150000")
+    response = declare(client, value="nonsense")
+    assert response.status_code == 400
+    assert 'value="150000"' in CAPITAL_INPUT.search(response.text)[0]
