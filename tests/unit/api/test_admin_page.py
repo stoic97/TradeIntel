@@ -26,6 +26,8 @@ from services.production.api import routes_events
 from services.production.api import scope_map as SM
 from services.production.api.app import create_app
 from services.production.api.settings import Settings
+from services.production.ctr import reconstruct as rc
+from services.production.ctr.intake import outcomes as oc
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
@@ -89,7 +91,7 @@ def admin_page(app, engine) -> str:
 
 def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
                rejection=None, rows=(10, 8, 2), at=THEN, source="A", trips=0,
-               raw_file_id=None) -> m.Import:
+               raw_file_id=None, adapter=("made-up", "1"), reconstruction=None) -> m.Import:
     if raw_file_id is None:
         raw = m.RawFile(trader_id=trader_id, sha256=f"{trader_id}-{at.isoformat()}-{version}",
                         original_name="tradebook.csv", size=1, stored_path="nowhere", uploaded_at=at)
@@ -98,7 +100,8 @@ def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCE
         raw_file_id = raw.id
     imp = m.Import(trader_id=trader_id, raw_file_id=raw_file_id, source_account=source,
                    trips_reconstructed=trips,
-                   adapter_id="made-up", adapter_version="1", filemap_version="1",
+                   adapter_id=adapter[0], adapter_version=adapter[1], filemap_version="1",
+                   reconstruction_version=reconstruction,
                    code_version=version, outcome=outcome, rejection_text=rejection,
                    rows_in=rows[0], rows_parsed=rows[1], rows_excluded=rows[2],
                    fees_available=False, version_no=1, created_at=at)
@@ -661,7 +664,7 @@ def test_the_reveal_route_is_still_a_get_that_stores_nothing():
 def test_the_page_says_why_each_gap_is_a_gap(app, engine):
     page = admin_page(app, engine)
     for says in ("writes nothing", "not visible here", "no deploy table",
-                 "not read by this deploy", "not that the figures are wrong"):
+                 "the same check that offers them a re-read"):
         assert says in page, says
 
 
@@ -1040,62 +1043,65 @@ def test_the_page_names_the_columns_and_says_the_time_is_a_floor(app, engine):
     assert "a visit that writes nothing can't show" in page.replace("&#39;", "'")
 
 
-# ---------- On current code ----------
+# ---------- Would read differently [TICKET-877] ----------
 
 
-def current(app, engine, login_id="someone") -> str:
-    return row_of(view(app, engine), login_id)["on_current"]
+def differs(app, engine, login_id="someone") -> str:
+    return row_of(view(app, engine), login_id)["reads_differently"]
 
 
-def test_the_latest_import_is_held_against_the_running_version(app, engine):
+def add_current(sess, trader_id, *, adapter_version=None, reconstruction=rc.RECONSTRUCTION_VERSION, **kw):
+    """An import stamped with what today's reconstruction and file map would stamp."""
+    fm = oc.ADAPTERS[0].file_map()
+    return add_import(sess, trader_id, adapter=(fm.adapter_id, adapter_version or fm.version),
+                      reconstruction=reconstruction, **kw)
+
+
+def test_a_deploy_that_changed_no_reading_is_not_flagged(app, engine):
+    """The old column went red here: another code version, the same figures."""
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
+        add_current(sess, trader_id, version=OLD)
         sess.commit()
-    assert current(app, engine) == "no"
-    with make_session(engine) as sess:
-        add_import(sess, trader_id, version=RUNNING, at=THEN + timedelta(hours=1))
-        sess.commit()
-    assert current(app, engine) == "yes"
+    assert differs(app, engine) == "no"
 
 
-def test_a_refused_file_on_this_deploy_does_not_hide_a_record_read_by_an_older_one(app, engine):
-    """A refused file reads nothing. What he is looking at is still the old reading."""
+@pytest.mark.parametrize("stale", [{"reconstruction": "an-older-one"}, {"adapter_version": "an-older-one"},
+                                   {"reconstruction": None}])
+def test_a_reading_today_would_change_is_flagged(app, engine, stale):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
-        add_import(sess, trader_id, version=RUNNING, outcome=s.ImportOutcome.REJECTED,
-                   at=THEN + timedelta(hours=1))
+        add_current(sess, trader_id, version=RUNNING, **stale)
         sess.commit()
-    assert current(app, engine) == "no"
+    assert differs(app, engine) == "yes"
 
 
-@pytest.mark.parametrize(("stamped", "running"), [("unknown", RUNNING), (OLD, "unknown")])
-def test_an_unknown_version_cannot_be_compared(app, engine, stamped, running):
+def test_a_refused_file_does_not_hide_the_reading_he_is_still_looking_at(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=stamped)
+        add_current(sess, trader_id, reconstruction="an-older-one")
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, at=THEN + timedelta(hours=1))
         sess.commit()
-    app.state.code_version = running
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "yes"
 
 
 def test_no_file_read_has_nothing_to_compare(app, engine):
     trader_id = add_trader(engine, "someone")
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "—"
     with make_session(engine) as sess:
         add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED)
         sess.commit()
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "—"
 
 
-def test_stale_is_drawn_in_red_and_in_words(app, engine):
+def test_only_a_real_difference_is_drawn_in_red_and_in_words(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
+        add_current(sess, trader_id, reconstruction="an-older-one")
         sess.commit()
     page = admin_page(app, engine)
-    assert re.search(r'class="[^"]*admin__stale[^"]*"[^>]*>no<', page)
+    assert "Would read differently" in page and "On current code" not in page
+    assert re.search(r'class="[^"]*admin__stale[^"]*"[^>]*>yes<', page)
 
 
 def test_the_running_version_is_on_the_page(app, engine):
