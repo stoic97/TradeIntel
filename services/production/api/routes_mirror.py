@@ -99,7 +99,7 @@ def scope_home(request: Request):
         declared = rb.in_force(rb.for_trader(sess, trader), trader_today().isoformat())
         number = rb.rupees(declared)
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
-                imp=imp, trade_count=len(trips), trading_day_count=len(context["days"].counts),
+                imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
                 charges=charges,
                 **SF.home_context(context, imp, _opened_chapters(request), number=number))
 

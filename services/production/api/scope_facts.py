@@ -51,15 +51,18 @@ def record_context(trips: list[mx.Trip]) -> dict:
     does. The last five are PRD 6.3's comparison: trades after two straight losses
     against the rest, on strike rate and average lots.
     """
-    two_losses = mx.two_straight_losses(trips)
     same_day = mx.same_day_trips(trips)
-    after = mx.subset(trips, two_losses.condition_trip_ids)
-    rest = mx.complement(trips, two_losses.condition_trip_ids)
+    # Chapter 3 reads the same trades as Chapter 2 [TICKET-855]: a position held past the day
+    # moves none of its figures.
+    two_losses = mx.two_straight_losses(same_day)
+    after = mx.subset(same_day, two_losses.condition_trip_ids)
+    rest = mx.complement(same_day, two_losses.condition_trip_ids)
     return {
         "worst_days": mx.five_worst_days(trips),
         "share": mx.share_of_losses(trips),
         "day_blocks": mx.worst_day_blocks(trips),
-        "days": mx.day_counts(trips),
+        "days": mx.day_counts(same_day),
+        "file_trading_days": len({t.trading_day for t in trips}),
         "best": mx.best_five(same_day),
         "worst": mx.worst_five(same_day),
         "held_past_day": mx.held_past_day(trips),
@@ -194,7 +197,7 @@ def _busiest_story(ctx: dict) -> dict | None:
     """The busiest day as its page tells it: metrics counted it, this words the parts."""
     if not ctx["days"].busiest_day:
         return None
-    st = mx.busiest_day_story(ctx["trips"], ctx["days"].busiest_day)
+    st = mx.busiest_day_story(mx.same_day_trips(ctx["trips"]), ctx["days"].busiest_day)
     drawn = [(t.side, _f(t.net)) for t in st.strip]
     what = f"{st.book} trade" if st.strip_is_the_book else "option trade"
     spread_holds = st.median_hold_seconds is not None and not st.holds_alike
@@ -615,9 +618,10 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         first_day=formatting.day(series[0].trading_day) if series else "",
         last_day=formatting.day(series[-1].trading_day) if series else "",
     )
+    counted_days = sorted({t.trading_day for t in mx.same_day_trips(trips)})
     out["busiest"].update(
-        first=out["worst-days"]["first_day"],
-        last=out["worst-days"]["last_day"],
+        first=formatting.day(counted_days[0]) if counted_days else "",
+        last=formatting.day(counted_days[-1]) if counted_days else "",
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["busiest"]["story"] = _busiest_story(ctx)
@@ -636,7 +640,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         out["busiest"]["dial_figure"] = f"{_trades_word(ctx['days'].busiest_trips)}, {on_day}"
     two_losses = ctx["two_losses"]
     out["down"]["post_loss_sentence"] = (
-        mx.post_loss_sentence_may_show(trips)
+        mx.post_loss_sentence_may_show(mx.same_day_trips(trips))
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )

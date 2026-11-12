@@ -93,10 +93,10 @@ def test_a_history_of_only_held_positions_has_no_strike_rate():
     assert figs["math"]["state"] == "not-enough"
 
 
-def test_chapter_three_still_compares_every_trade():
-    """Only this fact narrows. After two losses against the rest keeps its own population."""
+def test_chapter_three_compares_the_same_same_day_trades():
+    """TICKET-855: after two losses against the rest reads the same five winners as this fact."""
     ctx = SF.record_context(HELD)
-    assert ctx["rest_strike"].wins + ctx["after_strike"].wins == 7
+    assert ctx["rest_strike"].wins + ctx["after_strike"].wins == 5
 
 
 @pytest.mark.parametrize(
