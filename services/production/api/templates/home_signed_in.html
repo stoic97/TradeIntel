@@ -8,7 +8,7 @@
 {% block content %}
   <div class="stage__bar stage__bar--record">{{ home_lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
   <a class="scope-card on-navy" href="/mirror">
-    <span class="label label--soft">Your report · Import {{ Figure(imp.id, "upload") }} · {{ imported }}</span>
+    <span class="label label--soft">Your report · Upload {{ Figure(imp.id, "upload") }} · {{ imported }}</span>
     <span class="scope-card__verdict">{{ verdict_sentence(verdict) }}</span>
     {%- if verdict.options_trades and verdict.others_trades %}
     <span class="scope-card__split">

@@ -24,7 +24,7 @@ def test_home_opens_the_scope_from_its_headline(client):
     body = client.get("/").text
     assert '<a class="scope-card on-navy" href="/mirror">' in body
     assert "of your losses in five days" not in body
-    assert re.search(r"Your report · Import \d+ · \d\d \w{3} \d{4}</span>", body)
+    assert re.search(r"Your report · Upload \d+ · \d\d \w{3} \d{4}</span>", body)
     assert "Open your report" in body
 
 
