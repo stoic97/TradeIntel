@@ -42,14 +42,14 @@
     kit's num-- scale: hero, large, medium, small, label. exact keeps the paise
     of a figure metrics decided with them, such as an average. -#}
 {% macro money(value, size=none, signed=true, exact=false) -%}
-<span class="num{% if size %} num--{{ size }}{% endif %} num--{{ value|tone if signed else "plain" }}">{{ value|rupees(signed=signed, exact=exact) }}</span>
+<span class="num{% if size %} num--{{ size }}{% endif %} num--{{ value|tone if signed else "plain" }}">{{ Figure(value, "rupees")|rupees(signed=signed, exact=exact) }}</span>
 {%- endmacro %}
 
 {#- One plain line, never a box. Shown by the page only when the export has no charges
     column; the wording is the Mirror's own (handoff section 7). -#}
 {#- [TICKET-812] The share, its base rate: never of the net result (definitions 1). -#}
 {% macro share_sentence(share) -%}
-{{ share.worst_day_count }} of your {{ share.trading_day_count|count }} trading days (about {{ share.days_percent }}%) carried about <span class="num">{{ share.share_percent }}</span>% of your losses.
+{{ Figure(share.worst_day_count, "days") }} of your {{ Figure(share.trading_day_count, "days")|count }} trading days (about {{ Figure(share.days_percent, "percent") }}%) carried about <span class="num">{{ Figure(share.share_percent, "percent") }}</span>% of your losses.
 {%- endmacro %}
 
 {% macro gross_line() -%}
@@ -66,7 +66,7 @@
     not in the file. The tag is written in sentence case; the kit's CSS sets it in
     capitals, so a screen reader reads words, not letters. -#}
 {% macro not_enough(have, need) -%}
-<div class="result-state result-state--not-enough"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span><p class="result-state__figure">—</p><p class="result-state__text"><span class="num">{{ have|count }}</span> trades, and it needs <span class="num">{{ need|count }}</span>.</p><p class="result-state__note">We tell you what your history can't yet show, instead of guessing.</p></div>
+<div class="result-state result-state--not-enough"><span class="result-state__tag"><svg class="result-state__swatch" viewBox="0 0 10 10" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9" class="result-state__swatch-box"/><path d="M0 10L10 0M-3 5L5 -3M5 13L13 5" class="result-state__swatch-hatch"/></svg>Not enough trades yet</span><p class="result-state__figure">—</p><p class="result-state__text"><span class="num">{{ Figure(have, "trades")|count }}</span> trades, and it needs <span class="num">{{ Figure(need, "trades")|count }}</span>.</p><p class="result-state__note">We tell you what your history can't yet show, instead of guessing.</p></div>
 {%- endmacro %}
 
 {% macro not_in_file(sentence) -%}
@@ -97,7 +97,7 @@
     block - its axis and legend, which differ from fact to fact. -#}
 {% macro figure(number, caption, c) -%}
 <figure class="figure">
-    <figcaption class="figure__caption">Figure {{ number }} · {{ caption }}</figcaption>
+    <figcaption class="figure__caption">Figure {{ Figure(number, "figure") }} · {{ caption }}</figcaption>
     {{ chart(c) }}
     {%- if caller %}
     {{ caller() }}{% endif %}
@@ -109,14 +109,14 @@
     block. stacked: the title would wrap, so the figure takes its own line. -#}
 {% macro story_card(number, title, href, figure, foot, stacked=false) -%}
 <a class="story-card{% if stacked %} story-card--stacked{% endif %}" href="{{ href }}">
-  <span class="story-card__head"><span class="story-card__num">{{ number }}</span><span class="story-card__title">{{ title }}</span><span class="story-card__figure">{{ figure }}</span></span>
+  <span class="story-card__head"><span class="story-card__num">{{ Figure(number, "card") }}</span><span class="story-card__title">{{ title }}</span><span class="story-card__figure">{{ figure }}</span></span>
   {% if caller %}{{ caller() }}{% endif %}
   <span class="story-card__foot"><span>{{ foot }}</span><span aria-hidden="true">›</span></span>
 </a>
 {%- endmacro %}
 
 {% macro trades_behind(n) -%}
-<span class="num">{{ n|count }}</span> {{ "trade" if n == 1 else "trades" }} behind this
+<span class="num">{{ Figure(n, "checks")|count }}</span> {{ "trade" if n == 1 else "trades" }} behind this
 {%- endmacro %}
 
 {#- The bar at the top of a fact page: the lens (the chapter's dial at 56 px, this fact
@@ -146,23 +146,23 @@
     a ranked list. -#}
 {% macro trade(t, after=false, rank=none) -%}
 <article class="trade{% if after %} trade--after{% endif %}">
-      <div class="trade__label">{% if rank %}<span class="trade__rank">{{ rank }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ t.qty|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
-      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ t.held_seconds|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ t.net|rupees_on_a_trade }}</span></div>
+      <div class="trade__label">{% if rank %}<span class="trade__rank">{{ Figure(rank, "rank") }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ Figure(t.qty, "units")|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
+      <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ Figure(t.held_seconds, "seconds")|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ Figure(t.net, "rupees")|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
-      <div class="trade__prices">{{ t.entry_price|price }} → {{ t.exit_price|price }}{% if t.get("paid") %} · Paid {{ t.paid|rupees(signed=false) }} · {{ t.result_percent|signed_percent }} of premium{% endif %}</div>
+      <div class="trade__prices">{{ Figure(t.entry_price, "rupees")|price }} → {{ Figure(t.exit_price, "rupees")|price }}{% if t.get("paid") %} · Paid {{ Figure(t.paid, "rupees")|rupees(signed=false) }} · {{ Figure(t.result_percent, "percent")|signed_percent }} of premium{% endif %}</div>
       {%- endif %}
       {%- if t.get("gap") %}
       <div class="trade__gap">{{ t.gap }}</div>
       {%- endif %}
       {%- if t.get("legs") %}
       <table class="fills trade__legs">
-        <tbody>{% for leg in t.legs %}<tr><td>{{ leg.label }}</td><td class="table__num num--{{ leg.net|tone }}">{{ leg.net|rupees_on_a_trade }}</td></tr><tr><td class="trade__leg-detail" colspan="2">{% if leg.qty %}Qty {{ leg.qty|count }} · {% endif %}{{ leg.entry_price|price }} → {{ leg.exit_price|price }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for leg in t.legs %}<tr><td>{{ leg.label }}</td><td class="table__num num--{{ leg.net|tone }}">{{ Figure(leg.net, "rupees")|rupees_on_a_trade }}</td></tr><tr><td class="trade__leg-detail" colspan="2">{% if leg.qty %}Qty {{ Figure(leg.qty, "units")|count }} · {% endif %}{{ Figure(leg.entry_price, "rupees")|price }} → {{ Figure(leg.exit_price, "rupees")|price }}</td></tr>{% endfor %}</tbody>
       </table>
       {%- endif %}
       {%- if t.fills %}
       <table class="fills">
         <thead><tr><th>Time</th><th>Side</th><th class="table__num">Qty</th><th class="table__num">Price</th><th class="table__num">Row in your file</th></tr></thead>
-        <tbody>{% for fill in t.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ fill.qty|count }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ fill.row|count }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for fill in t.fills %}<tr><td>{{ fill.time }}</td><td>{{ fill.side }}</td><td class="table__num">{{ Figure(fill.qty, "units")|count }}</td><td class="table__num">{{ fill.price }}</td><td class="table__num">{{ Figure(fill.row, "rows")|count }}</td></tr>{% endfor %}</tbody>
       </table>
       {%- endif %}
     </article>
@@ -184,7 +184,7 @@
   {%- for group in groups %}
   <section class="trades__group">
     <div class="trades__head">
-      <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ group.trade_count|count }} {{ "trade" if group.trade_count == 1 else "trades" }} · {{ group.net|rupees }}</span></div>
+      <div class="trades__title"><span class="trades__day">{{ group.title }}</span><span>{{ Figure(group.trade_count, "trades")|count }} {{ "trade" if group.trade_count == 1 else "trades" }} · {{ Figure(group.net, "rupees")|rupees }}</span></div>
       <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Result</span></div>
     </div>
     {%- for t in group.trades %}

@@ -23,6 +23,7 @@ from markupsafe import Markup
 from services.production.api import dial, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
+from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 
@@ -162,35 +163,36 @@ def _state(key: str, ctx: dict) -> str:
     return ""
 
 
-def _figure(key: str, ctx: dict, imp) -> str:
-    """The figure a fact leads with, as its slice and its card show it."""
+def _figure(key: str, ctx: dict, imp) -> Figure:
+    """The figure a fact leads with, as its slice and its card show it, and what it counts."""
     if key == "worst-days":
-        return formatting.rupees(ctx["worst_days"].sum)
+        return Figure(formatting.rupees(ctx["worst_days"].sum), "rupees")
     if key == "share":
         share = ctx["share"]
         if share.shown_as_percentage:
-            return f"{share.share_percent}%"
-        return formatting.rupees(share.total)  # the second state leads with the whole result
+            return Figure(f"{share.share_percent}%", "percent", of="your losses")
+        return Figure(formatting.rupees(share.total), "rupees")  # the second state leads with the whole result
     if key == "money":
         found = ctx["money_found"]
-        return formatting.rupees(
+        return Figure(formatting.rupees(
             found.same_day_net if found.same_day_count else ctx["held_past_day"].net
-        )
+        ), "rupees")
     if key == "math":
-        return f"{ctx['strike'].rate_percent}%"
+        return Figure(f"{ctx['strike'].rate_percent}%", "percent")
     if key == "run":
-        return f"{formatting.count(ctx['run'].length)} trades"
+        return Figure(f"{formatting.count(ctx['run'].length)} trades", "trades")
     if key == "clock":  # the hour with the largest result across the books: what happened there
-        return _hour_words(mx.lead_clock(ctx["clocks"]).largest.hour)
+        return Figure(_hour_words(mx.lead_clock(ctx["clocks"]).largest.hour), "hour")
     if key == "down":
-        return formatting.count(ctx["two_losses"].population)
+        return Figure(formatting.count(ctx["two_losses"].population), "trades")
     if key == "busiest":
-        return f"{ctx['days'].busiest_vs_normal}×"
+        return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
-        return f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows"
+        return Figure(f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows", "rows")
     if key == "risk":
-        return f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))}"
-    return str(NOT_TOLD)
+        return Figure(f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))}",
+                      "trades")
+    return Figure(str(NOT_TOLD), "things we have not told you")
 
 
 def _busiest_story(ctx: dict) -> dict | None:
@@ -601,11 +603,13 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         state = _state(key, ctx)
         kind = fact.chart
         behind = len(S.trades_behind(key, ctx))
+        lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
         out[key] = {
             "key": key,
             "title": fact.title,
             "state": state,
-            "figure": "—" if state else _figure(key, ctx, imp),
+            "figure": str(lead),
+            "noun": lead.noun,
             "href": S.fact_href(key),
             "trade_count": behind,
             "see_all": S.see_all_href(key) if behind > S.INLINE_TRADES else None,
