@@ -20,8 +20,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
-    door,
     dial,
+    door,
     formatting,
     limits,
     routes_admin,

@@ -12,8 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import days_worth_a_look as worth
-from services.production.api import door
-from services.production.api import formatting
+from services.production.api import door, formatting
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
 from services.production.api.routes_journal import trades_of, trips_of
