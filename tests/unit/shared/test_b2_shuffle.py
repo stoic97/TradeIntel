@@ -71,7 +71,7 @@ def test_the_draws_and_minimums_are_the_frameworks_own():
     b2 = next(line for line in framework.splitlines() if "id: B2," in line)
     assert "null: N-B" in b2
     assert "n_min: 30/60" in b2
-    assert (T.DRAWS, T.MIN_CONDITION, T.MIN_COMPARISON) == (2000, 30, 60)
+    assert (T.DRAWS, T.MIN_CONDITION, T.MIN_COMPARISON) == (10000, 30, 60)
 
 
 def gate_in_the_framework() -> dict:
@@ -298,3 +298,70 @@ def test_a_closed_gate_is_not_said_to_be_a_finding_about_the_trader():
     html = fact_page("down", trips_from(synthetic(10)))
     assert not re.search(r"(?i)no effect|you don't|you do not trade differently", html)
     assert IMP is not None
+
+
+# ---------- The finding bar corrects for the family (TICKET-909) ----------
+
+
+def test_the_finding_bar_is_written_in_the_framework_as_the_code_runs_it():
+    framework = yaml.safe_load(Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8"))
+    bar = framework["evidence"]["multiplicity"]["finding_bar"] if "evidence" in framework else None
+    if bar is None:
+        found = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                if "finding_bar" in node:
+                    found.append(node["finding_bar"])
+                for value in node.values():
+                    walk(value)
+        walk(framework)
+        assert len(found) == 1
+        bar = found[0]
+    from services.shared.conditions import multiplicity
+    assert bar["method"] == "westfall_young_step_down_min_p"
+    assert bar["m"] == len(multiplicity.family()) == 18
+    assert bar["alpha"] == T.ALPHA and bar["draws"] == T.DRAWS
+    assert bar["not_eligible"] == "p_1" and bar["fallback"] == "holm"
+    assert gate_in_the_framework()["corrected_by"] == "finding_bar"
+
+
+def test_a_strong_effect_in_both_halves_is_a_finding_corrected_for_the_family():
+    got = T.shuffle_test(synthetic(8, effect=-1500))
+    assert got.level == T.FINDING and got.passes
+    assert got.family_size == 18
+    assert got.p_adjusted is not None and got.p_adjusted >= got.p - 2 / T.DRAWS
+    assert all(gap < 0 for gap in got.halves)
+
+
+def shifted(obs: list[Obs], by: int) -> list[Obs]:
+    return [Obs(day=o.day + by, entry_at=o.entry_at + by * 1000, exit_at=o.exit_at + by * 1000, r=o.r)
+            for o in obs]
+
+
+def test_a_gap_that_reverses_between_halves_is_only_worth_watching():
+    """Strong in the first half of his days, the other way in the second: the whole file may
+    clear p, but it is never called a finding."""
+    obs = synthetic(8, days=200, effect=-2500) + shifted(synthetic(9, days=200, effect=600), 200)
+    got = T.shuffle_test(obs)
+    assert got.halves[0] < 0 < got.halves[1]
+    assert got.p <= T.ALPHA and got.difference < 0
+    assert got.level == T.WORTH_WATCHING and not got.passes
+
+
+def test_a_file_below_the_minimum_is_not_enough_trades_yet():
+    got = T.shuffle_test(synthetic(3, days=10))
+    assert got.level == T.NOT_ENOUGH and not got.passes
+
+
+def test_with_more_checks_in_play_the_same_file_meets_a_stricter_bar():
+    """The correction is real once other checks share the shuffle: B2 alone keeps about its own
+    p; with the family's other checks able to fire on the same draws it can only rise."""
+    from services.shared.conditions import multiplicity
+    rng = np.random.default_rng(4)
+    null_b2 = rng.normal(size=4000)
+    others = {c: rng.normal(size=4000) for c in ("B1", "S1", "B5")}
+    alone = multiplicity.step_down_min_p({"B2": -2.4}, {"B2": null_b2}, multiplicity.family())["B2"]
+    observed = {"B2": -2.4, **{c: 0.0 for c in others}}
+    together = multiplicity.step_down_min_p(observed, {"B2": null_b2, **others}, multiplicity.family())["B2"]
+    assert together > alone

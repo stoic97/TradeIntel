@@ -10,6 +10,18 @@ No difference we can stand behind.
 {%- endif -%}
 {%- endmacro %}
 
+{#- What the finding bar said, after the opening sentence and never inside it (TICKET-909):
+    worth watching (it showed up before the correction, not after it or not in both halves),
+    or not enough trades yet, with how many more. A finding says nothing more here: the
+    opening sentence already states it. -#}
+{% macro down_level(f) -%}
+{%- if f.post_loss_level == "worth_watching" -%}
+Something showed up here, but it didn't clear the bar a finding has to clear. Upload more months to confirm.
+{%- elif f.post_loss_needs -%}
+There aren't enough trades yet to test it: it needs {% if f.post_loss_needs.condition %}<span class="num">{{ Figure(f.post_loss_needs.condition, "trades")|count }}</span> more right after two straight losses{% if f.post_loss_needs.comparison %} and {% endif %}{% endif %}{% if f.post_loss_needs.comparison %}<span class="num">{{ Figure(f.post_loss_needs.comparison, "trades")|count }}</span> more of your other trades{% endif %}.
+{%- endif -%}
+{%- endmacro %}
+
 {% macro busiest_sentence(days) -%}
 Your busiest day had <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ Figure(days.normal_day, "trades") }}</span> on your normal day.
 {%- endmacro %}
