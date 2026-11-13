@@ -32,6 +32,7 @@ from sqlalchemy import or_, select
 
 from services.production.api import asking, formatting
 from services.production.api import days_worth_a_look as worth
+from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.ctr.intake import persist
@@ -227,6 +228,7 @@ def journal_page(request: Request, journal_id: int):
         sess.commit()
         return page(
             request, "journal.html", title=f"Your Journal, {formatting.day(journal.period_start)}",
+            back=SM.back_from(request.query_params.get("from")),
             journal=journal, paragraphs=paragraphs, rows=asked, answers=answers,
             rest_rows=rest,
             rest_answered=any(

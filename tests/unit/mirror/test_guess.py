@@ -89,8 +89,8 @@ def test_ready_is_live_only_once_frozen():
     assert GU.ready(production=True) is GU.FROZEN
 
 
-def test_the_reveal_goes_on_to_the_one_number_and_back_to_the_days(client):
+def test_the_reveal_goes_back_to_the_days_and_not_on_to_the_number(client):
     guess(client, "unknown")
     page = client.get("/mirror/reveal").text
     assert 'href="/mirror/fact/worst-days?enter=lens">Show me those days</a>' in page
-    assert 'href="/budget">Next: what you risk</a>' in page
+    assert 'href="/budget"' not in page  # TICKET-903: the walk is upload, receipt, reveal, report

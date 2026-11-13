@@ -21,7 +21,8 @@ from tests.unit.api.test_no_claims import CLAIM_PATTERNS, NEVER_USED
 WORST = "/mirror/fact/worst-days"
 RUN = "/mirror/fact/run"
 BLOCK = re.compile(r'<details class="day-block" id="day-([^"]+)">(.*?)</details>', re.DOTALL)
-JOURNAL = re.compile(r'href="/journals/(\d+)"')
+# TICKET-903: the link names the page it came from, so the journal links back.
+JOURNAL = re.compile(r'href="/journals/(\d+)\?from=(?:worst-days|run)"')
 ASKS = re.compile(r"You lost (\d+) in a row on (\d{2} \w{3} \d{4})\. What do you remember\?")
 
 

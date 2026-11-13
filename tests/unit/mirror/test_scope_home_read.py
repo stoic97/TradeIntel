@@ -23,14 +23,14 @@ def rows(engine) -> list[m.DwellEvent]:
 
 def test_a_first_visit_starts_at_chapter_1(client):
     body = client.get("/mirror").text
-    assert ">Start with chapter 1<" in body
+    assert ">Continue: Your worst trading days<" in body  # TICKET-903: Continue names the page
     assert "home__chapter--read" not in body
 
 
 def test_opening_a_chapter_marks_it_read(client):
     client.get("/mirror/chapter/1")
     body = client.get("/mirror").text
-    assert ">Next: chapter 2<" in body
+    assert ">Continue: Your worst trading days<" in body  # TICKET-903: opening a chapter reads no page
     assert body.count("home__chapter--read") == 1
     assert 'class="scope__opened"' in body
 

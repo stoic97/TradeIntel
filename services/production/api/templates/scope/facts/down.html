@@ -1,7 +1,6 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import money %}
 {% from "scope/_opening.html" import down_sentence %}
-{% from "scope/_next.html" import next_fact, chapter_four %}
 {#- Its card has the Mirror's sentences and tables. This page opens with the same one sentence
     (TICKET-832), says how the trades are counted, and leaves the list behind its link. No
     comparison word: both averages are stated side by side, whichever way they point. -#}
@@ -19,7 +18,4 @@
 {% endblock %}
 {% block caption %}Every trade you opened right after two straight losses.{% endblock %}
 {% block caption_more %}<p class="evidence__caption">{% if two_losses.population %}From the <span class="num">{{ Figure(two_losses.population, "trades")|count }}</span> {{ "trade" if two_losses.population == 1 else "trades" }} counted above. {% endif %}Listed in the order you opened them.</p>{% endblock %}
-{% block lineage %}
-  {{ next_fact(f.next) }}
-  {{ chapter_four(f.chapter_four, kind="secondary") }}
-{% endblock %}
+

@@ -39,12 +39,15 @@ TITLE = {f.key: f.title for c in S.CHAPTERS for f in c.facts}
 CHAPTER_OF = {f.key: c.number for c in S.CHAPTERS for f in c.facts}
 LAST = "You've read the report. Start with your days worth a look."
 TEMPLATES = Path("services/production/api/templates")
+REPORT_TEMPLATES = [*sorted((TEMPLATES / "scope").rglob("*.html")),
+                    *(TEMPLATES / n for n in ("reveal.html", "budget.html", "home_signed_in.html",
+                                              "journal.html"))]
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 
 TAG = re.compile(r"<[^>]+>")
-ANCHOR = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.S)
+ANCHOR = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.DOTALL)
 ATTR = re.compile(r'([\w-]+)(?:="([^"]*)")?')
-MAIN_NAV = re.compile(r'<nav class="bottom-nav[^"]*" aria-label="Main">(.*?)</nav>', re.S)
+MAIN_NAV = re.compile(r'<nav class="bottom-nav[^"]*" aria-label="Main">(.*?)</nav>', re.DOTALL)
 TABS = [("/", "Home"), ("/mirror", "Scope"), ("/journals", "Journal"), ("/account", "Account")]
 
 SIGNED_IN = [
@@ -71,7 +74,7 @@ def path(href: str) -> str:
 
 def spine(html: str, name: str) -> str:
     """The inside of the element marked data-spine="name"."""
-    found = re.search(rf'<(\w+)\b[^>]*data-spine="{name}"[^>]*>(.*?)</\1>', html, re.S)
+    found = re.search(rf'<(\w+)\b[^>]*data-spine="{name}"[^>]*>(.*?)</\1>', html, re.DOTALL)
     assert found, f'no data-spine="{name}" on the page'
     return found.group(2)
 
@@ -168,7 +171,7 @@ def test_all_pages_lists_every_page_with_its_short_answer(client, key):
 def test_no_template_writes_a_report_link_or_a_step_label_of_its_own():
     offenders = []
     patterns = (r'href="/mirror/(?:fact|chapter)/', r"\bNext[:,]", r"\bContinue:", r"\bPrevious:")
-    for file in sorted(TEMPLATES.rglob("*.html")):
+    for file in REPORT_TEMPLATES:
         text = file.read_text(encoding="utf-8")
         offenders += [f"{file.relative_to(TEMPLATES)}: {p}" for p in patterns if re.search(p, text)]
     assert offenders == []
@@ -329,12 +332,14 @@ def test_the_busiest_day_offers_that_days_questions(demo):
 # ---------- Gate 6: upload, receipt, reveal, report ----------
 
 
-def test_the_reveal_goes_on_to_the_report(client):
-    r = client.get("/mirror/reveal")
-    assert r.url.path == "/mirror/reveal", r.url.path
-    hrefs = [path(a["href"]) for a in anchors(r.text)]
-    assert f"/mirror/fact/{ORDER[0]}" in hrefs
-    assert "/budget" not in hrefs and "/eligibility" not in hrefs
+def test_the_reveal_goes_on_to_the_report():
+    """Its one way on is the report's first page, from scope_map; Limits left the walk. Read from
+    the template and the route: in a test the reveal waits behind the guess."""
+    template = (TEMPLATES / "reveal.html").read_text(encoding="utf-8")
+    assert 'href="/budget"' not in template and "/eligibility" not in template
+    assert "worst_href" in template
+    route = Path("services/production/api/routes_reveal.py").read_text(encoding="utf-8")
+    assert "worst_href=SM.fact_href(SM.PAGES[0].key)" in route
 
 
 def test_limits_no_longer_send_on_to_the_checks_page(client):

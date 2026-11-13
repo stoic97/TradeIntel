@@ -113,6 +113,6 @@ def reveal(request: Request):
         body_class="reveal",
         guessed=guessed_label,
         view=SF.reveal_view(context),
-        worst_href=SM.fact_href("worst-days"),
+        worst_href=SM.fact_href(SM.PAGES[0].key),  # the report's first page (TICKET-903)
         **context,
     )

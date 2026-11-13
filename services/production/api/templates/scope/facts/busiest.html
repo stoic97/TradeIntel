@@ -1,6 +1,5 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import figure, money %}
-{% from "scope/_next.html" import chapter_four %}
 {#- The busiest day as a story (TICKET-827). Its card keeps the Mirror's sentence and the chart
     of every day; this page says what that day was made of. Each part is here only if it is
     true of the day (metrics.busiest_day_story). -#}
@@ -39,5 +38,7 @@
 {% endblock %}
 {% block caption %}Every trade on <span class="num">{{ f.busiest_date }}</span>, in every book.{% endblock %}
 {% block lineage %}
-  {{ chapter_four(f.chapter_four) }}
+  {%- if busiest_journal_href is defined and busiest_journal_href %}
+  <p class="body busiest__journal"><a class="link" href="{{ busiest_journal_href }}">That day's questions</a></p>
+  {%- endif %}
 {% endblock %}

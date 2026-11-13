@@ -233,9 +233,6 @@ def _busiest_story(ctx: dict) -> dict | None:
     }
 
 
-def _next_fact(key: str) -> dict:
-    return {"label": f"Next: {S.FACTS[key].title}", "href": S.fact_href(key)}
-
 
 def _break_even_lines(ctx: dict) -> list[dict]:
     """What it would have taken each book to break even: the amount per winner, from the same
@@ -248,22 +245,6 @@ def _break_even_lines(ctx: dict) -> list[dict]:
         if row.state is s.ResultState.COUNTED_FACT and row.winner_gap is not None and row.winner_gap > 0
     ]
 
-
-def chapter_next(n: int) -> dict | None:
-    """The button that ends a chapter's overview, where it has one."""
-    labels = {1: "Chapter 2: your patterns", 2: "Chapter 3, your behaviour: what you did after losing"}
-    return {"label": labels[n], "href": S.chapter_href(n + 1)} if n in labels else None
-
-
-def _chapter_four(ctx: dict) -> dict:
-    """The way out of chapter 3, by chapter 4's own title. The number is mentioned only while
-    chapter 4 still offers to take it (its risk fact, with no declared budget)."""
-    c = S.chapter(4)
-    return {
-        "label": f"Chapter {c.number}: {c.name}",
-        "href": S.chapter_href(c.number),
-        "names_the_number": ctx["risk"].counts[s.RiskUnitSourceV1.DECLARED_BUDGET] == 0,
-    }
 
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
@@ -628,10 +609,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["busiest"]["story"] = _busiest_story(ctx)
-    out["busiest"]["chapter_four"] = out["down"]["chapter_four"] = _chapter_four(ctx)
-    out["down"]["next"] = _next_fact("busiest")
-    out["math"]["next"] = _next_fact("run")
-    out["run"]["next"] = _next_fact("clock")
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     two_losses = ctx["two_losses"]
     out["down"]["post_loss_sentence"] = (
@@ -670,7 +647,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["worst-days"].update(
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
-        next_href=S.fact_href("money", lens=False),
         all_trades_href=S.see_all_href("worst-days"),
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
@@ -684,8 +660,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for b, w in zip(ctx["best"], ctx["worst"], strict=False)
     ]
-    money_chapter, _ = S.chapter_of("money")
-    next_chapter = S.chapter(money_chapter.number + 1)
     out["money"].update(
         found=ctx["money_found"],
         best_rows=S.ranked(ctx["best"], ctx),
@@ -693,11 +667,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         held_groups=[]
         if out["money"]["see_all"]
         else S.groups("money", ctx, only=ctx["held_past_day"].trips),
-        next={
-            "number": next_chapter.number,
-            "name": next_chapter.name,
-            "href": S.chapter_href(next_chapter.number),
-        },
     )
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
@@ -775,7 +744,6 @@ def _clock_view(ctx: dict) -> dict:
         )
     wide = [v for v in views if v["trades"] >= mx.CLOCK_MINIMUM_TRADES] or views[:1]
     lead = mx.lead_clock(ctx["clocks"])
-    next_chapter = S.chapter(S.chapter_of("clock")[0].number + 1)
     return {
         "clocks": wide,
         "other_clocks": views[len(wide):],
@@ -783,10 +751,6 @@ def _clock_view(ctx: dict) -> dict:
         "lead_book": lead.book if lead else "",
         "lead": lead.largest if lead else None,
         "lead_label": _hour_words(lead.largest.hour) if lead else "",
-        "next": {
-            "label": f"Chapter {next_chapter.number}: {next_chapter.name}",
-            "href": S.chapter_href(next_chapter.number),
-        },
     }
 
 
@@ -1007,14 +971,6 @@ def home_view(
     return {"kind": "home", "items": items, "centre": centre}
 
 
-def _start(opened: frozenset[int]) -> dict | None:
-    """Where the button goes: chapter 1 at first, then the first chapter still unread."""
-    unread = [c.number for c in S.CHAPTERS if c.number not in opened]
-    if not unread:
-        return None
-    label = f"Next: chapter {unread[0]}" if opened else f"Start with chapter {unread[0]}"
-    return {"label": label, "href": S.chapter_href(unread[0], from_home=True)}
-
 
 def home_context(
     ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None
@@ -1035,10 +991,19 @@ def home_context(
             }
             for c in S.CHAPTERS
         ],
-        "start": _start(opened),
         "two_losses": ctx["two_losses"],
         "post_loss": figs["down"],
     }
+
+
+def short_answers(figs: dict[str, dict]) -> dict[str, str]:
+    """Each page's answer in a few words, for All pages (TICKET-903): its chapter wedge, read
+    aloud, so the panel and the dial say the same thing."""
+    out = {}
+    for key in S.FACTS:
+        wedge = figs[key]["wedge"]
+        out[key] = " ".join(f"{wedge['figure']} {wedge['label']}".split())
+    return out
 
 
 REVEAL_C = 150  # the reveal's dial: 300 x 300, the outer ring at 149.5 (kit screen 12)

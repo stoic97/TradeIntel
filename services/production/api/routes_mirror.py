@@ -113,6 +113,7 @@ def scope_home(request: Request):
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
                 imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
                 charges=charges,
+                continue_step=SM.continue_step(_read_pages(request)),
                 **SF.home_context(context, imp, _opened_chapters(request), number=number))
 
 
@@ -133,7 +134,7 @@ def scope_chapter(request: Request, n: int):
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
-                next_step=SF.chapter_next(n),
+                next_step=SM.chapter_step(n),
                 trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
@@ -148,6 +149,21 @@ def _opened_chapters(request: Request) -> frozenset[int]:
         keys = set(sess.scalars(select(m.DwellEvent.key).where(
             m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE)))
     return frozenset(c.number for c in SM.CHAPTERS if c.name in keys)
+
+
+def read_pages(sess, trader) -> frozenset[str]:
+    """The report pages this trader has read: each one's dwell "view" (TICKET-903)."""
+    keys = sess.scalars(select(m.DwellEvent.key).where(
+        m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == "mirror_line",
+        m.DwellEvent.event == "view"))
+    return SM.read_from(keys)
+
+
+def _read_pages(request: Request) -> frozenset[str]:
+    if is_sample(request):
+        return frozenset()
+    with make_session(request.app.state.engine) as sess:
+        return read_pages(sess, current_trader(request, sess))
 
 
 def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
@@ -242,6 +258,7 @@ def scope_fact(request: Request, key: str):
                 enter_class=enter_class(request), body_class="screen__body--fact",
                 chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
                 back_href=SM.chapter_href(chapter.number, fact=index + 1),
+                spine=SM.spine(key, _read_pages(request)), answers=SF.short_answers(figs),
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
                 trading_day_count=len(context["days"].counts),
@@ -270,21 +287,28 @@ def _journal_ids(sess, trader, days: set[str]) -> dict[str, int]:
 
 
 def _journal_links(request: Request, key: str, fact: dict, context: dict) -> dict:
-    """A finding links the journal of the day it is about, or shows no link (TICKET-839).
-    Worst days: one href per block whose day has a journal. The run: the day it began."""
+    """A finding links the journal of the day it is about, or shows no link (TICKET-839), and
+    the link says which page opened it, so the Journal offers the way back (TICKET-903).
+    Worst days: one href per block whose day has a journal. The run: the day it began. The
+    busiest day: that day."""
     if is_sample(request):  # its Journals are no visitor's to open
         return {}
+    busiest = str(context["days"].busiest_day) if context["days"].busiest_day else None
     if key == "worst-days":
         days = {b["iso"] for b in fact["blocks"]}
     elif key == "run" and context["run"].days:
         days = {context["run"].days[0]}
+    elif key == "busiest" and busiest:
+        days = {busiest}
     else:
         return {}
     with make_session(request.app.state.engine) as sess:
         opens = _journal_ids(sess, current_trader(request, sess), days)
-    hrefs = {day: f"/journals/{jid}" for day, jid in opens.items()}
+    hrefs = {day: f"/journals/{jid}?from={key}" for day, jid in opens.items()}
     if key == "worst-days":
         return {"journal_hrefs": hrefs}
+    if key == "busiest":
+        return {"busiest_journal_href": hrefs.get(busiest)}
     return {"run_journal_href": hrefs.get(context["run"].days[0])}
 
 
@@ -300,7 +324,7 @@ def _ending(request: Request, imp, fact: dict) -> dict:
             .order_by(m.Import.id.desc()).limit(1)
         ).first()
         return {
-            "journal_href": f"/journals/{opens[worst['iso']]}"
+            "journal_href": f"/journals/{opens[worst['iso']]}?from=not-told"
             if worst and worst["iso"] in opens else "/journals",
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),

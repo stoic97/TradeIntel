@@ -277,15 +277,17 @@ def start_button(html: str) -> str:
 
 
 def test_there_is_a_way_to_start():
-    html = page()
-    assert start_button(html) == "Start with chapter 1"
-    assert S.chapter_href(1, from_home=True).replace("&", "&amp;") in html
+    """TICKET-903: Continue names the first page not yet read (scope_map.continue_step)."""
+    assert S.continue_step(frozenset())["label"] == f"Continue: {S.PAGES[0].title}"
+    assert "Start with chapter" not in page()
 
 
-def test_once_started_it_points_at_the_next_unread_chapter():
-    assert start_button(page(opened=frozenset({1}))) == "Next: chapter 2"
-    assert start_button(page(opened=frozenset({1, 2, 4}))) == "Next: chapter 3"
-    assert start_button(page(opened=frozenset({2}))) == "Next: chapter 1"
+def test_once_started_it_points_at_the_next_unread_page():
+    """TICKET-903: by page, not by chapter; read pages are skipped, in scope_map's order."""
+    assert S.continue_step(frozenset({S.PAGES[0].key}))["label"] == f"Continue: {S.PAGES[1].title}"
+    read = frozenset({S.PAGES[0].key, S.PAGES[1].key, S.PAGES[3].key})
+    assert S.continue_step(read)["label"] == f"Continue: {S.PAGES[2].title}"
+    assert S.continue_step(frozenset(f.key for f in S.PAGES)) is None
 
 
 def test_with_everything_read_there_is_no_button():
