@@ -1,10 +1,15 @@
-"""TICKET-898 RED: an independent count of the prior-minute figure, from spec s4.7 only.
+"""TICKET-898: an independent count of the prior-minute figure, from spec s4.7 and the rulings.
 
-Every expected number below was worked out by hand from s4.7 on BARS, never copied from
-program output. Bars are stamped at the START of their minute (s4.7.2), so the price at a
-minute edge E is the close of the bar stamped E - 1 minute; a move is the close at one edge
-against the close at another (s4.7.5). Entry t lies in minute m0; the minute before entry is
-edge m0 against edge m0 - 1; "+N after entry" is edge m0 + N against edge m0.
+Every expected number below was worked out by hand on BARS, never copied from program output.
+Bars are stamped at the START of their minute (s4.7.2). Entry t lies in minute m0.
+
+Rulings on TICKET-898 (13 Nov 2026) that this file pins:
+  D1  "+N after entry" runs from the close of the entry-minute bar (bar m0) to the close of
+      bar m0 + N. Anything earlier counts seconds that came before the entry.
+  D2  the minute before entry is bar m0 - 1, read as its own open to its own close. The
+      close(m0 - 2) to close(m0 - 1) reading stays only as a sensitivity row.
+  D3  a count drops a trip only when a bar that count needs is missing, and the reason names
+      the bar: the prior count needs bar m0 - 1; a +N count needs bar m0 and bar m0 + N.
 """
 from __future__ import annotations
 
@@ -47,18 +52,19 @@ def _series() -> Series:
     return Series({_t(k + ":00"): v for k, v in BARS.items()})
 
 
+# Prior = bar m0 - 1, open to close. The comment on each trip is its prior reading.
 TRIPS = [
-    Trip("A", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:03:20")),   # 103-101=+2 long  -> with
-    Trip("B", "MCX_CRUDEOIL", "FUT", "SELL", _t("09:03:00")),  # same move, short -> against
-    Trip("C", "MCX_CRUDEOILM", "PUT", "BUY", _t("09:05:10")),  # 102-103=-1 short -> with
-    Trip("D", "MCX_CRUDEOIL", "PUT", "SELL", _t("09:04:59")),  # 103-103=0        -> flat
+    Trip("A", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:03:20")),    # 09:02 is -1, long: against
+    Trip("B", "MCX_CRUDEOIL", "FUT", "SELL", _t("09:03:00")),   # 09:02 is -1, short: with
+    Trip("C", "MCX_CRUDEOILM", "PUT", "BUY", _t("09:05:10")),   # 09:04 is -1, put=short: with
+    Trip("D", "MCX_CRUDEOIL", "PUT", "SELL", _t("09:04:59")),   # 09:03 is 0: flat
     Trip("E", "MCX_CRUDEOIL", "MULTI", "BUY", _t("09:03:20")),  # no single direction
     Trip("F", "MCX_NATURALGAS", "FUT", "BUY", _t("09:03:20")),  # no series
     Trip("G", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:03:20", "2026-02-10")),  # not covered
-    Trip("H", "MCX_CRUDEOIL", "CALL", "BUY", _t("09:00:30")),  # bar 08:59 missing
-    Trip("I", "MCX_CRUDEOIL", "CALL", "BUY", _t("09:07:30")),  # 105-104=+1 long  -> with
-    Trip("J", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:08:10")),   # bar 09:07 missing (gap)
-    Trip("K", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:06:30")),   # 104-102=+2 long  -> with
+    Trip("H", "MCX_CRUDEOIL", "CALL", "BUY", _t("09:00:30")),   # prior bar 08:59 missing
+    Trip("I", "MCX_CRUDEOIL", "CALL", "BUY", _t("09:07:30")),   # 09:06 is +1, long: with
+    Trip("J", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:08:10")),    # prior bar 09:07 missing
+    Trip("K", "MCX_CRUDEOIL", "FUT", "BUY", _t("09:06:30")),    # 09:05 is +2, long: with
 ]
 
 
@@ -79,6 +85,7 @@ def test_direction_table_s4_7_7():
 
 
 def test_prior_minute_headline(result):
+    # with: B, C, I, K. against: A. flat: D.
     p = result.prior
     assert (p.with_, p.against, p.flat, p.measured) == (4, 1, 1, 6)
 
@@ -88,15 +95,21 @@ def test_prior_minute_unmeasured_each_with_its_reason(result):
         "no_single_direction": 1,
         "no_series_for_underlying": 1,
         "series_does_not_cover": 1,
-        "missing_bar": 2,
+        "missing_prior_bar": 2,
     }
     assert result.prior.measured + sum(result.prior.unmeasured.values()) == result.total == 11
 
 
+def test_prior_minute_is_the_prior_bars_own_open_to_close(result):
+    # A enters 09:03:20, so its prior bar is 09:02: open 104, close 103 = -1. A is long, so
+    # against. Close to close (103 - 101 = +2) would read it as with.
+    assert result.prior.per_trip["A"] == "against"
+
+
 def test_entry_on_the_minute_reads_the_bar_before_not_the_entry_bar(result):
-    # B enters at 09:03:00 exactly. Reading the entry bar instead (one-minute shift)
-    # would give close 09:03 vs close 09:02 = 103-103 = flat, not "against".
-    assert result.prior.per_trip["B"] == "against"
+    # B enters at 09:03:00 exactly. Reading the entry bar instead (a one-minute shift) would
+    # give open 103, close 103 = flat, not "with".
+    assert result.prior.per_trip["B"] == "with"
 
 
 def test_bought_put_is_short_the_underlying(result):
@@ -104,30 +117,49 @@ def test_bought_put_is_short_the_underlying(result):
 
 
 def test_a_gap_is_never_filled_with_the_nearest_bar(result):
-    assert result.prior.per_trip["J"] == "missing_bar"
-    assert result.after[2].per_trip["K"] == "missing_bar"
+    # J's prior bar 09:07 is missing. C's +2 bar is 09:07, also missing.
+    assert result.prior.per_trip["J"] == "missing_prior_bar"
+    assert result.after[2].per_trip["C"] == "missing_horizon_bar"
 
 
-def test_plus_two_after_entry(result):
-    # A 102-103=-1 against, B with, C 105-102=+3 short against, D 104-103=+1 sold put with,
-    # I 106-105=+1 with; H, J no reference bar; K no bar at the horizon.
+def test_plus_two_runs_from_the_close_of_the_entry_minute(result):
+    # close of bar m0 + 2 less close of bar m0:
+    # A 09:05 104 - 09:03 103 = +1 long: with. B same move, short: against.
+    # D 09:06 105 - 09:04 102 = +3 sold put (long): with. H 09:02 103 - 09:00 100 = +3: with.
+    # K 09:08 106 - 09:06 105 = +1 long: with.
+    # C no bar 09:07. I no entry bar 09:07. J no bar 09:10.
     a = result.after[2]
-    assert (a.with_, a.against, a.flat, a.measured) == (3, 2, 0, 5)
+    assert (a.with_, a.against, a.flat, a.measured) == (4, 1, 0, 5)
     assert dict(a.unmeasured) == {
         "no_single_direction": 1,
         "no_series_for_underlying": 1,
         "series_does_not_cover": 1,
-        "missing_bar": 3,
+        "missing_entry_minute_bar": 1,
+        "missing_horizon_bar": 2,
     }
+    # A tells the bases apart: from the start of the entry minute it would read
+    # close(09:04) 102 - close(09:02) 103 = -1, against.
+    assert a.per_trip["A"] == "with"
 
 
-def test_open_to_close_sensitivity_is_reported_separately(result):
-    # Bar 09:02 opens 104 and closes 103: open->close reads A as -1 (against),
-    # while the s4.7.5 close->close reading is +2 (with).
-    assert result.prior.per_trip["A"] == "with"
-    assert result.prior_open_close.per_trip["A"] == "against"
-    alt = result.prior_open_close
-    assert (alt.with_, alt.against, alt.flat) == (4, 1, 1)
+def test_each_count_needs_only_the_bars_it_uses(result):
+    # H: prior bar 08:59 missing, yet +2 needs only bars 09:00 and 09:02, so it is measured.
+    assert result.prior.per_trip["H"] == "missing_prior_bar"
+    assert result.after[2].per_trip["H"] == "with"
+    # I: entry bar 09:07 missing (the entry-minute bar is reported first), yet its prior bar
+    # 09:06 is there, so the prior count still measures it.
+    assert result.prior.per_trip["I"] == "with"
+    assert result.after[2].per_trip["I"] == "missing_entry_minute_bar"
+
+
+def test_close_to_close_is_reported_separately_as_a_sensitivity(result):
+    # close(m0 - 2) to close(m0 - 1): A 103 - 101 = +2, long: with, where the ruled
+    # reading says against.
+    alt = result.prior_close_close
+    assert alt.per_trip["A"] == "with"
+    assert result.prior.per_trip["A"] == "against"
+    assert (alt.with_, alt.against, alt.flat, alt.measured) == (4, 1, 1, 6)
+    assert dict(alt.unmeasured)["missing_prior_bar"] == 2
 
 
 def test_default_horizons_are_the_tickets():
