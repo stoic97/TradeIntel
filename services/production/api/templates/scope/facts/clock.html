@@ -1,7 +1,7 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import money %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
     <p class="mirror">The largest result in any one hour: {{ money(f.lead.net) }} at <span class="num">{{ f.lead_label }}</span>, in {{ f.lead_book }}.</p>
     {%- if f.held.count %}
     <p class="mirror">These are trades you closed the day you opened them. {{ Figure(f.held.count, "positions")|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>

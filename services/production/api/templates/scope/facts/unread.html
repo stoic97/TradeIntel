@@ -1,7 +1,7 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import figure %}
 {% block head %}
-    <div class="fact__figure"><span class="num num--hero">{{ f.figure }}</span></div>
+    <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
 {% endblock %}
 {% block gross %}{% endblock %}
 {% block body %}

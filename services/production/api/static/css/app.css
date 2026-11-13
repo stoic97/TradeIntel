@@ -366,6 +366,9 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   body:not(:has(.bottom-nav)) .rail { top: 0; } /* TICKET-903: no header bar above the rail (/sample) */
 }
 
+/* TICKET-905: a wedge with nothing behind it opens nothing, and doesn't look as if it would. */
+.scope__slice--plain { pointer-events: none; }
+.figure-link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 /* TICKET-904: the report's year and book filter, under the demo line. */
 .report-filter { margin: 0 0 var(--space-4); }
 .report-filter__row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); margin: 0 0 var(--space-2); }
