@@ -403,13 +403,35 @@ class ChargeStatement(Base, _InsertOnly):
 
 
 class RuleDeclaration(Base, _InsertOnly):
-    """Captured, unused in v1. Collecting from day one is free (PRD 9)."""
+    """A rule the trader set, by tapping, dated before it is tested (TICKET-922).
+
+    ``factor`` and ``value`` are chips from ``rules.chips``; ``text`` keeps the rule's
+    words as they read when he set it. Never updated: a newer one governs only the
+    trades after it. ``applies_from``/``applies_to`` are India dates; one day for a
+    before-the-session commitment, open-ended for a standing rule.
+    """
 
     __tablename__ = "rule_declaration"
     id: Mapped[int] = mapped_column(primary_key=True)
     trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
     text: Mapped[str] = mapped_column(Text)
     declared_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    factor: Mapped[str | None] = mapped_column(String(32))
+    value: Mapped[int | None] = mapped_column(Integer)
+    applies_from: Mapped[str | None] = mapped_column(String(10))
+    applies_to: Mapped[str | None] = mapped_column(String(10))
+    screen: Mapped[str | None] = mapped_column(String(32))
+
+
+class PreTradeNote(Base, _InsertOnly):
+    """Two taps before a click: the book and the reason, matched to a fill on upload."""
+
+    __tablename__ = "pre_trade_note"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    book: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(String(32))
+    entered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
 class AdherenceEvent(Base, _InsertOnly):

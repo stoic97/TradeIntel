@@ -130,7 +130,7 @@ def delete_trader(
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ConsentEvent,
+                  m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ConsentEvent,
                   m.ChargeStatement, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
@@ -236,7 +236,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     found: list[str] = []
     for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.ChapterFeedback,
+                  m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():

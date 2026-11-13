@@ -1,0 +1,15 @@
+{#- Blind replay isn't open for this record, and says which of its three conditions is missing. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
+  <h1 class="title">Blind replay</h1>
+  {%- if why == "not_signed" %}
+  <p class="body">Not open yet. The rule for what its count may say is written, and waits for the research seat to sign it before it runs on anyone's real trades.</p>
+  {%- elif why == "no_bars" %}
+  <p class="body">Not open yet. It needs the market's own one-minute prices for your trades' dates, and those aren't here yet.</p>
+  {%- elif why == "not_old" %}
+  <p class="body">Not yet: it uses only trades more than <span class="num">{{ Figure(old_after, "days")|count }}</span> days old, because a recent chart is remembered. Your file has none with the market's prices around them.</p>
+  {%- else %}
+  <p class="body">Upload a tradebook first.</p>
+  {%- endif %}
+{% endblock %}

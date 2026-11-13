@@ -1,0 +1,23 @@
+{#- Screen A, before the session (TICKET-922): three rows of chips, each a tap. A
+    commitment for today, dated when he taps. Nothing is chosen in advance. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/rules">‹ Rules you set</a></p>
+  <h1 class="title">Before the session</h1>
+  <p class="body">Tap one in each row, for today. Each is dated when you tap it. Tapping again sets a new one from that moment; the earlier one still counts for the trades before it.</p>
+  {%- for f in factors %}
+  <section class="import__section">
+    <h2 class="card-title">{{ f.label }}</h2>
+    {%- if set_today.get(f.key) %}
+    <p class="body-small">Set for today: {{ set_today[f.key].text }}.</p>
+    {%- endif %}
+    <form method="post" action="/rules/today" class="rules__chips">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="factor" value="{{ f.key }}">
+      {%- for v in f.values %}
+      <button class="btn btn--pill-small" type="submit" name="value" value="{{ v }}">{{ Figure(f.chip(v), f.noun or "chip") }}</button>
+      {%- endfor %}
+    </form>
+  </section>
+  {%- endfor %}
+{% endblock %}

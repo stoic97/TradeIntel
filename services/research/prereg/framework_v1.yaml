@@ -113,13 +113,24 @@ evidence:
     N-C: {for: edge_map_cells, compare: same_size_random_cells_within_dimension}
     validation_fp_band: [0.02, 0.08]        # on both noise classes; adversarial is the gate
   production_gates:                         # what lets a page state a direction; not a Finding
-    B2_post_loss_sentence: {null_model: N-B, draws: 2000, sided: one, direction: "<", bar_p: 0.05, outcome: net_rupees, minimum: 30/60, theta_min: not_applied, opposite_direction: closed}
+    B2_post_loss_sentence: {null_model: N-B, draws: 10000, sided: one, direction: "<", bar_p: 0.05, corrected_by: finding_bar, outcome: net_rupees, minimum: 30/60, theta_min: not_applied, opposite_direction: closed}
   null_reporting:                           # §5.4a
     mde_power: 0.80
     shuffle_inflation: 1.65                 # measured
     no_problem_found_only_if: mde <= theta_min
     else_report: "no leak larger than {mde} found; smaller ones cannot be ruled out"
   multiplicity:                             # §5.5
+    finding_bar:                            # §5.5a — added 13 Nov 2026, research seat ruling 12 Nov (TICKET-909)
+      method: westfall_young_step_down_min_p   # on the one within-day shuffle every check shares
+      family: core_list                     # the §9 core tests by id, C1 (the Edge Map) beside it; fixed per spec version
+      m: 18
+      not_eligible: p_1                     # a check that can't run stays in the family at p = 1
+      alpha: 0.05                           # on the adjusted p
+      draws: 10000                          # Monte-Carlo error near a 0.003 bar: about 19%, not 40% at 2,000
+      p_floor: (b+1)/(N+1)
+      fallback: holm                        # same m, for a check whose null isn't the shared shuffle
+      halves: same_sign_in_both_halves_of_own_trading_days   # weak form; neither half need be significant
+      levels: [finding, worth_watching, not_enough_trades_yet]
     method: benjamini_hochberg
     families: [F-Strategy, F-Risk, F-Execution, F-Behaviour, F-Cells]
     q: {established: 0.05, likely: 0.10}

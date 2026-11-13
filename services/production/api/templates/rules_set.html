@@ -1,0 +1,24 @@
+{#- A standing rule (TICKET-922): a factor his file can check, then a value. Two taps. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/rules">‹ Rules you set</a></p>
+  <h1 class="title">Set a rule</h1>
+  {%- if chosen is none %}
+  <p class="body">First, what it is about.</p>
+  <ul class="door__answers">
+    {%- for f in factors %}
+    <li><a class="btn btn--pill-small" href="/rules/set?factor={{ f.key }}">{{ f.label }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  <p class="body">{{ chosen.label }}. Then the value. It counts from the moment you tap, on every day after.</p>
+  <form method="post" action="/rules/set" class="rules__chips">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="factor" value="{{ chosen.key }}">
+    {%- for v in chosen.values %}
+    <button class="btn btn--pill-small" type="submit" name="value" value="{{ v }}">{{ Figure(chosen.words(v), chosen.noun or "chip") }}</button>
+    {%- endfor %}
+  </form>
+  <p class="body-small"><a class="link" href="/rules/set">Something else</a></p>
+  {%- endif %}
+{% endblock %}

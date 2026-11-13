@@ -44,6 +44,7 @@
     {%- endfor %}
   </ol>
   {{ uncounted_line(imp.trips_refused) }}
+  <p class="body-small home__bar">Every finding here clears a bar corrected for every check we run on your trades: today <span class="num">{{ Figure(checks_run, "checks")|count }}</span> of the <span class="num">{{ Figure(checks_listed, "checks")|count }}</span> on our fixed list.</p>
   <p class="label label--plain home__foot"><span>{{ Figure(imp.rows_parsed, "rows")|count }} of {{ Figure(imp.rows_in, "rows")|count }} rows read · {{ Figure(trade_count, "trades")|count }} trades · {{ Figure(trading_day_count, "days")|count }} trading days{% if not imp.fees_available %} · before charges{% endif %}</span><span>No buy or sell calls, ever.</span></p>
   {% include "scope/_refused.html" %}
   {% include "scope/_lineage.html" %}

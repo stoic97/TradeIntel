@@ -322,3 +322,5 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .report-filter__choice[aria-current="true"] { color: var(--color-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .report-filter__words { margin: var(--space-2) 0 0; padding: var(--space-2) var(--space-3); background: var(--color-surface); border-left: 3px solid var(--color-navy); }
 .home__book-years { display: block; }
+.replay__chart { width: 100%; height: auto; margin: var(--space-4) 0; color: var(--color-navy); }
+.rules__chips { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
