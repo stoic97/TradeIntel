@@ -63,7 +63,7 @@ from services.research.evaluation import null_rate as nr
 from services.research.evaluation.synthetic import corpus as cp
 from services.research.evaluation.synthetic.crude import load_crude_1m
 from services.research.library import b2
-from services.research.models.base import BadDiagnostics, FitConfig
+from services.research.models.base import BadDiagnostics, FitConfig, failing_parameters
 
 ROOT = Path(__file__).resolve().parents[1]
 CRUDE = ROOT / "data" / "market" / "crude_1m.csv"
@@ -133,6 +133,20 @@ class Row:
     multiple: int = 0
     nominal: float = float("nan")
     reached: bool = True
+    # Schema v2, TICKET-897. All defaulted so a v1 checkpoint still loads.
+    # ``fired`` is and always was the shippable one; ``core_fired`` is the statistics
+    # alone. The v1 register reported them under one name and quoted the kinder.
+    core_fired: bool = False
+    diag_train: bool = False
+    diag_hold: bool = False
+    budget_train: str = ""
+    budget_hold: str = ""
+    theta_p10: float = float("nan")
+    theta_p50: float = float("nan")
+    theta_p90: float = float("nan")
+    theta_oracle: float = float("nan")  # the realised contrast on the fitted trades
+    nu_train: float = float("nan")  # at the floor means the atoms still drive the fit
+    atom_share_train: float = float("nan")
 
 
 def one(task: tuple[str, int, int]) -> Row:
@@ -195,7 +209,23 @@ def one(task: tuple[str, int, int]) -> Row:
         and r.core.big_enough
         and not r.core.killed
     )
+    core_fired = bool(r.core.real and r.core.big_enough and not r.core.killed)
+    theta = np.asarray(r.train.samples["theta"], dtype=float)
+    p10, p50, p90 = (float(q) for q in np.quantile(theta, [0.10, 0.50, 0.90]))
+    train_r = np.asarray(r.train_data.r, dtype=float)
+    train_c = np.asarray(r.train_data.condition, dtype=float)
+    has_both = bool((train_c == 1).any() and (train_c == 0).any())
+    oracle = (float(train_r[train_c == 1].mean() - train_r[train_c == 0].mean())
+              if has_both else float("nan"))
+    _, tie_counts = np.unique(train_r, return_counts=True)
     return Row(
+        core_fired=core_fired and evaluable,
+        diag_train="theta" in failing_parameters(r.train),
+        diag_hold="theta" in failing_parameters(r.hold),
+        budget_train=r.train.budget, budget_hold=r.hold.budget,
+        theta_p10=p10, theta_p50=p50, theta_p90=p90, theta_oracle=oracle,
+        nu_train=float(np.median(r.train.samples["nu"])),
+        atom_share_train=float(tie_counts.max() / train_r.size) if train_r.size else float("nan"),
         history_id=hid, kind=h.kind, n_trips=len(h.trips), median_day=median_day,
         n_condition=r.n_condition, n_comparison=r.n_comparison,
         n_condition_isolation=r.n_condition_isolation,
@@ -340,6 +370,21 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
           f"complete={len(rows) == total})", flush=True)
 
 
+def _recalls(c: dict[str, object]) -> None:
+    """Both numbers, always together, never one of them alone.
+
+    Core recall is the statistics: the effect was found and cleared theta_min.
+    Shippable recall is what a trader would have been shown. The 12 October
+    register carried only the first and called it ``recall``, which is how 62.5 per
+    cent came to describe a cell whose shippable recall was zero.
+    """
+    ev = int(c["evaluable"])
+    for name in ("core", "shippable"):
+        fired = int(c[f"{name}_fired"])
+        c[f"{name}_recall"] = fired / ev if ev else None
+        c[f"{name}_interval"] = list(nr.wilson_interval(fired, ev)) if ev else None
+
+
 def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, total: int,
                         seconds: float, recomputed_by: str | None = None) -> None:
     """Recall: of the histories where B2 was planted and could be tested, how many fired?
@@ -364,32 +409,35 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
     for r in planted:
         c = cells.setdefault((r.multiple, r.n_trips), {
             "multiple": r.multiple, "n_trades": r.n_trips, "nominal": r.nominal,
-            "reached": r.reached, "n": 0, "evaluable": 0, "fired": 0,
+            "reached": r.reached, "n": 0, "evaluable": 0,
+            "core_fired": 0, "shippable_fired": 0,
         })
         c["n"] = int(c["n"]) + 1
         c["evaluable"] = int(c["evaluable"]) + int(r.evaluable)
-        c["fired"] = int(c["fired"]) + int(r.fired)
+        c["core_fired"] = int(c["core_fired"]) + int(r.core_fired)
+        c["shippable_fired"] = int(c["shippable_fired"]) + int(r.fired)
     for c in cells.values():
-        ev, fired = int(c["evaluable"]), int(c["fired"])
-        c["recall"] = fired / ev if ev else None
-        c["interval"] = list(nr.wilson_interval(fired, ev)) if ev else None
+        _recalls(c)
 
     by_k: dict[int, dict[str, object]] = {}
     for (k, _), c in cells.items():
         a = by_k.setdefault(k, {"nominal": c["nominal"], "reached": c["reached"],
-                                "n": 0, "evaluable": 0, "fired": 0})
-        for key in ("n", "evaluable", "fired"):
+                                "n": 0, "evaluable": 0,
+                                "core_fired": 0, "shippable_fired": 0})
+        for key in ("n", "evaluable", "core_fired", "shippable_fired"):
             a[key] = int(a[key]) + int(c[key])
     for a in by_k.values():
-        ev, fired = int(a["evaluable"]), int(a["fired"])
-        a["recall"] = fired / ev if ev else None
-        a["interval"] = list(nr.wilson_interval(fired, ev)) if ev else None
+        _recalls(a)
 
     report: dict[str, object] = {
         "test_id": b2.TEST_ID,
         "grid_version": cp.GRID_VERSION,
         "measure": "recall on planted histories",
-        "fired_definition": "core.real and core.big_enough and not core.killed",
+        "core_fired_definition": "core.real and core.big_enough and not core.killed",
+        "shippable_fired_definition": "the core definition AND no failed_gate: a "
+                                      "Finding the product would actually show",
+        "headline": "shippable_recall. Quoting core recall as 'recall' is what made "
+                    "62.5 per cent describe cells whose shippable recall was zero.",
         "clustering": "8 seeds per cell share the one crude series; intervals are "
                       "Wilson over seeds and so are narrower than the truth",
         "config": {"draws": CONFIG.draws, "warmup": CONFIG.warmup, "chains": CONFIG.chains,
@@ -404,24 +452,29 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
         "histories": [vars(r) for r in rows],
     }
 
-    print(f"\n{'k':>2} {'planted':>9} {'trades':>7} {'evaluable':>10} {'fired':>6} "
-          f"{'recall':>8}  95% interval")
+    print(f"\n{'k':>2} {'planted':>9} {'trades':>7} {'evaluable':>10} {'core':>5} "
+          f"{'ship':>5} {'shippable':>10}  95% interval")
     for key in sorted(cells):
         c = cells[key]
         ev = int(c["evaluable"])
-        rec = f"{c['recall']:.0%}" if c["recall"] is not None else "   -"
-        iv = (f"[{c['interval'][0]:.0%}, {c['interval'][1]:.0%}]"
-              if c["interval"] else "not testable")
+        rec = f"{c['shippable_recall']:.0%}" if c["shippable_recall"] is not None else "   -"
+        iv = (f"[{c['shippable_interval'][0]:.0%}, {c['shippable_interval'][1]:.0%}]"
+              if c["shippable_interval"] else "not testable")
         star = "" if c["reached"] else "  (saturated)"
         print(f"{c['multiple']:>2} {float(c['nominal']):>8.2f}R {c['n_trades']:>7} "
-              f"{ev:>7}/{c['n']:<2} {int(c['fired']):>6} {rec:>8}  {iv}{star}")
-    print("\nby effect size, lengths pooled:")
+              f"{ev:>7}/{c['n']:<2} {int(c['core_fired']):>5} "
+              f"{int(c['shippable_fired']):>5} {rec:>10}  {iv}{star}")
+    print("\nby effect size, lengths pooled  (core -> shippable):")
     for k in sorted(by_k):
         a = by_k[k]
-        rec = f"{a['recall']:.0%}" if a["recall"] is not None else "-"
-        iv = f"[{a['interval'][0]:.0%}, {a['interval'][1]:.0%}]" if a["interval"] else ""
-        print(f"  k={k}  {float(a['nominal']):.2f}R  {int(a['fired'])}/{int(a['evaluable'])} "
-              f"= {rec}  {iv}{'' if a['reached'] else '  (saturated)'}")
+        core = f"{a['core_recall']:.0%}" if a["core_recall"] is not None else "-"
+        rec = f"{a['shippable_recall']:.0%}" if a["shippable_recall"] is not None else "-"
+        iv = (f"[{a['shippable_interval'][0]:.0%}, {a['shippable_interval'][1]:.0%}]"
+              if a["shippable_interval"] else "")
+        print(f"  k={k}  {float(a['nominal']):.2f}R  core {int(a['core_fired'])}"
+              f"/{int(a['evaluable'])} = {core}   shippable "
+              f"{int(a['shippable_fired'])}/{int(a['evaluable'])} = {rec}  {iv}"
+              f"{'' if a['reached'] else '  (saturated)'}")
     print(f"\nfires in the wrong direction: {len(wrong_direction)}")
 
     out.parent.mkdir(parents=True, exist_ok=True)

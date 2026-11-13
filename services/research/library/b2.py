@@ -62,6 +62,10 @@ class B2Result:
     train: FitResult
     hold: FitResult
     zones: zn.Zones
+    # The arrays the two fits were actually given. Carried so a sweep can put theta
+    # beside the contrast the trades themselves show, without rebuilding the zones.
+    train_data: m1.M1Data
+    hold_data: m1.M1Data
 
 
 def _m1_data(obs: Sequence[Obs], idx: np.ndarray, in_pop: np.ndarray, cond: np.ndarray) -> m1.M1Data:
@@ -109,4 +113,7 @@ def run(
         n_min=N_MIN,
         diagnostics_failed=theta_bad,
     )
-    return B2Result(core, finding, n_condition, n_comparison, n_condition_isolation, train, hold, zones)
+    return B2Result(
+        core, finding, n_condition, n_comparison, n_condition_isolation,
+        train, hold, zones, train_data, hold_data,
+    )
