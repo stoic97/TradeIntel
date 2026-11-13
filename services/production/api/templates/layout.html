@@ -34,13 +34,14 @@
 <body>
 <svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
 <div class="screen{% if screen_class %} {{ screen_class }}{% endif %}">
-{% if signed_in and not nav %}<nav class="home-bar" aria-label="Home">{{ home_lockup() }}<a class="home-bar__home" href="/">Home</a></nav>{% endif %}
+{% if signed_in and (not nav or sample) %}<nav class="home-bar" aria-label="Home">{{ home_lockup() }}<a class="home-bar__home" href="/">Home</a></nav>{% endif %}
 {% block stage %}{% endblock %}
-<main class="screen__body{% if nav %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
+<main class="screen__body{% if nav and not sample %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
+{% if sample %}<div class="demo-line sample-line" role="note"><p>Sample trader, invented. These aren't your trades.</p><a class="link" href="/">Run this on my trades</a></div>{% endif %}
 {% if demo %}<p class="demo-line" role="note">{{ demo }}</p>{% endif %}
 {% block content %}{% endblock %}
 </main>
-{% if nav %}{{ bottom_nav(nav) }}{% endif %}
+{% if nav and not sample %}{{ bottom_nav(nav) }}{% endif %}
 </div>
 {% block scripts %}{% endblock %}
 </body>

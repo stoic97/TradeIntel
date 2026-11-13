@@ -66,6 +66,10 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
     context.setdefault("title", "Scope")
     context["csrf_token"] = auth.csrf_token(session, _settings(request).secret_key)
     context["signed_in"] = session is not None
+    if getattr(request.state, "sample_trader_id", None) is not None:
+        # /sample (routes_sample): the invented trader's page says so itself, and carries
+        # nothing of the visitor's: no demo line, no offer to read a file again.
+        context.update(sample=True, demo=None, stale_import_id=None)
     if "demo" not in context:
         from services.production import demo
 
@@ -145,6 +149,8 @@ def landing_for(sess, trader: m.Trader) -> str:
 
 
 LOGIN_ID_MAX = 100
+SAMPLE_LOGIN_ID = "scope-sample"
+"""Kept for /sample's record (routes_sample.LOGIN_ID), so no one can sign up as it."""
 DISPLAY_NAME_MAX = 200
 
 
@@ -201,7 +207,8 @@ def signup(
         taken = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
         # A listed id nobody holds, or one whose owner deleted himself, is still an admin's:
         # registering it would make a stranger an admin.
-        if taken is not None or login_id in _settings(request).admin_login_ids:
+        if (taken is not None or login_id in _settings(request).admin_login_ids
+                or login_id == SAMPLE_LOGIN_ID):
             return _signup_refused(request, "That login id is taken.")
 
         trader = m.Trader(display_name=display_name, login_id=login_id,

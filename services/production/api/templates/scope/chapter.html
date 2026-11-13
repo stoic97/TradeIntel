@@ -26,7 +26,7 @@
     {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
   {%- endfor %}
   </div>
-  {%- if chapter.feedback %}
+  {%- if chapter.feedback and not sample %}
   {% include "scope/_feedback.html" %}
   {%- endif %}
   {%- if next_step %}

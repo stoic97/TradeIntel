@@ -70,6 +70,7 @@
     {%- endif %}
   </section>
 
+{%- if not sample %}
   <section class="ending__check feedback" id="report-check" aria-label="Does this match your trading?">
     <h2 class="feedback__question">Does this match your trading?</h2>
     {%- if ending.answered %}
@@ -86,6 +87,7 @@
     </form>
     {%- endif %}
   </section>
+  {%- endif %}
 
   <a class="ending__back" href="/mirror">Back to your report</a>
 {% endblock %}
