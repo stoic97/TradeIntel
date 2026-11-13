@@ -623,10 +623,16 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
     for s in d["slices"]:
         c = s["contents"]
         state_class = f" scope__slice--{s['state']}" if s["state"] else ""
-        o.append(
-            f'<a class="scope__slice{state_class}" href="{s["href"]}" '
-            f'aria-label="{_esc(s["name"] + ".")}">'
-        )
+        # A slice with nothing behind it opens nothing (TICKET-905): an <a> with no href, which
+        # HTML and SVG treat as a placeholder, not a link - no focus, no navigation.
+        if s["href"]:
+            o.append(
+                f'<a class="scope__slice{state_class}" href="{s["href"]}" '
+                f'aria-label="{_esc(s["name"] + ".")}">'
+            )
+        else:
+            o.append(f'<a class="scope__slice scope__slice--plain{state_class}" '
+                     f'aria-label="{_esc(s["name"] + ".")}">')
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
             f'<path class="scope__focus" d="{s["focusRing"]}"/>'

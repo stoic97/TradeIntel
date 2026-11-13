@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from markupsafe import Markup, escape
+
 
 class NoNoun(ValueError):
     """A figure with nothing for its value to belong to."""
@@ -30,6 +32,10 @@ class Figure:
     value: Any
     noun: str
     of: str | None = None
+    opens: str | None = None
+    """Where every trade behind this figure is listed (TICKET-905). Set by whatever decided the
+    figure, from the same object, never by a page. None means nothing opens: the figure counts
+    something with no trades behind it, and it is written as plain text."""
 
     def __post_init__(self) -> None:
         if not isinstance(self.noun, str) or not self.noun.strip():
@@ -45,13 +51,33 @@ class Figure:
 
 
 def through_figure(write):
-    """A filter that takes a Figure, and writes its value as the filter always wrote it."""
+    """A filter that takes a Figure, and writes its value as the filter always wrote it. A figure
+    that opens its trades is written as a link to them; one that doesn't stays plain text."""
 
     def written(value, *args, **kwargs):
         if isinstance(value, Figure):
-            return Written(write(value.value, *args, **kwargs))
+            text = Written(write(value.value, *args, **kwargs))
+            return opened(value, text)
         return write(value, *args, **kwargs)
 
     written.__name__ = write.__name__
     written.__doc__ = write.__doc__
     return written
+
+
+def opened(figure: Figure, text: str):
+    """The figure's text, as a link to its trades when it has any. Keyboard and screen reader
+    reach it like any link, and its label says what opens."""
+    if not figure.opens:
+        return text
+    said = str(text) if str(text).endswith(figure.noun) else f"{text} {figure.noun}"
+    label = f"{said}: open the trades behind it"
+    return Markup('<a class="figure-link" href="{}" aria-label="{}">{}</a>').format(
+        figure.opens, label, text)
+
+
+def as_text(value) -> str:
+    """A figure written as a sentence's own text: through ``opened`` when it is one."""
+    if isinstance(value, Figure):
+        return opened(value, escape(str(value.value)))
+    return value

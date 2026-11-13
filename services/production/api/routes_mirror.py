@@ -12,6 +12,7 @@ argument is that he should not have to.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -19,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
+from services.production.api import formatting
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -402,6 +404,30 @@ def day_feedback(request: Request, trading_day: str = Form(None), note: str = Fo
         sess.commit()
     return RedirectResponse(f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}",
                             status_code=303)
+
+
+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+@router.get("/mirror/day/{iso}", response_class=HTMLResponse)
+def trading_day(request: Request, iso: str):
+    """One trading day: every trade opened that day, and its journal (TICKET-905). Any date the
+    report writes opens here. A day his record doesn't hold is not found."""
+    if not DAY.fullmatch(iso):
+        raise HTTPException(status_code=404)
+    early, record = load_record(request)
+    if early is not None:
+        return early
+    trips, imp, context = record
+    that_day = [t for t in trips if t.trading_day == iso]
+    if not that_day:
+        raise HTTPException(status_code=404)
+    with make_session(request.app.state.engine) as sess:
+        opens = _journal_ids(sess, reader(request, sess), {iso})
+    return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
+                when=formatting.day(iso), count=len(that_day),
+                groups=SM.groups("busiest", context, only=that_day),
+                journal_href=f"/journals/{opens[iso]}" if iso in opens else None)
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)

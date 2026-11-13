@@ -28,7 +28,7 @@
     {%- for b in verdict.books %}
     <li class="home__book"><span class="home__book-head"><span>{% if b.label in filter_books %}<a class="link" href="{{ filter_books[b.label] }}">{{ b.label }}</a>{% else %}{{ b.label }}{% endif %}</span> {{ money(b.net) }}</span> <span class="body-small"><span class="num">{{ Figure(b.trades, "trades")|count }}</span> trade{{ "" if b.trades == 1 else "s" }}.
       {%- if b.standout %} {{ b.standout.symbol }} made {{ money(b.standout.net, signed=false) }}{{ held(b.standout) }}.
-      {%- elif b.worst_day %} Worst day: {{ b.worst_day|day }}, {{ money(b.worst_net) }}.{% endif %}</span>
+      {%- elif b.worst_day %} Worst day: {{ b.worst_day|day_link }}, {{ money(b.worst_net) }}.{% endif %}</span>
       {%- if by_year.get(b.label) and by_year[b.label]|length > 1 %}
       <span class="body-small home__book-years">By year: {% for y in by_year[b.label] %}{{ Figure(y.year, "year") }} {% if y.trades %}{{ money(y.net) }}{% else %}no trades{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</span>
       {%- endif %}</li>

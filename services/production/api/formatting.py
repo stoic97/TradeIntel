@@ -203,8 +203,21 @@ _FIGURE_FILTERS = {
 """One of each, so every environment holds the same filter."""
 
 
+def day_link(iso_date: str):
+    """A trading day as day() writes it, opening that day: its trades and its journal (TICKET-905)."""
+    from markupsafe import Markup
+    return Markup('<a class="figure-link" href="/mirror/day/{}">{}</a>').format(iso_date, day(iso_date))
+
+
+def opens(value):
+    """A figure as a link to its trades when it has any, else its plain text (figures.opened)."""
+    from services.production.api.figures import as_text
+    return as_text(value)
+
+
 def register(env) -> None:
     """Make the filters available to every template the app renders. A figure goes through the
     same filter as a plain value, so writing one changes nothing on the page."""
-    env.filters.update(tone=tone, day=day, local_day=local_day, book_in_a_sentence=book_in_a_sentence, **_FIGURE_FILTERS)
+    env.filters.update(tone=tone, day=day, local_day=local_day, book_in_a_sentence=book_in_a_sentence,
+                       day_link=day_link, opens=opens, **_FIGURE_FILTERS)
     env.globals["Figure"] = Figure
