@@ -105,11 +105,11 @@ def expected_next(i: int) -> tuple[str, str]:
 
 
 def labelled(links: list[dict], rel: str) -> list[tuple[str, str]]:
-    return [(path(a["href"]), a.get("aria-label", "")) for a in links if a.get("rel") == rel]
+    return [(path(a.get("href", "")), a.get("aria-label", "")) for a in links if a.get("rel") == rel]
 
 
 def continues(html: str) -> list[tuple[str, str]]:
-    return [(path(a["href"]), a["text"]) for a in anchors(html) if a["text"].startswith("Continue:")]
+    return [(path(a.get("href", "")), a["text"]) for a in anchors(html) if a["text"].startswith("Continue:")]
 
 
 def backs(html: str) -> list[tuple[str, str]]:
@@ -117,7 +117,7 @@ def backs(html: str) -> list[tuple[str, str]]:
     for a in anchors(html):
         text = a["text"].replace("\u2039", "").strip()
         if text.startswith("Back to ") and text != "Back to your report":
-            found.append((path(a["href"]), text))
+            found.append((path(a.get("href", "")), text))
     return found
 
 
@@ -135,11 +135,11 @@ def test_the_rail_runs_in_that_order_marks_this_page_and_counts_it(client, key):
     rail = spine(page_of(client, key), "rail")
     segs = [a for a in anchors(rail) if "data-page" in a]
     assert [a["data-page"] for a in segs] == ORDER
-    assert [path(a["href"]) for a in segs] == [f"/mirror/fact/{k}" for k in ORDER]
+    assert [path(a.get("href", "")) for a in segs] == [f"/mirror/fact/{k}" for k in ORDER]
     assert [a["data-page"] for a in segs if a.get("aria-current") == "page"] == [key]
     words = " ".join(unescape(TAG.sub(" ", rail)).split())
     assert f"{ORDER.index(key) + 1} of {len(ORDER)}" in words
-    assert any(a["href"] == "#all-pages" and a["text"] == f"All {len(ORDER)} pages"
+    assert any(a.get("href", "") == "#all-pages" and a["text"] == f"All {len(ORDER)} pages"
                for a in anchors(rail))
     assert "path__crumbs--short" not in rail, "the full path, no cut-off names"
     assert S.chapter(CHAPTER_OF[key]).name in words and TITLE[key] in words
@@ -164,7 +164,7 @@ def test_all_pages_lists_every_page_with_its_short_answer(client, key):
         rest = a["text"].replace(TITLE[a["data-page"]], "", 1)
         rest = re.sub(r"^(\u2713|\d+)\s*", "", rest.strip()).strip()
         assert rest, f"{a['data-page']}: no short answer beside its name"
-    others = {path(a["href"]) for a in anchors(panel) if "data-page" not in a}
+    others = {path(a.get("href", "")) for a in anchors(panel) if "data-page" not in a}
     assert {"/", "/journals", "/account"} <= others
 
 
@@ -190,7 +190,7 @@ def test_scope_facts_decides_no_step_of_its_own():
 def test_each_chapter_goes_on_to_its_first_page(client, n):
     first = S.chapter(n).facts[0].key
     html = client.get(f"/mirror/chapter/{n}").text
-    assert any(path(a["href"]) == f"/mirror/fact/{first}" and a["text"] == f"Next: {TITLE[first]}"
+    assert any(path(a.get("href", "")) == f"/mirror/fact/{first}" and a["text"] == f"Next: {TITLE[first]}"
                for a in anchors(html))
 
 
@@ -209,7 +209,7 @@ def test_every_signed_in_page_has_the_one_header(client, url):
     assert r.status_code == 200, (url, r.status_code)
     navs = MAIN_NAV.findall(r.text)
     assert len(navs) == 1, f"{url}: {len(navs)} main navs"
-    tabs = [(a["href"], a["text"]) for a in anchors(navs[0])
+    tabs = [(a.get("href", ""), a["text"]) for a in anchors(navs[0])
             if "bottom-nav__item" in a.get("class", "")]
     assert tabs == TABS, url
     assert "home-bar" not in r.text, f"{url}: the separate Home bar is retired"
@@ -226,7 +226,7 @@ def test_the_report_bar_on_a_phone(client):
     links = anchors(spine(page_of(client, "run"), "rbar"))
     assert labelled(links, "prev") == [(f"/mirror/fact/{ORDER[i - 1]}", f"Previous: {TITLE[ORDER[i - 1]]}")]
     assert labelled(links, "next") == [expected_next(i)]
-    middle = [a for a in links if a["href"] == "#all-pages"]
+    middle = [a for a in links if a.get("href", "") == "#all-pages"]
     assert len(middle) == 1
     assert f"{i + 1} of {len(ORDER)}" in middle[0]["text"] and "All pages" in middle[0]["text"]
 
@@ -269,7 +269,7 @@ def test_with_every_page_read_continue_goes_away(client, engine):
     read(engine, "fx", *ORDER)
     for url in ("/", "/mirror"):
         assert continues(client.get(url).text) == [], url
-    assert any(path(a["href"]) == "/mirror" for a in anchors(client.get("/").text))
+    assert any(path(a.get("href", "")) == "/mirror" for a in anchors(client.get("/").text))
 
 
 def test_the_rail_and_all_pages_fill_the_pages_read(client, engine):
@@ -316,8 +316,8 @@ def test_a_journal_from_anywhere_else_goes_back_home(demo, engine):
 def test_report_pages_open_their_days_journal_with_the_way_back(demo):
     seen = 0
     for key in ("worst-days", "run", "busiest", "not-told"):
-        hrefs = [a["href"] for a in anchors(demo.get(f"/mirror/fact/{key}").text)
-                 if re.match(r"/journals/\d+", a["href"])]
+        hrefs = [a.get("href", "") for a in anchors(demo.get(f"/mirror/fact/{key}").text)
+                 if re.match(r"/journals/\d+", a.get("href", ""))]
         seen += len(hrefs)
         assert all(parse_qs(urlsplit(h).query).get("from") == [key] for h in hrefs), (key, hrefs)
     assert seen, "no report page linked a day's journal"
@@ -326,7 +326,7 @@ def test_report_pages_open_their_days_journal_with_the_way_back(demo):
 def test_the_busiest_day_offers_that_days_questions(demo):
     html = demo.get("/mirror/fact/busiest").text
     assert any(a["text"] == "That day's questions"
-               and re.fullmatch(r"/journals/\d+\?from=busiest", a["href"]) for a in anchors(html))
+               and re.fullmatch(r"/journals/\d+\?from=busiest", a.get("href", "")) for a in anchors(html))
 
 
 # ---------- Gate 6: upload, receipt, reveal, report ----------
@@ -343,16 +343,16 @@ def test_the_reveal_goes_on_to_the_report():
 
 
 def test_limits_no_longer_send_on_to_the_checks_page(client):
-    assert "/eligibility" not in [path(a["href"]) for a in anchors(client.get("/budget").text)]
+    assert "/eligibility" not in [path(a.get("href", "")) for a in anchors(client.get("/budget").text)]
 
 
 def test_the_checks_page_is_reached_from_what_we_read(client):
-    assert any(path(a["href"]) == "/eligibility" and a["text"] == "What we can check"
+    assert any(path(a.get("href", "")) == "/eligibility" and a["text"] == "What we can check"
                for a in anchors(page_of(client, "unread")))
 
 
 def test_limits_stay_reachable_from_account(client):
-    assert "/budget" in [path(a["href"]) for a in anchors(client.get("/account").text)]
+    assert "/budget" in [path(a.get("href", "")) for a in anchors(client.get("/account").text)]
 
 
 def test_opening_a_report_page_counts_as_having_walked(client, engine):
