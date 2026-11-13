@@ -1,6 +1,6 @@
 {% extends "scope/fact.html" %}
 {% from "_components.html" import money %}
-{% from "scope/_opening.html" import down_sentence %}
+{% from "scope/_opening.html" import down_level, down_sentence %}
 {% from "scope/_next.html" import next_fact, chapter_four %}
 {#- Its card has the Mirror's sentences and tables. This page opens with the same one sentence
     (TICKET-832), says how the trades are counted, and leaves the list behind its link. No
@@ -8,6 +8,8 @@
 {% block head %}
 {%- set tl = two_losses %}
     <p class="mirror">{{ down_sentence(f, two_losses) }}</p>
+    {%- set level = down_level(f) %}{% if level|trim %}
+    <p class="body down__level">{{ level }}</p>{% endif %}
     <p class="mirror">
     {%- if not tl.population %}No trade you opened had two earlier trades that day already closed.
     {%- else %}{% if tl.population == 1 %}This is the <span class="num">1</span> trade{% else %}These are the <span class="num">{{ Figure(tl.population, "trades")|count }}</span> trades{% endif %} you opened once at least two earlier trades that day had closed.

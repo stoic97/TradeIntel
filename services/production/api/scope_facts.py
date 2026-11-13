@@ -24,6 +24,7 @@ from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
+from services.shared.conditions import b2_shuffle, multiplicity
 from services.shared.schemas import scope_v1 as s
 
 COUNTED = s.ResultState.COUNTED_FACT
@@ -634,8 +635,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["run"]["next"] = _next_fact("clock")
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     two_losses = ctx["two_losses"]
+    same_day = mx.same_day_trips(trips)
+    check = mx.post_loss_check(same_day) if same_day else None
+    out["down"]["post_loss_level"] = check.level if check else None
+    out["down"]["post_loss_needs"] = None if check is None or check.level != "not_enough" else {
+        "condition": max(0, b2_shuffle.MIN_CONDITION - check.n_condition),
+        "comparison": max(0, b2_shuffle.MIN_COMPARISON - check.n_comparison),
+    }
     out["down"]["post_loss_sentence"] = (
-        mx.post_loss_sentence_may_show(mx.same_day_trips(trips))
+        mx.post_loss_sentence_may_show(same_day)
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
@@ -1038,6 +1046,9 @@ def home_context(
         "start": _start(opened),
         "two_losses": ctx["two_losses"],
         "post_loss": figs["down"],
+        # How many of the finding bar's fixed list run today, and how long the list is.
+        "checks_run": len(mx.CHECKS_RUN),
+        "checks_listed": len(multiplicity.family()),
     }
 
 
