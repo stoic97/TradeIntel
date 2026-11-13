@@ -29,7 +29,7 @@
       </tbody>
     </table>
   </div>
-  <p class="body-small admin__note">Traders, not events: each counts once a line, whether on the demo or a real file, and "Where readers stop" keeps those apart. A real upload removes the demo, so "Tried the demo" is a floor. A refused file counts as a real file brought. Said Wrong on any chapter: {{ cards.said_wrong|count }}, {{ cards.said_wrong_demo|count }} of them on the demo.</p>
+  <p class="body-small admin__note">Traders, not events: each counts once a line, whether on the demo or a real file, and "Where readers stop" keeps those apart. A real upload removes the demo, so "Tried the demo" is a floor. A refused file counts as a real file brought. Visits aren't known: opening a page writes nothing, so "Came back on a later day" counts a later day with something stored, and a trader who came back and read nothing isn't in it. The reveal writes nothing either, so it has no line. Said Wrong on any chapter: {{ cards.said_wrong|count }}, {{ cards.said_wrong_demo|count }} of them on the demo.</p>
 
   <h2 class="heading admin__head">System health</h2>
   <dl class="admin__quiet body-small">

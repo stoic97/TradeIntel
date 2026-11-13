@@ -1801,3 +1801,30 @@ def test_the_count_of_those_left_out_is_above_the_cards(app, engine):
     add_trader(engine, "tester", dev=True)
     page = admin_page(app, engine)
     assert page.index("1 development account is left out") < page.index("Signed up")
+
+
+# ---------- Reaching the reveal and coming back [TICKET-878] ----------
+# Decided 6 Nov: the reveal writes nothing, so it has no line; a visit that writes nothing isn't
+# known, and the page says so where "came back" is counted. No new event is recorded.
+
+
+def test_the_ladder_has_no_reveal_line(app, engine):
+    add_trader(engine, "someone")
+    labels = [line["label"] for line in view(app, engine)["ladder"]]
+    assert not any("reveal" in label.lower() for label in labels)
+    assert "Reached the reveal" not in admin_page(app, engine)
+
+
+def test_beside_came_back_the_page_says_visits_are_not_known(app, engine):
+    add_trader(engine, "someone")
+    page = admin_page(app, engine).replace("&#39;", "'")
+    ladder_at = page.index("Came back on a later day")
+    note_at = page.index("Visits aren't known")
+    assert ladder_at < note_at < page.index("System health")
+    assert "reveal writes nothing" in page[note_at:page.index("System health")]
+
+
+def test_no_visit_or_reveal_event_is_recorded():
+    from services.production.api import routes_events
+    source = Path(routes_events.__file__).read_text(encoding="utf-8").lower()
+    assert "visit" not in source and "reveal" not in source
