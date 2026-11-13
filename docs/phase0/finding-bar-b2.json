@@ -1,0 +1,48 @@
+{
+  "null_books": {
+    "books": 1000,
+    "evaluable": 1000,
+    "days": 100,
+    "per_day": 5,
+    "seed": 909,
+    "draws": 10000,
+    "family": 18,
+    "with_a_finding": {
+      "old": 47,
+      "bonferroni": 5,
+      "corrected": 47,
+      "corrected_and_halves": 40
+    },
+    "share": {
+      "old": 0.047,
+      "bonferroni": 0.005,
+      "corrected": 0.047,
+      "corrected_and_halves": 0.04
+    },
+    "band": [
+      0.035,
+      0.065
+    ]
+  },
+  "demo_file": {
+    "result": {
+      "n_condition": 45,
+      "n_comparison": 102,
+      "difference": 725.5517973856208,
+      "p": 0.9642035796420358,
+      "p_adjusted": 0.9642035796420358,
+      "halves": [
+        2250.569055944056,
+        486.5644117647058
+      ],
+      "level": "nothing",
+      "family_size": 18
+    },
+    "finding_under": {
+      "old": false,
+      "bonferroni": false,
+      "corrected": false,
+      "corrected_and_halves": false
+    }
+  }
+}
