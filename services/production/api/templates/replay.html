@@ -1,0 +1,12 @@
+{#- Blind replay, the start (TICKET-924). The rules of the game, plainly, before the first card. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
+  <h1 class="title">Blind replay</h1>
+  <p class="lead">The market up to a moment, and nothing after it. Take it or skip it.</p>
+  <p class="body">Some of these moments are when you really entered. The others are random moments from the same months, on the same market, taken the same way. You won't be told which until you've decided.</p>
+  <p class="body">Each card shows the <span class="num">{{ Figure(window, "minutes")|count }}</span> minutes before the moment. After you decide, you see whether it was yours and what the market did over the next <span class="num">{{ Figure(horizon, "minutes")|count }}</span> minutes, in points, before charges.</p>
+  <p class="body-small">Only trades more than <span class="num">{{ Figure(old_after, "days")|count }}</span> days old are used: a recent chart is remembered, and memory would decide for you.</p>
+  <p class="body-small">Most one-minute bars are ordinary. The random moments are drawn from every minute, so the cards look the way a chart usually does.</p>
+  <a class="btn btn--primary btn--block" href="/replay/card">Start: <span class="num">{{ Figure(cards, "cards")|count }}</span> cards</a>
+{% endblock %}

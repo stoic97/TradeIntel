@@ -1,0 +1,11 @@
+{#- A period and book with no trades between them (TICKET-904): shown, not hidden, so a
+    book never seems to have gone missing. The filter bar above says what was chosen. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import button %}
+{% set nav = "scope" %}
+{% block content %}
+  <p class="label label--plain">Nothing in this choice</p>
+  <h1 class="title">No trades here</h1>
+  <p class="body">Your file has no trades for this period and book. Your other trades are all still here.</p>
+  <div class="screen__actions">{{ button("Show everything", href=report_filter.clear, block=true) }}</div>
+{% endblock %}

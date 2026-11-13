@@ -139,6 +139,11 @@ class PriorMinute:
 
 
 def _minute(ts: datetime) -> datetime:
+    if ts.utcoffset() is None:
+        raise ValueError(
+            "an entry timestamp must carry its time zone: read in the machine's own zone, "
+            "one history gives different minutes on different machines"
+        )
     return ts.astimezone(IST).replace(second=0, microsecond=0)
 
 

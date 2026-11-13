@@ -45,10 +45,12 @@ from services.shared.schemas import scope_v1 as s
 
 NOT_RECORDED = "—"
 FEED_LENGTH = 40
+TRAIL_LENGTH = 20
 MINUTE_MS = 60 * 1000
 ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
+VIEW_ACTION = "admin_view"
 MIRROR_LINE = "mirror_line"
 FILE_REAL, FILE_DEMO, FILE_NONE = "real", "demo", "none"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
@@ -89,6 +91,45 @@ def _span(ms: float | None) -> str:
 def _name(text: str) -> str:
     """A name is free text too, so even here the page keeps its one promise about rupees."""
     return text.replace(formatting.RUPEE, "")
+
+
+def _shown_id(login_id: str) -> str:
+    """A login id that is an email is someone's address, and this page gets screenshotted, so
+    it shows only enough to tell two apart."""
+    local, at, domain = login_id.partition("@")
+    return f"{local[:2]}…@{domain[:1]}…" if at and local and domain else login_id
+
+
+def _tallies(sess: Session) -> dict:
+    """The page's small counts in one statement, so a panel's tally doesn't cost a query of its own.
+
+    The load-budget test caps queries per load; page views, the last wrong-reports run and
+    deletions were three statements and are now one.
+    """
+    is_view = m.AdminAction.action == VIEW_ACTION
+    views, last_view, last_read, deleted, last_deleted = sess.execute(
+        select(func.count().filter(is_view), func.max(m.AdminAction.at).filter(is_view),
+               func.max(m.AdminAction.at).filter(m.AdminAction.action == "wrong_reports"),
+               select(func.count()).select_from(m.DeletionRecord).scalar_subquery(),
+               select(func.max(m.DeletionRecord.completed_at)).scalar_subquery())
+        .select_from(m.AdminAction)
+    ).one()
+    return {"views": views, "last_view": last_view, "last_read": last_read,
+            "deleted": deleted, "last_deleted": last_deleted}
+
+
+def _trail(sess: Session, accounts: list[tuple], tally: dict) -> tuple[list[dict], dict]:
+    """What admins did, newest first. Page views would crowd out the rest, so they are a count."""
+    ids = {f"trader:{a.id}": _shown_id(a.login_id) for a in accounts}
+    rows = sess.execute(
+        select(m.AdminAction.actor, m.AdminAction.action, m.AdminAction.target, m.AdminAction.at)
+        .where(m.AdminAction.action != VIEW_ACTION).order_by(m.AdminAction.at.desc(), m.AdminAction.id.desc())
+        .limit(TRAIL_LENGTH)
+    ).all()
+    return ([{"who": ids.get(actor, _name(actor)), "action": action,
+              "target": _name(_shown_id(target)) if target else NOT_RECORDED, "when": _when(at)}
+             for actor, action, target, at in rows],
+            {"count": tally["views"], "last": _when(tally["last_view"])})
 
 
 def _with_note(answer: str, noted: bool) -> str:
@@ -306,7 +347,7 @@ def _read_features(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
     return answers
 
 
-def _told(sess: Session, real: dict[int, _Reader], chapters: list[int]) -> dict:
+def _told(sess: Session, real: dict[int, _Reader], chapters: list[int], last_read: datetime | None) -> dict:
     """What traders said, in counts. Each trader's latest answer counts once. Notes are asked
     for only as present or not, so no typed word is ever fetched."""
     latest: dict[tuple[int, int], tuple[int, str]] = {}
@@ -332,7 +373,6 @@ def _told(sess: Session, real: dict[int, _Reader], chapters: list[int]) -> dict:
             "reasons": ", ".join(f"{label} {why.count(key)}" for key, label in FB.REASONS.items()
                                  if why.count(key)) or NOT_RECORDED,
         })
-    last_read = sess.scalar(select(func.max(m.AdminAction.at)).where(m.AdminAction.action == "wrong_reports"))
     whole: dict[int, str] = {}
     days, waiting = set(), 0
     for trader_id, answer, day, noted, at in sess.execute(
@@ -612,13 +652,13 @@ def _left_out(count: int) -> str:
 
 
 def build(sess: Session, *, running_version: str, production: bool, now: datetime | None = None,
-          last_looked: datetime | None = None) -> dict:
+          last_looked: datetime | None = None, admin_ids: frozenset[str] = frozenset()) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
                m.Trader.development_data).order_by(m.Trader.id)
     ).all()
-    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=a.login_id,
+    real = {a.id: _Reader(id=a.id, name=a.display_name, login_id=_shown_id(a.login_id),
                           signed_up=a.created_at, seen=[a.created_at] if a.created_at else [])
             for a in accounts if not a.development_data}
 
@@ -655,9 +695,8 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
         if trader_id in real:
             wtp_asked += 1
             real[trader_id].seen.append(at)
-    deleted, last_deleted = sess.execute(
-        select(func.count(), func.max(m.DeletionRecord.completed_at))
-    ).one()
+    tally = _tallies(sess)
+    deleted, last_deleted = tally["deleted"], tally["last_deleted"]
 
     feed_lines = (answer_lines + _feed_of_uploads(sess, real, imports)
                   + _feed_of_reading(sess, real) + _feed_of_joining(sess, real, accounts))
@@ -669,11 +708,15 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
             for r in sorted(real.values(), key=_last_seen, reverse=True)]
     on_real = [r for r in real.values() if r.file == FILE_REAL]
     on_demo = [r for r in real.values() if r.file == FILE_DEMO]
+    trail, admin_views = _trail(sess, accounts, tally)
     return {
         "new_since": {"last_looked": _when(last_looked) if last_looked else None,
                       "lines": admin_ladder.new_since(sess, real, imports, last_looked)},
         "ladder": admin_ladder.ladder(sess, real, imports, now=now or datetime.now(UTC),
                                       fact_of=fact_of),
+        "admins": sorted(_name(_shown_id(login_id)) for login_id in admin_ids),
+        "trail": trail,
+        "admin_views": admin_views,
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
         "feedback_chapters": feedback_chapters,
@@ -690,7 +733,7 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
         "rows": rows,
         "feed": _feed(feed_lines),
         "code_seen": _code_seen(imports),
-        "told": _told(sess, real, feedback_chapters),
+        "told": _told(sess, real, feedback_chapters, tally["last_read"]),
         "fact_table": _fact_table(on_real, on_demo),
         "quiet": {
             "most_opened": _most_opened(drawers),
@@ -701,7 +744,7 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
             "consent_declines": declines,
         },
         "dev_left_out": _left_out(sum(1 for a in accounts if a.development_data)),
-        "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(a.login_id),
+        "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(_shown_id(a.login_id)),
                           "joined": _when(a.created_at)}
                          for a in accounts if a.development_data],
     }

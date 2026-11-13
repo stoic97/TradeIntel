@@ -1621,6 +1621,79 @@ def test_the_new_styles_are_not_added_at_the_end_of_the_file():
     assert css.index(".admin__scroll") < css.index(".day-blocks__next")
 
 
+# ---------- Who can open this page, and what admins did [TICKET-873] ----------
+
+
+def add_action(sess, action, *, actor="ops", target=None, at=THEN):
+    sess.add(m.AdminAction(actor=actor, action=action, target=target, at=at))
+
+
+def test_an_email_login_id_is_shortened_in_the_table_and_the_feed(app, engine):
+    trader_id = add_trader(engine, "someone.long@example.com", name="Someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id)
+        sess.commit()
+    the_view = view(app, engine)
+    assert the_view["rows"][0]["login_id"] == "so…@e…"
+    assert "someone.long@example.com" not in str(the_view["feed"])
+    assert "someone.long@example.com" not in admin_page(app, engine)
+
+
+def test_a_login_id_that_is_no_email_is_shown_whole(app, engine):
+    add_trader(engine, "someone")
+    assert row_of(view(app, engine), "someone")["login_id"] == "someone"
+
+
+def test_a_development_email_is_shortened_too(app, engine):
+    add_trader(engine, "tester@example.com", dev=True)
+    assert view(app, engine)["dev_accounts"][0]["login_id"] == "te…@e…"
+
+
+def test_the_trail_lists_what_admins_did_newest_first_without_page_views(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "classify_real", target="a.person@example.com", at=THEN)
+        add_action(sess, "wrong_reports", at=THEN + timedelta(hours=1))
+        add_action(sess, "admin_view", at=THEN + timedelta(hours=2))
+        sess.commit()
+    trail = view(app, engine)["trail"]
+    assert [(t["action"], t["target"]) for t in trail] == [("wrong_reports", "—"), ("classify_real", "a.…@e…")]
+    assert trail[0]["who"] == "ops"
+
+
+def test_the_trail_names_an_admin_by_login_id_and_keeps_to_its_length(app, engine):
+    from services.production.api import admin_view
+    trader_id = add_trader(engine, "boss2")
+    with make_session(engine) as sess:
+        for n in range(admin_view.TRAIL_LENGTH + 5):
+            add_action(sess, "classify_real", actor=f"trader:{trader_id}", at=THEN + timedelta(minutes=n))
+        sess.commit()
+    trail = view(app, engine)["trail"]
+    assert len(trail) == admin_view.TRAIL_LENGTH
+    assert trail[0]["who"] == "boss2"
+
+
+def test_an_actor_whose_account_is_gone_is_left_as_stored(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "delete_trader", actor="trader:99999")
+        sess.commit()
+    assert view(app, engine)["trail"][0]["who"] == "trader:99999"
+
+
+def test_page_views_are_counted_apart(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "admin_view", at=THEN)
+        add_action(sess, "admin_view", at=THEN + timedelta(hours=1))
+        sess.commit()
+    quiet = view(app, engine)["admin_views"]
+    assert quiet["count"] == 2 and quiet["last"].startswith("02 Mar 2026")
+
+
+def test_the_page_lists_who_can_open_it_shortened_and_the_trail(app, engine):
+    page = admin_page(app, engine)
+    assert "Who can open this page" in page and ADMIN in page
+    assert "What admins have done" in page
+
+
 # ---------- What traders told us [TICKET-876] ----------
 
 
@@ -1728,3 +1801,30 @@ def test_the_count_of_those_left_out_is_above_the_cards(app, engine):
     add_trader(engine, "tester", dev=True)
     page = admin_page(app, engine)
     assert page.index("1 development account is left out") < page.index("Signed up")
+
+
+# ---------- Reaching the reveal and coming back [TICKET-878] ----------
+# Decided 6 Nov: the reveal writes nothing, so it has no line; a visit that writes nothing isn't
+# known, and the page says so where "came back" is counted. No new event is recorded.
+
+
+def test_the_ladder_has_no_reveal_line(app, engine):
+    add_trader(engine, "someone")
+    labels = [line["label"] for line in view(app, engine)["ladder"]]
+    assert not any("reveal" in label.lower() for label in labels)
+    assert "Reached the reveal" not in admin_page(app, engine)
+
+
+def test_beside_came_back_the_page_says_visits_are_not_known(app, engine):
+    add_trader(engine, "someone")
+    page = admin_page(app, engine).replace("&#39;", "'")
+    ladder_at = page.index("Came back on a later day")
+    note_at = page.index("Visits aren't known")
+    assert ladder_at < note_at < page.index("System health")
+    assert "reveal writes nothing" in page[note_at:page.index("System health")]
+
+
+def test_no_visit_or_reveal_event_is_recorded():
+    from services.production.api import routes_events
+    source = Path(routes_events.__file__).read_text(encoding="utf-8").lower()
+    assert "visit" not in source and "reveal" not in source

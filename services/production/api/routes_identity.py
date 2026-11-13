@@ -75,6 +75,8 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
 
         context["demo"] = demo.LINE if _drawn_from_demo(request, session, context) else None
     context.setdefault("stale_import_id", _read_again_offer(request, session, context))
+    # The report's year and book filter (report_filter), set where the record was loaded.
+    context.setdefault("report_filter", getattr(request.state, "report_filter", None))
     return _templates(request).TemplateResponse(
         request=request, name=name, context=context, status_code=status_code
     )

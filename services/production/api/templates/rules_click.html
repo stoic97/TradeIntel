@@ -1,0 +1,35 @@
+{#- Screen B, before a trade (TICKET-922): book, then reason, two taps, before the result
+    exists. Matched to a fill on the next upload. Then his own record in that book, as
+    counts, and what a round trip has cost him when his file says. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import money %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/rules">‹ Rules you set</a></p>
+  <h1 class="title">Before a trade</h1>
+  {%- if noted %}
+  <p class="lead">Noted: {{ noted.book }}, {{ noted.reason }}.</p>
+  <p class="body">In {{ noted.book }} your file has <span class="num">{{ Figure(noted.trades, "trades")|count }}</span> {{ "trade" if noted.trades == 1 else "trades" }}, <span class="num">{{ Figure(noted.won, "trades")|count }}</span> of them winners.</p>
+  {%- if noted.cost is not none %}
+  <p class="body">Charges on a round trip there average {{ money(noted.cost, signed=false) }}. That much is certain before you click.</p>
+  {%- else %}
+  <p class="body">Your file has no charges, so what a round trip costs isn't known here.</p>
+  {%- endif %}
+  <p class="body-small">It will be matched to the trade you open next in that book, when you next upload.</p>
+  {%- elif book is none %}
+  <p class="body">Which book?</p>
+  <ul class="door__answers">
+    {%- for b in books %}
+    <li><a class="btn btn--pill-small" href="/rules/click?book={{ b|urlencode }}">{{ b }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  <p class="body">{{ book }}. And the reason?</p>
+  <form method="post" action="/rules/click" class="rules__chips">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="book" value="{{ book }}">
+    {%- for r in reasons %}
+    <button class="btn btn--pill-small" type="submit" name="reason" value="{{ r }}">{{ r }}</button>
+    {%- endfor %}
+  </form>
+  {%- endif %}
+{% endblock %}
