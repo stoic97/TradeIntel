@@ -3,6 +3,7 @@
     (T7). A first upload's days are all new, so its list is plain; a later one
     compares each day with what was there before. -#}
 {% extends "layout.html" %}
+{% from "_components.html" import money %}
 {% macro counted(n, one, many) %}{{ Figure(n, many)|count }} {{ one if n == 1 else many }}{% endmacro %}
 {% block content %}
   <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
@@ -15,6 +16,20 @@
   {%- if read_again %}
   <p class="lead">This is the same file, read with newer code. Your figures may differ from before.</p>
   <p class="body"><span class="num">{{ Figure(imp.trips_reconstructed, "trades")|count }}</span> {{ "trade" if imp.trips_reconstructed == 1 else "trades" }} now, <span class="num">{{ Figure(trades_before, "trades")|count }}</span> before.</p>
+  {%- if moved %}
+  <section class="import__section">
+    <h2 class="card-title">What moved</h2>
+    <table class="table"><thead><tr><th class="table__wide"></th><th class="table__num">Before</th><th class="table__num">Now</th></tr></thead>
+      <tbody>
+      {%- for row in moved %}
+        <tr><td class="table__text">{{ row.label }}</td><td class="table__num">{% if row.was is not none %}{{ money(row.was) }}{% else %}—{% endif %}</td><td class="table__num">{% if row.now is not none %}{{ money(row.now) }}{% else %}—{% endif %}</td></tr>
+      {%- endfor %}
+      </tbody></table>
+    <p class="body-small">Both are your file. Before is how Scope read it then; now is how it reads it today.</p>
+  </section>
+  {%- else %}
+  <p class="body">No rupee figure in your report moved.</p>
+  {%- endif %}
   {%- endif %}
   {%- if rows_confirmed is defined and rows_confirmed %}
   <p class="lead">You told us <span class="num">{{ Figure(rows_confirmed, "rows")|count }}</span> {{ "row repeats" if rows_confirmed == 1 else "rows repeat" }} a trade already in the file. {{ "It is" if rows_confirmed == 1 else "They are" }} set aside, and your figures were rebuilt without {{ "it" if rows_confirmed == 1 else "them" }}.</p>

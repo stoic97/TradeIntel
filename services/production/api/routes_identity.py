@@ -70,6 +70,7 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
         from services.production import demo
 
         context["demo"] = demo.LINE if _drawn_from_demo(request, session, context) else None
+    context.setdefault("stale_import_id", _read_again_offer(request, session, context))
     return _templates(request).TemplateResponse(
         request=request, name=name, context=context, status_code=status_code
     )
@@ -91,6 +92,24 @@ def _drawn_from_demo(request: Request, session, context: dict) -> bool:
     with make_session(request.app.state.engine) as sess:
         trader = sess.get(m.Trader, session.trader_id)
         return trader is not None and demo.is_demo(demo.current_import(sess, trader))
+
+
+def _read_again_offer(request: Request, session, context: dict) -> int | None:
+    """The import to offer a re-read of, on any page drawn from his current import.
+
+    Asked of ``pipeline.out_of_date``, the one check the read-again route and the admin page
+    ask too, never the deploy. Only the import the report reads can be read again, so a page
+    about an older upload offers nothing. The page itself is never blocked.
+    """
+    imp = context.get("imp")
+    if session is None or imp is None or not getattr(imp, "id", None):
+        return None
+    if not pl.out_of_date(imp):
+        return None
+    with make_session(request.app.state.engine) as sess:
+        trader = sess.get(m.Trader, session.trader_id)
+        current = loader.current_import(sess, trader) if trader else None
+    return imp.id if current is not None and current.id == imp.id else None
 
 
 def require_csrf(request: Request, token: str | None) -> bool:
