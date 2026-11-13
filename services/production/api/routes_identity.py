@@ -147,7 +147,7 @@ def landing_for(sess, trader: m.Trader) -> str:
     through - import check, guess, reveal, one number (handoff 5) - the import check
     of the upload his record comes from, which starts the walk: not simply his latest
     upload, which may be a file we refused and whose page has no way on. Once he has
-    been through it, home. A guess or a number on record says he has: in production
+    been through it, home. A guess, a number, or a report page he has opened says he has (TICKET-903: the number left the walk): in production
     the guess is skipped until its labels are frozen (TR-009), and the number is the
     walk's last step either way. With uploads but no record, his latest, which says
     why.
@@ -164,7 +164,7 @@ def landing_for(sess, trader: m.Trader) -> str:
         return f"/imports/{refused.id}" if refused is not None else "/upload"
     walked = any(
         sess.scalars(select(model.id).where(model.trader_id == trader.id)).first() is not None
-        for model in (m.GuessAnswer, m.RiskBudgetDeclaration)
+        for model in (m.GuessAnswer, m.RiskBudgetDeclaration, m.DwellEvent)
     )
     return "/" if walked else f"/imports/{record.id}"
 

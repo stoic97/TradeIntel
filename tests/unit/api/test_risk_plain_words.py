@@ -102,9 +102,10 @@ def test_with_a_budget_it_does_not():
     assert "Set your number" not in fact_page("risk", budget())
 
 
-def test_it_goes_on_to_the_last_fact():
-    assert 'href="/mirror/fact/not-told"' in fact_page("risk", nothing())
-    assert 'href="/mirror/fact/not-told"' in fact_page("risk", budget())
+def test_its_way_on_is_the_spines_not_its_own():
+    """TICKET-903: Next comes from scope_map on every report page (test_report_spine)."""
+    assert "Next: what we have not told you" not in fact_page("risk", nothing())
+    assert "Next: what we have not told you" not in fact_page("risk", budget())
 
 
 def test_the_table_uses_the_new_label():

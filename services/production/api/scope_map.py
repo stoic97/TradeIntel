@@ -153,6 +153,92 @@ def see_all_href(key: str, **filters) -> str:
     return _with(f"/mirror/fact/{key}/trades", **filters)
 
 
+# ---------- The report's pages, in order (TICKET-903) ----------
+# One order, read from here and nowhere else: the rail, Previous and Next, All pages, Continue,
+# each chapter's way on, and the reveal's. Rikk's ruling of 13 Nov 2026 (round 2, section N):
+# the pages are the facts, chapter by chapter; Next says so when it crosses into a new chapter,
+# and the last page hands over to the Journal, not Home.
+
+PAGES: tuple[Fact, ...] = tuple(f for c in CHAPTERS for f in c.facts)
+
+LAST_STEP = {
+    "key": None,
+    "small": "You've read the report",
+    "title": "Start with your days worth a look",
+    "label": "You've read the report. Start with your days worth a look.",
+    "href": "/journals",
+}
+
+
+def page_number(key: str) -> int:
+    """A page's place in the report, counted from 1."""
+    return [f.key for f in PAGES].index(key) + 1
+
+
+def _step(to: Fact, small: str) -> dict:
+    return {"key": to.key, "small": small, "title": to.title, "label": f"{small}: {to.title}",
+            "href": fact_href(to.key)}
+
+
+def previous_step(key: str) -> dict | None:
+    i = page_number(key) - 1
+    return _step(PAGES[i - 1], "Previous") if i > 0 else None
+
+
+def next_step(key: str) -> dict:
+    i = page_number(key) - 1
+    if i + 1 == len(PAGES):
+        return dict(LAST_STEP)
+    to = PAGES[i + 1]
+    there = chapter_of(to.key)[0].number
+    crosses = there != chapter_of(key)[0].number
+    return _step(to, f"Next, chapter {there}" if crosses else "Next")
+
+
+def chapter_step(n: int) -> dict:
+    """A chapter's overview goes on to its own first page."""
+    return _step(chapter(n).facts[0], "Next")
+
+
+def read_from(keys) -> frozenset[str]:
+    """The pages read, from the dwell keys kept: a page's own key, or the long page's old key
+    for it (OLD_DWELL_LINES)."""
+    return frozenset(OLD_DWELL_LINES.get(k, k) for k in keys) & frozenset(FACTS)
+
+
+def continue_step(read: frozenset[str]) -> dict | None:
+    """The first page not yet read, by name; None once every page has been read."""
+    for f in PAGES:
+        if f.key not in read:
+            return {"key": f.key, "label": f"Continue: {f.title}", "href": fact_href(f.key)}
+    return None
+
+
+def back_from(key: str | None) -> dict:
+    """Where a Journal goes back to: the report page that opened it, or Home when that is not
+    one of the report's pages (Rikk, 13 Nov 2026)."""
+    if key in FACTS:
+        return {"href": fact_href(key, lens=False), "title": FACTS[key].title}
+    return {"href": "/", "title": "Home"}
+
+
+def spine(key: str, read: frozenset[str]) -> dict:
+    """What a report page draws around itself: the rail, Previous and Next, All pages."""
+    return {
+        "number": page_number(key),
+        "total": len(PAGES),
+        "previous": previous_step(key),
+        "next": next_step(key),
+        "chapters": [
+            {"number": c.number, "name": c.name, "pages": [
+                {"key": f.key, "title": f.title, "number": page_number(f.key),
+                 "href": fact_href(f.key), "read": f.key in read, "current": f.key == key}
+                for f in c.facts]}
+            for c in CHAPTERS
+        ],
+    }
+
+
 # ---------- The trades behind each fact ----------
 
 INLINE_TRADES = 30

@@ -202,7 +202,7 @@ def _journals(engine, **versions) -> None:
 def test_the_journal_step_opens_on_the_flagged_day(client, engine):
     _journals(engine)
     steps = section(client.get(PAGE).text, "steps")
-    opened = re.findall(r'href="/journals/(\d+)"', steps)
+    opened = re.findall(r'href="/journals/(\d+)\?from=not-told"', steps)  # TICKET-903
     assert len(opened) == 1
     with make_session(engine) as sess:
         assert sess.get(m.Journal, int(opened[0])).period_start
@@ -212,7 +212,7 @@ def test_the_flagged_day_opens_on_its_latest_version(client, engine):
     _journals(engine, top=2)
     with make_session(engine) as sess:
         latest = {j.id for j in sess.scalars(select(m.Journal).where(m.Journal.version_no == 2))}
-    opened = re.findall(r'href="/journals/(\d+)"', section(client.get(PAGE).text, "steps"))
+    opened = re.findall(r'href="/journals/(\d+)\?from=not-told"', section(client.get(PAGE).text, "steps"))
     assert opened and {int(i) for i in opened} <= latest
 
 

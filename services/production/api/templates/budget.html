@@ -36,7 +36,6 @@
     <label class="field"><span class="field__label">Has that been your number for the whole history you uploaded? If it changed, from when?</span><input class="field__input field__input--mono" type="date" id="effective_from" name="effective_from" max="{{ today }}" value="{{ default_from }}" required><span class="field__hint">Trades before this date keep whatever number was in force then. Set an earlier date if this has been your number all along.</span></label>
     <div class="screen__actions">
       {{ button("Record it", block=true) }}
-      {{ button("Next: what we can and cannot check on your history", href="/eligibility", kind="text") }}
     </div>
   </form>
   {%- if declarations %}

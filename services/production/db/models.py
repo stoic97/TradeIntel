@@ -113,6 +113,9 @@ class Import(Base, _InsertOnly):
     id: Mapped[int] = mapped_column(primary_key=True)
     trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
     raw_file_id: Mapped[int] = mapped_column(ForeignKey("raw_file.id"))
+    # Every raw file this reading read, oldest first, as a JSON list of ids, when it read
+    # more than one (a Groww trader's stocks and F&O files). Empty: ``raw_file_id`` alone.
+    reads_files: Mapped[str | None] = mapped_column(Text)
     source_account: Mapped[str] = mapped_column(String(100))
     export_date: Mapped[str | None] = mapped_column(String(10))
     export_date_source: Mapped[str | None] = mapped_column(String(16))

@@ -64,7 +64,7 @@ def _col(i: int) -> str:
     return "ABCDEFGHIJ"[i]
 
 
-def sheet_and_strings() -> tuple[str, str]:
+def sheet_and_strings(orders: list[tuple] | None = None) -> tuple[str, str]:
     strings: list[str] = []
 
     def s(text: str) -> int:
@@ -73,7 +73,7 @@ def sheet_and_strings() -> tuple[str, str]:
         return strings.index(text)
 
     rows = [*PREAMBLE, HEADER]
-    for n, (name, sym, isin, side, qty, value, exch, when, status) in enumerate(ORDERS):
+    for n, (name, sym, isin, side, qty, value, exch, when, status) in enumerate(orders or ORDERS):
         rows.append([name, sym, isin, side, qty, value, exch, f"{1000000000000000 + n * 7919}", when, status])
 
     out = []
@@ -127,10 +127,11 @@ PARTS = {
 }
 
 
-def build() -> bytes:
+def build(orders: list[tuple] | None = None) -> bytes:
+    """The workbook; `orders` picks a subset, e.g. only the shares, as a test needs."""
     import io
 
-    sheet, shared = sheet_and_strings()
+    sheet, shared = sheet_and_strings(orders)
     parts = {**PARTS, "xl/worksheets/sheet1.xml": sheet, "xl/sharedStrings.xml": shared}
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as book:

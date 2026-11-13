@@ -131,7 +131,7 @@ def test_one_day_reads_in_the_singular():
 
 
 def test_the_button_says_where_it_goes():
-    assert '<a class="btn btn--text-on-navy" href="/budget">Next: what you risk</a>' in reveal(TRIPS)
+    assert 'href="/budget"' not in reveal(TRIPS)  # TICKET-903: its one way on is the report
     assert ">Continue<" not in reveal(TRIPS)
 
 
