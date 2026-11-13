@@ -29,7 +29,12 @@ import numpy as np
 from services.research.engine import evidence as ev
 from services.research.engine import zones as zn
 from services.research.models import m1
-from services.research.models.base import FitConfig, FitResult, failing_parameters
+from services.research.models.base import (
+    FitConfig,
+    FitResult,
+    failing_parameters,
+    fit_escalating,
+)
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 
 TEST_ID = "B2"
@@ -81,8 +86,10 @@ def run(
 
     train_data = _m1_data(obs, zones.training, in_pop, cond)
     hold_data = _m1_data(obs, zones.isolation, in_pop, cond)
-    train = m1.fit(train_data, priors, config, keep_samples=True)
-    hold = m1.fit(hold_data, priors, config, keep_samples=True)
+    # One escalated attempt each when the diagnostics refuse the first. A Finding
+    # killed on diagnostics has to be killed after the harder budget, not before it.
+    train = fit_escalating(m1.fit, train_data, priors, config, keep_samples=True)
+    hold = fit_escalating(m1.fit, hold_data, priors, config, keep_samples=True)
     assert train.samples is not None and hold.samples is not None
 
     core = ev.statistical_core(train.samples["theta"], hold.samples["theta"], DIRECTION, THETA_MIN)
