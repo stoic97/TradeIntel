@@ -314,3 +314,4 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .door__row dt { margin: 0; }
 .door__row dd { margin: 0; }
 .door__sample { margin-bottom: var(--space-8); }
+.replay__chart { width: 100%; height: auto; margin: var(--space-4) 0; color: var(--color-navy); }

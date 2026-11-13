@@ -35,6 +35,7 @@ from services.production.api import (
     routes_identity,
     routes_journal,
     routes_mirror,
+    routes_replay,
     routes_reveal,
     routes_sample,
     routes_upload,
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_mirror.router)
     app.include_router(routes_sample.router)
     app.include_router(routes_reveal.router)
+    app.include_router(routes_replay.router)
     app.include_router(routes_events.router)
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
