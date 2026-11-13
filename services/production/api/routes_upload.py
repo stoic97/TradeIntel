@@ -119,10 +119,12 @@ def _same_file_again(sess, trader: m.Trader, digest: str) -> tuple[str, int | No
     current = loader.current_import(sess, trader)
     if current is None:
         return said, None
-    if sess.get(m.RawFile, current.raw_file_id).sha256 == digest:
+    read_now = persist.files_read(sess, current)
+    if digest in {raw.sha256 for raw in read_now}:
         return said, current.id if pl.out_of_date(current) else None
-    reads = _first_upload(sess, trader, sess.get(m.RawFile, current.raw_file_id).sha256)
-    return f"{said} Your record now reads {reads.original_name}, from {_when(reads)}.", None
+    named_now = [_first_upload(sess, trader, raw.sha256) for raw in read_now]
+    reads = " and ".join(f"{raw.original_name}, from {_when(raw)}" for raw in named_now)
+    return f"{said} Your record now reads {reads}.", None
 
 
 @router.post("/upload")
@@ -201,6 +203,33 @@ def upload_demo(request: Request, csrf_token: str = Form(None)):
                        source_account=demo.ACCOUNT)
 
 
+def _texts_of(request: Request, sess, imp: m.Import) -> list[tuple[m.RawFile, str]]:
+    """Every file a reading read, with its text, oldest first."""
+    return [(raw, pl.text_of(_store(request).get(raw.sha256)))
+            for raw in persist.files_read(sess, imp)]
+
+
+def _read_with(request: Request, sess, trader: m.Trader, text: str,
+               source_account: str) -> list[tuple[m.RawFile, str]]:
+    """The record's files this upload is read together with (TICKET-926).
+
+    A Groww trader's stocks and F&O come as two files with one header: the second is
+    read with the first, not instead of it. ``pipeline.files_kept`` decides which stay;
+    the demo is never added to, and a stored file that can't be opened adds nothing.
+    """
+    if source_account == demo.ACCOUNT:
+        return []
+    current = persist.current_reading(sess, trader, source_account)
+    if current is None:
+        return []
+    try:
+        record = _texts_of(request, sess, current)
+    except (NoSuchFile, CannotDecrypt):
+        logger.exception("import %s: a stored file could not be opened to add to", current.id)
+        return []
+    return [record[at] for at in pl.files_kept([t for _, t in record], text)]
+
+
 def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_name: str,
             export_date: str | None, source_account: str):
     """Store the file, plan it, write it and its Journals: one path for every upload.
@@ -210,7 +239,10 @@ def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_na
     A real file refused outright leaves the demo where it was.
     """
     stored = _store(request).put(content)
-    text = content.decode("utf-8-sig", errors="replace")
+    text = pl.text_of(content)
+    read_with = _read_with(request, sess, trader, text, source_account)
+    if read_with:
+        text = pl.combine([*(t for _, t in read_with), text])
     existing = persist.existing_days(sess, trader=trader, source_account=source_account)
     # In production the pipeline refuses a file whose broker map nobody has
     # checked, which is right: a rejection built from a guessed map names an
@@ -241,7 +273,7 @@ def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_na
     imp = persist.write_plan(
         sess, trader=trader, plan=plan, raw_sha256=stored.sha256,
         original_name=file_name, stored_path=str(stored.path), size=stored.size,
-        source_account=source_account,
+        source_account=source_account, also_reads=tuple(raw for raw, _ in read_with),
     )
     sess.commit()
     gen.for_import(sess, trader=trader)
@@ -307,6 +339,7 @@ def import_review(request: Request, import_id: int):
         confirmed = [r for r in rows if r.flag is s.RowFlag.TRADER_CONFIRMED_DUPLICATE]
         return page(request, "import_review.html", title="What we read",
                     imp=imp, groups=groups, excluded=excluded, rejected=rejected,
+                    files=persist.files_read(sess, imp),
                     days=days, first_upload=first_upload, changed_days=changed_days,
                     shrunk_days=shrunk_days, read_again=read_again,
                     same_file=persist.reads_same_file_as_before(sess, imp),
@@ -386,6 +419,7 @@ def confirm_duplicates(request: Request, import_id: int,
                         title="Not open for your broker yet")
 
         new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
+                                           reads=persist.files_read(sess, current),
                                            source_account=current.source_account)
         gen.for_import(sess, trader=trader)
         sess.commit()
@@ -438,6 +472,7 @@ def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
 
         try:
             new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
+                                               reads=persist.files_read(sess, current),
                                                source_account=current.source_account)
             gen.for_import(sess, trader=trader)
             sess.commit()
@@ -455,8 +490,11 @@ def _not_read_again(request: Request, status_code: int, sentence: str):
 
 def _read_stored(request: Request, sess, trader: m.Trader, imp: m.Import, raw: m.RawFile,
                  also_confirm: tuple[str, ...] = ()) -> pl.ImportPlan:
-    """A new plan of an import's stored file, keeping what was stated and confirmed on it."""
-    text = _store(request).get(raw.sha256).decode("utf-8-sig", errors="replace")
+    """A new plan of an import's stored files, keeping what was stated and confirmed on it.
+
+    Every file the reading read, together, as when they were uploaded (TICKET-926).
+    """
+    text = pl.combine([t for _, t in _texts_of(request, sess, imp)])
     return pl.plan_import(
         text,
         context=pl.ImportContext(

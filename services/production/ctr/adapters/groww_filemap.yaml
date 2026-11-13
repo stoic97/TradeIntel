@@ -1,0 +1,35 @@
+# Groww's exports (TICKET-895). Written from one real "Order history" download held on
+# 13 Nov 2026 (an Excel file whose own title line reads "Order history for stocks from
+# <date> to <date>"), and from Groww's help centre for where the reports sit: Profile,
+# then Reports, with Order history under Transactions. The F&O order history has the same
+# header (founder, 13 Nov 2026).
+broker: Groww
+adapter_id: groww_orders_v1
+version: "1"
+verified: true
+verified_on: '2026-11-13'
+# Units, as the exchanges count them: shares are whole shares (the real file), and an
+# F&O quantity is the exchange's contract quantity, a whole number of lots in units (one
+# NIFTY lot is 65). The size check still raises MisdeclaredQuantityUnit on a quantity no
+# lot size divides, rather than printing a size that is wrong.
+quantity_unit: units
+exports:
+  - broker_name: Order history
+    where_it_lives: Profile, then Reports, under Transactions
+    is_the_one_we_need: true
+    note: >
+      Every executed order with its date and time to the minute, quantity, total value
+      and exchange order id. No price column (the value is the total) and no charges.
+      This is the file the engine reads.
+  - broker_name: Stocks P&L
+    where_it_lives: Profile, then Reports, under Profit & Loss
+    is_the_one_we_need: false
+    note: Realised profit per stock. No times, no individual orders. Not usable.
+  - broker_name: F&O P&L
+    where_it_lives: Profile, then Reports, under Profit & Loss
+    is_the_one_we_need: false
+    note: Net profit per contract. No times, no individual orders. Not usable.
+  - broker_name: Ledger
+    where_it_lives: Profile, then Reports
+    is_the_one_we_need: false
+    note: Funds in and out. Not trades at all.

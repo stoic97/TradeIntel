@@ -18,7 +18,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from services.production.accounts import risk_budget as rb
-from services.production.ctr.adapters import dhan_tradebook
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
@@ -157,15 +156,16 @@ def expiries_for(sess: Session, imp: m.Import) -> dict[tuple, date | None]:
     The same contract at the same instant under two expiries cannot be told apart, so it
     has no expiry here rather than a guessed one.
     """
-    if imp.adapter_id != dhan_tradebook.FORMAT_ID:
+    adapter = oc.adapter_for(imp.adapter_id)
+    if adapter is None:
         return {}
     raw = sess.scalars(
         select(m.ImportRow.raw_text).where(m.ImportRow.import_id == imp.id,
                                            m.ImportRow.status == "PARSED")
         .order_by(m.ImportRow.row_no)
     ).all()
-    header = ",".join(dhan_tradebook.HEADER)
-    parsed = dhan_tradebook.parse([header, *raw], trader_id="expiry", raw_hash="0" * 64)  # read, not kept
+    header = ",".join(adapter.header)
+    parsed = adapter.parse([header, *raw], trader_id="expiry", raw_hash="0" * 64)  # read, not kept
     expiries: dict[tuple, date | None] = {}
     for fill in parsed.fills:
         if fill.expiry is None:

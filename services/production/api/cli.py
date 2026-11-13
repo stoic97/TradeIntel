@@ -176,7 +176,8 @@ def cmd_delete_trader(args: argparse.Namespace) -> None:
 
 def cmd_import(args: argparse.Namespace) -> None:
     path = Path(args.file)
-    text = path.read_text()
+    content = path.read_bytes()
+    text = pl.text_of(content)
     engine = make_engine(args.db)
     run_migrations(engine)
 
@@ -189,7 +190,7 @@ def cmd_import(args: argparse.Namespace) -> None:
         # it was found. ADR-007 says raw files are encrypted at rest; this is the
         # path that was not.
         store = file_store()
-        kept = store.put(text.encode("utf-8"))
+        kept = store.put(content)
         digest = kept.sha256
 
         existing = persist.existing_days(

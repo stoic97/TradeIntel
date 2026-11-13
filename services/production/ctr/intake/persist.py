@@ -115,8 +115,13 @@ def write_plan(
     stored_path: str,
     size: int,
     source_account: str = "A",
+    also_reads: tuple[m.RawFile, ...] = (),
 ) -> m.Import:
-    """Record the file, write the plan and return the import row it produced."""
+    """Record the file, write the plan and return the import row it produced.
+
+    ``also_reads`` are the record's files this upload was read together with
+    (``pipeline.files_kept``); the new file is the last of them.
+    """
     raw = m.RawFile(
         trader_id=trader.id,
         sha256=raw_sha256,
@@ -127,7 +132,8 @@ def write_plan(
     )
     sess.add(raw)
     sess.flush()
-    return write_reading(sess, trader=trader, plan=plan, raw=raw, source_account=source_account)
+    return write_reading(sess, trader=trader, plan=plan, raw=raw, source_account=source_account,
+                         reads=(*also_reads, raw) if also_reads else ())
 
 
 def confirmed_groups(sess: Session, imp: m.Import) -> set[str]:
@@ -163,10 +169,28 @@ def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
     ).first()
 
 
+def files_read(sess: Session, imp: m.Import) -> list[m.RawFile]:
+    """Every file this reading read, oldest first: its own, or all it was read together with."""
+    if imp.reads_files:
+        return [sess.get(m.RawFile, file_id) for file_id in json.loads(imp.reads_files)]
+    return [sess.get(m.RawFile, imp.raw_file_id)]
+
+
+def current_reading(sess: Session, trader: m.Trader, source_account: str) -> m.Import | None:
+    """The latest reading of this source account that has trades: what an upload adds to."""
+    return sess.scalars(
+        select(m.Import)
+        .join(m.Trip, m.Trip.import_id == m.Import.id)
+        .where(m.Import.trader_id == trader.id, m.Import.source_account == source_account)
+        .order_by(m.Import.id.desc())
+        .limit(1)
+    ).first()
+
+
 def same_file(sess: Session, one: m.Import, other: m.Import) -> bool:
     """Whether two imports read the same bytes. Older confirmations each wrote a ``RawFile``."""
-    return (sess.get(m.RawFile, one.raw_file_id).sha256
-            == sess.get(m.RawFile, other.raw_file_id).sha256)
+    return ([f.sha256 for f in files_read(sess, one)]
+            == [f.sha256 for f in files_read(sess, other)])
 
 
 def reads_same_file_as_before(sess: Session, imp: m.Import) -> bool:
@@ -191,9 +215,13 @@ def read_with_newer_code(sess: Session, imp: m.Import) -> bool:
 
 
 def write_reading(
-    sess: Session, *, trader: m.Trader, plan: ImportPlan, raw: m.RawFile, source_account: str
+    sess: Session, *, trader: m.Trader, plan: ImportPlan, raw: m.RawFile, source_account: str,
+    reads: tuple[m.RawFile, ...] | list[m.RawFile] = (),
 ) -> m.Import:
-    """Write the plan as a new version, reading ``raw``. Nothing earlier is touched."""
+    """Write the plan as a new version, reading ``raw``. Nothing earlier is touched.
+
+    ``reads`` names every file the plan was read from when there was more than one.
+    """
     now = datetime.now(UTC)
 
     version_no, supersedes = _next_version(sess, trader, source_account)
@@ -201,6 +229,7 @@ def write_reading(
     imp = m.Import(
         trader_id=trader.id,
         raw_file_id=raw.id,
+        reads_files=json.dumps([f.id for f in reads]) if len(reads) > 1 else None,
         source_account=source_account,
         export_date=plan.export_date,
         export_date_source=plan.export_date_source,
