@@ -12,6 +12,7 @@ argument is that he should not have to.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -19,6 +20,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
+from services.production.api import formatting
+from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
 from services.production.api import trade_list as TL
@@ -67,6 +70,7 @@ def load_record(request: Request):
 
         try:
             trips, imp = loader.load_for(sess, trader)
+            new_days = None if is_sample(request) or imp is None else _new_days(sess, imp)
         except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
@@ -74,7 +78,41 @@ def load_record(request: Request):
                         reason=str(exc)), None
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
-        return None, (trips, imp, SF.record_context(trips))
+        if is_sample(request):
+            return None, (trips, imp, SF.record_context(trips))
+        chosen = RF.valid(RF.decode(request.cookies.get(RF.COOKIE)), trips, new_days)
+        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path)
+        request.state.history = trips
+        shown = RF.apply(trips, chosen, new_days)
+        if not shown:
+            return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
+                        report_filter=request.state.report_filter), None
+        return None, (shown, imp, SF.record_context(shown))
+
+
+def _new_days(sess, imp) -> set[str] | None:
+    """The days the latest upload added: its day versions with no rows before them. None when
+    there was no upload before it to be "since". A file read again adds no days."""
+    earlier = persist.earlier_reading(sess, imp)
+    if earlier is None or persist.same_file(sess, imp, earlier):
+        return None
+    return set(sess.scalars(select(m.TradingDayVersion.trading_day).where(
+        m.TradingDayVersion.import_id == imp.id,
+        m.TradingDayVersion.rows_before == 0)))
+
+
+@router.get("/mirror/filter")
+def choose_filter(request: Request, period: str = RF.ALL, book: str = "", next: str = "/mirror"):
+    """Remember the chosen period and book, then go back to the page it was chosen on. Only a
+    report address is gone back to; anything else goes to the report's home."""
+    back = next if next.startswith("/mirror") and "//" not in next else "/mirror"
+    response = RedirectResponse(back, status_code=303)
+    chosen = RF.ReportFilter(period or RF.ALL, book or None)
+    if chosen.active:
+        response.set_cookie(RF.COOKIE, chosen.encode(), httponly=True, samesite="lax", path="/")
+    else:
+        response.delete_cookie(RF.COOKIE, path="/")
+    return response
 
 
 ENTER = {"in": "vt-in vt-tap-{tap}", "out": "vt-out vt-tap-{tap}", "lens": "vt-lens",
@@ -110,7 +148,12 @@ def scope_home(request: Request):
         charges = charge_record.build(sess, trader, imp)
         declared = rb.in_force(rb.for_trader(sess, trader), trader_today().isoformat())
         number = rb.rupees(declared)
+    history = getattr(request.state, "history", None) or trips
+    bar = getattr(request.state, "report_filter", None)
+    filter_books = {} if bar is None else {
+        b["label"]: b["href"] for b in bar["books"] if b["label"] != "All books"}
     return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
+                by_year=RF.by_year(history), filter_books=filter_books,
                 imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
                 charges=charges,
                 **SF.home_context(context, imp, _opened_chapters(request), number=number))
@@ -361,6 +404,30 @@ def day_feedback(request: Request, trading_day: str = Form(None), note: str = Fo
         sess.commit()
     return RedirectResponse(f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}",
                             status_code=303)
+
+
+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+@router.get("/mirror/day/{iso}", response_class=HTMLResponse)
+def trading_day(request: Request, iso: str):
+    """One trading day: every trade opened that day, and its journal (TICKET-905). Any date the
+    report writes opens here. A day his record doesn't hold is not found."""
+    if not DAY.fullmatch(iso):
+        raise HTTPException(status_code=404)
+    early, record = load_record(request)
+    if early is not None:
+        return early
+    trips, imp, context = record
+    that_day = [t for t in trips if t.trading_day == iso]
+    if not that_day:
+        raise HTTPException(status_code=404)
+    with make_session(request.app.state.engine) as sess:
+        opens = _journal_ids(sess, reader(request, sess), {iso})
+    return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
+                when=formatting.day(iso), count=len(that_day),
+                groups=SM.groups("busiest", context, only=that_day),
+                journal_href=f"/journals/{opens[iso]}" if iso in opens else None)
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)

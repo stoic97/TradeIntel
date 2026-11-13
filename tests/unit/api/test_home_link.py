@@ -69,11 +69,14 @@ def params(engine) -> dict[str, list[str]]:
         imp = demo.demo_import(sess, trader)
         journal = sess.scalars(select(m.Journal.id).where(m.Journal.import_id == imp.id)
                                .order_by(m.Journal.id)).first()
+        from services.production.mirror import loader
+        day = loader.load_for(sess, trader)[0][0].trading_day
     return {
         "import_id": [str(imp.id)],
         "journal_id": [str(journal)],
         "n": [str(c.number) for c in S.CHAPTERS],
         "key": list(S.FACTS),
+        "iso": [str(day)],
     }
 
 

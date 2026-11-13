@@ -61,7 +61,8 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
             if "mini" not in item:
                 raise ValueError(f"slice {item['name']!r} names a {kind} chart but gives none")
             minis[kind] = G.render_chart(item["mini"])
-        items.append({**item, "href": str(escape(item["href"]))})
+        href = item.get("href")
+        items.append({**item, "href": str(escape(href)) if href else ""})
 
     built = G.build_dial({**view, "items": items, "centre": centre}, size, OPTS)
     return Markup(G.render_dial_svg(built, minis))

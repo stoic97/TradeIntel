@@ -39,6 +39,7 @@
 <main class="screen__body{% if nav and not sample %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
 {% if sample %}<div class="demo-line sample-line" role="note"><p>Sample trader, invented. These aren't your trades.</p><a class="link" href="/">Run this on my trades</a></div>{% endif %}
 {% if demo %}<p class="demo-line" role="note">{{ demo }}</p>{% endif %}
+{% if report_filter and not sample %}{% include "scope/_filter_bar.html" %}{% endif %}
 {% if stale_import_id %}<div class="demo-line stale-line" role="note"><p>Scope reads files differently since it read yours, so these figures are from its older reading. Read it again to see today's: it takes a few seconds, and nothing you told us is lost.</p><form class="stale-line__form" method="post" action="/imports/{{ stale_import_id }}/read-again"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="upload__demo-button" type="submit">Read your file again</button></form></div>{% endif %}
 {% block content %}{% endblock %}
 </main>

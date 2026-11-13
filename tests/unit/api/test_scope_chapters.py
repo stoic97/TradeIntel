@@ -165,8 +165,13 @@ def test_the_dial_has_a_slice_per_fact_in_slice_order(n):
     assert view["centre"] == {"name": S.chapter(n).name, "scopeHref": S.home_href(tap=n)}
     svg = str(dial.scope_dial(view))
     assert svg.count('<a class="scope__slice') == len(S.chapter(n).facts)
+    # Each wedge opens the trades behind its figure (TICKET-905); one with none is plain.
     for f in S.chapter(n).facts:
-        assert f'href="{S.fact_href(f.key).replace("&", "&amp;")}"' in svg
+        opens = FIGS[f.key]["opens"]
+        if opens:
+            assert f'href="{opens.replace("&", "&amp;")}"' in svg
+    plain = [f for f in S.chapter(n).facts if not FIGS[f.key]["opens"]]
+    assert svg.count("scope__slice--plain") == len(plain)
 
 
 def test_a_slice_in_a_state_is_marked_and_draws_no_mini_chart():
