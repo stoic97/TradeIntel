@@ -1,17 +1,36 @@
-{#- The front door, signed out (handoff 5, screen 0): the navy door. The app's own
-    words. The mark links back to plusev.in - a trader on scope.plusev.in needs a way
-    back to PlusEV (test_home.py), which the kit's screen does not draw. -#}
+{#- The front door, signed out (TICKET-914, from round 2's section 0): the question first,
+    then a trader's first questions answered, then, once he has tapped, a form with only a
+    login id and a password. /signup draws this same page with the form open, so there is
+    one door. The mark links back to plusev.in (test_home.py). Words: api/door.py. -#}
 {% extends "layout.html" %}
 {% from "_components.html" import lockup %}
 {% block stage %}
 <header class="stage stage--door on-navy">
-  <div class="stage__bar"><a href="https://plusev.in" aria-label="PlusEV">{{ lockup() }}</a></div>
-  <h1 class="title door__title">A record of how you traded, built from your own tradebook.</h1>
+  <div class="stage__bar"><a href="https://plusev.in" aria-label="PlusEV">{{ lockup() }}</a><a class="link link--on-navy door__sign-in" href="/login">Sign in</a></div>
+  {%- if said %}
+  <p class="lead door__said">You said: {{ door.ANSWERS[said] }}.</p>
+  {%- else %}
+  <h1 class="title door__title">{{ door.QUESTION }}</h1>
+  <ul class="door__answers">
+    {%- for key, label in door.ANSWERS.items() %}
+    <li><a class="btn btn--pill-small" href="/?said={{ key }}#door-form">{{ label }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
 </header>
 {% endblock %}
 {% block content %}
+  <p class="lead">{{ door.LINE }}</p>
+  <dl class="door__rows">
+    {%- for label, answer in door.ROWS %}
+    <div class="door__row"><dt class="label label--plain">{{ label }}</dt><dd class="body">{{ answer }}</dd></div>
+    {%- endfor %}
+  </dl>
+  <p class="body door__sample"><a class="link" href="/sample">See a sample report, no account needed.</a></p>
+  {%- if said or form_open %}
   <h2 class="heading">Create your account</h2>
-  <p class="body">Choose a login id and a password.</p>
+  {% if error %}<p class="field__error field__error--block" role="alert">{{ error }}</p>{% endif %}
   {% include "_signup_form.html" %}
-  <a class="link" href="/login">Sign in if you already have an account.</a>
+  {%- endif %}
+  <p class="body"><a class="link" href="/login">Sign in if you already have an account.</a></p>
 {% endblock %}

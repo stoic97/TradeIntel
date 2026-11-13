@@ -66,6 +66,10 @@ def page(request: Request, name: str, status_code: int = 200, **context) -> HTML
     context.setdefault("title", "Scope")
     context["csrf_token"] = auth.csrf_token(session, _settings(request).secret_key)
     context["signed_in"] = session is not None
+    if getattr(request.state, "sample_trader_id", None) is not None:
+        # /sample (routes_sample): the invented trader's page says so itself, and carries
+        # nothing of the visitor's: no demo line, no offer to read a file again.
+        context.update(sample=True, demo=None, stale_import_id=None)
     if "demo" not in context:
         from services.production import demo
 
@@ -164,12 +168,14 @@ def landing_for(sess, trader: m.Trader) -> str:
 
 
 LOGIN_ID_MAX = 100
+SAMPLE_LOGIN_ID = "scope-sample"
+"""Kept for /sample's record (routes_sample.LOGIN_ID), so no one can sign up as it."""
 DISPLAY_NAME_MAX = 200
 
 
 def _signup_refused(request: Request, error: str):
-    return page(request, "signup.html", status_code=400, title="Create your account",
-                error=error)
+    return page(request, "home.html", status_code=400, title="Create your account",
+                form_open=True, error=error)
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -178,7 +184,7 @@ def signup_form(request: Request):
         trader = current_trader(request, sess)
         if trader is not None:
             return RedirectResponse(landing_for(sess, trader), status_code=303)
-    return page(request, "signup.html", title="Create your account")
+    return page(request, "home.html", title="Create your account", form_open=True)
 
 
 @router.post("/signup")
@@ -198,14 +204,16 @@ def signup(
     if wait:
         limits.count_refusal(request, limits.SIGNUP_CAP)
         return limits.with_retry_after(
-            page(request, "signup.html", status_code=429, title="Create your account",
-                 error=limits.signups_refused(wait)),
+            page(request, "home.html", status_code=429, title="Create your account",
+                 form_open=True, error=limits.signups_refused(wait)),
             wait,
         )
 
-    login_id, display_name = login_id.strip(), display_name.strip()
-    if not login_id or not display_name:
-        return _signup_refused(request, "A name and a login id are both needed.")
+    # The door asks for a login id only, and calls him by it (TICKET-914).
+    login_id = login_id.strip()
+    display_name = display_name.strip() or login_id
+    if not login_id:
+        return _signup_refused(request, "A login id is needed.")
     if len(login_id) > LOGIN_ID_MAX or len(display_name) > DISPLAY_NAME_MAX:
         return _signup_refused(request, "That name or login id is too long.")
     try:
@@ -220,7 +228,8 @@ def signup(
         taken = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
         # A listed id nobody holds, or one whose owner deleted himself, is still an admin's:
         # registering it would make a stranger an admin.
-        if taken is not None or login_id in _settings(request).admin_login_ids:
+        if (taken is not None or login_id in _settings(request).admin_login_ids
+                or login_id == SAMPLE_LOGIN_ID):
             return _signup_refused(request, "That login id is taken.")
 
         trader = m.Trader(display_name=display_name, login_id=login_id,

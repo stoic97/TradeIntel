@@ -33,7 +33,8 @@
         <span class="day-block__net">{{ money(b.net) }}</span>
         <span class="body-small day-block__went">{{ b.went }}{% if b.vs_normal %} {{ b.vs_normal }}.{% endif %}</span>
       </summary>
-      {%- if b.iso in (flagged_days or []) %}
+      {%- if sample %}
+      {%- elif b.iso in (flagged_days or []) %}
       <p class="body-small day-block__flag">You told us this day looks wrong.</p>
       {%- else %}
       <form class="day-block__flag" method="post" action="/mirror/feedback/day">

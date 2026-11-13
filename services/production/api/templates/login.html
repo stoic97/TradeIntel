@@ -1,10 +1,15 @@
-{#- Screen 4, sign in (handoff section 5), on the design kit. The words are the app's
-    own (handoff section 6). Two choices differ from the kit's template, on purpose: the
-    login id is not written back after a failed attempt, so a wrong password and an
-    unknown login id give the same page (test_identity.py); and there is no "Scope page"
-    link, which is not wording the app has (new lines wait for D9). -#}
+{#- Screen 4, sign in, with the door's two sides (TICKET-914): the logo on navy, and a way
+    to reach us for a password he has forgotten, since an account has no email and a reset
+    is an admin's step. The login id is not written back after a failed attempt, so a wrong
+    password and an unknown login id give the same page (test_identity.py). -#}
 {% extends "layout.html" %}
-{% from "_components.html" import button, field %}
+{% from "_components.html" import button, field, lockup %}
+{% block stage %}
+<header class="stage stage--door on-navy">
+  <div class="stage__bar"><a href="https://plusev.in" aria-label="PlusEV">{{ lockup() }}</a></div>
+  <p class="lead door__said">Traded since your last upload? Sign in and see what changed.</p>
+</header>
+{% endblock %}
 {% block content %}
 <h1 class="title">Sign in</h1>
 {% if error %}<p class="field__error field__error--block" role="alert">{{ error }}</p>{% endif %}
@@ -14,5 +19,6 @@
   {{ field("Password", "password", type="password", autocomplete="current-password", required=true, error=true if error else none) }}
   <div class="screen__actions">{{ button("Sign in", block=true) }}</div>
 </form>
-<a class="link" href="/signup">Create an account if you don't have one.</a>
+<p class="body">Forgot your password? Your account has no email, so a reset goes through us: <a class="link" href="mailto:{{ door.CONTACT }}">{{ door.CONTACT }}</a></p>
+<p class="body"><a class="link" href="/">Create an account if you don't have one.</a></p>
 {% endblock %}

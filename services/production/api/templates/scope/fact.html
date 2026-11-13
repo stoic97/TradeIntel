@@ -31,4 +31,4 @@
 {% endblock %}
 {#- Dwell (PRD decision 12): how long a fact was read, keyed by the fact
     (scope_map.OLD_DWELL_LINES maps the long page's keys onto these). -#}
-{% block scripts %}<script src="/static/js/dwell.js" defer></script>{% endblock %}
+{% block scripts %}{% if not sample %}<script src="/static/js/dwell.js" defer></script>{% endif %}{% endblock %}

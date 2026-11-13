@@ -38,6 +38,18 @@ router = APIRouter()
 SHARE_MOVED = "share"
 
 
+def is_sample(request: Request) -> bool:
+    """Whether this page is being drawn for /sample (routes_sample): read-only, no one's."""
+    return getattr(request.state, "sample_trader_id", None) is not None
+
+
+def reader(request: Request, sess):
+    """Whose record a page reads: the sample's on /sample, else the signed-in trader's."""
+    if is_sample(request):
+        return sess.get(m.Trader, request.state.sample_trader_id)
+    return current_trader(request, sess)
+
+
 def load_record(request: Request):
     """The signed-in trader's record, or the page to show instead of it.
 
@@ -47,10 +59,10 @@ def load_record(request: Request):
     context)), context being every figure the Mirror and the Scope read.
     """
     with make_session(request.app.state.engine) as sess:
-        trader = current_trader(request, sess)
+        trader = reader(request, sess)
         if trader is None:
             return RedirectResponse("/login", status_code=303), None
-        if not has_diagnosis_consent(sess, trader):
+        if not is_sample(request) and not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303), None
 
         try:
@@ -94,7 +106,7 @@ def scope_home(request: Request):
         return early
     trips, imp, context = record
     with make_session(request.app.state.engine) as sess:
-        trader = current_trader(request, sess)
+        trader = reader(request, sess)
         charges = charge_record.build(sess, trader, imp)
         declared = rb.in_force(rb.for_trader(sess, trader), trader_today().isoformat())
         number = rb.rupees(declared)
@@ -115,7 +127,8 @@ def scope_chapter(request: Request, n: int):
     if early is not None:
         return early
     _trips, imp, context = record
-    _mark_opened(request, chapter)
+    if not is_sample(request):  # a visitor to /sample leaves nothing behind
+        _mark_opened(request, chapter)
     figs = SF.facts(context, imp)
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
@@ -128,6 +141,8 @@ def scope_chapter(request: Request, n: int):
 
 def _opened_chapters(request: Request) -> frozenset[int]:
     """The chapters this trader has opened, whichever upload he was reading."""
+    if is_sample(request):
+        return frozenset()
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         keys = set(sess.scalars(select(m.DwellEvent.key).where(
@@ -151,7 +166,7 @@ def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
 
 def _feedback_context(request: Request, n: int) -> dict:
     """What the feedback row needs: where it stands, its choices, where it posts."""
-    if n not in FB.CHAPTERS:
+    if n not in FB.CHAPTERS or is_sample(request):
         return {}
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
@@ -235,6 +250,8 @@ def scope_fact(request: Request, key: str):
 
 
 def _flagged_days(request: Request, imp) -> set[str]:
+    if is_sample(request):
+        return set()
     with make_session(request.app.state.engine) as sess:
         return FB.flagged_days(sess, current_trader(request, sess), imp.id)
 
@@ -255,6 +272,8 @@ def _journal_ids(sess, trader, days: set[str]) -> dict[str, int]:
 def _journal_links(request: Request, key: str, fact: dict, context: dict) -> dict:
     """A finding links the journal of the day it is about, or shows no link (TICKET-839).
     Worst days: one href per block whose day has a journal. The run: the day it began."""
+    if is_sample(request):  # its Journals are no visitor's to open
+        return {}
     if key == "worst-days":
         days = {b["iso"] for b in fact["blocks"]}
     elif key == "run" and context["run"].days:
@@ -272,7 +291,7 @@ def _journal_links(request: Request, key: str, fact: dict, context: dict) -> dic
 def _ending(request: Request, imp, fact: dict) -> dict:
     """What the report's last page reads from beyond the record (TICKET-825)."""
     with make_session(request.app.state.engine) as sess:
-        trader = current_trader(request, sess)
+        trader = reader(request, sess)
         worst = fact["flagged"]["worst"]
         opens = {} if worst is None else _journal_ids(sess, trader, {worst["iso"]})
         earlier = sess.scalars(
