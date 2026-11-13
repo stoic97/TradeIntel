@@ -25,7 +25,7 @@
       {% else %}<p class="mirror mirror--card">Best five: {% for book, n in f.found.best_books %}{{ Figure(n, "trades") }} in {{ book }}{{ ", " if not loop.last }}{% endfor %}.</p>
       <p class="mirror mirror--card">Worst five: {% for book, n in f.found.worst_books %}{{ Figure(n, "trades") }} in {{ book }}{{ ", " if not loop.last }}{% endfor %}.</p>
       {% endif %}
-      {% if f.found.evening_told %}<p class="mirror mirror--card">{{ f.found.best_evening }} of the 5 best were opened from 5 pm on, and {% if f.found.worst_mostly_late %}{{ f.found.worst_late }} of the 5 worst from 8 pm on{% else %}{{ f.found.worst_evening }} of the 5 worst from 5 pm on{% endif %}.</p>{% endif %}
+      {% if f.found.evening_told %}<p class="mirror mirror--card">{{ Figure(f.found.best_evening, "trades") }} of the 5 best were opened from 5 pm on, and {% if f.found.worst_mostly_late %}{{ Figure(f.found.worst_late, "trades") }} of the 5 worst from 8 pm on{% else %}{{ Figure(f.found.worst_evening, "trades") }} of the 5 worst from 5 pm on{% endif %}.</p>{% endif %}
       {% if f.found.durations_told %}<p class="mirror mirror--card">Your best five trades ran a median of {{ Figure(f.found.best_median_seconds, "seconds")|hold }}. Your worst five trades lost a median of {{ Figure(f.found.worst_median_loss, "rupees")|rupees(signed=false) }} each, in a median of {{ Figure(f.found.worst_median_seconds, "seconds")|hold }}.</p>
       {% endif %}
     </div>
