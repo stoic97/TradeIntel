@@ -5,20 +5,24 @@ It does not import, and was not written from, services/production/mirror/prior_m
 (TICKET-891): the value of a second count is that its mistakes are its own.
 
   s4.7.2  bars are stamped at the START of their minute; a stamp off the minute is refused.
-  s4.7.5  a move is the close at one minute edge against the close at another. The price at
-          edge E is the close of the bar stamped E - 1 minute; nothing inside a bar is read.
-          Entry t lies in minute m0 (t floored to the minute). The minute before entry is
-          edge m0 against edge m0 - 1; "+N after entry" is edge m0 + N against edge m0.
+  s4.7.5  a bar is asked where the price WAS at the edge of a minute, never what it DID inside
+          one. Entry t lies in minute m0 (t floored to the minute).
+  s4.7.9  the minute before entry is bar m0 - 1, read as its own open to its own close (ruling
+          on TICKET-898, D2). The close-to-close reading, close(m0 - 2) to close(m0 - 1), is
+          reported beside it as a sensitivity only.
+  after   "+N after entry" runs from the close of the entry-minute bar (bar m0) to the close of
+          bar m0 + N (ruling on TICKET-898, D1); anything earlier counts seconds before entry.
   s4.7.3  one series per underlying; MCX_CRUDEOIL and MCX_CRUDEOILM share one.
   s4.7.6  no series, a date the series does not cover, or a missing bar makes a trip
-          unmeasured. The nearest bar is never used.
+          unmeasured. The nearest bar is never used. A count drops a trip only when a bar that
+          count needs is missing, and the reason names the bar (ruling D3): the prior count
+          needs bar m0 - 1; a +N count needs bar m0 and bar m0 + N.
   s4.7.7  the direction table, written here from the spec's words (not imported).
   s4.7.8  a multi-leg position has no single direction: unmeasured, and counted.
 
 A trip's unmeasured reason is the first check it fails, in this order: direction, series,
-coverage, bars. A move of exactly zero is "flat": measured, neither with nor against.
-The open->close reading of the prior bar is reported beside the s4.7.5 reading as a
-sensitivity only, so a disagreement with another count can be located.
+coverage, then bars (for a +N count: the entry-minute bar, then the bar at the horizon). A move
+of exactly zero is "flat": measured, neither with nor against.
 
 Run locally only; never commit its output for a real trader (README rule 1).
 """
@@ -49,7 +53,9 @@ MEASURED = (WITH, AGAINST, FLAT)
 NO_DIRECTION = "no_single_direction"
 NO_SERIES = "no_series_for_underlying"
 NOT_COVERED = "series_does_not_cover"
-MISSING_BAR = "missing_bar"
+MISSING_PRIOR_BAR = "missing_prior_bar"
+MISSING_ENTRY_BAR = "missing_entry_minute_bar"
+MISSING_HORIZON_BAR = "missing_horizon_bar"
 
 
 def direction(kind: str, side: str) -> int:
@@ -173,7 +179,7 @@ class Tally:
 class Result:
     total: int
     prior: Tally
-    prior_open_close: Tally
+    prior_close_close: Tally
     after: dict[int, Tally]
 
 
@@ -209,14 +215,27 @@ def count(
                 tally.per_trip[tid] = reason or NO_SERIES
             continue
         m0 = trip.entry.replace(second=0, microsecond=0)
+        # The minute before entry: bar m0 - 1, its own open to its own close (ruling D2).
+        prior_bar = series.bar(m0 - ONE_MIN)
+        prior.per_trip[tid] = (
+            MISSING_PRIOR_BAR if prior_bar is None else _outcome(d, prior_bar[1] - prior_bar[0])
+        )
+        # Sensitivity only: close(m0 - 2) to close(m0 - 1), the s4.7.5 close-to-close reading.
         p0 = series.price_at_edge(m0)
         pm1 = series.price_at_edge(m0 - ONE_MIN)
-        prior.per_trip[tid] = MISSING_BAR if p0 is None or pm1 is None else _outcome(d, p0 - pm1)
-        bar = series.bar(m0 - ONE_MIN)
-        alt.per_trip[tid] = MISSING_BAR if bar is None else _outcome(d, bar[1] - bar[0])
+        alt.per_trip[tid] = (
+            MISSING_PRIOR_BAR if p0 is None or pm1 is None else _outcome(d, p0 - pm1)
+        )
+        # After entry: close of the entry-minute bar to the close of bar m0 + h (ruling D1).
+        entry_bar = series.bar(m0)
         for h, tally in after.items():
-            ph = series.price_at_edge(m0 + h * ONE_MIN)
-            tally.per_trip[tid] = MISSING_BAR if p0 is None or ph is None else _outcome(d, ph - p0)
+            if entry_bar is None:
+                tally.per_trip[tid] = MISSING_ENTRY_BAR
+                continue
+            later = series.bar(m0 + h * ONE_MIN)
+            tally.per_trip[tid] = (
+                MISSING_HORIZON_BAR if later is None else _outcome(d, later[1] - entry_bar[1])
+            )
     result = Result(len(trips), prior, alt, after)
     for t in (prior, alt, *after.values()):
         assert t.measured + sum(t.unmeasured.values()) == result.total
@@ -235,7 +254,7 @@ def _line(name: str, t: Tally, total: int) -> str:
 def report(r: Result) -> str:
     lines = ["TICKET-898 independent count (spec s4.7)", _line("prior minute", r.prior, r.total)]
     lines += [_line(f"+{h} after entry", t, r.total) for h, t in sorted(r.after.items())]
-    lines.append(_line("sens: prior bar open->close", r.prior_open_close, r.total))
+    lines.append(_line("sens: close->close", r.prior_close_close, r.total))
     return "\n".join(lines)
 
 
@@ -243,9 +262,9 @@ def write_per_trip(r: Result, path: Path) -> None:
     keys = sorted(r.prior.per_trip)
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["trip_id", "prior", "prior_open_close", *[f"plus_{h}" for h in r.after]])
+        w.writerow(["trip_id", "prior", "prior_close_close", *[f"plus_{h}" for h in r.after]])
         for k in keys:
-            row = [k, r.prior.per_trip[k], r.prior_open_close.per_trip[k]]
+            row = [k, r.prior.per_trip[k], r.prior_close_close.per_trip[k]]
             w.writerow(row + [t.per_trip[k] for t in r.after.values()])
 
 
