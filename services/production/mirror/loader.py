@@ -222,9 +222,14 @@ def _premium(legs: list[m.Trip]) -> Decimal | None:
     return row.entry_price * row.quantity
 
 
-def load_for(sess: Session, trader: m.Trader) -> tuple[list[Trip], m.Import | None]:
-    """His trips and the import that produced them, for the lineage stamp."""
-    imp = current_import(sess, trader)
+def load_for(sess: Session, trader: m.Trader,
+             imp: m.Import | None = None) -> tuple[list[Trip], m.Import | None]:
+    """His trips and the import that produced them, for the lineage stamp.
+
+    The current import unless one is named: an earlier reading is read the same way, so
+    the figures it gave can be set beside today's (TICKET-908).
+    """
+    imp = imp or current_import(sess, trader)
     if imp is None:
         return [], None
     rows = sess.scalars(

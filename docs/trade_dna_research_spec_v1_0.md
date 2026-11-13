@@ -188,6 +188,60 @@ At σ_R = 1.4 with a comparison group four times the condition group:
 
 **Zone discipline.** Discovery runs on training only. Embargo separates a state that began in training from leaking into isolation. **Isolation on a real trader's history is read once, at the end of Phase 0, on the final framework version** (§13.2) — not on every intermediate iteration, which was Draft 1's mistake and would have frozen the calibration into two or three expensive shots. Synthetic isolation reads are unlimited: nothing is spent, because the data is generated. Reserve is everything arriving after the diagnosis; it is what the experiment measures.
 
+### 4.7 Bars — PRE-COMMIT · derived (**new in v1.0.1; the spec had no section on market data the trader did not supply**)
+
+§9 names five core tests that cannot be computed from the trader's own export, and calls that the product's data edge over any analysis of the file alone. Every one of them reads a price series. Draft 1 through v1.0 said nothing about how that series is read, so a bar-derived number had no convention to be reviewed against — and a reviewer disagreeing with one would have had nothing to disagree with. This section is that convention. It is written before the first bar-derived claim ships, not after.
+
+**4.7.1 · One interval.** Bars are **1-minute**, for every instrument family, with no fallback to a coarser interval. A 5-minute fallback would mean one figure saying different things on different instruments, and the direction of that error is already measured: ADR 005 and §4.2 record bar-sampled bias as a function of `hold ÷ bar interval`, so a scalper and a swing trader measured on different intervals are not comparable even within one instrument. Where 1-minute bars do not exist for a family, that family has no market context — not coarser market context.
+
+**4.7.2 · The clock, asserted rather than assumed.** A bar is stamped at the **start** of its interval. The mapping from a trade's entry timestamp to "the bar before it" is asserted in code at load, against each series, and a series whose stamping cannot be established is unusable rather than assumed.
+
+The reason this is a rule and not a note: shift a series by one minute and "the minute before entry" becomes the minute of entry — the minute he was buying into, which agrees with him by construction. The figure goes **up**, the page reads beautifully, and nothing looks wrong. A silent one-minute error produces a more impressive number than the truth, which is the only kind of error that survives review. T-001 established alignment by hand on both of his series on 6 Nov and recorded it in prose; prose is not a check.
+
+**4.7.3 · The underlying, never the contract.** A trade in an option is measured against its **underlying's** series. One series per underlying, never per strike or expiry, and families sharing an underlying share a series: `MCX_CRUDEOIL` with `MCX_CRUDEOILM`, `MCX_GOLD` with `MCX_GOLDM`. The mapping from instrument profile to underlying is versioned data and is recorded on every import, under the same rule PRD §9 already applies to the profiles themselves, and for the same reason: an import must be able to say which mapping produced its figures.
+
+**4.7.4 · The sign check — required per family, threshold per family.** A series is not usable for an instrument family until someone has shown that it moves with that family's trades. The check is the agreement in sign between the series' move and the trades' premium moves, measured on real trades of that family, above a stated move size.
+
+**The check is mandatory. The threshold is not fixed here**, because what counts as agreement depends on the instrument's tick size and its typical move, and a number chosen now for crude would be arbitrary for gold and wrong for an index. The research seat sets it per family; the family's threshold, its move size and its measured result are recorded in the PR that enables that family.
+
+The worked example, and the reason the check is in this section at all: on 6 Nov the crude continuous future was found to agree in sign with T-001's option premiums **98% of the time on moves of 5 points or more.** Nobody asked for that measurement. It is what makes measuring an option against its underlying a defensible step rather than an assumed one.
+
+**4.7.5 · What a bar may be used to claim, and what it may not.**
+
+**Permitted: direction after an entry.** Whether the underlying moved in a trade's direction over a stated interval, as a count of trades. This is a question about the close of one minute against the close of another, and a 1-minute bar answers it exactly.
+
+**Forbidden: exit capture, and anything else that needs the path inside a bar.** `docs/phase0/method-findings.md` measures the bias: bar-sampled MFE overstates exit capture by roughly **0.33 ÷ √(hold ÷ bar interval)**, and the bias differs by holding time. At a median hold under ten minutes, 1-minute bars overstate capture by about **+0.12** and 5-minute bars by about **+0.26** — larger than the effects E2 and E4′ are looking for. So for a trader of that kind those two tests are **impossible without tick data, not degraded.** A bar-derived capture figure is not a weaker version of the right answer; it is a different number that happens to look like one.
+
+The boundary is therefore: a bar may be asked where the price **was** at the edge of a minute. It may never be asked what the price **did** inside one.
+
+**4.7.6 · Provenance and staleness.** Each series records where it came from, how it was constructed, and how current it is. A constructed series states its construction: a continuous future is not a fact but a choice of roll, and a different roll gives different bars at the join, so the roll convention is written beside the series.
+
+A claim refuses itself when its series does not cover the trader's dates. The product shows the fact in its "not in your file" state with an honest line; it never silently omits the trade, and it never reaches for the nearest available bar. The live case this is written against: the research store's crude continuous future runs to **24 Dec 2025**, so for a trader with 2026 crude trades the correct behaviour today is to refuse, not to answer.
+
+**4.7.7 · Direction, for one leg.** Which way the underlying had to move for a trip to profit:
+
+| Trip | Direction |
+|---|---|
+| Bought call | long |
+| Bought put | **short** |
+| Sold call | short |
+| Sold put | long |
+| Future or stock, bought | long |
+| Future or stock, sold | short |
+| Multi-leg position | **no single direction** — see 4.7.8 |
+
+A sold option inverts the bought answer. A future's direction needs no rule, and answering "none" for one would remove every futures trip from every count, which on a crude history is most of the book.
+
+The executable form of this table is `services/shared/option_direction.py`, whose docstring cites this item; this item names that module by path. One rule, two pointers, neither one a copy. It sits in `shared` because both production and research may read it and neither may read the other (methodology Rule 5).
+
+**4.7.8 · Multi-leg direction is open, and open visibly.** `positions._links` requires that two legs link only if their directions differ, so **every** multi-leg position the product can build holds one bought leg and one sold leg. Applying 4.7.7 leg by leg therefore returns "no single direction" for every spread, butterfly and ratio — as the rule, not as an edge case.
+
+That is the state until the convention exists, and it is a convention rather than a coding choice: a debit call vertical is directionally long, a credit *put* vertical is also long, a butterfly is direction-neutral, and a ratio spread can change sign with the underlying's level. Under the loop's 4 November decision a convention that touches numbers is checked by a second person with their own script before it is built.
+
+**The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. On T-001's history it is under 1% of trips; on a spread trader's history it would be most of the book, which is precisely why it is deferred to a convention rather than guessed at here.
+
+**4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
+
 ## 5. The Evidence Standard
 
 ### 5.1 Claim levels — PRE-COMMIT · inherited
@@ -879,6 +933,8 @@ Not built in Phase 0. One line each; they enter through §13.3 when the core has
 **Risk** — R9 tail-loss contribution · R4 drawdown response · R5 intraday risk escalation · R3 post-win size change · R6 correlated exposure (dormant until multi-instrument) · R10 risk after equity change.
 **Execution** — E1 entry slippage · E3 premature exit against target · E8 re-entry after a stop-out in the same direction · E6 scaling out of winners (the scaling-in half is now R11) · E7 order-type effect · E9 exit-reason mix.
 **Behaviour** — B3 post-loss frequency · B4 post-win expectancy · B7 drawdown-state expectancy · B9 streak chasing · B10 recovery trading in the last hour · B11 instrument switching after a loss (dormant until multi-instrument) · B8 session fatigue.
+**Added 12 Nov 2026** — B13 entry alignment with the prior move: does the agreement between a trade's direction and the minutes before it differ by instrument? Seed: one history, 6 Nov 2026 — NIFTY's prior single minute agrees 69.7% against 44.2% over the prior fifteen, while crude's prior fifteen agree 64.4%, so one book buys the turn and the other follows the move. Exploratory, one file, not tested (§4.7.9).
+
 **Open to the field.** A behaviour the in-house trader or the founder has watched crude retail traders do and does not see above enters here as a one-line question with its seed; the register is the hypothesis inbox's Phase 0 substitute (§10).
 
 ## Annex C — Evidence object fields
@@ -1000,6 +1056,10 @@ The CEO asked for every open conflict to be decided and the document rewritten t
 **Added at freeze (3 Oct, late) — regenerability.** A third review made the harder case: a persistent agent with tools, memory and a broker connection can run this protocol, pre-commitment included, so methodology protects correctness and not uniqueness. Accepted. The research layer's answer is not to make the engine uncopyable but to make the one compounding asset — the intervention–adherence–outcome record — usable across years, which it is only if it stays on one framework version. §14 now carries the regenerability rule. The review names a frontier lab as the threat; the likelier copier is a broker, which holds the recurring data by default, and that is recorded as a thesis touch (J12) rather than argued here. **This was the last addition before freeze; one correction followed it** (above), which is a different category — a decision found inconsistent by review, the case the status line names. From here, further reviews are read, and their consequences are written to a post-freeze notes file, not to this document, until Phase 0 produces evidence that requires a major version.
 
 **Added at freeze (3 Oct, evening) — the LLM baseline.** Two reviews of v1.0 argued the moat lives in the loop and the datasets rather than in the analysis; both are right about Phase 2 and both leave the doormat's first year unexamined, which is where the product must survive on its own. The founder asked the direct question — what do we have over a capable model given the same CSV — and the research layer's answer is four things, measured rather than asserted: pre-commitment, published error rates, the gated null, and data not in his file. §15 now carries a pre-registered baseline, with the prompt written by the founder so it is the strongest case for the model, run on the corpora the engine is already gated on, with one pre-committed consequence. One correction to the reviews is recorded here because it matters: a model with a code interpreter *can* run a hold-out or a permutation test; the edge is that it will not unless told, will not do it the same way twice, and has no measured error rate — pre-commitment and calibration, not computation. Nothing in the PRE-COMMIT layer moved; one measurement was added.
+
+### What changed from v1.0 → v1.0.1 (12 November 2026)
+
+**§4.7 added: the bars convention.** The spec had no section on market data the trader did not supply, while §9 names five core tests that require it, so every bar-derived number was unreviewable and ruling 3 (bars in the report) had been parked waiting for it. The section fixes one interval (1-minute, no fallback), start-of-minute stamping asserted in code, the underlying rather than the contract, a mandatory per-family sign check with the threshold set per family, the boundary between what a bar may and may not be asked, provenance and staleness, and the single-leg direction table. Multi-leg direction is explicitly left open and reported rather than guessed. Longer look-backs go to Annex B. Founder's four rulings on TICKET-888, 12 Nov 2026.
 
 ### Decisions taken in the walkthrough, 1–3 October 2026
 

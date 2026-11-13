@@ -101,13 +101,13 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["worst-days"]["figure"] == formatting.rupees(CTX["worst_days"].sum)
     assert FIGS["share"]["figure"] == f"{share.share_percent}%"
     assert FIGS["money"]["figure"] == formatting.rupees(CTX["money_found"].same_day_net)
-    assert FIGS["math"]["figure"] == f"{CTX['strike'].rate_percent}%"
+    assert FIGS["math"]["figure"] == f'{formatting.out_of_a_hundred(CTX["strike"].rate_percent)} trades'
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
-    assert FIGS["clock"]["figure"] == "10:00"
-    assert FIGS["down"]["figure"] == str(CTX["two_losses"].population)
+    assert FIGS["clock"]["figure"] == "10:00 hour"
+    assert FIGS["down"]["figure"] == f"{CTX['two_losses'].population} trades"
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"
-    assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40"
+    assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40 trades"
     assert FIGS["not-told"]["figure"] == "4"
 
 
@@ -226,7 +226,7 @@ SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell the
     2: [
         "Your winners were open a median of",
         "minutes, your losers",
-        "Your strike rate was",
+        "trades made money:",
         "winners against",
         "Your longest run of consecutive losers was",
     ],
@@ -234,7 +234,7 @@ SENTENCES = {  # the Mirror's own sentences (mirror.html), as the cards tell the
         "occasions you opened a trade after two earlier trades that day had already closed",
         "of those, the two most recent had both lost.",
         "After two straight losses",
-        "Your other trades that qualified",
+        "Your other trades after two had closed",
         "Every other trade",
         "A trade still open when the next one started does not count as closed.",
         "A scratch trade ends the run.",

@@ -12,7 +12,7 @@
 {% endblock %}
 {% block content %}
   <div class="fact__head" data-dwell-line="{{ fact.key }}">
-    <p class="fact__chapter">CHAPTER {{ chapter.number }} · FACT {{ number }} OF {{ chapter.facts|length }}</p>
+    <p class="fact__chapter">CHAPTER {{ Figure(chapter.number, "chapter") }} · FACT {{ Figure(number, "fact") }} OF {{ Figure(chapter.facts|length, "facts") }}</p>
     <h1 class="title fact__title">{% block fact_title %}{{ fact.title }}{% endblock %}</h1>
     {% if f.state %}{% include "scope/_state.html" %}{% else %}{% block head %}{% endblock %}{% endif %}
     {% block gross %}{% if not imp.fees_available %}{{ gross_line() }}{% endif %}{% endblock %}
@@ -22,7 +22,7 @@
   {% block evidence %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">{% block caption %}{% endblock %} <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">{% block caption %}{% endblock %} <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     {% block caption_more %}{% endblock %}
     {% if f.see_all %}<p class="evidence__see-all">{{ button("See all trades", f.see_all, "secondary") }}</p>{% else %}{{ trades(groups) }}{% endif %}
   </section>
@@ -31,4 +31,4 @@
 {% endblock %}
 {#- Dwell (PRD decision 12): how long a fact was read, keyed by the fact
     (scope_map.OLD_DWELL_LINES maps the long page's keys onto these). -#}
-{% block scripts %}<script src="/static/js/dwell.js" defer></script>{% endblock %}
+{% block scripts %}{% if not sample %}<script src="/static/js/dwell.js" defer></script>{% endif %}{% endblock %}

@@ -176,7 +176,7 @@ def test_two_of_the_five_is_not_enough():
 def test_a_trader_with_no_holdings_reads_what_his_lists_came_to():
     page = page_of(SAME_DAY)
     assert HEADLINE not in page
-    assert "Your best five came to +₹3,500. Your worst five came to −₹13,100." in page
+    assert "Your best five trades came to +₹3,500. Your worst five trades came to −₹13,100." in page
 
 
 def test_options_held_for_months_are_trades_so_the_headline_is_not_said():
@@ -349,7 +349,7 @@ def test_all_ten_in_one_book_is_the_same_place():
     assert found(WHOLE).same_place == "WIDGETOIL options"
     page = page_of(WHOLE)
     assert HOOK in page
-    assert "All 10 are in one book: WIDGETOIL options." in page
+    assert "All 10 trades are in one book: WIDGETOIL options." in page
 
 
 def test_a_list_in_two_books_is_not_the_same_place_and_is_told_as_counted():
@@ -390,8 +390,8 @@ def test_a_morning_trader_reads_no_sentence_about_evenings():
 
 def test_the_durations_are_told_as_medians_with_no_sentence_about_them():
     page = page_of(WHOLE)
-    assert "Your best five ran a median of 60 min." in page
-    assert "Your worst five lost a median of ₹2,700 each, in a median of 11 min." in page
+    assert "Your best five trades ran a median of 60 min." in page
+    assert "Your worst five trades lost a median of ₹2,700 each, in a median of 11 min." in page
     for line in CUT:
         assert line not in page, "rule 3: the page describes, and explains nothing"
 
@@ -465,7 +465,7 @@ def test_the_card_says_the_headline():
 def test_the_card_of_another_trader_says_what_his_lists_came_to():
     page = readable(chapter_page(1, SAME_DAY))
     assert HEADLINE not in page
-    assert "Your best five came to +₹3,500. Your worst five came to −₹13,100." in page
+    assert "Your best five trades came to +₹3,500. Your worst five trades came to −₹13,100." in page
 
 
 # ---------- Through the app ----------

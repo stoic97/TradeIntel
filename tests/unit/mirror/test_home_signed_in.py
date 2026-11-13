@@ -24,7 +24,7 @@ def test_home_opens_the_scope_from_its_headline(client):
     body = client.get("/").text
     assert '<a class="scope-card on-navy" href="/mirror">' in body
     assert "of your losses in five days" not in body
-    assert re.search(r"Your report · Import \d+ · \d\d \w{3} \d{4}</span>", body)
+    assert re.search(r"Your report · Upload \d+ · \d\d \w{3} \d{4}</span>", body)
     assert "Open your report" in body
 
 
@@ -35,9 +35,11 @@ def test_home_names_the_trader_and_offers_the_upload(client):
     assert "A new file replaces the days it covers." in body
 
 
-def test_home_is_no_tab_of_the_three(client):
+def test_home_is_the_home_tab(client):
+    """TICKET-860: the nav leads with Home, and on Home that tab is the current one."""
     body = client.get("/").text
-    assert '<nav class="bottom-nav"' in body and 'aria-current="page"' not in body
+    assert '<nav class="bottom-nav"' in body
+    assert re.findall(r'href="([^"]+)" aria-current="page"', body) == ["/"]
 
 
 def test_without_journals_there_is_no_empty_journal_list(client):

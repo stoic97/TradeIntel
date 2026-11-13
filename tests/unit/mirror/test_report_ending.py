@@ -168,7 +168,7 @@ def test_no_step_sends_him_to_do_something(client):
 def test_each_step_says_what_is_there_with_its_number(client):
     said = text_of(section(client.get(PAGE).text, "steps"))
     day = r"\d{2} \w{3}(?: \d{4})?"
-    assert re.search(rf"Your {day} — ?\s*\d+ losses in a row", said), said
+    assert re.search(rf"{day} — ?\s*\d+ losses in a row", said), said
     assert re.search(r"Your five worst days — [−+]?₹[\d,]+", said), said
     assert re.search(rf"Your journal for {day} — one of your five worst days:\s+\d+ trades?, "
                      r"[−+]?₹[\d,]+", said), said

@@ -90,8 +90,8 @@ def test_the_card_goes_to_the_report_and_says_so(client):
     assert "Open the Scope" not in card
 
 
-def test_the_card_says_which_import_it_read(client):
-    assert re.search(r"Your report · Import \d+ · \d\d \w{3} \d{4}", _readable(_card(client)))
+def test_the_card_says_which_upload_it_read(client):
+    assert re.search(r"Your report · Upload \d+ · \d\d \w{3} \d{4}", _readable(_card(client)))
 
 
 def test_the_card_splits_options_from_the_rest_only_when_both_exist(client):
@@ -113,7 +113,7 @@ def test_the_three_days_are_the_ones_the_report_named_in_its_order(client):
 
 
 @pytest.mark.parametrize(("index", "words"), [
-    (0, ("Your longest losing run: 4 in a row", "5 trades", "+₹10")),
+    (0, ("Your longest losing run: 4 losses in a row", "5 trades", "+₹10")),
     (1, ("Your busiest day: 6 trades", "6 trades", "+₹5")),
     (2, ("This was one of your five worst days", "2 trades", "−₹490")),
 ])

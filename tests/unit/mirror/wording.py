@@ -108,7 +108,7 @@ REFERENCE = Path("tests/fixtures/mirror_wording/mirror_v1.json")
 DRAWER_CAPTIONS = (
     "The five days, and every trade on them.",
     "Your best five and worst five, by result.",
-    "Every trade opened after two earlier trades that day had already closed.",  # TICKET-840
+    "Every trade you opened right after two straight losses.",  # TICKET-840
     "How long each trade was open, by how it ended.",
     "Every trade, by the hour you opened it.",
 )

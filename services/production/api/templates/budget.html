@@ -5,6 +5,7 @@
 {% extends "layout.html" %}
 {% from "_components.html" import button, uncounted_line %}
 {% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
   <p class="label label--plain">Your account</p>
   <h1 class="title">What you risk</h1>
   {%- if past_number %}
@@ -31,7 +32,7 @@
       <label class="choice"><input class="choice__input" type="radio" name="unit" value="INR" checked><span class="body">rupees</span></label>
       <label class="choice"><input class="choice__input" type="radio" name="unit" value="PCT"><span class="body">per cent of my trading capital</span></label>
     </fieldset>
-    <label class="field"><span class="field__label">Your trading capital, in rupees</span><input class="field__input field__input--mono" id="capital_amount" name="capital_amount" inputmode="decimal"><span class="field__hint">Only needed if you answered in per cent.</span></label>
+    <label class="field"><span class="field__label">Your trading capital, in rupees</span><input class="field__input field__input--mono" id="capital_amount" name="capital_amount" inputmode="decimal"{% if capital %} value="{{ capital }}"{% endif %}><span class="field__hint">Only needed if you answered in per cent.</span></label>
     <label class="field"><span class="field__label">Has that been your number for the whole history you uploaded? If it changed, from when?</span><input class="field__input field__input--mono" type="date" id="effective_from" name="effective_from" max="{{ today }}" value="{{ default_from }}" required><span class="field__hint">Trades before this date keep whatever number was in force then. Set an earlier date if this has been your number all along.</span></label>
     <div class="screen__actions">
       {{ button("Record it", block=true) }}
@@ -44,7 +45,7 @@
     <thead><tr><th>From</th><th class="table__num">Number</th><th>Recorded</th></tr></thead>
     <tbody>
     {%- for d in declarations %}
-      <tr><td>{{ d.effective_from }}</td><td class="table__num">{% if d.unit == "INR" %}{{ d.value|rupees(signed=false) }}{% else %}{{ d.value }}% of {{ d.capital_amount|rupees(signed=false) }}{% endif %}</td><td class="table__text">{{ d.declared_at.strftime('%d %b %Y') }}{% if d.retrospective %} — about a period that had already passed{% endif %}</td></tr>
+      <tr><td>{{ d.effective_from|day }}</td><td class="table__num">{% if d.unit == "INR" %}{{ Figure(d.value, "rupees")|rupees(signed=false) }}{% else %}{{ d.value }}% of {{ Figure(d.capital_amount, "rupees")|rupees(signed=false) }}{% endif %}</td><td class="table__text">{{ d.declared_at|local_day }}{% if d.retrospective %} — about a period that had already passed{% endif %}</td></tr>
     {%- endfor %}
     </tbody>
   </table>

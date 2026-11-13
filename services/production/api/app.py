@@ -21,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
     dial,
+    door,
     formatting,
     limits,
     routes_admin,
@@ -35,6 +36,7 @@ from services.production.api import (
     routes_journal,
     routes_mirror,
     routes_reveal,
+    routes_sample,
     routes_upload,
 )
 from services.production.api.settings import Settings
@@ -45,6 +47,7 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
 dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
+door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
 
 def code_version() -> str:
@@ -85,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_upload.router)
     app.include_router(routes_charges.router)
     app.include_router(routes_mirror.router)
+    app.include_router(routes_sample.router)
     app.include_router(routes_reveal.router)
     app.include_router(routes_events.router)
     app.include_router(routes_budget.router)
@@ -99,10 +103,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(404)
     def not_found(request: Request, _exc: Exception) -> HTMLResponse:
-        return TEMPLATES.TemplateResponse(
-            request=request, name="404.html", context={"title": "Not found"},
-            status_code=404,
-        )
+        # Through page() so a signed-in trader on a dead address still has his way back
+        # to Home (TICKET-860). demo=None: a missing page is drawn from no file.
+        from services.production.api.routes_identity import page
+
+        return page(request, "404.html", status_code=404, title="Not found", demo=None)
 
     @app.exception_handler(405)
     async def method_not_allowed(request: Request, exc: Exception):

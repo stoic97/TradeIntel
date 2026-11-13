@@ -23,6 +23,7 @@ import hashlib
 import logging
 import threading
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -47,6 +48,7 @@ from services.production.db.session import make_session
 from services.production.journal import constants as k
 from services.production.journal import generate as gen
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 
 router = APIRouter()
@@ -90,7 +92,7 @@ def _first_upload(sess, trader: m.Trader, digest: str) -> m.RawFile | None:
 
 
 def _when(raw: m.RawFile) -> str:
-    return raw.uploaded_at.astimezone(limits.INDIA).strftime("%d %b %Y")
+    return formatting.local_day(raw.uploaded_at)
 
 
 def _same_file_again(sess, trader: m.Trader, digest: str) -> tuple[str, int | None]:
@@ -310,8 +312,35 @@ def import_review(request: Request, import_id: int):
                     same_file=persist.reads_same_file_as_before(sess, imp),
                     rows_confirmed=len(confirmed) if pl.rebuilt_without_confirmed(imp) else 0,
                     trades_before=earlier.trips_reconstructed if earlier else None,
+                    moved=_what_moved(sess, trader, earlier, imp) if earlier else [],
                     charges_offered=(charges_open(request) and not imp.fees_available
                                      and imp.trips_reconstructed > 0))
+
+
+def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list[dict]:
+    """The rupee figures a re-read changed, before and now (TICKET-908).
+
+    The report's own headline figures, each by the function the report uses: the result
+    by book (``metrics.verdict``) and the five worst days. Only rows that moved are listed;
+    a figure that stayed the same is not news.
+    """
+    def figures(imp: m.Import) -> dict[str, Decimal]:
+        trips, _ = loader.load_for(sess, trader, imp)
+        verdict = mx.verdict(trips)
+        out: dict[str, Decimal] = {}
+        if verdict.options_trades:
+            out["Option trades"] = verdict.options_net
+        for book in verdict.books:
+            out[book.label] = book.net
+        if verdict.others_trades:
+            out["Other trades"] = verdict.others_net
+        out["Your five worst days"] = mx.five_worst_days(trips).sum
+        return out
+
+    was, now_ = figures(before), figures(now)
+    labels = list(now_) + [label for label in was if label not in now_]
+    return [{"label": label, "was": was.get(label), "now": now_.get(label)}
+            for label in labels if was.get(label) != now_.get(label)]
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")

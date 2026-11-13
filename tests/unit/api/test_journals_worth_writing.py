@@ -153,7 +153,7 @@ def test_the_list_leads_with_the_five_days(engine, client):
 
 def test_each_day_on_the_list_says_why_it_is_there(client):
     text = _readable(client.get("/journals").text)
-    assert "Your longest losing run: 4 in a row" in text
+    assert "Your longest losing run: 4 losses in a row" in text
     assert "Your busiest day: 6 trades" in text
     assert "This was one of your five worst days" in text
 
@@ -200,7 +200,7 @@ def test_a_run_across_two_days_is_named_on_both_but_only_its_first_leads():
     flags = worth.flags_by_day(trips)
     assert next(iter(flags)) == "2025-02-03"
     labels = [f.label for f in flags["2025-02-04"]]
-    assert "Part of your longest losing run: 3 in a row" in labels
+    assert "Part of your longest losing run: 3 losses in a row" in labels
 
 
 def test_a_day_that_made_money_is_never_one_of_the_worst():
@@ -229,7 +229,7 @@ def test_a_run_of_one_and_a_tie_for_busiest_name_nothing():
 @pytest.mark.parametrize(("day", "label", "href"), [
     ("2025-02-10", "This was one of your five worst days", "/mirror/fact/worst-days"),
     ("2025-02-04", "This was one of your five worst days", "/mirror/fact/worst-days"),
-    ("2025-02-11", "Your longest losing run: 4 in a row", "/mirror/fact/run"),
+    ("2025-02-11", "Your longest losing run: 4 losses in a row", "/mirror/fact/run"),
     ("2025-02-12", "Your busiest day: 6 trades", "/mirror/fact/busiest"),
 ])
 def test_a_flagged_day_links_the_finding(engine, client, day, label, href):
@@ -245,7 +245,7 @@ def test_an_unflagged_day_claims_nothing(engine, client):
 
 def test_the_size_line_stays_on_the_day(engine, client):
     html = client.get(f"/journals/{_journal_ids(engine)['2025-02-11']}").text
-    assert ("On 11 Feb 2025 you went from 1 lot to 3 after 3 losses. Your usual is about 1.1."
+    assert ("On 11 Feb 2025 you went from 1 lot to 3 after 3 losses. Your usual is about 1.1 lots."
             in _readable(html))
 
 
@@ -407,12 +407,12 @@ def test_the_size_line_counts_the_losses_before_the_first_rise():
     """1 lot, two losses, then 2, then 4: the rise starts after two."""
     trades = [_t(-1), _t(-1), _t(-1, 2), _t(-1, 4), _t(5, 4)]
     assert _line(trades) == ("On 11 Feb 2025 you went from 1 lot to 4 after 2 losses. "
-                             "Your usual is about 1.1.")
+                             "Your usual is about 1.1 lots.")
 
 
 def test_one_loss_reads_in_the_singular():
     assert _line([_t(-1), _t(-1, 2), _t(5)]) == (
-        "On 11 Feb 2025 you went from 1 lot to 2 after 1 loss. Your usual is about 1.1.")
+        "On 11 Feb 2025 you went from 1 lot to 2 after 1 loss. Your usual is about 1.1 lots.")
 
 
 def test_a_size_that_fell_back_on_the_way_up_says_nothing():

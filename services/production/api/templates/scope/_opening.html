@@ -4,12 +4,12 @@
 {% from "_components.html" import money %}
 {% macro down_sentence(f, two_losses) -%}
 {%- if f.post_loss_sentence -%}
-After two straight losses, your next trades averaged <span class="opening-figure">{{ money(two_losses.condition_mean, exact=true) }}</span>. Your other trades that qualified averaged <span class="opening-figure">{{ money(two_losses.comparison_mean, exact=true) }}</span>.
+After two straight losses, your next trades averaged <span class="opening-figure">{{ money(two_losses.condition_mean, exact=true) }}</span>. Your other trades after two had closed averaged <span class="opening-figure">{{ money(two_losses.comparison_mean, exact=true) }}</span>.
 {%- else -%}
 No difference we can stand behind.
 {%- endif -%}
 {%- endmacro %}
 
 {% macro busiest_sentence(days) -%}
-Your busiest day had <span class="num">{{ days.busiest_trips|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ days.normal_day }}</span> on your normal day.
+Your busiest day had <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ Figure(days.normal_day, "trades") }}</span> on your normal day.
 {%- endmacro %}

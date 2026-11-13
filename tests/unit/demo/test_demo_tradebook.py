@@ -77,8 +77,8 @@ def test_the_production_pipeline_reads_every_row(plan):
 
 
 def test_it_names_no_one_and_trades_only_contracts_scope_reads(plan):
-    """README rule 1: synthetic. Two real contracts, chosen because a profile exists."""
-    assert {leg.symbol for p in plan.positions for leg in p.legs} == {"CRUDEOIL", "NIFTY"}
+    """README rule 1: synthetic. Real instruments, chosen because a profile exists."""
+    assert {leg.symbol for p in plan.positions for leg in p.legs} == {"CRUDEOILM", "NIFTY", "NIFTYBEES"}
 
 
 def test_it_has_one_of_each_thing_the_report_talks_about(plan, trips):
@@ -87,8 +87,11 @@ def test_it_has_one_of_each_thing_the_report_talks_about(plan, trips):
     assert any(p.exit_ts.date() > p.entry_ts.date() for p in plan.positions), "a held position"
     books = defaultdict(int)
     for p in plan.positions:
-        books[p.legs[0].symbol] += 1
-    assert set(books) == {"CRUDEOIL", "NIFTY"} and min(books.values()) >= mx.BOOK_ROW_MINIMUM
+        if p.legs[0].segment.value == "OPT":
+            books[p.legs[0].symbol] += 1
+    assert set(books) == {"CRUDEOILM", "NIFTY"} and min(books.values()) >= mx.BOOK_ROW_MINIMUM
+    assert any(p.legs[0].segment.value == "EQ" and p.exit_ts.date() > p.entry_ts.date()
+               for p in plan.positions), "a share held, not traded"
     assert mx.longest_losing_run(trips).length >= 5, "a losing run"
     assert len({t.trading_day for t in trips}) >= 5 and len(mx.worst_five(trips)) == 5
 

@@ -2,23 +2,23 @@
     the chapter's facts on the navy stage, then one story card per fact, in slice order.
     Every sentence is the Mirror's own, word for word (test_wording_reference.py). -#}
 {% extends "layout.html" %}
-{% from "_components.html" import button, dial, gross_line, uncounted_line %}
+{% from "_components.html" import button, dial, dials, gross_line, uncounted_line %}
 {% from "scope/_next.html" import chapter_four %}
 {% set nav = "scope" %}
 {% block stage %}
 <header class="stage on-navy" aria-label="The Scope">
-  {{ dial(view) }}
+  {{ dials(view) }}
 </header>
 {% endblock %}
 {% block content %}
-  <p class="label">CHAPTER {{ chapter.number }} OF 4</p>
+  <p class="label">CHAPTER {{ Figure(chapter.number, "chapter") }} OF 4</p>
   <h1 class="title fact__title">{{ chapter.name }}</h1>
-  <p class="body">{{ chapter.facts|length }} facts, counted from your file.</p>
+  <p class="body">{{ Figure(chapter.facts|length, "facts") }} facts, counted from your file.</p>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
   {{ uncounted_line(imp.trips_refused) }}
   {%- if chapter.number == 2 %}
   {%- for line in facts["math"].lead_lines %}
-  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ line.more|rupees(signed=false) }} more per winner.</p>
+  <p class="mirror">In {{ line.book|book_in_a_sentence }}, break-even takes {{ Figure(line.more, "rupees")|rupees(signed=false) }} more per winner.</p>
   {%- endfor %}
   {%- endif %}
   <div class="story-list">
@@ -26,7 +26,7 @@
     {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
   {%- endfor %}
   </div>
-  {%- if chapter.feedback %}
+  {%- if chapter.feedback and not sample %}
   {% include "scope/_feedback.html" %}
   {%- endif %}
   {%- if next_step %}

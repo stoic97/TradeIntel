@@ -235,7 +235,7 @@ def test_the_headline_calls_no_hour_good_or_bad(words):
 
 
 def test_the_figure_is_an_hour_not_a_span():
-    assert FIG["figure"] == "20:00"
+    assert FIG["figure"] == "20:00 hour"
     assert "hours" not in FIG["figure"]
 
 

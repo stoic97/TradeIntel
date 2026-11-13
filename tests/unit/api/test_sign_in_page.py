@@ -53,7 +53,8 @@ def test_sign_in_stands_on_the_design_kits_layout(client):
 
 def test_it_says_what_it_said_before_and_nothing_more(client):
     assert words(client.get("/login").text) == (
-        "Sign in Login id Password Sign in Create an account if you don't have one.")
+        "Sign in Login id Password Sign in Forgot your password? Your account has no email, "
+        "so a reset goes through us: team@plusev.in Create an account if you don't have one.")
 
 
 def test_the_fields_are_the_kits_and_keep_what_the_browser_needs(client):

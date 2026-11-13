@@ -312,17 +312,19 @@ def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
     split = stacked_split(item["figure"]) if (not state and stacked and not label) else None
     head = "—" if state else (split[0] if split else item["figure"])
     tail = label or (split[1] if split else "")
+    tail_lines = tail.split("\n") if tail else []  # a hub answer's words can take more than a line
     tight = head.find(" · ") > 0
     head_w = mono_width(head, fig_size) - (2 * 0.45 * fig_size if tight else 0)
-    tail_w = mono_width(tail, 11)
+    tail_w = max((mono_width(line, 11) for line in tail_lines), default=0)
     lh = js_round(fig_size * 1.15)
     lead = 0 if label else 13 + 4  # the kit's serial row, which a labelled figure has no need of
-    row_a = lead + lh + (13 if tail else 0)
+    row_a = lead + lh + 13 * len(tail_lines)
     row_b = 28 if state else (14 if item.get("chart") else 0)
     width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
     return {
         "head": head,
         "tail": tail,
+        "tailLines": tail_lines,
         "lead": lead,
         "tight": tight,
         "figSize": fig_size,
@@ -458,7 +460,10 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     sec = sectors(len(view["items"]), is_home)
     t = ticks(cx, cy, rr, sec["dividers"], 0)
     lay = layout_contents(
-        view["items"], sec, rr, size["figSizesHome"] if is_home else size["figSizesChapter"]
+        view["items"],
+        sec,
+        rr,
+        view.get("figSizes") or (size["figSizesHome"] if is_home else size["figSizesChapter"]),
     )
     slices = []
     for i, sl in enumerate(sec["slices"]):
@@ -518,6 +523,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     "chartY": top + b["rowA"] + 3,
                     "head": b["head"],
                     "tail": b["tail"],
+                    "tailLines": b["tailLines"],
                     "tight": b["tight"],
                     "figSize": b["figSize"],
                     "lineHeight": b["lineHeight"],
@@ -649,7 +655,7 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if c["tail"]:
             o.append(
                 _text_block(
-                    [c["tail"]],
+                    c["tailLines"],
                     c["x"],
                     c["tailY"],
                     13,

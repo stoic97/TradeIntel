@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 import re
 import types
+from datetime import UTC, datetime
 
 from services.production.api.formatting import day
 from services.production.ctr.intake import day_versions as dv
@@ -38,7 +39,7 @@ def rows_of(page: str) -> list[str]:
 
 def line(change) -> str:
     imp = NS(id=7, outcome=NS(value="accepted"), rows_in=10, trips_reconstructed=2,
-             created_at=NS(strftime=lambda _: "08 Sep 2026"))
+             created_at=datetime(2026, 9, 8, 6, 0, tzinfo=UTC), source_account="A")
     page = template_env().get_template("account.html").render(
         title="T", csrf_token="x", display_name="R", login_id="r", imports=[imp],
         changes={7: change})

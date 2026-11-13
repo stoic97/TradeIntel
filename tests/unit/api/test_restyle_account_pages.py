@@ -33,7 +33,7 @@ CONTEXT = {
     "delete_done.html": {},
     "404.html": {},
     "not_open.html": {},
-    "signup.html": {"error": "That login id is taken."},
+    "home.html": {"error": "That login id is taken.", "form_open": True},
 }
 
 SAID = {
@@ -52,8 +52,18 @@ SAID = {
     "not_open.html": (
         "Scope Scope is not open yet The page that tells you what happens to your tradebook has not been checked yet. Someone other than the people who wrote it has to read it, and the deletion process has to be run end to end and confirmed, before anyone is asked to agree to it. Until both are done, this account cannot upload a file. Nothing is stored for you beyond the account itself, and nothing has been read. If you were expecting to start today, tell us and we will say where this stands."
     ),
-    "signup.html": (
-        "Create your account Choose a login id and a password. That login id is taken. Your name Login id Password At least 12 characters. There is no email on your account, so keep this somewhere safe — a reset has to go through us. Create account Sign in if you already have an account."
+    "home.html": (
+        "You know what your account did last year. You do not know which of your habits "
+        "produced it. You give us The trade file your broker lets you download. Never your "
+        "broker login. You get Your own trades, counted: where your results came from, with "
+        "the trades behind every figure. You won&#39;t get Tips or courses. No buy or sell "
+        "calls, ever. Brokers Dhan today. Others are coming. Cost Free today. Your file No "
+        "third party receives it. Delete everything whenever you want. See a sample report, "
+        "no account needed. Create your account That login id is taken. Choose a login id Any "
+        "name you like. Password At least 12 characters. We don't ask for your email or "
+        "phone, so we can't call or message you. It also means no reset link, so keep this "
+        "password safe. Create account Next: a page on what we keep and why, then your file. "
+        "Sign in if you already have an account."
     ),
 }
 
@@ -107,12 +117,13 @@ def test_delete_keeps_its_field_and_greys_the_button_until_ticked():
 
 
 def test_sign_up_keeps_its_field_names_and_what_the_browser_needs():
-    page = render("signup.html")
-    for name, autocomplete in (("display_name", "name"), ("login_id", "username"),
-                               ("password", "new-password")):
+    """The door's form (TICKET-914): a login id and a password, nothing else."""
+    page = render("home.html")
+    assert 'name="display_name"' not in page
+    for name, autocomplete in (("login_id", "username"), ("password", "new-password")):
         assert f'name="{name}"' in page and f'autocomplete="{autocomplete}"' in page
     assert 'minlength="12"' in page
-    assert '<form method="post" action="/signup">' in page
+    assert '<form method="post" action="/signup" id="door-form">' in page
 
 
 def test_no_page_in_this_batch_has_the_kits_new_lines():
