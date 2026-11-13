@@ -52,7 +52,9 @@ class Reason(str, Enum):
 
     NO_SERIES = "no series for the underlying"
     NOT_COVERED = "the series does not cover the date"
-    NO_BAR = "no bar for that minute"
+    NO_PRIOR_BAR = "no bar for the minute before entry"
+    NO_ENTRY_BAR = "no bar for the entry minute"
+    NO_HORIZON_BAR = "no bar at the horizon"
     NO_DIRECTION = "no single direction"
 
 
@@ -125,6 +127,8 @@ class PriorMinute:
     before: Count
     after: dict[int, Count]
     unmeasured: tuple[Unmeasured, ...]  # left out of every count, with the reason
+    # Left out of one count only, because a bar that count needs is missing; the reason names it.
+    unmeasured_before: tuple[Unmeasured, ...] = ()
     unmeasured_after: dict[int, tuple[Unmeasured, ...]] = field(default_factory=dict)
     seed: int = SEED
     draws: int = DRAWS
@@ -167,6 +171,7 @@ def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
           seed: int = SEED, draws: int = DRAWS) -> PriorMinute:
     """Count each trip before and after its entry minute, beside its shuffle control."""
     unmeasured: list[Unmeasured] = []
+    before_out: list[Unmeasured] = []
     before_signs: list[int] = []
     before_dirs: list[int] = []
     after_signs: dict[int, list[int]] = {h: [] for h in HORIZONS}
@@ -185,16 +190,22 @@ def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
         if e.direction not in (1, -1):
             unmeasured.append(Unmeasured(e.trip_id, Reason.NO_DIRECTION))
             continue
+        # Each count asks only for the bars it reads (ruling on TICKET-898, D3): the before
+        # count the bar ahead of the entry minute; each after count the entry-minute bar and the
+        # bar ``h`` minutes later. A trip missing one of them is left out of that count alone.
         previous, entered = bars.bar(minute - timedelta(minutes=1)), bars.bar(minute)
-        if previous is None or entered is None:
-            unmeasured.append(Unmeasured(e.trip_id, Reason.NO_BAR))
-            continue
-        before_signs.append(_sign(previous.close - previous.open))
-        before_dirs.append(e.direction)
+        if previous is None:
+            before_out.append(Unmeasured(e.trip_id, Reason.NO_PRIOR_BAR))
+        else:
+            before_signs.append(_sign(previous.close - previous.open))
+            before_dirs.append(e.direction)
         for h in HORIZONS:
+            if entered is None:
+                after_out[h].append(Unmeasured(e.trip_id, Reason.NO_ENTRY_BAR))
+                continue
             later = bars.bar(minute + timedelta(minutes=h))
             if later is None:
-                after_out[h].append(Unmeasured(e.trip_id, Reason.NO_BAR))
+                after_out[h].append(Unmeasured(e.trip_id, Reason.NO_HORIZON_BAR))
                 continue
             after_signs[h].append(_sign(later.close - entered.close))
             after_dirs[h].append(e.direction)
@@ -203,6 +214,6 @@ def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
     before = _counted(before_signs, before_dirs, rng, draws)
     after = {h: _counted(after_signs[h], after_dirs[h], rng, draws) for h in HORIZONS}
     return PriorMinute(total=len(entries), before=before, after=after,
-                       unmeasured=tuple(unmeasured),
+                       unmeasured=tuple(unmeasured), unmeasured_before=tuple(before_out),
                        unmeasured_after={h: tuple(after_out[h]) for h in HORIZONS},
                        seed=seed, draws=draws)
