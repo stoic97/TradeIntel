@@ -26,7 +26,7 @@
     {%- for b in verdict.books %}
     <li class="home__book"><span class="home__book-head"><span>{{ b.label }}</span> {{ money(b.net) }}</span> <span class="body-small"><span class="num">{{ Figure(b.trades, "trades")|count }}</span> trade{{ "" if b.trades == 1 else "s" }}.
       {%- if b.standout %} {{ b.standout.symbol }} made {{ money(b.standout.net, signed=false) }}{{ held(b.standout) }}.
-      {%- elif b.worst_day %} Worst day: {{ b.worst_day|day }}, {{ money(b.worst_net) }}.{% endif %}</span></li>
+      {%- elif b.worst_day %} Worst day: {{ b.worst_day|day_link }}, {{ money(b.worst_net) }}.{% endif %}</span></li>
     {%- endfor %}
   </ul>
   <p class="label label--plain home__heading">Four chapters</p>

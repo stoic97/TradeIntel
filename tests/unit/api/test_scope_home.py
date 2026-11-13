@@ -28,8 +28,12 @@ def home_page(trips=TRIPS, imp=IMP) -> str:
 def test_home_has_the_four_chapters_in_order_each_scoping_in():
     view = SF.home_view(CTX, IMP)
     assert [i["name"] for i in view["items"]] == [c.name for c in S.CHAPTERS]
-    assert [i["href"] for i in view["items"]] == [
-        S.chapter_href(c.number, from_home=True) for c in S.CHAPTERS]
+    # Each wedge opens the trades behind its figure (TICKET-905), from its chapter's fact; the
+    # chapters themselves are reached from the list below the dial.
+    figs = SF.facts(CTX, IMP)
+    for c, item in zip(S.CHAPTERS, view["items"], strict=True):
+        assert item["href"] in (figs[SF.HUB_FACT[c.number]]["opens"], None)
+    assert view["items"][0]["href"] == figs["worst-days"]["opens"]
 
 
 def test_without_caption_lines_the_dial_is_the_kits_byte_for_byte():

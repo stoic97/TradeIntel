@@ -603,12 +603,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         kind = fact.chart
         behind = len(S.trades_behind(key, ctx))
         lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
+        opens = None if state else _opens(key, ctx)
         out[key] = {
             "key": key,
             "finding": findings.of(key),  # both labels, or Unlabelled before any page
             "title": fact.title,
             "state": state,
             "figure": str(lead),
+            "opens": opens,
+            "lead_figure": Figure(lead.value, lead.noun, of=lead.of, opens=opens),
             "noun": lead.noun,
             "href": S.fact_href(key),
             "trade_count": behind,
@@ -829,6 +832,28 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     return _wedge(Figure(fig["figure"], fig["noun"], of="on same-day trades"), shown=fig["figure"])
 
 
+def _opens(key: str, ctx: dict) -> str | None:
+    """Every trade behind a fact's figure, from the same record that decided it (TICKET-905).
+    The clock's figure is one hour of one book, so it opens that hour. A fact that counts rows
+    or things rather than trades opens nothing."""
+    if key not in TRADES_BEHIND:
+        return None
+    if not S.trades_behind(key, ctx):
+        return None
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        if lead is not None:
+            return S.see_all_href("clock", book=lead.book, hour=lead.largest.hour)
+    return S.see_all_href(key)
+
+
+TRADES_BEHIND = frozenset(S.FACTS) - {"unread", "not-told"}
+"""The facts whose figure has trades behind it: the same set the trade lists serve."""
+
+HUB_FACT = {1: "worst-days", 2: "math", 3: "busiest", 4: "risk"}
+"""Which fact each chapter's hub wedge takes its figure from, and so what it opens."""
+
+
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre."""
     c = S.chapter(n)
@@ -838,7 +863,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         item = {
             "name": f.title,
             **fig["wedge"],
-            "href": fig["href"],
+            "href": fig["opens"],  # the trades behind the wedge's figure, or nothing (TICKET-905)
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,
         }
@@ -990,22 +1015,38 @@ def home_view(
     opened: frozenset[int] = frozenset(),
     number: Decimal | None = None,
     answers: dict[int, dict] | None = None,
+    figs: dict[str, dict] | None = None,
 ) -> dict:
     """Home's dial: each chapter's answer in its wedge, the trader's result in the centre. Read
-    is the dot on the rim, and no words in the wedge."""
-    answers = answers or hub_answers(ctx, facts(ctx, imp), number)
+    is the dot on the rim, and no words in the wedge. Each wedge opens the trades behind its
+    figure (TICKET-905); one whose figure has none behind it is drawn plain."""
+    figs = figs or facts(ctx, imp)
+    answers = answers or hub_answers(ctx, figs, number)
     items = [
         {
             "name": c.name,
             **answers[c.number]["wedge"],
             "opened": c.number in opened,
-            "href": S.chapter_href(c.number, from_home=True),
+            "href": _hub_opens(c.number, answers[c.number], figs),
         }
         for c in S.CHAPTERS
     ]
     caption = ["your result,", "before charges"] if gross else ["your result for", "the whole period"]
     centre = {"figure": formatting.rupees(ctx["share"].total), "captionLines": caption}
     return {"kind": "home", "items": items, "centre": centre}
+
+
+def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
+    """The trades behind a hub wedge's figure: its chapter's fact's own list. Chapter 4's wedge
+    counts trades only when it says how many went past his number or couldn't be sized."""
+    if answer.get("state"):
+        return None
+    if n == 4:
+        past, uncapped = answer.get("past"), answer.get("uncapped")
+        counts_trades = (past is not None and past.count) or (answer.get("number") is None and uncapped)
+        if not counts_trades:
+            return None
+    return figs[HUB_FACT[n]]["opens"]
 
 
 def _start(opened: frozenset[int]) -> dict | None:
@@ -1024,7 +1065,8 @@ def home_context(
     figs = facts(ctx, imp)
     answers = hub_answers(ctx, figs, number)
     return {
-        "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers),
+        "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers,
+                          figs=figs),
         "verdict": mx.verdict(ctx["trips"]),
         "chapters": [
             {

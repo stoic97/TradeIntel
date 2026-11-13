@@ -314,3 +314,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .door__row dt { margin: 0; }
 .door__row dd { margin: 0; }
 .door__sample { margin-bottom: var(--space-8); }
+
+/* TICKET-905: a wedge with nothing behind it opens nothing, and doesn't look as if it would. */
+.scope__slice--plain { pointer-events: none; }
+.figure-link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
