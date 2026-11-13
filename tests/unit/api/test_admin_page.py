@@ -1621,6 +1621,79 @@ def test_the_new_styles_are_not_added_at_the_end_of_the_file():
     assert css.index(".admin__scroll") < css.index(".day-blocks__next")
 
 
+# ---------- Who can open this page, and what admins did [TICKET-873] ----------
+
+
+def add_action(sess, action, *, actor="ops", target=None, at=THEN):
+    sess.add(m.AdminAction(actor=actor, action=action, target=target, at=at))
+
+
+def test_an_email_login_id_is_shortened_in_the_table_and_the_feed(app, engine):
+    trader_id = add_trader(engine, "someone.long@example.com", name="Someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id)
+        sess.commit()
+    the_view = view(app, engine)
+    assert the_view["rows"][0]["login_id"] == "so…@e…"
+    assert "someone.long@example.com" not in str(the_view["feed"])
+    assert "someone.long@example.com" not in admin_page(app, engine)
+
+
+def test_a_login_id_that_is_no_email_is_shown_whole(app, engine):
+    add_trader(engine, "someone")
+    assert row_of(view(app, engine), "someone")["login_id"] == "someone"
+
+
+def test_a_development_email_is_shortened_too(app, engine):
+    add_trader(engine, "tester@example.com", dev=True)
+    assert view(app, engine)["dev_accounts"][0]["login_id"] == "te…@e…"
+
+
+def test_the_trail_lists_what_admins_did_newest_first_without_page_views(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "classify_real", target="a.person@example.com", at=THEN)
+        add_action(sess, "wrong_reports", at=THEN + timedelta(hours=1))
+        add_action(sess, "admin_view", at=THEN + timedelta(hours=2))
+        sess.commit()
+    trail = view(app, engine)["trail"]
+    assert [(t["action"], t["target"]) for t in trail] == [("wrong_reports", "—"), ("classify_real", "a.…@e…")]
+    assert trail[0]["who"] == "ops"
+
+
+def test_the_trail_names_an_admin_by_login_id_and_keeps_to_its_length(app, engine):
+    from services.production.api import admin_view
+    trader_id = add_trader(engine, "boss2")
+    with make_session(engine) as sess:
+        for n in range(admin_view.TRAIL_LENGTH + 5):
+            add_action(sess, "classify_real", actor=f"trader:{trader_id}", at=THEN + timedelta(minutes=n))
+        sess.commit()
+    trail = view(app, engine)["trail"]
+    assert len(trail) == admin_view.TRAIL_LENGTH
+    assert trail[0]["who"] == "boss2"
+
+
+def test_an_actor_whose_account_is_gone_is_left_as_stored(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "delete_trader", actor="trader:99999")
+        sess.commit()
+    assert view(app, engine)["trail"][0]["who"] == "trader:99999"
+
+
+def test_page_views_are_counted_apart(app, engine):
+    with make_session(engine) as sess:
+        add_action(sess, "admin_view", at=THEN)
+        add_action(sess, "admin_view", at=THEN + timedelta(hours=1))
+        sess.commit()
+    quiet = view(app, engine)["admin_views"]
+    assert quiet["count"] == 2 and quiet["last"].startswith("02 Mar 2026")
+
+
+def test_the_page_lists_who_can_open_it_shortened_and_the_trail(app, engine):
+    page = admin_page(app, engine)
+    assert "Who can open this page" in page and ADMIN in page
+    assert "What admins have done" in page
+
+
 # ---------- What traders told us [TICKET-876] ----------
 
 
