@@ -31,6 +31,7 @@ from services.production.api import (
     routes_deletion,
     routes_eligibility,
     routes_events,
+    routes_factors,
     routes_home,
     routes_identity,
     routes_journal,
@@ -94,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
     app.include_router(routes_eligibility.router)
+    app.include_router(routes_factors.router)
     app.include_router(routes_deletion.router)
     app.include_router(routes_admin.router)
 
