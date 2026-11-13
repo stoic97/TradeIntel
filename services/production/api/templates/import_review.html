@@ -34,8 +34,11 @@
   {%- if rows_confirmed is defined and rows_confirmed %}
   <p class="lead">You told us <span class="num">{{ Figure(rows_confirmed, "rows")|count }}</span> {{ "row repeats" if rows_confirmed == 1 else "rows repeat" }} a trade already in the file. {{ "It is" if rows_confirmed == 1 else "They are" }} set aside, and your figures were rebuilt without {{ "it" if rows_confirmed == 1 else "them" }}.</p>
   {%- endif %}
+  {%- if files is defined and files|length > 1 %}
+  <p class="body">Read together, from {{ files|length }} files: {% for f in files %}<span class="upload__file-name">{{ f.original_name }}</span>{% if loop.revindex == 2 %} and {% elif not loop.last %}, {% endif %}{% endfor %}.</p>
+  {%- endif %}
   <dl class="facts-list">
-    <dt>Rows in the file</dt><dd>{{ counted(imp.rows_in, "row", "rows") }}</dd>
+    <dt>Rows in the {{ "files" if files is defined and files|length > 1 else "file" }}</dt><dd>{{ counted(imp.rows_in, "row", "rows") }}</dd>
     <dt>Rows we could read</dt><dd>{{ counted(imp.rows_parsed, "row", "rows") }}</dd>
     <dt>Rows set aside</dt><dd>{{ counted(imp.rows_excluded, "row", "rows") }}</dd>
     <dt>Trades rebuilt</dt><dd>{{ counted(imp.trips_reconstructed, "trade", "trades") }}</dd>
