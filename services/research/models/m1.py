@@ -276,6 +276,8 @@ def fit(
         tune=config.warmup,
         chains=config.chains,
         seed=config.seed,
+        target_accept=config.target_accept,
+        maxdepth=config.maxdepth,
         progress_bar=False,
     )
     seconds = time.perf_counter() - started

@@ -13,13 +13,19 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
 MAX_R_HAT = 1.01
 MIN_BULK_ESS = 400.0
 MAX_DIVERGENCES = 0
+
+STANDARD, ESCALATED = "standard", "escalated"
+"""The two budgets a fit can be produced at. See ``escalate``."""
+
+ESCALATED_TARGET_ACCEPT = 0.99
+ESCALATED_MAXDEPTH = 12
 
 
 class BadDiagnostics(Exception):
@@ -32,6 +38,13 @@ class FitConfig:
     warmup: int = 1000
     chains: int = 4
     seed: int = 0
+    # nutpie's own defaults, and therefore the budget ADR-006's benchmark, the
+    # null-rate sweep and the recall sweep were every one of them measured at. The
+    # first attempt keeps them: a first attempt that differs from the recorded one
+    # moves every number already written into docs/phase0 without anyone deciding it
+    # should. Only the retry is harder - see escalate.
+    target_accept: float = 0.8
+    maxdepth: int = 10
 
 
 @dataclass(frozen=True)
@@ -50,6 +63,9 @@ class FitResult:
     # every fit is waste. Excluded from summary_digest: the same fit is the same fit
     # whether or not its draws were retained.
     samples: dict[str, np.ndarray] | None = None
+    budget: str = STANDARD
+    """Which attempt produced this fit. Carried so the evidence object records the
+    effort a Finding took and not only its result."""
 
     def summary_digest(self) -> str:
         """Identity of what the fit concluded, to six decimals. Timing is excluded on
@@ -80,6 +96,51 @@ def check_diagnostics(result: FitResult) -> None:
             f"{result.backend}: bulk ess below the framework minimum "
             f"{MIN_BULK_ESS:.0f}: {starved}"
         )
+
+
+
+def escalate(config: FitConfig) -> FitConfig:
+    """The one harder attempt a fit gets when the framework's diagnostics refuse it.
+
+    **This is not a tolerance.** ``MAX_R_HAT``, ``MIN_BULK_ESS`` and
+    ``MAX_DIVERGENCES`` do not move. A divergence is a statement about the sampler's
+    step size against the posterior's curvature, so the honest answer to one is a
+    smaller step and a longer warmup, not a wider bar. The seed moves because
+    re-running a seeded failure reproduces it.
+
+    Where the posterior is improper no budget helps and the escalated fit fails too -
+    which is the signature that tells a sampler fault from a model fault. On corpus A,
+    13 Nov 2026, the improper fits failed with 573 to 1,415 divergences at any budget,
+    while the fits worth retrying failed with one or two (TICKET-897).
+    """
+    return replace(
+        config,
+        draws=2 * config.draws,
+        warmup=2 * config.warmup,
+        seed=config.seed + 1,
+        target_accept=ESCALATED_TARGET_ACCEPT,
+        maxdepth=ESCALATED_MAXDEPTH,
+    )
+
+
+def fit_escalating(fit_fn, data, priors, config: FitConfig | None = None, **kw) -> FitResult:
+    """Fit; if the diagnostics refuse it, fit once more at ``escalate``'s budget.
+
+    Once, not until it passes: a third attempt is fishing for a seed that works. The
+    escalated fit is returned whether or not it passed, because it is the more careful
+    one, and ``budget`` says which attempt produced it rather than leaving the reader
+    to assume the first.
+
+    Diagnostics are never raised from here. What a failing fit means is the caller's
+    to decide - B2 turns one into "Not enough evidence yet", SBC counts it.
+    """
+    config = config or FitConfig()
+    first = fit_fn(data, priors, config, **kw)
+    try:
+        check_diagnostics(first)
+    except BadDiagnostics:
+        return replace(fit_fn(data, priors, escalate(config), **kw), budget=ESCALATED)
+    return first
 
 
 def summarise(

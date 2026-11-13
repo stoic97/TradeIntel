@@ -36,7 +36,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from services.research.models import m1
+from services.research.models import base, m1
 from services.research.models.base import BadDiagnostics, FitConfig, FitResult, check_diagnostics
 
 FIT = FitConfig(draws=1000, warmup=1000, chains=4, seed=3)
@@ -394,3 +394,63 @@ def test_a_history_that_is_almost_one_number_is_refused_rather_than_fitted():
     assert m1.tie_propriety_floor(data) > PRIORS.nu_floor
     with pytest.raises(ValueError, match="improper"):
         m1.fit(data, PRIORS, FIT)
+
+
+# --- the sampler budget: the thresholds hold, the effort adapts -----------------
+
+def test_the_standard_budget_is_the_one_adr_006_measured():
+    """nutpie's own defaults. ADR-006's benchmark, the null-rate sweep and the recall
+    sweep were all run at them, so the first attempt has to reproduce them exactly or
+    every number already recorded moves without anyone deciding that it should."""
+    assert (FitConfig().target_accept, FitConfig().maxdepth) == (0.8, 10)
+
+
+def test_the_escalated_budget_is_harder_and_reseeded():
+    """One retry, pre-committed. This is not a tolerance: the framework's three
+    thresholds do not move. What moves is how carefully the same posterior is
+    explored. The seed moves too, because re-running a seeded failure reproduces it."""
+    hard = base.escalate(FIT)
+    assert (hard.draws, hard.warmup) == (2 * FIT.draws, 2 * FIT.warmup)
+    assert hard.target_accept > FIT.target_accept
+    assert hard.maxdepth > FIT.maxdepth
+    assert hard.seed != FIT.seed
+    assert hard.chains == FIT.chains
+
+
+def test_a_clean_fit_is_not_retried():
+    calls = []
+
+    def fit_fn(data, priors, config, **kw):
+        calls.append(config)
+        return _stub()
+
+    got = base.fit_escalating(fit_fn, None, None, FIT)
+    assert len(calls) == 1
+    assert got.budget == "standard"
+
+
+def test_a_failing_fit_is_retried_once_and_the_result_says_so():
+    """Once, not until it passes - a third attempt is fishing. The escalated fit is
+    returned even when it fails again, because it is the more careful one, and the
+    caller is told which budget produced it rather than left to assume."""
+    calls = []
+
+    def fit_fn(data, priors, config, **kw):
+        calls.append(config)
+        return _stub(divergences=1)
+
+    got = base.fit_escalating(fit_fn, None, None, FIT)
+    assert len(calls) == 2
+    assert calls[1] == base.escalate(FIT)
+    assert got.budget == "escalated"
+    assert got.divergences == 1
+
+
+def test_the_budget_reaches_the_sampler():
+    """A config field nothing passes on is a lie in the evidence object. maxdepth 1
+    cripples the sampler, so the same data at the same seed must come back different."""
+    data = _data(seed=43)
+    assert (
+        m1.fit(data, PRIORS, replace(FIT, maxdepth=1)).summary_digest()
+        != m1.fit(data, PRIORS, FIT).summary_digest()
+    )
