@@ -138,10 +138,10 @@ def _figures(tags: dict[str, dict], count) -> tuple[int, int]:
     return column.count(WITH), column.count(WITH) + column.count(NOT_WITH)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--seed", type=int, default=898, help="seed for the synthetic bars")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     trips = load_demo_trips()
     multi = {leg.trip_id for p in group_positions(trips) if len(p.legs) > 1 for leg in p.legs}
