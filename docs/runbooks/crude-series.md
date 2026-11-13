@@ -81,7 +81,7 @@ extension through 11 November 2026 had:
   on 5 October, so every synthetic history still regenerates exactly.
 - The fund's own copy, which the fund's backtests read. Extending it would change the fund's
   results and spend its unseen months, so that is the fund's call, not this script's.
-- Licensing, and every other series (TICKET-894, TICKET-889).
+- Every other series (TICKET-889). Where every family's bars come from is ADR 008.
 
 Until the fund and the product have separate accounts (ADR 002), the broker connection is the fund's.
 So each pull is a market-data crossing, and it is logged in `CROSSINGS.md` like one.
