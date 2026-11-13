@@ -90,31 +90,36 @@ def demo():
 
 
 def test_the_demo_file_counts_no_trip_out_for_want_of_a_direction(demo):
-    """Gate 4 on synthetic data. The demo file's five two-leg positions are all debit
-    verticals (four CRUDEOIL calls, one NIFTY put). Before the convention all five were
-    counted out as "no single direction"; now none is."""
+    """Gate 4 on synthetic data. The demo file's sample trader holds one two-leg position:
+    CRUDEOILM, bought 10 CE 5750 and sold 10 CE 5850, a debit call vertical. Before the
+    convention it was counted out as "no single direction"; now it is long, and no demo trip
+    is counted out for want of a direction. If the demo's two-leg positions change, recount
+    them by hand before changing this test."""
     from services.production.mirror import prior_minute as pm
     from tests.unit.mirror.test_prior_minute import walk
 
     multi = [p for p in demo if len(p.legs) > 1]
-    assert (len(demo), len(multi)) == (373, 5)
+    assert len(multi) == 1
+    (vertical,) = multi
+    legs = sorted((t.option_type.value, int(t.strike), t.direction.value, t.quantity)
+                  for t in vertical.legs)
+    assert legs == [("CE", 5750, "LONG", 10), ("CE", 5850, "SHORT", 10)]
     answers = {p.position_id: od.underlying_direction(p) for p in demo}
-    assert sorted(answers[p.position_id].value for p in multi) == ["long"] * 4 + ["short"]
-    assert [answers[p.position_id] for p in multi if p.legs[0].symbol == "NIFTY"] == [U.SHORT]
+    assert answers[vertical.position_id] is U.LONG
 
     sign = {U.LONG: 1, U.SHORT: -1, U.NONE: None}
     entries = [pm.Entry(p.position_id, p.legs[0].symbol, p.entry_ts, sign[answers[p.position_id]])
                for p in demo]
     days = sorted({p.entry_ts.astimezone(IST).date() for p in demo})
     result = pm.count(entries, {"NIFTY": walk(1, days), "CRUDEOIL": walk(2, days)})
-    assert result.total == 373
+    assert result.total == len(demo)
     assert result.unmeasured_by_reason().get(pm.Reason.NO_DIRECTION, 0) == 0
 
 
 def test_every_demo_single_leg_answers_by_the_4_7_7_table(demo):
     """Gate 5: the single-leg rule is untouched."""
     singles = [p for p in demo if len(p.legs) == 1]
-    assert len(singles) == 368
+    assert singles, "the demo file has no single-leg position"
     for p in singles:
         t = p.legs[0]
         key = (t.option_type if t.segment is Segment.OPT else None, t.direction)
