@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
-from services.production.api import dial, formatting
+from services.production.api import dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
@@ -605,6 +605,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
         out[key] = {
             "key": key,
+            "finding": findings.of(key),  # both labels, or Unlabelled before any page
             "title": fact.title,
             "state": state,
             "figure": str(lead),

@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from services.production.api import (
     dial,
     door,
+    findings,
     formatting,
     limits,
     routes_admin,
@@ -47,6 +48,7 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
 dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
+findings.register(TEMPLATES.env)  # a finding's two labels, read only from a Finding
 door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
 
