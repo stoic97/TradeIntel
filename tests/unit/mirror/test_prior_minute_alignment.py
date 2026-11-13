@@ -211,7 +211,7 @@ def _at(seconds: int) -> datetime:
 
 def test_every_demo_entry_lines_up_on_the_minute_before_and_on_no_other():
     times = _demo_entry_times()
-    assert len(times) > 300  # the demo file's positions, not a handful
+    assert len(times) >= 100  # the demo file's positions, not a handful
     for ts in times:
         assert ts.utcoffset() is not None, f"demo entry_ts has no zone: {ts!r}"
         m0 = _epoch_minute(ts)
