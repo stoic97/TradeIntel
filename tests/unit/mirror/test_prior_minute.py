@@ -142,16 +142,26 @@ def test_no_trip_is_dropped_and_each_one_left_out_says_why(table):
     ]
     result = pm.count(entries, {"NIFTY": table})
     assert result.total == 6
-    assert result.before.measured + len(result.unmeasured) == 6
+    left_out = len(result.unmeasured) + len(result.unmeasured_before)
+    assert result.before.measured + left_out == 6
     assert {u.trip_id: u.reason for u in result.unmeasured} == {
         "no series": pm.Reason.NO_SERIES,
         "not covered": pm.Reason.NOT_COVERED,
-        "no bar": pm.Reason.NO_BAR,
         "no direction": pm.Reason.NO_DIRECTION,
         "no underlying": pm.Reason.NO_SERIES,
     }
+    # No bar at or before 08:00: the before count and every after count each name the bar.
+    assert {u.trip_id: u.reason for u in result.unmeasured_before} == {
+        "no bar": pm.Reason.NO_PRIOR_BAR,
+    }
+    for h in pm.HORIZONS:
+        assert {u.trip_id: u.reason for u in result.unmeasured_after[h]} == {
+            "no bar": pm.Reason.NO_ENTRY_BAR,
+        }
+        out = len(result.unmeasured) + len(result.unmeasured_after[h])
+        assert result.after[h].measured + out == 6
     assert result.unmeasured_by_reason() == {
-        pm.Reason.NO_SERIES: 2, pm.Reason.NOT_COVERED: 1, pm.Reason.NO_BAR: 1, pm.Reason.NO_DIRECTION: 1}
+        pm.Reason.NO_SERIES: 2, pm.Reason.NOT_COVERED: 1, pm.Reason.NO_DIRECTION: 1}
 
 
 def test_a_horizon_past_the_last_bar_is_counted_out_with_its_reason(table):
@@ -159,7 +169,9 @@ def test_a_horizon_past_the_last_bar_is_counted_out_with_its_reason(table):
     result = pm.count([pm.Entry("late", "NIFTY", close, 1)], {"NIFTY": table})
     assert result.before.measured == 1
     assert result.after[5].measured == 0
-    assert [(u.trip_id, u.reason) for u in result.unmeasured_after[5]] == [("late", pm.Reason.NO_BAR)]
+    assert [(u.trip_id, u.reason) for u in result.unmeasured_after[5]] == [
+        ("late", pm.Reason.NO_HORIZON_BAR)
+    ]
 
 
 def test_the_same_history_gives_the_same_band_and_the_seed_is_recorded(table):
@@ -224,7 +236,60 @@ def test_it_runs_on_the_demo_file_with_no_network(monkeypatch):
     crude = walk(2, days)  # one series for crude and its mini
     result = pm.count(entries, {"NIFTY": walk(1, days), "CRUDEOIL": crude, "CRUDEOILM": crude})
     assert result.total == len(plan.positions) > 0
-    assert result.before.measured + len(result.unmeasured) == result.total
+    left_out = len(result.unmeasured) + len(result.unmeasured_before)
+    assert result.before.measured + left_out == result.total
+    for h in pm.HORIZONS:
+        out = len(result.unmeasured) + len(result.unmeasured_after[h])
+        assert result.after[h].measured + out == result.total
     assert any(len(p.legs) > 1 for p in plan.positions)  # a spread, which has no single direction
     assert result.unmeasured_by_reason().get(pm.Reason.NO_DIRECTION, 0) >= 1
     assert result.before.measured > 0
+
+
+MINUTE = datetime(2026, 6, 2, 11, 0, tzinfo=IST)
+
+
+def _with_bars(table, *, drop=(), put=None):
+    # A copy of the walk with some bars replaced and some removed; keys are minutes from 11:00.
+    bars = dict(table.bars)
+    for k, bar in (put or {}).items():
+        bars[MINUTE + timedelta(minutes=k)] = bar
+    for k in drop:
+        del bars[MINUTE + timedelta(minutes=k)]
+    return {"NIFTY": dataclasses.replace(table, bars=bars)}
+
+
+def test_a_missing_entry_minute_bar_does_not_drop_the_before_count(table):
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    series = _with_bars(table, drop=(0,), put={-1: pm.Bar(open=100.0, close=101.0)})
+    result = pm.count([entry], series)
+    assert (result.before.agreed, result.before.measured) == (1, 1)
+    assert result.unmeasured_before == ()
+    for h in pm.HORIZONS:
+        assert result.after[h].measured == 0
+        assert result.unmeasured_after[h] == (pm.Unmeasured("x", pm.Reason.NO_ENTRY_BAR),)
+
+
+def test_a_missing_prior_bar_does_not_drop_the_after_counts(table):
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    put = {0: pm.Bar(open=100.0, close=100.0), 5: pm.Bar(open=100.0, close=110.0)}
+    result = pm.count([entry], _with_bars(table, drop=(-1,), put=put))
+    assert result.before.measured == 0
+    assert result.unmeasured_before == (pm.Unmeasured("x", pm.Reason.NO_PRIOR_BAR),)
+    assert (result.after[5].agreed, result.after[5].measured) == (1, 1)  # 100 to 110: with him
+    assert all(result.after[h].measured == 1 for h in pm.HORIZONS)
+
+
+def test_a_missing_horizon_bar_drops_only_that_horizon(table):
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    result = pm.count([entry], _with_bars(table, drop=(15,)))
+    assert result.before.measured == 1
+    assert [result.after[h].measured for h in pm.HORIZONS] == [1, 0, 1, 1]
+    assert result.unmeasured_after[15] == (pm.Unmeasured("x", pm.Reason.NO_HORIZON_BAR),)
+    assert result.unmeasured_after[5] == result.unmeasured_after[30] == ()
+
+
+def test_each_missing_bar_has_a_reason_that_names_it():
+    reasons = {pm.Reason.NO_PRIOR_BAR, pm.Reason.NO_ENTRY_BAR, pm.Reason.NO_HORIZON_BAR}
+    assert len({r.value for r in reasons}) == 3
+    assert not hasattr(pm.Reason, "NO_BAR")  # the generic "no bar for that minute" is gone
