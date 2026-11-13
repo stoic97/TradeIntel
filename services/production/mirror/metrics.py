@@ -634,9 +634,20 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
+CHECKS_RUN: tuple[str, ...] = (b2_shuffle.CHECK,)
+"""The core-list checks production runs today. The finding bar corrects for the whole list
+(``multiplicity.family``), so this only says how many of them a report could hold."""
+
+
 @lru_cache(maxsize=64)
-def _post_loss_gate(obs: tuple[Obs, ...]) -> bool:
-    return b2_shuffle.shuffle_test(obs).passes
+def _post_loss_gate(obs: tuple[Obs, ...]) -> b2_shuffle.ShuffleResult:
+    return b2_shuffle.shuffle_test(obs)
+
+
+def post_loss_check(trips: list[Trip]) -> b2_shuffle.ShuffleResult:
+    """B2's test on this file, corrected for the family: its level, p before and after the
+    correction, and the gap in each half of his days. Once per file per process."""
+    return _post_loss_gate(tuple(b2_observations(trips)))
 
 
 def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
@@ -647,7 +658,7 @@ def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
     restart gets the same answer. Closed, the page says "No difference we can stand behind."
     beside the same numbers, and that isn't a finding about the trader.
     """
-    return _post_loss_gate(tuple(b2_observations(trips))) if trips else False
+    return post_loss_check(trips).passes if trips else False
 
 
 def subset(trips: list[Trip], trip_ids: list[str]) -> list[Trip]:

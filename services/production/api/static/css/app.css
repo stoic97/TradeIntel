@@ -315,3 +315,4 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .door__row dd { margin: 0; }
 .door__sample { margin-bottom: var(--space-8); }
 .replay__chart { width: 100%; height: auto; margin: var(--space-4) 0; color: var(--color-navy); }
+.rules__chips { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
