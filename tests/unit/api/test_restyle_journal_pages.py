@@ -81,25 +81,25 @@ CONTEXT = {
 
 SAID = {
     "import_review.html#first": (
-        "‹ Home Your upload What we read Rows in the file 1,240 rows Rows we could read 1,236 rows Rows set aside 4 rows Trades rebuilt 410 trades See your record — what these trades say, with the trades behind every line. This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file. 1 row we could not read Kept, not discarded. Each one says why. Row Why 12 no price Possible duplicates (1 group) Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell. 2 identical rows 2026-09-07,NIFTY,BUY,50,101.5 This is one trade recorded twice Days in this upload 2 trading days, from 2026-09-07 to 2026-09-08. All of them are new to Scope. Show all 2 days Every day, with its row count Day Rows 2026-09-07 120 2026-09-08 90 Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
+        "‹ Home Your upload What we read Rows in the file 1,240 rows Rows we could read 1,236 rows Rows set aside 4 rows Trades rebuilt 410 trades See your record — what these trades say, with the trades behind every line. This export has no charges column, so every rupee figure from it is gross — before brokerage and taxes. We do not estimate what is not in the file. 1 row we could not read Kept, not discarded. Each one says why. Row Why 12 no price Possible duplicates (1 group) Identical rows can be two real fills a second apart, or the same trade recorded twice. We cannot tell from the file, so we kept all of them. You can tell. 2 identical rows 2026-09-07,NIFTY,BUY,50,101.5 This is one trade recorded twice Days in this upload 2 trading days, from 07 Sep 2026 to 08 Sep 2026. All of them are new to Scope. Show all 2 days Every day, with its row count Day Rows 07 Sep 2026 120 08 Sep 2026 90 Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
     ),
     "import_review.html#later": (
-        "‹ Home Your upload What we read Rows in the file 1,240 rows Rows we could read 1,236 rows Rows set aside 4 rows Trades rebuilt 410 trades See your record — what these trades say, with the trades behind every line. Days in this upload Since your last upload, 1 day changed: 08 Sep 2026. 08 Sep 2026 has fewer rows than before. Show all 2 days Day Rows before Rows now 2026-09-07 120 120 unchanged 2026-09-08 90 80 fewer than before Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
+        "‹ Home Your upload What we read Rows in the file 1,240 rows Rows we could read 1,236 rows Rows set aside 4 rows Trades rebuilt 410 trades See your record — what these trades say, with the trades behind every line. Days in this upload Since your last upload, 1 day changed: 08 Sep 2026. 08 Sep 2026 has fewer rows than before. Show all 2 days Day Rows before Rows now 07 Sep 2026 120 120 unchanged 08 Sep 2026 90 80 fewer than before Journal unit for this upload: day. Read by Scope version abc123 using dhan_tradebook_v1. Every figure above can be reproduced from your file and these versions. See your record"
     ),
     "import_review.html#refused": (
         "‹ Home Your upload What we read This looks like a profit-and-loss statement. Upload a different file"
     ),
     "journals.html": (
-        "Journals Your Journals One for every complete trading day in what you have uploaded — 8 Journals so far. Each one is written from your trades and needs nothing from you. 2026-09-08 version 2 unread 2026-09-07 You have 3 earlier Journals. Read them one at a time, or go to your record."
+        "Journals Your Journals One for every complete trading day in what you have uploaded — 8 Journals so far. Each one is written from your trades and needs nothing from you. 08 Sep 2026 version 2 unread 07 Sep 2026 You have 3 earlier Journals. Read them one at a time, or go to your record."
     ),
     "journals.html#none": (
         "Journals Your Journals Your Journals start with your first upload. Send us a tradebook and one is written for every complete trading day in it."
     ),
     "journals_catch_up.html": (
-        "Journals Earlier Journals Everything behind the five most recent, newest first. Back to the latest. 2026-09-01 – 2026-09-02"
+        "Journals Earlier Journals Everything behind the five most recent, newest first. Back to the latest. 01 Sep 2026 – 02 Sep 2026"
     ),
     "journal.html": (
-        "Journal 2026-09-08 Your Journals Version 2. A later upload changed this period. The earlier version is kept. You took 8 trades. Your worst came at 10:00. Your own note Nothing on this page is required. Anything you want to add about this period? tired Save The trades, one at a time In the order you opened them. Result is gross — your export carries no charges. Trade 1 — −₹1,200 Where was your stop? What was the trade? Was the stop on the chart when you entered? yes / no Save One question, and it changes nothing about your account Would you pay for this? Yes No Maybe If not, what would change that? Send"
+        "Journal 08 Sep 2026 Your Journals Version 2. A later upload changed this period. The earlier version is kept. You took 8 trades. Your worst came at 10:00. Your own note Nothing on this page is required. Anything you want to add about this period? tired Save The trades, one at a time In the order you opened them. Result is gross — your export carries no charges. Trade 1 — −₹1,200 Where was your stop? What was the trade? Was the stop on the chart when you entered? yes / no Save One question, and it changes nothing about your account Would you pay for this? Yes No Maybe If not, what would change that? Send"
     ),
 }
 

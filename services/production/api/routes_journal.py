@@ -30,7 +30,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import or_, select
 
-from services.production.api import asking
+from services.production.api import asking, formatting
 from services.production.api import days_worth_a_look as worth
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
@@ -226,7 +226,7 @@ def journal_page(request: Request, journal_id: int):
         ask_wtp = wtp.ask_here(sess, trader=trader, journal=journal)
         sess.commit()
         return page(
-            request, "journal.html", title=f"Your Journal, {journal.period_start}",
+            request, "journal.html", title=f"Your Journal, {formatting.day(journal.period_start)}",
             journal=journal, paragraphs=paragraphs, rows=asked, answers=answers,
             rest_rows=rest,
             rest_answered=any(

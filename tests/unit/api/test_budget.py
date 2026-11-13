@@ -147,7 +147,7 @@ def test_the_history_is_shown(client):
     body = client.get("/budget").text
     assert "3,000" in body or "3000" in body
     assert "5,000" in body or "5000" in body
-    assert "2026-09-01" in body
+    assert "01 Sep 2026" in body
 
 
 def test_a_zero_or_negative_budget_is_refused(client, engine):

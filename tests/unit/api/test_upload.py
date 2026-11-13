@@ -267,7 +267,7 @@ def test_an_upload_writes_a_journal_for_every_complete_day(client, engine):
 
 def test_the_journal_list_shows_what_the_upload_generated(client):
     upload(client, content=_two_days())
-    assert "2026-10-14" in client.get("/journals").text
+    assert "14 Oct 2026" in client.get("/journals").text
 
 
 def test_an_unchecked_broker_map_refuses_with_a_page_not_a_crash(client, monkeypatch):
