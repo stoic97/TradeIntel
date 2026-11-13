@@ -228,17 +228,23 @@ A claim refuses itself when its series does not cover the trader's dates. The pr
 | Sold put | long |
 | Future or stock, bought | long |
 | Future or stock, sold | short |
-| Multi-leg position | **no single direction** — see 4.7.8 |
+| Multi-leg position | by 4.7.8: its larger-delta leg's direction, or **no single direction** |
 
 A sold option inverts the bought answer. A future's direction needs no rule, and answering "none" for one would remove every futures trip from every count, which on a crude history is most of the book.
 
 The executable form of this table is `services/shared/option_direction.py`, whose docstring cites this item; this item names that module by path. One rule, two pointers, neither one a copy. It sits in `shared` because both production and research may read it and neither may read the other (methodology Rule 5).
 
-**4.7.8 · Multi-leg direction is open, and open visibly.** `positions._links` requires that two legs link only if their directions differ, so **every** multi-leg position the product can build holds one bought leg and one sold leg. Applying 4.7.7 leg by leg therefore returns "no single direction" for every spread, butterfly and ratio — as the rule, not as an edge case.
+**4.7.8 · Multi-leg direction: the convention.** `positions._links` joins two legs only if their directions differ, so every multi-leg position the product can build holds a bought leg and a sold leg, and applying 4.7.7 leg by leg would answer "no single direction" for every spread. The convention, ruled by the founder on TICKET-902 (12 and 13 Nov 2026), reads the legs alone, after netting the units at each strike:
 
-That is the state until the convention exists, and it is a convention rather than a coding choice: a debit call vertical is directionally long, a credit *put* vertical is also long, a butterfly is direction-neutral, and a ratio spread can change sign with the underlying's level. Under the loop's 4 November decision a convention that touches numbers is checked by a second person with their own script before it is built.
+| Position | Direction |
+|---|---|
+| Two strikes, one option type, one expiry, one leg bought and one sold, and the larger-delta leg (the lower strike for calls, the higher for puts) carries at least as many units as the other | that leg's 4.7.7 direction |
+| The same, with fewer units on the larger-delta leg | **no single direction**: net delta changes sign with the underlying's level |
+| Any other shape: a butterfly, a call against a put, three or more strikes | **no single direction** |
 
-**The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. On T-001's history it is under 1% of trips; on a spread trader's history it would be most of the book, which is precisely why it is deferred to a convention rather than guessed at here.
+So a debit call vertical is long and a credit call vertical short; a debit put vertical is short and a credit *put* vertical long; equal units count as fixed. No price, level or result is read. Under the loop's 4 November decision a convention that touches numbers is checked by a second person with their own script. For this convention the founder ruled (13 Nov) that the check comes before merge rather than before the build, against a prediction registered on the ticket before the check was run.
+
+**The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. A position the convention leaves without a direction is counted out the same way.
 
 **4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
 
