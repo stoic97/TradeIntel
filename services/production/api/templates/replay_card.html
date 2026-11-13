@@ -1,0 +1,13 @@
+{#- One card (TICKET-924): the window before the moment and the side he would take. No date,
+    no time, nothing from the moment on, and nothing that says whether it is his. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="label label--plain">Card <span class="num">{{ Figure(card.number, "card")|count }}</span> of <span class="num">{{ Figure(cards, "cards")|count }}</span></p>
+  <h1 class="title">{{ card.underlying }}, {{ "long" if card.direction == 1 else "short" }}</h1>
+  <p class="body">The last <span class="num">{{ Figure(window, "minutes")|count }}</span> minutes, up to the moment. Take it or skip it?</p>
+  <svg class="replay__chart" viewBox="0 0 300 120" role="img" aria-label="The market's closes, minute by minute, up to the moment"><polyline fill="none" stroke="currentColor" stroke-width="2" points="{{ path }}"/></svg>
+  <ul class="door__answers">
+    <li><a class="btn btn--pill-small" href="/replay/reveal?calls={{ calls }}T">Take it</a></li>
+    <li><a class="btn btn--pill-small" href="/replay/reveal?calls={{ calls }}S">Skip it</a></li>
+  </ul>
+{% endblock %}
