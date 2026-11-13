@@ -210,7 +210,7 @@ def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_na
     A real file refused outright leaves the demo where it was.
     """
     stored = _store(request).put(content)
-    text = content.decode("utf-8-sig", errors="replace")
+    text = pl.text_of(content)
     existing = persist.existing_days(sess, trader=trader, source_account=source_account)
     # In production the pipeline refuses a file whose broker map nobody has
     # checked, which is right: a rejection built from a guessed map names an
@@ -456,7 +456,7 @@ def _not_read_again(request: Request, status_code: int, sentence: str):
 def _read_stored(request: Request, sess, trader: m.Trader, imp: m.Import, raw: m.RawFile,
                  also_confirm: tuple[str, ...] = ()) -> pl.ImportPlan:
     """A new plan of an import's stored file, keeping what was stated and confirmed on it."""
-    text = _store(request).get(raw.sha256).decode("utf-8-sig", errors="replace")
+    text = pl.text_of(_store(request).get(raw.sha256))
     return pl.plan_import(
         text,
         context=pl.ImportContext(

@@ -20,12 +20,18 @@
     <p class="label label--plain">Your upload</p>
     <h1 class="title">Upload your tradebook</h1>
     <p class="body">The trade-level export from your broker — every executed trade, with the time of day, the price and the quantity. Not the profit-and-loss statement.</p>
-    <p class="body">Works with: Dhan (more coming)</p>
+    <p class="body">Works with: Dhan and Groww (more coming)</p>
     <p class="subhead upload__steps-title">To download it from Dhan</p>
     <ol class="upload__steps body-small">
       <li>Open Profile, then All Statements, then All Exchange Transactions.</li>
       <li>Choose the dates, from your first trade to today.</li>
       <li>Download the CSV. Its name looks like <span class="upload__file-name">TRADE_HISTORY_CSV_&lt;client&gt;_&lt;from&gt;_&lt;to&gt;</span></li>
+    </ol>
+    <p class="subhead upload__steps-title">To download it from Groww</p>
+    <ol class="upload__steps upload__steps--groww body-small">
+      <li>Open Profile, then Reports, then Order history under Transactions.</li>
+      <li>Choose the dates, from your first trade to today.</li>
+      <li>Download the Excel file. Its name ends in <span class="upload__file-name">Order History &lt;from&gt; to &lt;to&gt;.xlsx</span></li>
     </ol>
     {%- if error %}
     <p class="field__error field__error--block" role="alert">{{ error }}</p>
@@ -39,7 +45,7 @@
     {%- endif %}
     <form class="upload" method="post" action="/upload" enctype="multipart/form-data" hx-post="/upload" hx-encoding="multipart/form-data" hx-target="body" hx-indicator="#upload">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" id="file" name="file" accept=".csv,.txt" required></label>
+      <label class="field upload__field"><span class="field__label">Your export file</span><input class="upload__input" type="file" id="file" name="file" accept=".csv,.txt,.xlsx" required></label>
       <label class="field"><span class="field__label">When did you download this file?</span><input class="field__input field__input--mono" type="date" id="export_date" name="export_date" max="{{ today }}" value="{{ today }}" required><span class="field__hint">Your last trading day gets its Journal only if you downloaded the file after that day.</span></label>
       {{ button("Upload") }}
     </form>

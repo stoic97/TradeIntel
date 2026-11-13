@@ -21,16 +21,31 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from services.production.ctr import reconstruct as rc
-from services.production.ctr.adapters import dhan_tradebook, filemap
+from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import day_versions as dv
 from services.production.ctr.intake import duplicates as dup
 from services.production.ctr.intake import outcomes as oc
+from services.production.ctr.intake import workbook
 from services.production.ctr.profiles import registry as profiles
 from services.shared.positions import Position, group_positions
 from services.shared.schemas import scope_v1 as s
 from services.shared.schemas.ctr_v1 import Fill, RoundTrip
 
 PROFILE_DIR = oc.ADAPTER_DIR.parent / "profiles"
+
+
+def text_of(content: bytes) -> str:
+    """An upload's bytes as the text ``plan_import`` reads (TICKET-895).
+
+    A CSV is decoded as it always was. A workbook (Groww) becomes CSV from its header
+    down, leaving its preamble's name and client code behind. A file that claims to be
+    a workbook and is not one comes back decoded as it is, and the format check
+    rejects it like any file we do not recognise.
+    """
+    try:
+        return workbook.text_of(content, oc.headers())
+    except workbook.UnreadableWorkbook:
+        return content.decode("utf-8-sig", errors="replace")
 
 
 @dataclass(frozen=True)
@@ -214,7 +229,7 @@ def plan_import(
     file_map = adapter.file_map()
     raw_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
     lines = text.splitlines()
-    parsed = dhan_tradebook.parse(lines, trader_id=context.trader_id, raw_hash=raw_hash)
+    parsed = adapter.parse(lines, trader_id=context.trader_id, raw_hash=raw_hash)
 
     classification = dup.classify_rows([line for line in lines[1:] if line.strip()])
     for group in sorted(confirmed_groups):
@@ -238,7 +253,7 @@ def plan_import(
     fills: list[Fill] = parsed.fills
     if classification.excluded:
         remaining = [r.raw_text for r in classification.rows if not r.excluded]
-        fills = dhan_tradebook.parse(
+        fills = adapter.parse(
             [lines[0], *remaining], trader_id=context.trader_id, raw_hash=raw_hash
         ).fills
     result = rc.reconstruct(fills, fees_available=parsed.fees_available, short_options=True)
