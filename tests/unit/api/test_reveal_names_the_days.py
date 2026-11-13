@@ -122,7 +122,7 @@ def test_a_first_trade_that_lost_reads_that_way():
 
 def test_the_page_says_what_they_share():
     assert "On 2 of these days your first trade lost and you kept going: ₹450 more was lost after it." in page()
-    assert "Every one of the five includes crude options, and 2 ran past 9 pm." in page()
+    assert "Every one of the five includes crude options, and 2 of them ran past 9 pm." in page()
 
 
 def test_one_day_reads_in_the_singular():

@@ -17,7 +17,7 @@ from services.production.api import dial as D
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable
+from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
 
 
 def trip(i: int, day: str, net: int, minute: int) -> mx.Trip:
@@ -57,30 +57,14 @@ def test_no_slice_draws_a_lone_digit(n):
 
 
 def test_the_run_keeps_its_digit_with_its_unit():
-    assert "3 trades" in slices(SF.chapter_view(2, FIGS))["Longest losing run"]
+    assert "3 lost" in slices(SF.chapter_view(2, FIGS))["Longest losing run"]
 
 
 def test_the_trades_after_two_losses_keep_theirs():
     assert "2 trades" in slices(SF.chapter_view(3, FIGS))["After two straight losses"]
 
 
-def test_a_two_digit_count_can_still_stack():
-    """Only a lone digit is held together: a wider figure still breaks to fit its slice."""
-    figs = SF.facts(SF.record_context(TRIPS), IMP)
-    assert slices(SF.chapter_view(2, figs))["Longest losing run"] == ["10", "trades"]
-
-
-@pytest.mark.parametrize(("figure", "held"), [
-    ("3 trades", True), ("8 of 80 rows read", True), ("10 trades", False), ("Best trade +₹20", False),
-    ("5 days: −₹130", True), ("15.8%", False), ("", False),
-])
-def test_the_rule_holds_only_a_leading_single_digit(figure, held):
-    got = SF.keep_digit_with_its_unit(figure)
-    assert (chr(0xA0) in got) is held
-    assert got.replace(chr(0xA0), " ") == figure
-
-
 def test_the_figure_itself_doesnt_change():
-    """The cards read the fact's own figure, so only the dial's copy is joined."""
+    """The cards read the fact's own figure: only the dial words it."""
     assert FIGS["run"]["figure"] == "3 trades"
     assert chr(0xA0) not in readable(chapter_page(2, small_file())).split("Longest losing run")[1][:40]

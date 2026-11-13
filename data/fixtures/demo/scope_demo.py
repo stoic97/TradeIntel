@@ -1,35 +1,38 @@
-"""Generate the Scope demo tradebook: a synthetic Dhan export (TICKET-842).
+"""Generate the Scope sample trader: a synthetic Dhan export (TICKET-842, TICKET-914).
 
 Run: python data/fixtures/demo/scope_demo.py   (from the repository root)
 
-A visitor without his broker export opens Scope on this file. It goes through the
-ordinary upload pipeline, so every figure he sees is the pipeline's, read from this
-file; nothing on a demo page is typed by hand.
+/sample and "Try it with a demo file" both read this file through the ordinary upload
+pipeline, so every figure a visitor sees is the pipeline's, read from these rows; nothing
+on a sample page is typed by hand.
 
-**No one's trading.** Every row is drawn from ``random.Random(SEED)``: no real
-trader's rows, no figure taken from any history (README rule 1). The instruments are
-real contracts (MCX CRUDEOIL and NSE NIFTY options), because the adapter reads only
-instruments it has a profile for. A contract name is a market fact, not a trader's.
+**An invented trader, with habits declared before a single row was drawn.** The first
+version was built to touch every feature. This one is a person a retail trader would
+recognise, and his habits are written down here, in ``HABITS``, as generic rules: none
+is taken from any real trader's record (README rule 1). The seed was fixed with them and
+the file is whatever they produce. It is **not tuned until a finding fires**: if a habit
+doesn't show up in the report, that is the report's honest reading of this file, and the
+seed and the numbers stay as they are. Changing either needs its own reason, written here.
+
+*One correction, 13 Nov 2026, before anything was committed.* The first draw came out
++22,146 overall, NIFTY winning 56 of 118 against a declared 42 in 100. The habit as
+declared, "slightly worse than even", had been written as an edge of about -1.5% of
+premium a trade, which chance easily outweighs over a few hundred trades: the numbers
+didn't say what the words said. A loser now gives up 15-45% of its premium rather than
+10-35%, about -6% a trade. Same seed, nothing else changed, and the result was taken as
+it came. No other change was made to reach any figure in the report.
 
 **Reproducible.** The seed is committed and the generator uses only the standard
 library, so the same seed writes the same bytes on any machine.
 ``tests/unit/demo/test_demo_tradebook.py`` fails if the committed file and this
 script disagree.
 
-**What it must contain** (the ticket's gate 2), each placed on purpose:
+**Still in it, from TICKET-842,** because the report talks about each: a spread (one
+bought and one sold leg on the same expiry, entered seconds apart), a sold option, and a
+position carried for days.
 
-* enough history for the eligibility page: three months of weekdays, and several
-  trades on most days, so trades after two earlier same-day trades are common;
-* two books: crude options most days, NIFTY options on most days, at least thirty
-  trades each (one book's rows need thirty to be shown);
-* a long losing run, and a few heavy days that become the worst five;
-* spreads: one bought and one sold leg on the same expiry, entered seconds apart
-  (Annex H's link window is 180 s);
-* sold options: a put sold and bought back the same day;
-* held positions: a bought option carried for several days, product MARGIN.
-
-Dhan's shape: the header verbatim, newest first, INTRADAY for same-day trades, the
-trade value exact and the price its value per unit.
+Dhan's shape: the header verbatim, newest first, INTRADAY for same-day trades, DELIVERY
+for shares held, the trade value exact and the price its value per unit.
 """
 
 from __future__ import annotations
@@ -40,7 +43,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-SEED = 842  # the ticket's number: any fixed value would do; this one is findable
+SEED = 914  # fixed with HABITS, before the first row was drawn; never searched for
 FIRST_DAY = date(2026, 6, 1)
 LAST_DAY = date(2026, 8, 31)
 
@@ -50,8 +53,36 @@ OUT = HERE / "scope_demo_tradebook.csv"
 HEADER = ("Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,"
           "Trade Price,Trade Value,Status")
 
-CRUDE_LOT = 100   # MCX CRUDEOIL: 100 barrels a lot (profile contract_multiplier)
-NIFTY_LOT = 65    # NSE NIFTY: 65 units a lot from 29 Dec 2025 (profile lot_sizes)
+CRUDE = "CRUDEOILM"  # the mini: a retail account's crude (profile MCX_CRUDEOILM)
+CRUDE_LOT = 10       # barrels a lot (profile contract_multiplier)
+NIFTY_LOT = 65       # NSE NIFTY: 65 units a lot from 29 Dec 2025 (profile lot_sizes)
+ETF = "NIFTYBEES"    # an index ETF, held, not traded (profile NSE_EQUITY)
+
+
+@dataclass(frozen=True)
+class Habits:
+    """Who this trader is, in rules. Generic: what many retail option buyers do."""
+
+    lots: tuple[int, ...] = (1, 1, 1, 1, 1, 1, 1, 2, 2, 3)  # mostly one lot
+    nifty_days: float = 0.7          # share of weekdays with a NIFTY morning
+    crude_days: float = 0.8          # share of weekdays with a crude evening
+    nifty_morning: tuple[time, time] = (time(9, 20), time(11, 30))
+    crude_evening: tuple[time, time] = (time(18, 0), time(22, 45))
+    trades_per_sitting: tuple[int, int] = (1, 5)
+    win_chance: float = 0.42         # slightly worse than even, as option buyers often are
+    win_move: tuple[float, float] = (0.10, 0.45)   # a winner's premium change
+    loss_move: tuple[float, float] = (0.15, 0.45)  # a loser's: decay works against a buyer
+    up_size_after: int = 2           # losses in a row in one sitting before size goes up
+    max_lots: int = 4
+    flip_after_loss: float = 0.5     # calls to puts, or back, after a loss
+    winner_hold_min: tuple[int, int] = (12, 50)
+    loser_hold_min: tuple[int, int] = (3, 14)    # losers cut faster than winners
+    gap_after_loss_min: tuple[int, int] = (1, 4)  # quick to go again after a loss
+    gap_after_win_min: tuple[int, int] = (15, 60)
+    etf_units: int = 200             # one ETF position, bought early and held
+
+
+HABITS = Habits()
 
 _MON = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
@@ -129,8 +160,9 @@ def nifty_price(x: float) -> Decimal:
 
 
 class Demo:
-    def __init__(self, seed: int = SEED) -> None:
+    def __init__(self, seed: int = SEED, habits: Habits = HABITS) -> None:
         self.rng = random.Random(seed)
+        self.habits = habits
         self.rows: list[Row] = []
 
     def _trip(self, *, entry: datetime, exit_: datetime, name: str, exchange: str,
@@ -142,49 +174,57 @@ class Demo:
         self.rows.append(Row(exit_, name, second, product, exchange, segment, quantity,
                              close_price))
 
-    def _move(self, lose: bool | None) -> float:
-        # Slightly worse than even, as most retail option buyers' records are: the demo
-        # should show the product's reveal, which needs a losing whole (handoff 7).
-        win = (self.rng.random() < 0.42) if lose is None else not lose
-        return self.rng.uniform(0.06, 0.32) if win else -self.rng.uniform(0.08, 0.40)
+    def _move(self, lose: bool | None = None) -> float:
+        h = self.habits
+        win = (self.rng.random() < h.win_chance) if lose is None else not lose
+        return self.rng.uniform(*h.win_move) if win else -self.rng.uniform(*h.loss_move)
 
-    def crude_day(self, day: date, count: int, forced_losses: int = 0,
-                  heavy: bool = False) -> None:
-        clock = datetime.combine(day, time(10, 0)) + timedelta(minutes=self.rng.randint(0, 40))
-        expiry = crude_expiry(day)
-        for i in range(count):
-            hold = timedelta(minutes=self.rng.randint(6, 55), seconds=self.rng.randint(0, 59))
-            premium = self.rng.uniform(80, 220)
-            move = self._move(True if i < forced_losses else None)
-            lots = self.rng.choice((3, 4)) if heavy else self.rng.choice((1, 1, 2, 2, 3))
-            strike = 50 * self.rng.randint(110, 130)
-            kind = self.rng.choice(("CALL", "PUT"))
-            self._trip(entry=clock, exit_=clock + hold,
-                       name=contract("CRUDEOIL", expiry, strike, kind), exchange="MCX",
-                       segment="Commodity", quantity=lots * CRUDE_LOT,
-                       open_price=crude_price(premium),
-                       close_price=crude_price(premium * (1 + move)))
-            clock += hold + timedelta(minutes=self.rng.randint(8, 70))
-            if clock.time() > time(22, 30):
+    def sitting(self, day: date, crude: bool) -> None:
+        """One sitting, every habit applied the same way, whatever the day."""
+        h, rng = self.habits, self.rng
+        start, end = h.crude_evening if crude else h.nifty_morning
+        clock = datetime.combine(day, start) + timedelta(minutes=rng.randint(0, 40))
+        stop = datetime.combine(day, end)
+        base = rng.choice(h.lots)
+        kind = rng.choice(("CALL", "PUT"))
+        losses = 0
+        for _ in range(rng.randint(*h.trades_per_sitting)):
+            if clock >= stop:
                 break
+            lots = min(h.max_lots, base + max(0, losses - h.up_size_after + 1))
+            move = self._move()
+            won = move > 0
+            hold = timedelta(minutes=rng.randint(*(h.winner_hold_min if won else h.loser_hold_min)),
+                             seconds=rng.randint(0, 59))
+            if crude:
+                premium = rng.uniform(80, 220)
+                self._trip(entry=clock, exit_=clock + hold,
+                           name=contract(CRUDE, crude_expiry(day), 50 * rng.randint(110, 130), kind),
+                           exchange="MCX", segment="Commodity", quantity=lots * CRUDE_LOT,
+                           open_price=crude_price(premium),
+                           close_price=crude_price(premium * (1 + move)))
+            else:
+                premium = rng.uniform(60, 180)
+                self._trip(entry=clock, exit_=clock + hold,
+                           name=contract("NIFTY", nifty_expiry(day), 50 * rng.randint(480, 520), kind),
+                           exchange="NSE", segment="Derivative", quantity=lots * NIFTY_LOT,
+                           open_price=nifty_price(premium),
+                           close_price=nifty_price(premium * (1 + move)))
+            losses = 0 if won else losses + 1
+            if not won and rng.random() < h.flip_after_loss:
+                kind = "PUT" if kind == "CALL" else "CALL"
+            gap = h.gap_after_win_min if won else h.gap_after_loss_min
+            clock += hold + timedelta(minutes=rng.randint(*gap), seconds=rng.randint(0, 59))
 
-    def nifty_day(self, day: date, count: int) -> None:
-        clock = datetime.combine(day, time(9, 25)) + timedelta(minutes=self.rng.randint(0, 30))
-        expiry = nifty_expiry(day)
-        for _ in range(count):
-            hold = timedelta(minutes=self.rng.randint(5, 45), seconds=self.rng.randint(0, 59))
-            premium = self.rng.uniform(60, 180)
-            move = self._move(None)
-            strike = 50 * self.rng.randint(480, 520)
-            self._trip(entry=clock, exit_=clock + hold,
-                       name=contract("NIFTY", expiry, strike, self.rng.choice(("CALL", "PUT"))),
-                       exchange="NSE", segment="Derivative",
-                       quantity=self.rng.choice((1, 2, 2, 3)) * NIFTY_LOT,
-                       open_price=nifty_price(premium),
-                       close_price=nifty_price(premium * (1 + move)))
-            clock += hold + timedelta(minutes=self.rng.randint(10, 60))
-            if clock.time() > time(14, 50):
-                break
+    def etf(self, bought: date, sold: date) -> None:
+        """One index ETF bought early and held to near the end (product DELIVERY)."""
+        price = self.rng.uniform(260, 290)
+        self._trip(entry=datetime.combine(bought, time(10, 12, self.rng.randint(0, 59))),
+                   exit_=datetime.combine(sold, time(14, 41, self.rng.randint(0, 59))),
+                   name=ETF, exchange="NSE", segment="Equity", quantity=self.habits.etf_units,
+                   open_price=nifty_price(price),
+                   close_price=nifty_price(price * (1 + self.rng.uniform(0.02, 0.12))),
+                   product="DELIVERY")
 
     def crude_spread(self, day: date, at: time) -> None:
         """A bought call and a sold call one strike-step up: one position (Annex H)."""
@@ -193,12 +233,12 @@ class Demo:
         expiry, low = far_crude_expiry(day), 50 * self.rng.randint(115, 125)
         bought, sold = self.rng.uniform(120, 180), self.rng.uniform(60, 100)
         move = self._move(None)
-        self._trip(entry=entry, exit_=exit_, name=contract("CRUDEOIL", expiry, low, "CALL"),
+        self._trip(entry=entry, exit_=exit_, name=contract(CRUDE, expiry, low, "CALL"),
                    exchange="MCX", segment="Commodity", quantity=CRUDE_LOT,
                    open_price=crude_price(bought), close_price=crude_price(bought * (1 + move)))
         self._trip(entry=entry + timedelta(seconds=self.rng.randint(5, 40)),
                    exit_=exit_ + timedelta(seconds=self.rng.randint(5, 40)),
-                   name=contract("CRUDEOIL", expiry, low + 100, "CALL"), exchange="MCX",
+                   name=contract(CRUDE, expiry, low + 100, "CALL"), exchange="MCX",
                    segment="Commodity", quantity=CRUDE_LOT, sold=True,
                    open_price=crude_price(sold), close_price=crude_price(sold * (1 + move)))
 
@@ -237,7 +277,7 @@ class Demo:
         expiry = far_crude_expiry(day + timedelta(days=days_held))
         premium = self.rng.uniform(150, 250)
         self._trip(entry=entry, exit_=exit_,
-                   name=contract("CRUDEOIL", expiry, 50 * self.rng.randint(118, 126), "CALL"),
+                   name=contract(CRUDE, expiry, 50 * self.rng.randint(118, 126), "CALL"),
                    exchange="MCX", segment="Commodity", quantity=CRUDE_LOT, product="MARGIN",
                    open_price=crude_price(premium),
                    close_price=crude_price(premium * (1 + self.rng.uniform(-0.3, 0.6))))
@@ -245,23 +285,18 @@ class Demo:
 
 def build(seed: int = SEED) -> list[Row]:
     demo = Demo(seed)
+    h, rng = demo.habits, demo.rng
     days = weekdays(FIRST_DAY, LAST_DAY)
-    losing_run_days = set(days[20:23])          # seven straight losers across three days
-    heavy_days = {days[9], days[31], days[52]}  # bigger size: the worst five pick from these
-    for i, day in enumerate(days):
-        if day in losing_run_days:
-            demo.crude_day(day, count=3, forced_losses=3 if day != days[22] else 1)
-        else:
-            demo.crude_day(day, count=demo.rng.randint(3, 6), heavy=day in heavy_days)
-        if i % 5 != 4:                          # NIFTY on four days in five
-            demo.nifty_day(day, count=demo.rng.randint(1, 2))
-    for day in (days[5], days[27], days[44], days[60]):
-        demo.crude_spread(day, time(13, 10))
-    demo.nifty_spread(days[38], time(12, 5))
-    for day in (days[12], days[35], days[57]):
-        demo.sold_put(day, time(13, 30))
-    demo.held_call(days[15], days_held=3)       # carried over a weekend's worth of days
-    demo.held_call(days[47], days_held=2)
+    for day in days:
+        if rng.random() < h.nifty_days:
+            demo.sitting(day, crude=False)
+        if rng.random() < h.crude_days:
+            demo.sitting(day, crude=True)
+    # Kept from TICKET-842, because the report talks about each; placed by the seed.
+    demo.crude_spread(rng.choice(days[5:60]), time(13, 10))
+    demo.sold_put(rng.choice(days[5:60]), time(13, 30))
+    demo.held_call(rng.choice(days[10:55]), days_held=3)
+    demo.etf(days[2], days[-3])
     return sorted(demo.rows, key=lambda r: (r.at, r.name, r.side), reverse=True)  # newest first
 
 

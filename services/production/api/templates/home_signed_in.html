@@ -2,18 +2,18 @@
     look, and the upload. The sentence is Scope home's own (_verdict.html); the days are the first
     of the Journal tab's list. No tab is current: home is none of the three. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import lockup, money, uncounted_line %}
+{% from "_components.html" import home_lockup, money, uncounted_line %}
 {% from "_verdict.html" import verdict_sentence %}
 {% set nav = "home" %}
 {% block content %}
-  <div class="stage__bar stage__bar--record">{{ lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
+  <div class="stage__bar stage__bar--record">{{ home_lockup() }}<span class="num num--label">{{ trader_name }}</span></div>
   <a class="scope-card on-navy" href="/mirror">
-    <span class="label label--soft">Your report · Import {{ imp.id }} · {{ imported }}</span>
+    <span class="label label--soft">Your report · Upload {{ Figure(imp.id, "upload") }} · {{ imported }}</span>
     <span class="scope-card__verdict">{{ verdict_sentence(verdict) }}</span>
     {%- if verdict.options_trades and verdict.others_trades %}
     <span class="scope-card__split">
-      <span class="body-small">Option trades {{ money(verdict.options_net) }} · <span class="num">{{ verdict.options_trades|count }}</span> trades</span>
-      <span class="body-small">Stocks, ETFs and futures {{ money(verdict.others_net) }} · <span class="num">{{ verdict.others_trades|count }}</span> trades</span>
+      <span class="body-small">Option trades {{ money(verdict.options_net) }} · <span class="num">{{ Figure(verdict.options_trades, "trades")|count }}</span> trades</span>
+      <span class="body-small">Stocks, ETFs and futures {{ money(verdict.others_net) }} · <span class="num">{{ Figure(verdict.others_trades, "trades")|count }}</span> trades</span>
     </span>
     {%- endif %}
     <span class="scope-card__foot"><span>Open your report</span><span aria-hidden="true">›</span></span>
@@ -23,7 +23,7 @@
   <section class="latest">
     <div class="latest__head"><h2 class="card-title">{{ days_heading }}</h2><a class="link link--back" href="/journals">All days</a></div>
     {%- for day in latest %}
-    <a class="latest__row" href="/journals/{{ day.id }}"><span class="latest__when"><span class="body">{{ day.period }}</span>{% if day.why %}<span class="body-small">{{ day.why }}</span>{% endif %}</span><span class="num table__num">{{ day.trades|count }} {{ "trade" if day.trades == 1 else "trades" }}</span><span class="num table__num num--{{ day.net|tone }}">{{ day.net|rupees }}</span><span class="journal-index__go" aria-hidden="true">›</span></a>
+    <a class="latest__row" href="/journals/{{ day.id }}"><span class="latest__when"><span class="body">{{ day.period }}</span>{% if day.why %}<span class="body-small">{{ day.why }}</span>{% endif %}</span><span class="num table__num">{{ Figure(day.trades, "trades")|count }} {{ "trade" if day.trades == 1 else "trades" }}</span><span class="num table__num num--{{ day.net|tone }}">{{ Figure(day.net, "rupees")|rupees }}</span><span class="journal-index__go" aria-hidden="true">›</span></a>
     {%- endfor %}
   </section>
   {%- endif %}

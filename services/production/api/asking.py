@@ -101,4 +101,4 @@ def size_line(day: str, trades: list[dict], usual: Decimal | None) -> str | None
         return None
     return (f"On {formatting.day(day)} you went from {_times(began, 'lot', 'lots')} to "
             f"{trades[up]['lots']} after {_times(losses, 'loss', 'losses')}. "
-            f"Your usual is about {formatting.lots(usual)}.")
+            f"Your usual is about {formatting.lots(usual)} lots.")

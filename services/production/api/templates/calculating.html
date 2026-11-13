@@ -18,8 +18,8 @@
   </figure>
   {%- endif %}
   <dl class="ledger">
-    <dt class="ledger__term">Rows read</dt><dd class="ledger__value">{{ imp.rows_parsed|count }} of {{ imp.rows_in|count }}</dd>
-    <dt class="ledger__term">Trades rebuilt</dt><dd class="ledger__value">{{ imp.trips_reconstructed|count }}</dd>
+    <dt class="ledger__term">Rows read</dt><dd class="ledger__value">{{ Figure(imp.rows_parsed, "rows")|count }} of {{ Figure(imp.rows_in, "rows")|count }} {{ "row" if imp.rows_in == 1 else "rows" }}</dd>
+    <dt class="ledger__term">Trades rebuilt</dt><dd class="ledger__value">{{ Figure(imp.trips_reconstructed, "trades")|count }} {{ "trade" if imp.trips_reconstructed == 1 else "trades" }}</dd>
   </dl>
   <p class="ledger__status">Every row is accounted for on the next screen.</p>
   <div class="screen__actions">{{ button("Continue", href="/imports/" ~ imp.id, block=true) }}</div>

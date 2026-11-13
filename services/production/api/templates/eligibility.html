@@ -5,18 +5,18 @@
     The kit's demo bar and its "What it needs" column on the short checks are not the
     app's, and are left out. -#}
 {% extends "layout.html" %}
-{% macro checks(n) %}{{ n|count }} check{{ "" if n == 1 else "s" }}{% endmacro %}
+{% macro checks(n) %}{{ Figure(n, "checks")|count }} check{{ "" if n == 1 else "s" }}{% endmacro %}
 {% block content %}
   <p class="label label--plain">Eligibility</p>
   <h1 class="title">What we can check</h1>
-  <p class="body">Your <span class="num">{{ trips|count }}</span> trades across <span class="num">{{ days|count }}</span> trading days, against the <span class="num">{{ result.total|count }}</span> checks in our research library.</p>
-  <p class="body">{% if result.enough %}<span class="num">{{ result.enough|length|count }}</span> have enough to work with.{% else %}None of them has enough to work with yet.{% endif %} <span class="num">{{ result.short|length|count }}</span> need more history than you have given us so far, <span class="num">{{ result.waiting|length|count }}</span> are waiting on something that is not your trades at all{% if result.undetermined %}, and <span class="num">{{ result.undetermined|length|count }}</span> we cannot judge from this page{% endif %}.</p>
+  <p class="body">Your <span class="num">{{ Figure(trips, "trades")|count }}</span> trades across <span class="num">{{ Figure(days, "days")|count }}</span> trading days, against the <span class="num">{{ Figure(result.total, "checks")|count }}</span> checks in our research library.</p>
+  <p class="body">{% if result.enough %}<span class="num">{{ Figure(result.enough|length, "checks")|count }}</span> {{ "check" if result.enough|length == 1 else "checks" }} {{ "has" if result.enough|length == 1 else "have" }} enough to work with.{% else %}None of them has enough to work with yet.{% endif %} <span class="num">{{ Figure(result.short|length, "checks")|count }}</span> {{ "check" if result.short|length == 1 else "checks" }} {{ "needs" if result.short|length == 1 else "need" }} more history than you have given us so far, <span class="num">{{ Figure(result.waiting|length, "checks")|count }}</span> {{ "check" if result.waiting|length == 1 else "checks" }} {{ "is" if result.waiting|length == 1 else "are" }} waiting on something that is not your trades at all{% if result.undetermined %}, and <span class="num">{{ Figure(result.undetermined|length, "checks")|count }}</span> {{ "check" if result.undetermined|length == 1 else "checks" }} we cannot judge from this page{% endif %}.</p>
   {%- if draft %}
   <p class="body-small">What counts as enough is written down but not yet fixed, so these counts can still move.</p>
   {%- endif %}
   <ul class="check-groups">
     {%- if result.enough %}
-    <li class="body">Ready: {{ result.enough|length|count }} check{{ " has" if result.enough|length == 1 else "s have" }} enough of your trades.</li>
+    <li class="body">Ready: {{ Figure(result.enough|length, "checks")|count }} check{{ " has" if result.enough|length == 1 else "s have" }} enough of your trades.</li>
     {%- endif %}
     {%- if result.short %}
     <li class="body">Not enough history yet ({{ checks(result.short|length) }}).</li>
@@ -52,7 +52,7 @@
       <table class="table"><thead><tr><th>Check</th><th>What it needs</th><th>What you have</th></tr></thead>
         <tbody>
         {%- for verdict in result.enough %}
-          <tr><td>{{ verdict.test.id }}</td><td>{{ verdict.need }} {{ verdict.unit.value.replace('_', ' ') }}</td><td class="table__text">{{ verdict.reason }}</td></tr>
+          <tr><td>{{ verdict.test.id }}</td><td>{{ Figure(verdict.need, verdict.unit.value) }} {{ verdict.unit.value.replace('_', ' ') }}</td><td class="table__text">{{ verdict.reason }}</td></tr>
         {%- endfor %}
         </tbody></table>
       {%- else %}

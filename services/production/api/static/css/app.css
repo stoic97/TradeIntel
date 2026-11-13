@@ -11,6 +11,13 @@
    the screen, only the SVG's empty margin is outside it. Found in the 390 px browser
    walk of 1 Nov. `clip` where supported; `hidden` before it. */
 .stage { overflow-x: hidden; overflow-x: clip; }
+/* A page draws both of the kit's dials and one shows. Below 1366 px the desktop dial would be
+   scaled down until its 11 px words can't be read, so the phone's drawing, scaled up, stays. */
+.stage .scope.scope--desktop { display: none; }
+@media (min-width: 1366px) {
+  .stage .scope:not(.scope--desktop) { display: none; }
+  .stage .scope.scope--desktop { display: block; width: min(100%, var(--stage-desktop-w)); }
+}
 
 /* /admin (TICKET-848) is a working table, not a phone column, so it takes the width. Everything
    wide scrolls inside its own box and the page itself never does. The selectors are this long
@@ -29,7 +36,10 @@
 .admin__fold { margin-top: var(--space-3); }
 .admin__note, .admin__notes { margin-top: var(--space-3); max-width: 80ch; color: var(--color-muted); }
 .admin__notes { padding-left: var(--space-4); }
+.admin__journey { white-space: nowrap; }
+.admin__todo { color: var(--color-muted); }
 .admin__feed { list-style: none; margin: 0; padding: 0; overflow-wrap: anywhere; }
+.admin__feed-day { font-weight: 600; }
 .admin__feed li { padding: var(--space-1) 0; border-bottom: var(--hairline-thin) solid var(--color-hairline); }
 .admin__quiet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-2) var(--space-3); margin: 0; overflow-wrap: anywhere; }
 .admin__quiet dd { margin: 0; }
@@ -248,6 +258,15 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .upload__read-again { margin: var(--space-4) 0; }
 .upload__demo-button { background: none; border: 0; padding: 0; font: inherit; color: var(--color-action-blue); cursor: pointer; text-decoration: underline; }
 
+/* A way back to Home (TICKET-860). The lockup links to / on every signed-in page; the bottom nav
+   leads with a Home tab; a page with no nav (a fact, the upload, consent...) gets a slim bar with
+   the lockup and "Home". Ink on white, like the path bar below it. */
+.lockup-link { display: inline-flex; color: inherit; text-decoration: none; }
+.bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bottom-nav__mark { display: none; }
+.home-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 56px; padding: 0 var(--gutter-phone); background: var(--color-page); color: var(--color-ink); border-bottom: 1px solid var(--color-hairline); }
+.home-bar__home { padding: var(--space-3) 0; font-size: 15px; color: var(--color-ink); text-decoration: none; }
+
 /* Desktop (TICKET-845): the same pages, using the width. components.css stays the kit's, and its
    phone column stays what a phone gets. The kit's desktop screens set the shapes: dial beside the
    story, a fact's trades beside its story, the nav as a header. No markup changes, so a page reads
@@ -259,15 +278,23 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   .screen__body--with-nav { padding-bottom: var(--space-16); }
 
   .bottom-nav { order: -1; position: sticky; top: 0; max-width: none; width: 100%; height: 72px; margin: 0; padding: 0 var(--space-16); display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); box-shadow: var(--elevation-1); }
-  .bottom-nav::before { content: "PlusEV Scope"; margin-right: auto; font-family: var(--font-sans); font-size: 15px; font-weight: 600; color: var(--color-ink); }
+  .bottom-nav__mark { display: inline-flex; margin-right: auto; color: var(--color-ink); }
+  .home-bar { min-height: 72px; padding-inline: var(--space-16); }
   .bottom-nav__item { height: 44px; margin-top: 0; padding: 0 14px; border-top: 0; font-size: 15px; color: var(--color-ink); }
   .bottom-nav__item[aria-current="page"] { border-bottom: 2px solid var(--color-action-blue); }
 
-  .screen:has(> .stage) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 600px) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-8); align-items: start; padding-bottom: var(--space-16); }
-  .screen:has(> .stage) > .bottom-nav { grid-column: 1 / -1; grid-row: 1; }
-  .screen:has(> .stage) > .stage { grid-column: 2; grid-row: 2; position: sticky; top: 104px; margin-top: var(--space-8); padding-bottom: var(--space-6); border-radius: var(--radius-card); }
-  .screen:has(> .stage) > .screen__body { grid-column: 3; grid-row: 2; max-width: none; margin: 0; padding: var(--space-8) 0 0; }
+  /* The dial beside the story: report pages only. The signed-out door has a stage too, and the
+     kit draws it for a phone only (TICKET-857), so it keeps its shape below. */
+  .screen:has(> .stage:not(.stage--door)) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 600px) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-8); align-items: start; padding-bottom: var(--space-16); }
+  .screen:has(> .stage:not(.stage--door)) > .bottom-nav { grid-column: 1 / -1; grid-row: 1; }
+  .screen:has(> .stage:not(.stage--door)) > .stage { grid-column: 2; grid-row: 2; position: sticky; top: 104px; margin-top: var(--space-8); padding-bottom: var(--space-6); border-radius: var(--radius-card); }
+  .screen:has(> .stage:not(.stage--door)) > .screen__body { grid-column: 3; grid-row: 2; max-width: none; margin: 0; padding: var(--space-8) 0 0; }
   .stage .scope { width: min(100%, 460px); }
+
+  /* The door (TICKET-857): the phone's shape at the page's width. The navy band runs edge to
+     edge, its words start where the form's do (the 760px column and its 64px gutter), and the
+     form follows - nothing floats beside it, and no white sits under it. */
+  .stage--door { padding-block: var(--space-10); padding-inline: max(var(--space-5), calc((100% - 760px) / 2 + var(--space-16))); }
 
   .screen__body--fact { max-width: 1312px; display: grid; grid-template-columns: minmax(0, 700px) minmax(0, 520px); grid-template-rows: repeat(14, auto) 1fr; column-gap: var(--space-16); justify-content: center; align-items: start; }
   .screen__body--fact > * { grid-column: 1; min-width: 0; }
@@ -277,8 +304,18 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
   .path { padding-inline: max(var(--space-4), calc((100vw - 1284px) / 2)); }
 
   .stage__bar--record { justify-content: flex-end; }
-  .stage__bar--record .lockup { display: none; }
+  .stage__bar--record .lockup-link { display: none; }
 
   .fact__title { font-size: 40px; line-height: 46px; }
   .figure .chart, .story-card__chart .chart { width: 100%; }
 }
+
+/* TICKET-914: the door asks its question first, then answers a trader's first questions. */
+.door__answers { list-style: none; margin: var(--space-6) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.door__said { margin-top: var(--space-4); }
+.door__sign-in { color: inherit; }
+.door__rows { margin: var(--space-6) 0; padding: 0; }
+.door__row { display: grid; grid-template-columns: 8.5rem 1fr; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--color-hairline); }
+.door__row dt { margin: 0; }
+.door__row dd { margin: 0; }
+.door__sample { margin-bottom: var(--space-8); }

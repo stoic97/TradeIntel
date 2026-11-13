@@ -30,7 +30,7 @@ HELD = mx.load_trips(
 ONLY_HELD = [t for t in HELD if t.trip_id in {"h03", "h06", "h09", "h11"}]
 SENTENCE = (
     "Your average winner was ₹310 and your average loser ₹270. "
-    "At those sizes, break-even is a strike rate of 46.6%."
+    "At those sizes, you break even at 47 of 100."
 )
 NOTE = (
     "These are trades you closed the day you opened them. "
@@ -93,10 +93,10 @@ def test_a_history_of_only_held_positions_has_no_strike_rate():
     assert figs["math"]["state"] == "not-enough"
 
 
-def test_chapter_three_still_compares_every_trade():
-    """Only this fact narrows. After two losses against the rest keeps its own population."""
+def test_chapter_three_compares_the_same_same_day_trades():
+    """TICKET-855: after two losses against the rest reads the same five winners as this fact."""
     ctx = SF.record_context(HELD)
-    assert ctx["rest_strike"].wins + ctx["after_strike"].wins == 7
+    assert ctx["rest_strike"].wins + ctx["after_strike"].wins == 5
 
 
 @pytest.mark.parametrize(
@@ -135,5 +135,7 @@ def test_totals_keep_the_whole_rupee_cut():
 )
 def test_a_round_percentage_is_written_as_a_number(trips, shown):
     """5E+1 is what a trimmed 50 came out as, on the page."""
-    assert f"{shown}%" in readable(fact_page("math", trips))
+    page = readable(fact_page("math", trips))
+    assert f"{shown} of 100 trades made money" in page
+    assert "E+" not in page
     assert "E+" not in readable(fact_page("math", trips))

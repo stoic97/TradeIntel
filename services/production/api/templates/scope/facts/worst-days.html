@@ -13,10 +13,10 @@
     <p class="mirror">They don't share a book, an hour or a size.</p>
     {%- endif %}
     {%- if share.shown_as_percentage %}
-    <p class="mirror">Your five worst days: {{ money(worst_days.sum) }}. Your other <span class="num">{{ share.other_days_count|count }}</span> days: {{ money(share.other_days_net) }}.</p>
+    <p class="mirror">Your five worst days: {{ money(worst_days.sum) }}. Your other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days: {{ money(share.other_days_net) }}.</p>
     {%- else %}
     <p class="mirror">Those five days came to {{ money(worst_days.sum) }}.</p>
-    <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
+    <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
     {%- endif %}
 {% endblock %}
 {% block body %}{% endblock %}
@@ -28,12 +28,13 @@
     {%- for b in f.blocks %}
     <details class="day-block" id="day-{{ b.iso }}">
       <summary class="day-block__summary">
-        <span class="day-block__when"><span class="num">{{ b.day }}</span> <span class="body-small">{{ b.books }} · {{ b.trades|count }} {{ "trade" if b.trades == 1 else "trades" }} · {{ b.span }}</span></span>
+        <span class="day-block__when"><span class="num">{{ b.day }}</span> <span class="body-small">{{ b.books }} · {{ Figure(b.trades, "trades")|count }} {{ "trade" if b.trades == 1 else "trades" }} · {{ b.span }}</span></span>
         {{ b.line }}
         <span class="day-block__net">{{ money(b.net) }}</span>
         <span class="body-small day-block__went">{{ b.went }}{% if b.vs_normal %} {{ b.vs_normal }}.{% endif %}</span>
       </summary>
-      {%- if b.iso in (flagged_days or []) %}
+      {%- if sample %}
+      {%- elif b.iso in (flagged_days or []) %}
       <p class="body-small day-block__flag">You told us this day looks wrong.</p>
       {%- else %}
       <form class="day-block__flag" method="post" action="/mirror/feedback/day">
@@ -53,14 +54,14 @@
   </section>
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     <p class="evidence__see-all">{{ button("See all trades", f.all_trades_href, "secondary") }}</p>
   </section>
   <p class="day-blocks__next">{{ button("Your 5 best and 5 worst trades →", f.next_href) }}</p>
   {%- else %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ f.trade_count|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     {{ trades(groups) }}
   </section>
   {%- endif %}

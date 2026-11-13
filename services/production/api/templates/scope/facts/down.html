@@ -10,15 +10,15 @@
     <p class="mirror">{{ down_sentence(f, two_losses) }}</p>
     <p class="mirror">
     {%- if not tl.population %}No trade you opened had two earlier trades that day already closed.
-    {%- else %}{% if tl.population == 1 %}This is the <span class="num">1</span> trade{% else %}These are the <span class="num">{{ tl.population|count }}</span> trades{% endif %} you opened once at least two earlier trades that day had closed.
-      {%- if tl.condition %} <span class="num">{{ tl.condition|count }}</span> came right after two losses in a row, and averaged <span class="opening-figure">{{ money(tl.condition_mean, exact=true) }}</span>.
+    {%- else %}{% if tl.population == 1 %}This is the <span class="num">1</span> trade{% else %}These are the <span class="num">{{ Figure(tl.population, "trades")|count }}</span> trades{% endif %} you opened once at least two earlier trades that day had closed.
+      {%- if tl.condition %} <span class="num">{{ Figure(tl.condition, "trades")|count }}</span> came right after two losses in a row, and averaged <span class="opening-figure">{{ money(tl.condition_mean, exact=true) }}</span>.
       {%- else %} None came right after two losses in a row.{% endif %}
-      {%- if tl.comparison %} The other <span class="num">{{ tl.comparison|count }}</span> came when the two most recent had not both lost, and averaged <span class="opening-figure">{{ money(tl.comparison_mean, exact=true) }}</span>.
+      {%- if tl.comparison %} The other <span class="num">{{ Figure(tl.comparison, "trades")|count }}</span> came when the two most recent had not both lost, and averaged <span class="opening-figure">{{ money(tl.comparison_mean, exact=true) }}</span>.
       {%- else %} None came when the two most recent had not both lost.{% endif %}
     {%- endif %}</p>
 {% endblock %}
-{% block caption %}Every trade opened after two earlier trades that day had already closed.{% endblock %}
-{% block caption_more %}<p class="evidence__caption"><span class="num">{{ f.trade_count|count }}</span> of <span class="num">{{ two_losses.population|count }}</span> qualifying trades. Listed in the order you opened them.</p>{% endblock %}
+{% block caption %}Every trade you opened right after two straight losses.{% endblock %}
+{% block caption_more %}<p class="evidence__caption">{% if two_losses.population %}From the <span class="num">{{ Figure(two_losses.population, "trades")|count }}</span> {{ "trade" if two_losses.population == 1 else "trades" }} counted above. {% endif %}Listed in the order you opened them.</p>{% endblock %}
 {% block lineage %}
   {{ next_fact(f.next) }}
   {{ chapter_four(f.chapter_four, kind="secondary") }}

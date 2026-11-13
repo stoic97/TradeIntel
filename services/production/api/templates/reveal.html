@@ -34,22 +34,22 @@
   <p class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
   {%- else %}
   <p class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}.</p>
-  <p class="mirror mirror--card">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ share.other_days_count|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
+  <p class="mirror mirror--card">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
   {%- endif %}
   {%- if five_days %}
   {%- if five_days.story %}
-  <p class="mirror mirror--card">{{ five_days.story.trading_day|day }}: your first trade {% if five_days.story.first_net > 0 %}made{% else %}lost{% endif %} {{ five_days.story.first_size|rupees(signed=false) }}. <span class="num">{{ five_days.story.later|count }}</span> {{ "trade" if five_days.story.later == 1 else "trades" }} later you were down {{ five_days.story.down|rupees(signed=false) }}.</p>
+  <p class="mirror mirror--card">{{ five_days.story.trading_day|day }}: your first trade {% if five_days.story.first_net > 0 %}made{% else %}lost{% endif %} {{ Figure(five_days.story.first_size, "rupees")|rupees(signed=false) }}. <span class="num">{{ Figure(five_days.story.later, "trades")|count }}</span> {{ "trade" if five_days.story.later == 1 else "trades" }} later you were down {{ Figure(five_days.story.down, "rupees")|rupees(signed=false) }}.</p>
   {%- endif %}
   <ol class="reveal__days">
     {%- for row in five_days.rows %}
-    <li class="reveal__day"><span class="num">{{ row.trading_day|day }}</span> <span class="body-small">{{ row.books|join(", ") }}</span> <span class="body-small"><span class="num">{{ row.trades|count }}</span> {{ "trade" if row.trades == 1 else "trades" }}</span> {{ money(row.net) }}</li>
+    <li class="reveal__day"><span class="num">{{ row.trading_day|day }}</span> <span class="body-small">{{ row.books|join(", ") }}</span> <span class="body-small"><span class="num">{{ Figure(row.trades, "trades")|count }}</span> {{ "trade" if row.trades == 1 else "trades" }}</span> {{ money(row.net) }}</li>
     {%- endfor %}
   </ol>
   {%- if five_days.first_lost_days %}
-  <p class="mirror mirror--card">On <span class="num">{{ five_days.first_lost_days|count }}</span> of these days your first trade lost and you kept going: {{ five_days.lost_after_first|rupees(signed=false) }} more was lost after it.</p>
+  <p class="mirror mirror--card">On <span class="num">{{ Figure(five_days.first_lost_days, "days")|count }}</span> of these days your first trade lost and you kept going: {{ Figure(five_days.lost_after_first, "rupees")|rupees(signed=false) }} more was lost after it.</p>
   {%- endif %}
   {%- if five_days.shared_book or five_days.past_nine %}
-  <p class="mirror mirror--card">{% if five_days.shared_book %}Every one of the five includes {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ five_days.past_nine|count }}</span> ran past 9 pm{% endif %}.{% else %}<span class="num">{{ five_days.past_nine|count }}</span> of the five ran past 9 pm.{% endif %}</p>
+  <p class="mirror mirror--card">{% if five_days.shared_book %}Every one of the five includes {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the five ran past 9 pm.{% endif %}</p>
   {%- endif %}
   {%- endif %}
   <div class="screen__actions">

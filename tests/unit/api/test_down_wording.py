@@ -26,7 +26,7 @@ SENTENCE = (
     "already closed. On {condition} of those, the two most recent had both lost."
 )
 FACT_COUNT = "These are the {population} trades you opened once at least two earlier trades that day had closed."
-CAPTION = "Every trade opened after two earlier trades that day had already closed."
+CAPTION = "Every trade you opened right after two straight losses."
 OLD_CLAIM = "had already closed at a loss"
 
 
@@ -66,4 +66,4 @@ def test_the_opening_sentence_does_not_say_the_other_trades_were_while_down():
     see it until then: this reads the words themselves."""
     opening = Path("services/production/api/templates/scope/_opening.html").read_text(encoding="utf-8")
     assert "while down" not in opening
-    assert "Your other trades that qualified averaged" in opening
+    assert "Your other trades after two had closed averaged" in opening

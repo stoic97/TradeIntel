@@ -34,12 +34,12 @@ def test_the_header_links_back_to_plusev(scope_environment):
 
 
 def test_the_front_door_is_the_kits_navy_door(scope_environment):
-    """Handoff 5, screen 0, in the app's own words."""
+    """Handoff 5, screen 0, as rebuilt by TICKET-914: the question first (api/door.py)."""
     page = TestClient(create_app()).get("/").text
     assert '<header class="stage stage--door on-navy">' in page
     assert "door__note" not in page
-    assert ('<h1 class="title door__title">A record of how you traded, built from your own '
-            "tradebook.</h1>") in page
+    assert ('<h1 class="title door__title">When your first trade of the day loses, what usually '
+            "happens next?</h1>") in page
     assert '<a class="link" href="/login">Sign in if you already have an account.</a>' in page
     assert '<nav class="bottom-nav"' not in page  # signed out: no tabs to go to
 

@@ -28,7 +28,7 @@ from tests.unit.api.test_admin_page import (  # noqa: F401
     view,
 )
 
-DEFAULT = ("Trader", "File", "Furthest step", "Facts read", "In the report", "Last activity", "Issues")
+DEFAULT = ("Trader", "File", "Journey", "Facts read", "In the report", "Last activity", "Issues")
 
 
 def page(app, engine, query=""):  # noqa: F811
@@ -50,8 +50,9 @@ def test_the_default_view_is_the_seven_columns(app, engine):  # noqa: F811
 def test_a_link_shows_every_column_and_loses_nothing(app, engine):  # noqa: F811
     html = page(app, engine, "?columns=all")
     columns = headers(html)
-    for name in ("Login id", "Rows read", "On current code", "Chapter 1 match?", "Whole report",
-                 "Journals written", "Budget", "Would pay", "Signed up"):
+    for name in ("Login id", "Files uploaded", "First upload", "Days active", "Rows read",
+                 "Would read differently", "Chapter 1 match?", "Whole report", "Journals opened",
+                 "Journals written", "Budget", "Would pay", "Pay question", "Signed up"):
         assert name in columns, name
     assert 'href="/admin"' in html
 
@@ -163,8 +164,8 @@ def test_a_switched_off_feature_draws_no_column_and_the_page_says_so(app, engine
 def test_the_notes_fold_and_keep_their_words(app, engine):  # noqa: F811
     html = page(app, engine)
     fold = re.search(r"<details class=\"admin__fold\">.*?</details>", html, re.DOTALL)[0]
-    for words in ("what the trader's report reads now", "says not read by this deploy",
-                  "the last step with a stored trace", "so these are floors",
+    for words in ("what the trader's report reads now", "the same check that offers them a re-read",
+                  "each step with a stored trace", "so these are floors",
                   "A byte-identical re-upload is refused", "It is a floor: a visit that writes nothing",
                   "what a trader typed is not shown"):
         assert words in fold.replace("&#39;", "'"), words
@@ -179,7 +180,7 @@ def test_the_page_has_a_way_back_and_a_way_to_sign_out(app, engine):  # noqa: F8
 def test_the_quiet_panel_says_what_it_is(app, engine):  # noqa: F811
     html = page(app, engine)
     assert "quiet panel" not in html
-    assert "Would pay, declines and deletions" in html
+    assert "Consent declines and deletions" in html  # would pay moved to "What traders told us" (876)
 
 
 def test_a_trader_cell_and_header_stay_in_view():

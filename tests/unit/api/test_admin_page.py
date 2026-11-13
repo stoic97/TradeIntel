@@ -26,7 +26,11 @@ from services.production.api import routes_events
 from services.production.api import scope_map as SM
 from services.production.api.app import create_app
 from services.production.api.settings import Settings
+from services.production.ctr import reconstruct as rc
+from services.production.ctr.intake import outcomes as oc
 from services.production.db import models as m
+from services.production.journal import constants as k
+from services.production.journal import wtp as WTP
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
 from tests.conftest import TEST_SECRET_KEY
@@ -89,7 +93,7 @@ def admin_page(app, engine) -> str:
 
 def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
                rejection=None, rows=(10, 8, 2), at=THEN, source="A", trips=0,
-               raw_file_id=None) -> m.Import:
+               raw_file_id=None, adapter=("made-up", "1"), reconstruction=None) -> m.Import:
     if raw_file_id is None:
         raw = m.RawFile(trader_id=trader_id, sha256=f"{trader_id}-{at.isoformat()}-{version}",
                         original_name="tradebook.csv", size=1, stored_path="nowhere", uploaded_at=at)
@@ -98,7 +102,8 @@ def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCE
         raw_file_id = raw.id
     imp = m.Import(trader_id=trader_id, raw_file_id=raw_file_id, source_account=source,
                    trips_reconstructed=trips,
-                   adapter_id="made-up", adapter_version="1", filemap_version="1",
+                   adapter_id=adapter[0], adapter_version=adapter[1], filemap_version="1",
+                   reconstruction_version=reconstruction,
                    code_version=version, outcome=outcome, rejection_text=rejection,
                    rows_in=rows[0], rows_parsed=rows[1], rows_excluded=rows[2],
                    fees_available=False, version_no=1, created_at=at)
@@ -300,14 +305,15 @@ def test_the_walk_of_the_routes_really_reaches_them(app):
 def test_only_get_routes_exist_under_admin(app):
     found = [r for r in every_route(app.routes)
              if isinstance(r, APIRoute) and r.path.startswith("/admin")]
-    assert {r.path for r in found} == {"/admin", "/admin/"}
+    assert {r.path for r in found} == {"/admin", "/admin/", "/admin/traders/{trader_id}",
+                                       "/admin/traders/{trader_id}/"}
     for route in found:
         assert route.methods <= {"GET"}, route.path
 
 
 def test_no_other_template_links_to_the_page():
     for path in TEMPLATES.rglob("*.html"):
-        if path.name != "admin.html":
+        if path.name not in ("admin.html", "admin_trader.html"):
             assert "/admin" not in path.read_text(), path
 
 
@@ -507,8 +513,7 @@ def test_the_top_card_keeps_signing_up_the_demo_and_a_real_file_apart(app, engin
         sess.commit()
     assert people_card(app, engine) == (3, 1, 1)
     page = admin_page(app, engine)
-    assert "Signed up / tried the demo / uploaded a real file" in page
-    assert "4 / 1 / 1" in page  # the admin who asks has signed up too
+    assert "Tried the demo" in page and "Uploaded a real file" in page
 
 
 def test_a_demo_only_account_has_a_demo_file_and_no_upload_of_a_real_one(app, engine):
@@ -557,8 +562,6 @@ def test_a_refused_real_file_was_brought_but_gives_no_record_to_read(app, engine
         sess.commit()
     assert row_of(view(app, engine), "someone")["file"] == "none"
     assert people_card(app, engine) == (1, 0, 1)
-    cards = view(app, engine)["cards"]
-    assert cards["read_none"] == 0, "with no report there is nothing to have left unread"
 
 
 def test_a_real_file_refused_while_the_demo_stands_leaves_the_report_on_the_demo(app, engine):
@@ -589,34 +592,6 @@ def test_the_notes_say_what_the_file_column_and_the_card_cannot_know(app, engine
     assert "a refused file counts" in page
 
 
-def test_a_demo_reader_is_counted_apart_from_a_real_file_reader(app, engine):
-    # TICKET-865: 3 real readers (all, some, none) and 2 demo readers (some, none).
-    every, some, none = (add_trader(engine, n) for n in ("every", "some", "none"))
-    demo_some, demo_none = (add_trader(engine, n) for n in ("demo-some", "demo-none"))
-    with make_session(engine) as sess:
-        for trader_id in (every, some, none):
-            add_record(sess, trader_id)
-        for trader_id in (demo_some, demo_none):
-            add_record(sess, trader_id, source=demo.ACCOUNT)
-        for key in SM.FACTS:
-            add_dwell(sess, every, key)
-        add_dwell(sess, some, "money")
-        add_dwell(sess, demo_some, "money")
-        sess.commit()
-    cards = view(app, engine)["cards"]
-    assert (cards["read_all"], cards["stopped_early"], cards["read_none"]) == (1, 1, 1)
-    assert (cards["demo_read_all"], cards["demo_stopped_early"], cards["demo_read_none"]) == (0, 1, 1)
-
-
-def test_each_reading_card_says_which_group_it_counts(app, engine):
-    page = admin_page(app, engine)
-    assert "Of those who uploaded" not in page
-    assert "Real-file readers: read all" in page
-    assert "Demo readers: read all" in page
-    assert "Of those whose report reads a real file." in page
-    assert "Of those whose report reads the demo." in page
-
-
 def test_said_wrong_says_how_many_of_them_are_on_the_demo(app, engine):
     on_real, on_demo = add_trader(engine, "on-real"), add_trader(engine, "on-demo")
     with make_session(engine) as sess:
@@ -627,7 +602,7 @@ def test_said_wrong_says_how_many_of_them_are_on_the_demo(app, engine):
         sess.commit()
     cards = view(app, engine)["cards"]
     assert (cards["said_wrong"], cards["said_wrong_demo"]) == (2, 1)
-    assert "On the demo: 1." in admin_page(app, engine)
+    assert "1 of them on the demo" in admin_page(app, engine)
 
 
 def test_said_wrong_counts_traders_not_answers(app, engine):
@@ -643,14 +618,6 @@ def test_said_wrong_counts_traders_not_answers(app, engine):
     assert view(app, engine)["cards"]["said_wrong"] == 1
 
 
-def test_the_reveal_cards_stay_empty_whatever_later_steps_are_stored(app, engine):
-    """/mirror/reveal writes nothing, and the budget and chapters are reachable without it."""
-    seed_everything(engine, add_trader(engine, "someone"))
-    cards = view(app, engine)["cards"]
-    assert cards["reached_reveal"] == "—"
-    assert cards["upload_to_reveal"] == "—"
-
-
 def test_the_reveal_route_is_still_a_get_that_stores_nothing():
     """If it starts leaving a trace, the "—" above can become a count."""
     source = Path("services/production/api/routes_reveal.py").read_text()
@@ -661,7 +628,7 @@ def test_the_reveal_route_is_still_a_get_that_stores_nothing():
 def test_the_page_says_why_each_gap_is_a_gap(app, engine):
     page = admin_page(app, engine)
     for says in ("writes nothing", "not visible here", "no deploy table",
-                 "not read by this deploy", "not that the figures are wrong"):
+                 "the same check that offers them a re-read"):
         assert says in page, says
 
 
@@ -708,19 +675,6 @@ def test_what_is_no_fact_is_not_counted(app, engine):
     assert row_of(view(app, engine), "someone")["facts_read"] == f"0 of {len(SM.FACTS)}"
 
 
-def test_read_all_and_stopped_early_split_the_readers(app, engine):
-    everything, some, none = (add_trader(engine, n) for n in ("everything", "some", "none"))
-    with make_session(engine) as sess:
-        for trader_id in (everything, some, none):
-            add_record(sess, trader_id)
-        for key in SM.FACTS:
-            add_dwell(sess, everything, key)
-        add_dwell(sess, some, "money")
-        sess.commit()
-    cards = view(app, engine)["cards"]
-    assert (cards["read_all"], cards["stopped_early"], cards["read_none"]) == (1, 1, 1)
-
-
 def test_minutes_add_up_the_views_and_drawers_are_counted_apart(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
@@ -737,45 +691,129 @@ def test_minutes_add_up_the_views_and_drawers_are_counted_apart(app, engine):
 # ---------- One row per trader ----------
 
 
-def step_of(app, engine, login_id="someone") -> str:
-    return row_of(view(app, engine), login_id)["step"]
+def done_of(app, engine, login_id="someone") -> list[str]:
+    return [step["label"] for step in row_of(view(app, engine), login_id)["journey"] if step["done"]]
 
 
-def test_the_furthest_step_starts_at_signed_up(app, engine):
+def test_a_new_account_has_no_tick(app, engine):
     add_trader(engine, "someone")
-    assert step_of(app, engine) == "signed up"
+    assert done_of(app, engine) == []
 
 
-def test_each_stored_step_moves_the_furthest_step_on(app, engine):
+def test_each_stored_step_ticks_on_its_own(app, engine):
     trader_id = add_trader(engine, "someone")
 
-    def then(step, write):
+    def then(done, write):
         with make_session(engine) as sess:
             write(sess)
             sess.commit()
-        assert step_of(app, engine) == step
+        assert done_of(app, engine) == done
 
-    then("consented", lambda sess: add_consent(sess, trader_id))
-    then("uploaded", lambda sess: add_import(sess, trader_id))
+    then(["consent"], lambda sess: add_consent(sess, trader_id))
+    then(["consent", "file"], lambda sess: add_import(sess, trader_id))
     with make_session(engine) as sess:
         import_id = sess.scalars(select(m.Import.id)).one()
-    then("guess", lambda sess: sess.add(m.GuessAnswer(
-        trader_id=trader_id, answer="unknown", labels_version="x", import_id=import_id,
-        answered_at=THEN)))
-    then("chapter 2", lambda sess: add_dwell(sess, trader_id, "run"))
-    then("chapter 3", lambda sess: sess.add(m.ChapterFeedback(
+    then(["consent", "file", "chapter 2"], lambda sess: add_dwell(sess, trader_id, "run"))
+    then(["consent", "file", "chapter 3"], lambda sess: sess.add(m.ChapterFeedback(
         trader_id=trader_id, chapter=3, answer="accurate", import_id=import_id, answered_at=THEN)))
-    then("chapter 4", lambda sess: add_dwell(sess, trader_id, "risk"))
-    then("journal", lambda sess: add_journal(sess, trader_id, import_id, opened=THEN))
-    then("budget", lambda sess: add_budget(sess, trader_id))
+    then(["consent", "file", "chapter 3", "journal"],
+         lambda sess: add_journal(sess, trader_id, import_id, opened=THEN))
+    then(["consent", "file", "chapter 3", "journal", "budget"], lambda sess: add_budget(sess, trader_id))
 
 
-def test_the_furthest_step_of_a_demo_only_account_is_no_upload(app, engine):
+def test_a_budget_set_first_hides_nothing_else(app, engine):
+    """The single label read budget here and hid how little else had happened."""
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_budget(sess, trader_id)
+        sess.commit()
+    assert done_of(app, engine) == ["budget"]
+
+
+def test_the_page_draws_the_journey_with_ticks_and_words(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert ">Journey</a></th>" in page and "Furthest step" not in page  # a sort link since 868
+    assert "✓ consent" in page
+
+
+def test_files_uploaded_counts_every_import(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id)
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, at=THEN + timedelta(hours=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["files_uploaded"] == 2
+
+
+def test_journals_opened_counts_opens_not_generated_ones(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_journal(sess, trader_id, imp.id, opened=THEN)
+        add_journal(sess, trader_id, imp.id)
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["journals_opened"] == 1
+
+
+def test_days_active_counts_distinct_india_days_across_stored_actions(app, engine):
+    trader_id = add_trader(engine, "someone")  # signed up at THEN
+    late_utc = datetime(2026, 3, 3, 19, 0, tzinfo=UTC)  # already 4 Mar in India
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=THEN + timedelta(minutes=5))  # same day as sign-up
+        add_dwell(sess, trader_id, "run", at=datetime(2026, 3, 3, 5, 0, tzinfo=UTC))
+        add_dwell(sess, trader_id, "run", at=datetime(2026, 3, 3, 6, 0, tzinfo=UTC))  # same day
+        sess.add(m.ChapterFeedback(trader_id=trader_id, chapter=3, answer="accurate", import_id=imp.id,
+                                   answered_at=late_utc))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["days_active"] == 3
+
+
+def test_first_upload_is_the_earliest_file(app, engine):
+    trader_id = add_trader(engine, "someone")
+    assert row_of(view(app, engine), "someone")["first_upload"] == "—"
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=THEN)
+        add_import(sess, trader_id, at=THEN + timedelta(days=2))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["first_upload"].startswith("02 Mar 2026")
+
+
+def test_pay_progress_follows_the_rule_the_question_uses(app, engine):
+    trader_id = add_trader(engine, "someone")
+    recent = datetime.now(UTC) - timedelta(days=1)
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id, at=recent)
+        add_journal(sess, trader_id, imp.id, opened=recent)
+        sess.commit()
+    progress = row_of(view(app, engine), "someone")["pay_progress"]
+    assert progress == f"1 of {WTP.JOURNALS_BEFORE_ASKING} journals; settled in: no"
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=recent + timedelta(hours=1))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["pay_progress"].endswith("settled in: yes")
+
+
+def test_pay_progress_counts_a_fortnight_as_settled_in(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, at=datetime.now(UTC) - timedelta(days=k.WTP_DAYS_SINCE_FIRST_UPLOAD))
+        sess.commit()
+    assert row_of(view(app, engine), "someone")["pay_progress"].endswith("settled in: yes")
+
+
+def test_the_journey_of_a_demo_only_account_is_no_upload(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
         add_record(sess, trader_id, source=demo.ACCOUNT)
         sess.commit()
-    assert step_of(app, engine) == "loaded the demo"
+    row = row_of(view(app, engine), "someone")
+    done = [step["label"] for step in row["journey"] if step["done"]]
+    assert "demo" in done and "file" not in done
+    assert (row["files_uploaded"], row["first_upload"]) == (0, "—")
 
 
 def test_a_withdrawn_consent_alone_is_not_consented(app, engine):
@@ -783,7 +821,7 @@ def test_a_withdrawn_consent_alone_is_not_consented(app, engine):
     with make_session(engine) as sess:
         add_consent(sess, trader_id, granted=False)
         sess.commit()
-    assert step_of(app, engine) == "signed up"
+    assert done_of(app, engine) == []
 
 
 def test_a_journal_generated_at_upload_is_no_step_and_none_written(app, engine):
@@ -793,7 +831,7 @@ def test_a_journal_generated_at_upload_is_no_step_and_none_written(app, engine):
         add_journal(sess, trader_id, add_import(sess, trader_id).id)
         sess.commit()
     row = row_of(view(app, engine), "someone")
-    assert row["step"] == "uploaded"
+    assert "journal" not in [step["label"] for step in row["journey"] if step["done"]]
     assert row["journals_written"] == 0
 
 
@@ -808,7 +846,7 @@ def test_journals_written_counts_journals_not_answers(app, engine):
         sess.commit()
     row = row_of(view(app, engine), "someone")
     assert row["journals_written"] == 2
-    assert row["step"] == "journal"
+    assert "journal" in [step["label"] for step in row["journey"] if step["done"]]
 
 
 def test_upload_health_reads_the_latest_file_and_counts_refusals_across_all(app, engine):
@@ -1020,6 +1058,13 @@ def test_an_account_stored_before_sign_up_times_were_kept_shows_no_time_and_sort
     assert the_view["rows"][-1]["login_id"] == "old"
 
 
+def test_an_account_with_no_sign_up_time_has_no_sign_up_line_in_the_feed(app, engine):
+    add_trader(engine, "old", joined=None)
+    add_trader(engine, "someone")
+    lines = feed_text(app, engine)
+    assert "someone signed up" in lines and "old signed up" not in lines
+
+
 def test_the_table_sorts_by_last_activity_whatever_the_source(app, engine):
     add_trader(engine, "signed-up-late", joined=THEN + timedelta(days=2))
     budget_latest, uploaded = add_trader(engine, "budget-latest"), add_trader(engine, "uploaded")
@@ -1047,62 +1092,65 @@ def test_the_page_names_the_columns_and_says_the_time_is_a_floor(app, engine):
     assert "a visit that writes nothing can't show" in page.replace("&#39;", "'")
 
 
-# ---------- On current code ----------
+# ---------- Would read differently [TICKET-877] ----------
 
 
-def current(app, engine, login_id="someone") -> str:
-    return row_of(view(app, engine), login_id)["on_current"]
+def differs(app, engine, login_id="someone") -> str:
+    return row_of(view(app, engine), login_id)["reads_differently"]
 
 
-def test_the_latest_import_is_held_against_the_running_version(app, engine):
+def add_current(sess, trader_id, *, adapter_version=None, reconstruction=rc.RECONSTRUCTION_VERSION, **kw):
+    """An import stamped with what today's reconstruction and file map would stamp."""
+    fm = oc.ADAPTERS[0].file_map()
+    return add_import(sess, trader_id, adapter=(fm.adapter_id, adapter_version or fm.version),
+                      reconstruction=reconstruction, **kw)
+
+
+def test_a_deploy_that_changed_no_reading_is_not_flagged(app, engine):
+    """The old column went red here: another code version, the same figures."""
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
+        add_current(sess, trader_id, version=OLD)
         sess.commit()
-    assert current(app, engine) == "no"
-    with make_session(engine) as sess:
-        add_import(sess, trader_id, version=RUNNING, at=THEN + timedelta(hours=1))
-        sess.commit()
-    assert current(app, engine) == "yes"
+    assert differs(app, engine) == "no"
 
 
-def test_a_refused_file_on_this_deploy_does_not_hide_a_record_read_by_an_older_one(app, engine):
-    """A refused file reads nothing. What he is looking at is still the old reading."""
+@pytest.mark.parametrize("stale", [{"reconstruction": "an-older-one"}, {"adapter_version": "an-older-one"},
+                                   {"reconstruction": None}])
+def test_a_reading_today_would_change_is_flagged(app, engine, stale):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
-        add_import(sess, trader_id, version=RUNNING, outcome=s.ImportOutcome.REJECTED,
-                   at=THEN + timedelta(hours=1))
+        add_current(sess, trader_id, version=RUNNING, **stale)
         sess.commit()
-    assert current(app, engine) == "no"
+    assert differs(app, engine) == "yes"
 
 
-@pytest.mark.parametrize(("stamped", "running"), [("unknown", RUNNING), (OLD, "unknown")])
-def test_an_unknown_version_cannot_be_compared(app, engine, stamped, running):
+def test_a_refused_file_does_not_hide_the_reading_he_is_still_looking_at(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=stamped)
+        add_current(sess, trader_id, reconstruction="an-older-one")
+        add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED, at=THEN + timedelta(hours=1))
         sess.commit()
-    app.state.code_version = running
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "yes"
 
 
 def test_no_file_read_has_nothing_to_compare(app, engine):
     trader_id = add_trader(engine, "someone")
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "—"
     with make_session(engine) as sess:
         add_import(sess, trader_id, outcome=s.ImportOutcome.REJECTED)
         sess.commit()
-    assert current(app, engine) == "—"
+    assert differs(app, engine) == "—"
 
 
-def test_stale_is_drawn_in_red_and_in_words(app, engine):
+def test_only_a_real_difference_is_drawn_in_red_and_in_words(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        add_import(sess, trader_id, version=OLD)
+        add_current(sess, trader_id, reconstruction="an-older-one")
         sess.commit()
-    page = admin_client(app, engine).get("/admin?columns=all").text
-    assert re.search(r'class="[^"]*admin__stale[^"]*"[^>]*>no<', page)
+    page = admin_client(app, engine).get("/admin?columns=all").text  # a full-view column (868)
+    assert "Would read differently" in page and "On current code" not in page
+    assert re.search(r'class="[^"]*admin__stale[^"]*"[^>]*>yes<', page)
 
 
 def test_the_running_version_is_on_the_page(app, engine):
@@ -1132,10 +1180,61 @@ def test_the_feed_is_newest_first_and_says_who_and_what(app, engine):
         "someone answered Wrong on chapter 2",
         "someone opened a drawer: Where the money came from",
         "someone uploaded a file: 8 of 10 rows read",
-        f"First import on code {RUNNING}",
+        "someone signed up",
     ]
 
 
+def test_the_feed_opens_with_a_trader_signing_up_and_consenting(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id, at=THEN + timedelta(minutes=1))
+        add_consent(sess, trader_id, granted=False, at=THEN + timedelta(minutes=2))
+        sess.commit()
+    assert feed_text(app, engine) == ["someone withdrew consent for diagnosis",
+                                      "someone gave consent for diagnosis", "someone signed up"]
+
+
+def test_a_budget_line_says_one_was_set_and_never_the_amount(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal("98765"),
+                                         effective_from="2026-03-02",
+                                         declared_at=THEN + timedelta(hours=1)))
+        sess.commit()
+    said = feed_text(app, engine)
+    assert said[0] == "someone set a budget"
+    assert "98765" not in " ".join(said)
+
+
+def test_a_charges_file_and_a_deleted_account_each_have_a_line(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        sess.add(add_charges(sess, trader_id, at=THEN + timedelta(hours=1)))
+        sess.add(m.DeletionRecord(trader_id=9999, requested_at=THEN, completed_at=THEN + timedelta(hours=2)))
+        sess.commit()
+    assert feed_text(app, engine)[:2] == ["An account was deleted", "someone added a charges file"]
+
+
+def test_each_day_is_headed_once_in_ist(app, engine):
+    add_trader(engine, "first")
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_consent(sess, trader_id, at=THEN + timedelta(days=1))
+        add_consent(sess, trader_id, at=THEN + timedelta(days=1, minutes=1))
+        sess.commit()
+    heads = [line["day_head"] for line in view(app, engine)["feed"]]
+    assert [bool(h) for h in heads] == [True, False, True, False]
+    assert heads[0] != heads[2]
+
+
+def test_the_page_draws_day_heads_and_the_code_versions_apart_from_the_feed(app, engine):
+    trader_id = add_trader(engine, "someone")
+    with make_session(engine) as sess:
+        add_import(sess, trader_id, version=OLD)
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "admin__feed-day" in page
+    assert "First import on code" in page and OLD in page[page.index("</ol>"):]
 def test_a_feed_line_says_the_demo_was_loaded_not_that_a_file_was_uploaded(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
@@ -1214,8 +1313,8 @@ def test_a_deploy_can_only_be_the_first_import_on_a_version(app, engine):
         add_import(sess, other, version=RUNNING, at=THEN + timedelta(hours=2))
         add_import(sess, other, version="unknown", at=THEN + timedelta(hours=3))
         sess.commit()
-    versions = [t for t in feed_text(app, engine) if t.startswith("First import on code")]
-    assert versions == [f"First import on code {RUNNING}", f"First import on code {OLD}"]
+    assert [c["version"] for c in view(app, engine)["code_seen"]] == [RUNNING, OLD]
+    assert not [t for t in feed_text(app, engine) if t.startswith("First import on code")]
 
 
 def test_feed_lines_for_a_day_and_a_whole_report_say_a_note_exists_and_no_more(app, engine):
@@ -1370,8 +1469,6 @@ def test_the_table_says_reading_is_stored_by_trader_not_by_file(app, engine):
 
 @pytest.mark.parametrize("path", [
     ("cards", "signed_up"), ("cards", "tried_demo"), ("cards", "uploaded_real"),
-    ("cards", "read_all"), ("cards", "stopped_early"), ("cards", "read_none"),
-    ("cards", "demo_read_all"), ("cards", "demo_stopped_early"), ("cards", "demo_read_none"),
     ("cards", "said_wrong"), ("cards", "said_wrong_demo"),
     ("fact_table", "chapters"), ("fact_table", "covers"),
     ("quiet", "wtp"), ("quiet", "wtp_asked"), ("quiet", "consent_declines"),
@@ -1398,7 +1495,7 @@ def test_a_development_account_has_no_row_and_no_line_and_is_listed_apart(app, e
     seed_everything(engine, add_trader(engine, "tester", dev=True, name="Test Account"))
     the_view = view(app, engine)
     assert [r["login_id"] for r in the_view["rows"]] == ["real"]
-    assert the_view["feed"] == []
+    assert [line["text"] for line in the_view["feed"]] == ["real signed up"]
     assert [(d["login_id"], d["name"]) for d in the_view["dev_accounts"]] == [("tester", "Test Account")]
 
 
@@ -1477,13 +1574,18 @@ def statements_for_one_load(app, engine, client) -> list[str]:
 
 def test_a_load_runs_the_same_queries_for_three_traders_as_for_thirty(app, engine):
     client = admin_client(app, engine)
+    client.get("/admin")  # a later look also asks what's new since the last one
     for i in range(3):
         seed_everything(engine, add_trader(engine, f"trader-{i}"))
     few = len(statements_for_one_load(app, engine, client))
     for i in range(3, 30):
         seed_everything(engine, add_trader(engine, f"trader-{i}"))
     assert len(statements_for_one_load(app, engine, client)) == few
-    assert few < 40
+    # 40 -> 50 -> 52 across 12-13 Nov, as six admin panels landed (877, 874, 867, 875, 869, 876).
+    # The N+1 guard above is the invariant and still holds; this is a budget, and it is set to
+    # today's real count with no headroom on purpose. The next panel breaches it and that breach
+    # is meant to be a decision, not a formality. Consolidate before 868 and 873 land.
+    assert few < 52
 
 
 def test_a_load_reads_no_trade_and_no_stored_file_row(app, engine):
@@ -1510,6 +1612,100 @@ def test_the_new_styles_are_not_added_at_the_end_of_the_file():
     css = Path("services/production/api/static/css/app.css").read_text()
     assert css.index(".admin__scroll") < css.index(".day-blocks__next")
 
+
+# ---------- What traders told us [TICKET-876] ----------
+
+
+def told(app, engine) -> dict:
+    return view(app, engine)["told"]
+
+
+def add_chapter_answer(sess, trader_id, import_id, chapter, answer, reasons=(), at=THEN):
+    row = m.ChapterFeedback(trader_id=trader_id, chapter=chapter, answer=answer, import_id=import_id,
+                            answered_at=at)
+    sess.add(row)
+    sess.flush()
+    for reason in reasons:
+        sess.add(m.ChapterFeedbackReason(feedback_id=row.id, reason=reason, given_at=at))
+
+
+def add_report_answer(sess, trader_id, import_id, answer, *, day="", note=None, at=THEN):
+    sess.add(m.ReportFeedback(trader_id=trader_id, import_id=import_id, answer=answer, trading_day=day,
+                              note=note, answered_at=at))
+
+
+def test_chapters_count_answers_with_reasons_and_reach(app, engine):
+    one, two, three = add_trader(engine, "one"), add_trader(engine, "two"), add_trader(engine, "three")
+    with make_session(engine) as sess:
+        imp = add_import(sess, one)
+        add_chapter_answer(sess, one, imp.id, 3, "wrong", ["wrong_facts"])
+        add_chapter_answer(sess, two, imp.id, 3, "wrong", ["wrong_reading"])
+        add_chapter_answer(sess, three, imp.id, 3, "not_sure")
+        sess.commit()
+    row = next(c for c in told(app, engine)["chapters"] if c["chapter"] == 3)
+    assert (row["reached"], row["accurate"], row["not_sure"], row["wrong"]) == (3, 0, 1, 2)
+    assert row["reasons"] == "Wrong facts 1, Right facts, wrong reading 1"
+
+
+def test_the_whole_report_and_days_said_to_look_wrong_are_counted(app, engine):
+    one, two = add_trader(engine, "one"), add_trader(engine, "two")
+    with make_session(engine) as sess:
+        imp = add_import(sess, one)
+        later = add_import(sess, one, at=THEN + timedelta(hours=1))
+        add_report_answer(sess, one, imp.id, "wrong")
+        add_report_answer(sess, one, later.id, "accurate")  # his latest is the one counted
+        add_report_answer(sess, two, imp.id, "wrong")
+        add_report_answer(sess, one, imp.id, "wrong", day="2026-03-02")
+        add_report_answer(sess, one, later.id, "wrong", day="2026-03-02")  # the same day again
+        add_report_answer(sess, two, imp.id, "wrong", day="2026-03-02")
+        sess.commit()
+    said = told(app, engine)
+    assert (said["report"]["accurate"], said["report"]["not_sure"], said["report"]["wrong"]) == (1, 0, 1)
+    assert said["days_wrong"] == 2
+
+
+def test_reports_waiting_are_those_since_wrong_reports_last_ran(app, engine):
+    trader_id = add_trader(engine, "one")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_report_answer(sess, trader_id, imp.id, "accurate", note="a note", at=THEN)
+        add_report_answer(sess, trader_id, add_import(sess, trader_id).id, "accurate", at=THEN)
+        add_report_answer(sess, trader_id, imp.id, "wrong", day="2026-03-02", at=THEN)
+        sess.commit()
+    assert told(app, engine)["waiting"] == 2
+    with make_session(engine) as sess:
+        sess.add(m.AdminAction(actor="admin", action="wrong_reports", target=None, at=THEN + timedelta(hours=1)))
+        sess.commit()
+    assert told(app, engine)["waiting"] == 0
+    with make_session(engine) as sess:
+        add_report_answer(sess, trader_id, imp.id, "wrong", day="2026-03-03", at=THEN + timedelta(hours=2))
+        sess.commit()
+    assert told(app, engine)["waiting"] == 1
+
+
+def test_a_development_account_moves_nothing_here(app, engine):
+    add_trader(engine, "real")
+    before = told(app, engine)
+    seed_everything(engine, add_trader(engine, "tester", dev=True))
+    assert told(app, engine) == before
+
+
+def test_would_pay_counts_those_with_a_note(app, engine):
+    seed_everything(engine, add_trader(engine, "someone"))
+    assert told(app, engine)["wtp_noted"] == 1
+
+
+def test_the_panel_draws_counts_and_the_command_and_no_typed_word(app, engine):
+    trader_id = add_trader(engine, "one")
+    with make_session(engine) as sess:
+        imp = add_import(sess, trader_id)
+        add_report_answer(sess, trader_id, imp.id, "wrong", note="MARKER-TYPED-WORDS")
+        sess.commit()
+    page = admin_page(app, engine)
+    assert "What traders told us" in page
+    assert "wrong-reports" in page and "1 waiting" in page
+    assert "MARKER-TYPED-WORDS" not in page
+    assert page.index("What traders told us") < page.index("Would pay</dt>")
 
 def test_the_page_says_how_many_development_accounts_it_left_out(app, engine):
     # TICKET-864: a low number on the cards must not be misread as every account there is.

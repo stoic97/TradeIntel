@@ -7,7 +7,7 @@
 {% set nav = "journal" %}
 {% block content %}
   <p class="label label--plain">Journal</p>
-  <h1 class="title num-title">{{ journal.period_start }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end }}{% endif %}</h1>
+  <h1 class="title num-title">{{ journal.period_start|day }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end|day }}{% endif %}</h1>
   <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
   {{ uncounted_line(uncounted) }}
   {%- if journal.id in changed_ids %}
@@ -42,7 +42,7 @@
     {%- endfor %}
     {%- if rest_rows %}
     <details class="journal__rest"{% if rest_answered %} open{% endif %}>
-      <summary class="body-small">The other {{ rest_rows|length|count }} trades</summary>
+      <summary class="body-small">The other {{ Figure(rest_rows|length, "trades")|count }} trades</summary>
       {%- for row in rest_rows %}
       {% include "_journal_trade.html" %}
       {%- endfor %}

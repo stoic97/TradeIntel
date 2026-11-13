@@ -47,8 +47,11 @@ def test_the_body_stops_leaving_room_for_a_bottom_nav():
     assert "padding-bottom" in rule(".screen__body--with-nav")
 
 
+REPORT_STAGE = ".screen:has(> .stage:not(.stage--door))"
+
+
 def test_the_dial_sits_beside_the_story():
-    grid = rule(".screen:has(> .stage)")
+    grid = rule(REPORT_STAGE)
     assert "display: grid" in grid
     assert "grid-template-columns" in grid
 
@@ -71,3 +74,25 @@ def test_the_layout_adds_no_second_set_of_templates():
 def test_the_next_button_is_not_shown_twice_in_a_row():
     """On a phone the evidence sits between the two. Beside the story, nothing does."""
     assert "display: none" in rule(".screen__body--fact > .day-blocks__next")
+
+
+# ---------- TICKET-857: the door is not a report page ----------
+
+def test_the_beside_the_story_grid_does_not_catch_the_door():
+    """TICKET-845's grid was keyed on any page with a stage, and the signed-out door has
+    one. On desktop the door's navy card floated top-aligned beside a taller form, with
+    white below it (T-001, 6 Nov). Every rule that places a stage beside its story names
+    the report's stages only."""
+    stage_rules = re.findall(r"\.screen:has\(> \.stage[^{]*", desktop_rules())
+    assert stage_rules, "the report pages still put the dial beside the story"
+    for selector in stage_rules:
+        assert selector.startswith(REPORT_STAGE), selector.strip()
+
+
+def test_on_desktop_the_door_is_a_band_above_its_form():
+    """The kit draws the door for a phone only: the navy stage on top, the form below.
+    On desktop that stays its shape: the band runs the page's width, its words line up
+    with the form's column, and the form follows it."""
+    door = rule(".stage--door")
+    assert "padding-inline" in door and "760px" in door
+    assert "sticky" not in door and "grid-column" not in door

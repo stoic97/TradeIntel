@@ -1,6 +1,6 @@
 """Chapter 2 leads with what it would take to break even, and always has a way on [TICKET-837].
 
-The overview's lead reads the same row as "The math of your trading", so the two can't disagree.
+The overview's lead reads the same row as "Your wins and losses", so the two can't disagree.
 It says the amount per winner and stops there: which lever to pull is not ours to say. A book
 under the minimum gets no line, and neither does a book that already made back what it lost.
 """

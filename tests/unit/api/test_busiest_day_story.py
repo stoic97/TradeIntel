@@ -190,14 +190,12 @@ def test_a_hold_under_a_minute_is_not_called_zero_minutes():
     assert "0 minutes" not in story
 
 
-def test_a_trade_held_past_the_day_leaves_the_holds_out_and_says_why():
-    """Its exit is another date, so "between ... and ..." reads the entries instead."""
+def test_a_trade_held_past_the_day_is_not_in_the_story():
+    """TICKET-855: Chapter 3 reads same-day trades, so the page is what it is without it."""
     held_over = option("09:30", "PE", 50)
     held_over = replace(held_over, exit_ts=held_over.entry_ts + timedelta(days=2), holding_seconds=172800)
-    story = story_of([option("09:20", "CE", 50), held_over, *QUIET])
-    assert "between 9:20 am and 9:30 am." in story
-    assert "holding" not in story
-    assert "1 stayed open past that day." in story
+    same_day = [option("09:20", "CE", 50), *QUIET]
+    assert story_of([same_day[0], held_over, *QUIET]) == story_of(same_day)
 
 
 def test_a_day_of_shares_tells_no_strike_lots_or_switches_and_draws_no_strip():
@@ -374,7 +372,7 @@ def test_the_down_page_says_only_the_opening_sentence_of_its_card():
     assert len(said) == 2
     for sentence in said[1:]:
         assert sentence not in page, sentence
-    for table_line in ("Table 1", "Table 2", "Your other trades that qualified", "Every other trade",
+    for table_line in ("Table 1", "Table 2", "Your other trades after two had closed", "Every other trade",
                        "A scratch trade ends the run."):
         assert table_line not in page, table_line
 
@@ -445,13 +443,10 @@ def dial_figures(trips) -> dict:
 
 
 def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
-    assert dial_figures(DAY)["Your busiest day"] == "6 trades, 02 Sep 2026"
-
-
-def test_the_busiest_figure_breaks_before_its_date_when_it_stacks():
     figs = SF.facts(SF.record_context(DAY), IMP)
-    figure = SF.chapter_view(3, figs)["items"][1]["figure"]
-    assert [x.replace("\xa0", " ") for x in G.stacked_split(figure)] == ["6 trades,", "02 Sep 2026"]
+    item = SF.chapter_view(3, figs)["items"][1]
+    assert (item["figure"], item["label"].replace("\xa0", " ")) == (
+        "6 trades", "on your\nbusiest day,\n02 Sep 2026")
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
@@ -475,8 +470,8 @@ def test_the_card_and_home_keep_their_own_figures():
     """Only the chapter's dial changes: home's slice says the busiest day, and a card's figure
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
-    assert figs["down"]["figure"] == "4"
-    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "busiest"
+    assert figs["down"]["figure"] == "4 trades"
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "on your\nbusiest day"
     assert ">4<" in chapter_page(3, DOWN)
 
 

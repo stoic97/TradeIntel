@@ -1,0 +1,33 @@
+# MCX sessions that are not a full weekday session, for the crude series' session check (TICKET-893).
+#
+# Kinds:
+#   closed        no session at all on a weekday
+#   evening_only  morning session closed for an Indian holiday, evening session (from 17:00 IST) open
+#   morning_only  evening session closed, usually for a holiday in the overseas markets
+#   special       a session on a weekend or at an unusual hour, such as Diwali muhurat trading
+#
+# Source: MCX's holiday list for 2026 (circular MCX/TRD/636/2025, 15 Dec 2025, as reproduced by
+# brokers), checked against the bars: every entry below up to 12 Nov 2026 matches what the series
+# shows on that day. A date not seen yet is listed only when the exchange closes on it every year.
+# A session the series shows that is missing here makes the extension refuse, so add the line, with
+# its reason, rather than loosening the check.
+
+sessions:
+  - {day: 2025-12-25, kind: closed, reason: Christmas}
+  - {day: 2026-01-15, kind: evening_only, reason: "Maharashtra municipal elections; morning session closed"}
+  - {day: 2026-01-26, kind: closed, reason: Republic Day}
+  - {day: 2026-02-01, kind: special, reason: "Union Budget; a full session on a Sunday"}
+  - {day: 2026-03-03, kind: evening_only, reason: "Holi; morning session closed"}
+  - {day: 2026-03-26, kind: evening_only, reason: "Ram Navami; morning session closed"}
+  - {day: 2026-03-31, kind: evening_only, reason: "Mahavir Jayanti; morning session closed"}
+  - {day: 2026-04-03, kind: closed, reason: Good Friday}
+  - {day: 2026-04-14, kind: evening_only, reason: "Dr Ambedkar Jayanti; morning session closed"}
+  - {day: 2026-05-01, kind: evening_only, reason: "Maharashtra Day; morning session closed"}
+  - {day: 2026-05-28, kind: evening_only, reason: "Bakri Id; morning session closed"}
+  - {day: 2026-06-26, kind: evening_only, reason: "Muharram; morning session closed"}
+  - {day: 2026-09-14, kind: evening_only, reason: "Ganesh Chaturthi; morning session closed"}
+  - {day: 2026-10-02, kind: closed, reason: Mahatma Gandhi Jayanti}
+  - {day: 2026-10-20, kind: evening_only, reason: "Dussehra; morning session closed"}
+  - {day: 2026-11-08, kind: special, reason: "Diwali muhurat trading, a Sunday"}
+  - {day: 2026-11-10, kind: evening_only, reason: "Diwali Balipratipada; morning session closed"}
+  - {day: 2026-12-25, kind: closed, reason: Christmas}

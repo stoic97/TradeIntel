@@ -1126,6 +1126,11 @@ class QuickCloses:
     losers_percent: int
     winners_percent: int
 
+    @property
+    def has_a_comparison(self) -> bool:
+        """Zero against zero is no measured result, and reads as one (TICKET-859)."""
+        return bool(self.losers_percent or self.winners_percent)
+
 
 @dataclass(frozen=True)
 class TopWinners:

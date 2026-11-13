@@ -84,6 +84,21 @@ def _past_number(sess, trader: m.Trader) -> dict:
     return {"past_number": mx.trades_past_number(trips), "imp": imp}
 
 
+def _latest_capital(declarations: list[m.RiskBudgetDeclaration]) -> Decimal | None:
+    """The capital most recently told to us, whatever its number's unit, for the form to show."""
+    told = [d for d in declarations if d.capital_amount is not None]
+    return max(told, key=lambda d: d.id).capital_amount if told else None
+
+
+def _typed_capital(raw: str | None) -> Decimal | None:
+    """The capital as a number above zero, or None if it is blank or isn't one."""
+    try:
+        capital = Decimal(raw) if raw else None
+    except (InvalidOperation, TypeError):
+        return None
+    return capital if capital is not None and capital.is_finite() and capital > 0 else None
+
+
 def _default_from(sess, trader: m.Trader) -> str:
     """Where the date starts: the first day he uploaded, today if there is none.
 
@@ -115,6 +130,7 @@ def budget_form(request: Request):
                     declarations=_history(sess, trader),
                     today=_today().isoformat(),
                     default_from=_default_from(sess, trader),
+                    capital=_latest_capital(_history(sess, trader)),
                     sizes=_loss_sizes(sess, trader))
 
 
@@ -144,6 +160,7 @@ def budget_submit(
                         declarations=_history(sess, trader),
                         today=_today().isoformat(),
                         default_from=_default_from(sess, trader),
+                        capital=_latest_capital(_history(sess, trader)),
                     sizes=_loss_sizes(sess, trader))
 
         try:
@@ -156,17 +173,14 @@ def budget_submit(
         if unit not in ("INR", "PCT"):
             return refuse("Choose rupees or a percentage of your capital.")
 
-        capital = None
-        if unit == "PCT":
-            try:
-                capital = Decimal(capital_amount) if capital_amount else None
-            except (InvalidOperation, TypeError):
-                capital = None
-            if capital is None or capital <= 0:
-                return refuse(
-                    "A percentage needs your trading capital in rupees — without it "
-                    "there is no rupee figure to measure a trade against."
-                )
+        capital = _typed_capital(capital_amount)
+        if capital is None and unit == "PCT":
+            return refuse(
+                "A percentage needs your trading capital in rupees — without it "
+                "there is no rupee figure to measure a trade against."
+            )
+        if capital is None and capital_amount:
+            return refuse("Your trading capital has to be a number above zero, in rupees.")
 
         try:
             effective = date.fromisoformat(effective_from)

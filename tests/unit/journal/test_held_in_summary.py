@@ -64,14 +64,14 @@ AFTERNOON = _trip("b", "2024-03-04T14:00:00", "2024-03-04T14:10:00", net=-60)
 
 def test_one_held_trade_reads_with_both_dates_and_the_days_between():
     assert _summary(MONTH_LONG).startswith(
-        "One trade, held past the day: opened on 4 March 2024, closed on 5 April 2024, "
+        "One trade, held past the day: opened on 04 Mar 2024, closed on 05 Apr 2024, "
         "32 days later. Net −₹100. It closed down."
     )
 
 
 def test_a_position_held_overnight_says_the_next_day():
     assert _summary(OVERNIGHT).startswith(
-        "One trade, held past the day: opened on 4 March 2024, closed on 5 March 2024, "
+        "One trade, held past the day: opened on 04 Mar 2024, closed on 05 Mar 2024, "
         "the next day. Net −₹100."
     )
 
@@ -84,7 +84,7 @@ def test_a_mixed_day_keeps_its_hours_and_adds_the_held_one():
     summary = _summary(MORNING, AFTERNOON, _trip("h", "2024-03-04T14:30:00", "2024-03-11T10:00:00"))
     assert summary.startswith("Three trades, between 09:00 and 14:00.")
     assert (
-        "One was held past the day: opened on 4 March 2024, closed on 11 March 2024, "
+        "One was held past the day: opened on 04 Mar 2024, closed on 11 Mar 2024, "
         "7 days later."
     ) in summary
 
@@ -92,8 +92,8 @@ def test_a_mixed_day_keeps_its_hours_and_adds_the_held_one():
 def test_several_held_trades_are_counted_and_the_longest_is_named():
     summary = _summary(MORNING, OVERNIGHT, _trip("h", "2024-03-04T14:30:00", "2024-04-05T10:00:00"))
     assert (
-        "Two were held past the day. The longest opened on 4 March 2024 and closed on "
-        "5 April 2024, 32 days later."
+        "Two were held past the day. The longest opened on 04 Mar 2024 and closed on "
+        "05 Apr 2024, 32 days later."
     ) in summary
 
 
@@ -155,7 +155,7 @@ def test_the_journal_page_shows_it_after_a_real_upload(scope_environment):
         ).one()
     page = client.get(f"/journals/{journal_id}").text
     assert (
-        "One was held past the day: opened on 2 January 2024, closed on 5 February 2024, "
+        "One was held past the day: opened on 02 Jan 2024, closed on 05 Feb 2024, "
         "34 days later."
     ) in page
     assert "before noon" not in page
