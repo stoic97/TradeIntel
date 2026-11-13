@@ -1,14 +1,16 @@
 {#- A fact (handoff 4, level 3; kit screens 16-f*): the lens and path pinned at the top,
     the Mirror's sentences and figures, then "The trades behind this" - every trade,
-    never a sample. No bottom nav: only the lens and the path go anywhere.
+    never a sample. Around it, the report's spine (TICKET-903): the rail at the top, Previous
+    and Next at the end, All pages, and on a phone the report bar in place of the tabs.
 
     Each fact's page extends this one and fills `head` (its figure and sentences under
     the title), `body` (its figures and tables) and `caption` (what the trades below
     are). A fact in a state shows the state in place of its figure and sentences. -#}
 {% extends "layout.html" %}
 {% from "_components.html" import path, gross_line, uncounted_line, trades, button %}
+{% from "scope/_spine.html" import rail, steps, all_pages, report_bar %}
 {% block stage %}
-{{ path(chapter.facts|length, index, chapter.name, back_href, fact.title) }}
+{% if spine is defined %}{{ rail(spine, chapter, index, back_href, fact) }}{% else %}{{ path(chapter.facts|length, index, chapter.name, back_href, fact.title) }}{% endif %}
 {% endblock %}
 {% block content %}
   <div class="fact__head" data-dwell-line="{{ fact.key }}">
@@ -28,6 +30,11 @@
   </section>
   {% endblock %}
   {% block lineage %}{% endblock %}
+  {%- if spine is defined %}
+  {{ steps(spine) }}
+  {{ all_pages(spine, answers) }}
+  {{ report_bar(spine) }}
+  {%- endif %}
 {% endblock %}
 {#- Dwell (PRD decision 12): how long a fact was read, keyed by the fact
     (scope_map.OLD_DWELL_LINES maps the long page's keys onto these). -#}

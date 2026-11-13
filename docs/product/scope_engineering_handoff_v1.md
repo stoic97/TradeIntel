@@ -52,7 +52,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | 2 | **Chapter** | The dial re-divided into that chapter's facts (2–4); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
 | 3 | **Fact** | White page. The 56 px lens pinned top-left with the path beside it on one line (`Scope › Where your… › Your worst trading days`); the Mirror's sentences, figures, tables; then "The trades behind this": every trade, never a sample | Nothing except the lens and the path |
 
-**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, tabs, dropdowns, text fields, next/previous fact or "related" anywhere in the Scope.
+**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, dropdowns or text fields anywhere in the Scope. Every report page has the rail, Previous and Next, and All pages, all in scope_map's one order, and on a phone the report bar (TICKET-903, ruled 13 Nov 2026, round 2 section N).
 
 ### Chapters and facts (the Mirror's own headings)
 

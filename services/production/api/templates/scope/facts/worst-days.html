@@ -50,14 +50,12 @@
       {{ trades(b.groups) }}
     </details>
     {%- endfor %}
-    <p class="day-blocks__next">{{ button("Your 5 best and 5 worst trades →", f.next_href) }}</p>
   </section>
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
     <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     <p class="evidence__see-all">{{ button("See all trades", f.all_trades_href, "secondary") }}</p>
   </section>
-  <p class="day-blocks__next">{{ button("Your 5 best and 5 worst trades →", f.next_href) }}</p>
   {%- else %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>

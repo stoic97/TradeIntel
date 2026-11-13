@@ -2,8 +2,8 @@
 
     A page fills two blocks: `stage`, the navy field (Scope home, chapters, the reveal,
     the front door), and `content`, the white record. An in-app page names its tab with
-    {% set nav = "scope" | "journal" | "account" %} and gets the bottom nav; a page that
-    names none has no nav (fact pages, and every page before sign-in). `enter_class` is
+    {% set nav = "scope" | "journal" | "account" %} and the nav marks it; every signed-in
+    page has that nav, the one header (TICKET-903); /sample keeps its Home bar (TICKET-914). `enter_class` is
     the motion hook (handoff section 7): the server sets it from ?enter=, motion.css
     plays it, and motion.js (in <head>, so it is ready before the first frame) adds
     the pressed state, the count and the one-play-per-tap rule. `body_class`
@@ -34,16 +34,16 @@
 <body>
 <svg class="visually-hidden" aria-hidden="true" focusable="false"><defs><pattern id="hatch-light" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#FFFFFF"/><path d="M0 0V5" stroke="#DDE4F1" stroke-width="2"/></pattern></defs></svg>
 <div class="screen{% if screen_class %} {{ screen_class }}{% endif %}">
-{% if signed_in and (not nav or sample) %}<nav class="home-bar" aria-label="Home">{{ home_lockup() }}<a class="home-bar__home" href="/">Home</a></nav>{% endif %}
+{% if signed_in and sample %}<nav class="home-bar" aria-label="Home">{{ home_lockup() }}<a class="home-bar__home" href="/">Home</a></nav>{% endif %}
 {% block stage %}{% endblock %}
-<main class="screen__body{% if nav and not sample %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
+<main class="screen__body{% if (nav or signed_in) and not sample %} screen__body--with-nav{% endif %}{% if body_class %} {{ body_class }}{% endif %}">
 {% if sample %}<div class="demo-line sample-line" role="note"><p>Sample trader, invented. These aren't your trades.</p><a class="link" href="/">Run this on my trades</a></div>{% endif %}
 {% if demo %}<p class="demo-line" role="note">{{ demo }}</p>{% endif %}
 {% if report_filter and not sample %}{% include "scope/_filter_bar.html" %}{% endif %}
 {% if stale_import_id %}<div class="demo-line stale-line" role="note"><p>Scope reads files differently since it read yours, so these figures are from its older reading. Read it again to see today's: it takes a few seconds, and nothing you told us is lost.</p><form class="stale-line__form" method="post" action="/imports/{{ stale_import_id }}/read-again"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="upload__demo-button" type="submit">Read your file again</button></form></div>{% endif %}
 {% block content %}{% endblock %}
 </main>
-{% if nav and not sample %}{{ bottom_nav(nav) }}{% endif %}
+{% if (nav or signed_in) and not sample %}{{ bottom_nav(nav) }}{% endif %}
 </div>
 {% block scripts %}{% endblock %}
 </body>
