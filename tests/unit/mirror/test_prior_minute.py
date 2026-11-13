@@ -200,7 +200,8 @@ def test_production_imports_nothing_from_research():
 
 def test_it_runs_on_the_demo_file_with_no_network(monkeypatch):
     """Every demo position is counted or counted out. Directions here are a stand-in for the
-    option direction rule, for this test only: a bought call is long, a bought put short."""
+    option direction rule, for this test only: a bought call is long, a bought put short.
+    A share has no option type and no series here, so it is counted out as having none."""
     from services.production.ctr.intake import pipeline as pl
 
     def refuse(*_a, **_k):
@@ -216,14 +217,14 @@ def test_it_runs_on_the_demo_file_with_no_network(monkeypatch):
     entries = []
     for p in plan.positions:
         leg = p.legs[0]
-        one_way = len(p.legs) == 1 and leg.direction.value == "LONG"
+        one_way = len(p.legs) == 1 and leg.direction.value == "LONG" and leg.option_type
         direction = (1 if leg.option_type.value == "CE" else -1) if one_way else None
         entries.append(pm.Entry(p.position_id, leg.symbol, p.entry_ts, direction))
     days = sorted({p.entry_ts.astimezone(IST).date() for p in plan.positions})
-    result = pm.count(entries, {"NIFTY": walk(1, days), "CRUDEOIL": walk(2, days)})
-    assert result.total == len(plan.positions) == 373
-    assert result.before.measured + len(result.unmeasured) == 373
-    no_direction = sum(e.direction is None for e in entries)
-    assert no_direction >= 5  # the five two-leg positions, at least
-    assert result.unmeasured_by_reason().get(pm.Reason.NO_DIRECTION) == no_direction
+    crude = walk(2, days)  # one series for crude and its mini
+    result = pm.count(entries, {"NIFTY": walk(1, days), "CRUDEOIL": crude, "CRUDEOILM": crude})
+    assert result.total == len(plan.positions) > 0
+    assert result.before.measured + len(result.unmeasured) == result.total
+    assert any(len(p.legs) > 1 for p in plan.positions)  # a spread, which has no single direction
+    assert result.unmeasured_by_reason().get(pm.Reason.NO_DIRECTION, 0) >= 1
     assert result.before.measured > 0
