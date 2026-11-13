@@ -57,11 +57,18 @@ def rows(engine) -> dict[str, int]:  # noqa: F811
                 for t in m.Base.metadata.sorted_tables}
 
 
-def test_it_is_closed_until_the_rule_for_its_count_is_signed(client):  # noqa: F811
+def test_it_is_closed_whenever_the_rule_for_its_count_is_unsigned(client, monkeypatch):  # noqa: F811
     send(client)
+    monkeypatch.setattr(B, "PREREG_SIGNED", False)
     said = words(client.get("/replay").text)
     assert "waits for the research seat to sign it" in said
-    assert B.PREREG_SIGNED is False
+
+
+def test_the_pre_registration_is_signed_before_anyone_real_plays():
+    from pathlib import Path
+    doc = Path("docs/phase0/blind-replay-prereg.md").read_text(encoding="utf-8")
+    assert B.PREREG_SIGNED is True
+    assert "| Research | Rikk | 13 November 2026 |" in doc
 
 
 def test_it_is_closed_without_bars(client, monkeypatch):  # noqa: F811

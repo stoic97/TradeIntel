@@ -25,9 +25,9 @@ made, how many went his way, and the band a coin flip would give on that many ca
 composite score, no rating, no "skill", no rupee figure. Points are the underlying's,
 labelled before charges.
 
-**Not open to a real trader until the pre-registration is signed** (``PREREG_SIGNED``):
-the rule for what the score may claim is written in ``docs/phase0/blind-replay-prereg.md``
-and is the research seat's to sign before anyone plays on a real file.
+**Open to a real trader only under a signed pre-registration** (``PREREG_SIGNED``): the rule
+for what the score may claim is ``docs/phase0/blind-replay-prereg.md``, signed by the
+research seat before anyone played on a real file.
 
 Bars come in through ``prior_minute.MinuteBars``, one series per underlying, and the
 direction of a trade from ``services.shared.option_direction``'s table. Nothing here
@@ -54,8 +54,9 @@ WINDOW_MINUTES = 60   # the market shown before the moment
 HORIZON_MINUTES = 15  # what "next" means at the reveal
 KEEP_AWAY_MINUTES = 30  # a random moment is at least this far from any of his entries
 SEED = 20261113
-PREREG_SIGNED = False
-"""The research seat signs docs/phase0/blind-replay-prereg.md before a real trader plays."""
+PREREG_SIGNED = True
+"""docs/phase0/blind-replay-prereg.md, signed 13 Nov 2026 by Rikk for the research seat, before
+any real trader played. Set it back to False if the document changes and isn't signed again."""
 
 
 @dataclass(frozen=True)

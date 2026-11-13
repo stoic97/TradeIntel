@@ -1,8 +1,9 @@
 # Blind replay — what the score may claim, written before anyone plays
 
-*13 November 2026 · written with the code (TICKET-924) · **NOT SIGNED.** The research seat
-signs this before a real trader plays. Until then `services/production/replay/blind.py`
-keeps `PREREG_SIGNED = False`, and the page opens only on the demo file.*
+*13 November 2026 · written with the code (TICKET-924) · **Signed 13 November 2026 by Rikk,
+holding the research seat for this test by his own ruling the same day.** Signed before any
+real trader played. `services/production/replay/blind.py` records it as `PREREG_SIGNED = True`;
+a change to anything above the signature is a new version, signed again.*
 
 ## The question
 
@@ -50,4 +51,4 @@ from every minute, so the cards hold ordinary bars as a chart does.
 
 | Seat | Name | Date |
 |---|---|---|
-| Research | | |
+| Research | Rikk | 13 November 2026 |
