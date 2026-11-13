@@ -108,7 +108,7 @@ def _from_header(rows: list[list[str]], headers: Iterable[tuple[str, ...]]) -> l
     """The rows from the first known header down, or all of them if there is none."""
     known = set(headers)
     for at, row in enumerate(rows[:PREAMBLE_LIMIT]):
-        cells = [c.strip().lstrip("﻿") for c in row]
+        cells = [c.strip().lstrip("\ufeff") for c in row]
         while cells and not cells[-1]:
             cells.pop()
         if tuple(cells) in known:
@@ -116,17 +116,33 @@ def _from_header(rows: list[list[str]], headers: Iterable[tuple[str, ...]]) -> l
     return rows
 
 
+def _csv_from_header(text: str, known: set[tuple[str, ...]]) -> str:
+    """A CSV from its header line down, read only near the top; the rest is never parsed.
+
+    A file whose header is its first line comes back byte for byte. Only the first
+    :data:`PREAMBLE_LIMIT` lines are looked at, each on its own, so a broken or enormous
+    line further down can't stop the format check from rejecting the file in its words.
+    """
+    lines = text.splitlines(keepends=True)
+    for at, line in enumerate(lines[:PREAMBLE_LIMIT]):
+        try:
+            cells = next(csv.reader([line.rstrip('\r\n')]), [])
+        except csv.Error:
+            continue
+        cells = [c.strip().lstrip("\ufeff") for c in cells]
+        while cells and not cells[-1]:
+            cells.pop()
+        if tuple(cells) in known:
+            return text if at == 0 else "".join(lines[at:])
+    return text
+
+
 def text_of(content: bytes, headers: Iterable[tuple[str, ...]]) -> str:
     """The upload as the pipeline reads it: CSV text beginning at its header."""
     headers = list(headers)
-    if is_workbook(content):
-        rows = workbook_rows(content)
-    else:
-        text = content.decode("utf-8-sig", errors="replace")
-        rows = list(csv.reader(text.splitlines()))
-        if rows and tuple(c.strip() for c in rows[0]) in set(headers):
-            return text  # already starts at its header: kept byte for byte
-    rows = _from_header(rows, headers)
+    if not is_workbook(content):
+        return _csv_from_header(content.decode("utf-8-sig", errors="replace"), set(headers))
+    rows = _from_header(workbook_rows(content), headers)
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
     for row in rows:

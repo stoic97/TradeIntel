@@ -8,10 +8,10 @@ adapter_id: groww_orders_v1
 version: "1"
 verified: true
 verified_on: '2026-11-13'
-# Shares: whole numbers of shares, from the real file. F&O: declared as units (a NIFTY
-# lot is 65 or 75 of them), not yet seen in a real F&O row. If a file counts lots
-# instead, the size check raises MisdeclaredQuantityUnit rather than printing a size
-# 65 times too small, and this line is the one to correct.
+# Units, as the exchanges count them: shares are whole shares (the real file), and an
+# F&O quantity is the exchange's contract quantity, a whole number of lots in units (one
+# NIFTY lot is 65). The size check still raises MisdeclaredQuantityUnit on a quantity no
+# lot size divides, rather than printing a size that is wrong.
 quantity_unit: units
 exports:
   - broker_name: Order history

@@ -107,6 +107,12 @@ def test_a_csv_with_a_preamble_above_its_header_is_read_from_the_header():
     assert pl.text_of(body.encode()).splitlines()[0] == HEADER
 
 
+def test_a_csv_with_a_line_too_big_to_parse_comes_back_whole_for_the_format_check():
+    huge = b"x" * 300_000
+    assert pl.text_of(huge) == huge.decode()
+    assert plan(pl.text_of(huge)).outcome is s.ImportOutcome.REJECTED
+
+
 def test_a_float_written_with_noise_reads_as_the_number_it_is():
     assert workbook._number("1234.4999999999998") == "1234.5"
     assert workbook._number("25210.5") == "25210.5"
@@ -200,6 +206,9 @@ def test_the_import_records_the_adapter_and_the_profile_versions():
      (Segment.OPT, "NIFTY", date(2024, 12, 26), Decimal(24000), OptionType.CE)),
     ("SENSEX25JAN80000CE", "", "BSE", "02-01-2025 10:00 AM",
      (Segment.OPT, "SENSEX", date(2025, 1, 28), Decimal(80000), OptionType.CE)),
+    # Thursday 30 Mar 2023 was a holiday (Ram Navami): the monthly expired on the Wednesday
+    ("NIFTY23MAR17000CE", "", "NSE", "01-03-2023 10:00 AM",
+     (Segment.OPT, "NIFTY", date(2023, 3, 29), Decimal(17000), OptionType.CE)),
     ("NIFTY26NOV24000CE", "NIFTY 23 Nov 24000 Call", "NSE", "10-11-2026 11:00 AM",
      (Segment.OPT, "NIFTY", date(2026, 11, 23), Decimal(24000), OptionType.CE)),
     ("NSE-NIFTY-17Nov26-24000-CE", "", "NSE", "12-11-2026 10:00 AM",
@@ -257,3 +266,13 @@ def test_a_share_with_its_own_options_profile_is_still_read_as_cash_equity():
     assert profiles.lookup(found, "NSE", "RELIANCE", Segment.EQ).key == ("NSE", "*")
     assert profiles.lookup(found, "NSE", "RELIANCE", Segment.OPT).key == ("NSE", "RELIANCE")
     assert "NSE:RELIANCE" not in plan().profile_versions
+
+
+def test_the_closure_calendar_was_read_from_the_exchanges_and_holds_dates_only():
+    from services.shared.market import closures
+
+    shut = closures.load()
+    assert set(shut) == {"NSE", "BSE"}
+    assert date(2023, 3, 30) in shut["NSE"].closed and date(2026, 1, 26) in shut["BSE"].closed
+    assert shut["NSE"].trading_day_on_or_before(date(2023, 3, 30)) == date(2023, 3, 29)
+    assert shut["NSE"].trading_day_on_or_before(date(2030, 1, 3)) == date(2030, 1, 3)

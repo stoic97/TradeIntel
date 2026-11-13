@@ -14,10 +14,10 @@ column. ``Value / Quantity`` lands on a whole paisa in every row and off the 0.0
 22 of 204, which is an order filled at more than one price with the fills added up. The
 price is derived from the value at full precision; nothing is multiplied back.
 
-**Quantity counts units.** Shares are whole numbers of shares. The F&O download carries
-the same header (founder, 13 Nov 2026); its quantity is declared as units in the file map,
-and a quantity that is not a whole number of lots raises ``MisdeclaredQuantityUnit``
-downstream rather than being read as lots.
+**Quantity counts units, as the exchanges do.** Shares are whole numbers of shares; an F&O
+row (same header, founder 13 Nov 2026) carries the exchange's contract quantity, so one
+NIFTY lot is 65. A quantity no lot size divides raises ``MisdeclaredQuantityUnit``
+downstream rather than being read as something else.
 
 **Times are to the minute, 12-hour, IST** (``13-11-2026 02:31 PM``). An after-market
 order is stamped 09:00, before the 09:15 open: that is when it was sent, not when it
@@ -28,13 +28,14 @@ bar for it and counts it unmeasured rather than measuring it against the wrong m
 so every figure from this file is gross (s4.5), as with Dhan's. The Exchange Order Id
 and ISIN are read to check the row, and not kept: a Fill has no field for them.
 
-**A contract is read from Symbol** in the exchange's own trading-symbol forms, which the
-Groww API also uses: ``NIFTY25N1826000CE`` (weekly: year, month code, day), and
-``BANKNIFTY25DEC27000PE`` / ``NIFTY25DECFUT`` (monthly), or Groww's own
-``NSE-NIFTY-18Nov25-26000-CE``. A monthly symbol has no day; it is taken from a date in
+**A contract is read from Symbol**, the exchange's own trading symbol, the same in every
+broker's account (the share rows carry the exchange's symbol, and Groww's API uses it):
+``NIFTY25N1826000CE`` (weekly: year, month code, day), ``BANKNIFTY25DEC27000PE`` and
+``NIFTY25DECFUT`` (monthly), or Groww's own ``NSE-NIFTY-18Nov25-26000-CE``. A monthly symbol has no day; it is taken from a date in
 Stock name when there is one, else the month's last expiry weekday for that exchange
-(:data:`MONTHLY_EXPIRY_WEEKDAY`). A row that is neither a contract nor a share with an
-ISIN is rejected with its reason, never guessed.
+(:data:`MONTHLY_EXPIRY_WEEKDAY`), moved to the trading day before when the exchange was
+shut. A row that is neither a contract nor a share with an ISIN is rejected with its
+reason, never guessed.
 """
 
 from __future__ import annotations
@@ -49,6 +50,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from services.production.ctr.adapters.base import ParseResult, Rejection
+from services.shared.market import closures
 from services.shared.schemas.ctr_v1 import Fill, OptionType, Segment, Side
 
 FORMAT_ID = "groww_orders_v1"
@@ -94,9 +96,9 @@ MONTHLY_EXPIRY_WEEKDAY: dict[str, tuple[tuple[date, int], ...]] = {
     "BSE": ((date(2000, 1, 1), 3), (date(2023, 5, 1), 4), (date(2025, 1, 1), 1),
             (date(2025, 9, 1), 3)),
 }
-"""Used only when a monthly symbol leaves the day out and Stock name doesn't give it. A
-holiday that moves an expiry a day earlier is not modelled, so such a contract's date
-can read a day late; it is still one contract, so pairing is unaffected."""
+"""Used only when a monthly symbol leaves the day out and Stock name doesn't give it. When
+the exchange was shut on that weekday, the expiry is the trading day before it, read from
+``services/shared/market/exchange_closures.yaml`` (the exchange's own daily bars)."""
 
 _SIDES = {"BUY": Side.BUY, "SELL": Side.SELL}
 _OPTION_TYPES = {"CE": OptionType.CE, "PE": OptionType.PE}
@@ -132,7 +134,9 @@ def _monthly_expiry(exchange: str, year: int, month: int, stock_name: str) -> da
             "for that exchange's expiry day -- the contract cannot be identified")
     month_start = date(year, month, 1)
     weekday = [w for since, w in rules if since <= month_start][-1]
-    return _last_weekday(year, month, weekday)
+    shut = closures.load().get(exchange)
+    expiry = _last_weekday(year, month, weekday)
+    return shut.trading_day_on_or_before(expiry) if shut else expiry
 
 
 def _contract(symbol: str, stock_name: str, exchange: str
