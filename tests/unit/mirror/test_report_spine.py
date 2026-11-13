@@ -366,3 +366,9 @@ def test_opening_a_report_page_counts_as_having_walked(client, engine):
     assert landing().startswith("/imports/"), "no guess, no number, nothing read: the walk"
     read(engine, "fx", ORDER[0])
     assert landing() == "/"
+
+def test_the_rail_sits_at_the_top_where_no_header_bar_is_above_it():
+    """Page read, 13 Nov 2026: /sample has no header bar, and on desktop the rail
+    stuck 72px down with the page showing above it."""
+    css = Path("services/production/api/static/css/app.css").read_text(encoding="utf-8")
+    assert "body:not(:has(.bottom-nav)) .rail { top: 0; }" in css

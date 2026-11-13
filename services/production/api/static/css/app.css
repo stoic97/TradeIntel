@@ -363,4 +363,5 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 }
 @media (min-width: 1024px) {
   .rail { top: 72px; padding-inline: max(var(--space-4), calc((100vw - 1284px) / 2)); }
+  body:not(:has(.bottom-nav)) .rail { top: 0; } /* TICKET-903: no header bar above the rail (/sample) */
 }
