@@ -58,17 +58,21 @@ def traders(engine) -> list[str]:
 
 
 def test_opening_the_site_with_no_invite_offers_sign_up_on_the_page(client):
+    """The door asks its question first (TICKET-914); any answer, "I don't know" included,
+    opens the form on the same page."""
     page = client.get("/")
     assert page.status_code == 200
+    assert 'href="/?said=unknown#door-form"' in page.text
+    page = client.get("/?said=unknown")
     assert '<form method="post" action="/signup"' in page.text
-    for name in ("display_name", "login_id", "password", "csrf_token"):
+    for name in ("login_id", "password", "csrf_token"):
         assert f'name="{name}"' in page.text
 
 
 def test_the_form_on_the_front_door_works_in_one_step(client, app_env):
     _, engine = app_env
-    csrf = CSRF.search(client.get("/").text).group(1)
-    response = client.post("/signup", data={"login_id": "door", "display_name": "Door",
+    csrf = CSRF.search(client.get("/?said=unknown").text).group(1)
+    response = client.post("/signup", data={"login_id": "door",
                                             "password": PASSWORD, "csrf_token": csrf},
                            follow_redirects=False)
     assert response.status_code == 303
@@ -88,7 +92,8 @@ def test_a_person_with_an_account_can_still_find_sign_in(client):
 
 
 def test_a_person_without_an_account_can_find_sign_up_from_sign_in(client):
-    assert 'href="/signup"' in client.get("/login").text
+    """Sign-in sends him to the door, which is the one sign-up page (TICKET-914)."""
+    assert '<a class="link" href="/">Create an account if you don' in client.get("/login").text
 
 
 def test_the_front_door_keeps_its_way_back_to_plusev(client):
@@ -169,7 +174,7 @@ def test_a_short_password_is_refused_plainly(client, app_env):
 
 
 @pytest.mark.parametrize(("field", "value"), [
-    ("login_id", "   "), ("display_name", "   "),
+    ("login_id", "   "),
     ("login_id", "x" * 101), ("display_name", "x" * 201),
 ])
 def test_a_name_that_is_blank_or_too_long_is_refused(client, app_env, field, value):
@@ -177,6 +182,13 @@ def test_a_name_that_is_blank_or_too_long_is_refused(client, app_env, field, val
     response = sign_up(client, **{field: value})
     assert response.status_code == 400
     assert traders(engine) == []
+
+
+def test_a_blank_name_is_called_by_the_login_id(client, app_env):
+    """The door asks for a login id only (TICKET-914), and calls him by it."""
+    _, engine = app_env
+    assert sign_up(client, display_name="   ").status_code == 303
+    assert traders(engine) == ["newcomer"]
 
 
 def test_a_login_id_keeps_no_stray_spaces(client, app_env):

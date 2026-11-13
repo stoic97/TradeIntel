@@ -155,8 +155,8 @@ DISPLAY_NAME_MAX = 200
 
 
 def _signup_refused(request: Request, error: str):
-    return page(request, "signup.html", status_code=400, title="Create your account",
-                error=error)
+    return page(request, "home.html", status_code=400, title="Create your account",
+                form_open=True, error=error)
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -165,7 +165,7 @@ def signup_form(request: Request):
         trader = current_trader(request, sess)
         if trader is not None:
             return RedirectResponse(landing_for(sess, trader), status_code=303)
-    return page(request, "signup.html", title="Create your account")
+    return page(request, "home.html", title="Create your account", form_open=True)
 
 
 @router.post("/signup")
@@ -185,14 +185,16 @@ def signup(
     if wait:
         limits.count_refusal(request, limits.SIGNUP_CAP)
         return limits.with_retry_after(
-            page(request, "signup.html", status_code=429, title="Create your account",
-                 error=limits.signups_refused(wait)),
+            page(request, "home.html", status_code=429, title="Create your account",
+                 form_open=True, error=limits.signups_refused(wait)),
             wait,
         )
 
-    login_id, display_name = login_id.strip(), display_name.strip()
-    if not login_id or not display_name:
-        return _signup_refused(request, "A name and a login id are both needed.")
+    # The door asks for a login id only, and calls him by it (TICKET-914).
+    login_id = login_id.strip()
+    display_name = display_name.strip() or login_id
+    if not login_id:
+        return _signup_refused(request, "A login id is needed.")
     if len(login_id) > LOGIN_ID_MAX or len(display_name) > DISPLAY_NAME_MAX:
         return _signup_refused(request, "That name or login id is too long.")
     try:

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import days_worth_a_look as worth
+from services.production.api import door
 from services.production.api import formatting
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
@@ -37,7 +38,8 @@ def home(request: Request):
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
-            return page(request, "home.html", title="Scope")
+            return page(request, "home.html", title="Scope",
+                        said=door.said(request.query_params.get("said")))
         trips, imp = loader.load_for(sess, trader)
         if not trips:
             return RedirectResponse(landing_for(sess, trader), status_code=303)
