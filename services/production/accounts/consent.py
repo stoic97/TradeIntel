@@ -135,3 +135,78 @@ def wording_for(purpose: Purpose, text: ConsentText = CURRENT) -> str:
         f"Who can access it: {text.who_can_access} "
         f"Deletion: {text.what_deletion_covers} {text.what_deletion_cannot_undo}"
     )
+
+
+# --- TICKET-896: consent for a recurring, read-only broker pull -----------------------
+# A separate decision from the diagnosis consent, with its own words and its own version.
+# CURRENT (version "1") is not touched, so nobody is asked to agree to it again. This text
+# is a DRAFT: require_reviewed refuses it for a real account until someone who did not
+# write it has read it against the connector and set reviewed=True.
+
+READ_ONLY_PROMISE = (
+    "read-only: we can fetch your trades, we can never place, change or cancel an order."
+)
+
+
+@dataclass(frozen=True)
+class BrokerPullText:
+    version: str
+    reviewed: bool
+    purpose: Purpose
+    what_we_fetch: str
+    how_often: str
+    how_long: str
+    how_to_stop: str
+    what_stopping_keeps: str
+
+
+BROKER_PULL = BrokerPullText(
+    version="broker-1-draft",
+    reviewed=False,
+    purpose=Purpose(
+        key="broker_pull",
+        enum=s.ConsentPurpose.BROKER_PULL,
+        title="Fetch my trades from my broker, read-only",
+        body=(
+            "This is separate from the file you uploaded. You let us fetch your trades "
+            "from your broker again and again, until you disconnect. Without it you can "
+            "still upload files by hand, exactly as before."
+        ),
+        required=False,
+    ),
+    what_we_fetch=(
+        "Your trades from Dhan, the good months and the bad ones alike. Dhan is an "
+        "outside service, and this connection is the one place this product talks to it. "
+        "To fetch, we keep a connection key for your account, stored encrypted and never "
+        "shown."
+    ),
+    how_often="Once each trading day, after the market closes.",
+    how_long=CURRENT.how_long,
+    how_to_stop=(
+        "Press Disconnect in your settings. The key is deleted at once and nothing more "
+        "is fetched."
+    ),
+    what_stopping_keeps=(
+        "The trades already fetched and the reports built from them stay exactly as they "
+        "are. Deleting your account removes the key and everything else, as above."
+    ),
+)
+
+
+def broker_pull_wording(text: BrokerPullText = BROKER_PULL) -> str:
+    """Exactly what the trader read for the broker connection, stored on his ledger row."""
+    return (
+        f"[{text.version}] {text.purpose.title}. {text.purpose.body} "
+        f"What we fetch: {text.what_we_fetch} "
+        f"How often: {text.how_often} "
+        f"Promise: {READ_ONLY_PROMISE} "
+        f"How long: {text.how_long} "
+        f"Deletion: {CURRENT.what_deletion_covers} "
+        f"How to stop: {text.how_to_stop} "
+        f"After you stop: {text.what_stopping_keeps}"
+    )
+
+
+def version_in_force(purpose: s.ConsentPurpose) -> str:
+    """The version a grant for this purpose has to carry to count today."""
+    return BROKER_PULL.version if purpose is s.ConsentPurpose.BROKER_PULL else CURRENT.version

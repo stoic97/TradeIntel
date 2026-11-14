@@ -28,7 +28,7 @@ from tests.unit.accounts.test_deletion import a_trader, engine, store  # noqa: F
 KEY = "ciphertext-of-his-broker-key"
 
 
-def connected(sess, store, login_id: str = "connected") -> m.Trader:
+def connected(sess, store, login_id: str = "connected") -> m.Trader:  # noqa: F811
     """A development account with a current diagnosis grant, a broker grant and a key."""
     trader = a_trader(sess, login_id, store, b"his own file\n")
     trader.development_data = True

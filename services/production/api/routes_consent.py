@@ -44,7 +44,7 @@ def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
     so a new version asks again, and every gate reads this one answer.
     """
     return {
-        purpose: event.granted and event.terms_version == cs.CURRENT.version
+        purpose: event.granted and event.terms_version == cs.version_in_force(purpose)
         for purpose, event in _latest_events(sess, trader).items()
     }
 
@@ -52,7 +52,7 @@ def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
 def _grants_on_an_older_text(sess, trader: m.Trader) -> set[s.ConsentPurpose]:
     return {
         purpose for purpose, event in _latest_events(sess, trader).items()
-        if event.granted and event.terms_version != cs.CURRENT.version
+        if event.granted and event.terms_version != cs.version_in_force(purpose)
     }
 
 
