@@ -60,6 +60,7 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
-      # The whole suite, no -x: a red run lists every failure, not the first.
+      # The whole suite, no -x: a red run lists every failure, not the first. No -q either:
+      # pyproject's addopts has it, and -qq would drop the line that counts the results.
       - name: Tests
-        run: uv run pytest tests -q
+        run: uv run pytest tests
