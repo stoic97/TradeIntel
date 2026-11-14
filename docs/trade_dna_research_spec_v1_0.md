@@ -1,6 +1,16 @@
-# PlusEV–TradeDNA · Research Specification — v1.0 (freeze candidate)
+# PlusEV–TradeDNA · Research Specification — v1.0.3 (frozen)
 
-*3 October 2026 · Supersedes Draft 2.1 · Child of Product Thesis v1.4 — Baseline (frozen; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+*3 October 2026, frozen; amended to v1.0.3 on 14 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+
+**Change log** (newest first). Under SR-011 this document changes only by a version bump and a row here. The first three rows after v1.0 were recorded on 14 November 2026: they had been made in place, under v1.0.
+
+| Version | Date | What changed | Why | Ticket · commit |
+|---|---|---|---|---|
+| v1.0.3 | 14 Nov 2026 | This change log. The header names this version and its parent, Thesis v1.5 (it still said v1.4), and says "frozen" (it said "freeze candidate", though the README and the Status paragraph call it frozen). No rule changes | Repo audit C3: three post-freeze edits were made under v1.0 | TICKET-931 |
+| v1.0.2 | 13 Nov 2026 | §5.5a, the finding bar, and its Annex I entry ("What changed from v1.0.1 → v1.0.2") | The live gate did not correct for the number of checks tried | TICKET-909 · `a4f9836` |
+| v1.0.1 | 12 Nov 2026 | §4.7, the bars convention, and its Annex I entry ("What changed from v1.0 → v1.0.1") | The spec had no section on market data the trader did not supply | TICKET-888 · `47a11cc` |
+| v1.0, edited without a bump | 24 Oct 2026 | Annex J: a status line, "Applied 24 October 2026 in Thesis v1.5". No rule changed | Recorded the thesis v1.5 pass | no ticket · `b868b55` |
+| v1.0 | 3 Oct 2026 | Frozen | | `e16e8e2` |
 
 **Status.** This is the version the CEO asked for after the walkthrough: every conflict the walkthrough found is resolved here, with the decision and its reason recorded in Annex I. It is frozen on upload to project knowledge. One recommendation stands beside the freeze rather than against it: Draft 2.1 was never reviewed by outside eyes, and every earlier freeze in this project followed a review round, so a single external review of this version before the week-1 kickoff is cheap insurance. If that review finds nothing material, nothing moves; if it does, the fix is a v1.1 before any data is seen, which costs nothing.
 
