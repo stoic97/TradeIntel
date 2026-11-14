@@ -1,11 +1,12 @@
-# PlusEV–TradeDNA · Research Specification — v1.0.3 (frozen)
+# PlusEV–TradeDNA · Research Specification — v1.0.4 (frozen)
 
-*3 October 2026, frozen; amended to v1.0.3 on 14 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+*3 October 2026, frozen; amended to v1.0.4 on 14 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
 
 **Change log** (newest first). Under SR-011 this document changes only by a version bump and a row here. The first three rows after v1.0 were recorded on 14 November 2026: they had been made in place, under v1.0.
 
 | Version | Date | What changed | Why | Ticket · commit |
 |---|---|---|---|---|
+| v1.0.4 | 14 Nov 2026 | §4.7.8, the multi-leg direction convention (it said the question was open), the 4.7.7 table's multi-leg row, and its Annex I entry ("What changed from v1.0.3 → v1.0.4") | The founder ruled the convention on 12 and 13 Nov; the code applies it from the legs alone | TICKET-902 |
 | v1.0.3 | 14 Nov 2026 | This change log. The header names this version and its parent, Thesis v1.5 (it still said v1.4), and says "frozen" (it said "freeze candidate", though the README and the Status paragraph call it frozen). No rule changes | Repo audit C3: three post-freeze edits were made under v1.0 | TICKET-931 |
 | v1.0.2 | 13 Nov 2026 | §5.5a, the finding bar, and its Annex I entry ("What changed from v1.0.1 → v1.0.2") | The live gate did not correct for the number of checks tried | TICKET-909 · `a4f9836` |
 | v1.0.1 | 12 Nov 2026 | §4.7, the bars convention, and its Annex I entry ("What changed from v1.0 → v1.0.1") | The spec had no section on market data the trader did not supply | TICKET-888 · `47a11cc` |
@@ -1102,6 +1103,10 @@ The CEO asked for every open conflict to be decided and the document rewritten t
 ### What changed from v1.0.1 → v1.0.2 (13 November 2026)
 
 **§5.5a added: the finding bar corrects for the number of checks tried.** Found by a trader reviewing the product, not by us: the live gate cleared p ≤ 0.05 with no correction, so with eighteen core tests about one trader in two would get a finding by luck, and the trader's own rule already divided by the number of checks. Ruled by the research seat on 12 November: Westfall–Young step-down min-p on the shared within-day shuffle, over a family of eighteen fixed by this version (a check that can't run stays in at p = 1), 10,000 draws, Holm as the fallback, the same sign in both halves of his own days as a hard condition, and three levels on the page. Bonferroni was considered and turned down as too strict for checks that share one trader's trades.
+
+### What changed from v1.0.3 → v1.0.4 (14 November 2026)
+
+**§4.7.8 now states the multi-leg direction convention.** It had said the question was open, so every spread, butterfly and ratio answered "no single direction". Ruled by the founder on TICKET-902 (12 November; the ratio row amended 13 November, once the ratio `test_positions.py` builds was shown to keep its sign at every level): with two strikes, one option type and one expiry, one leg bought and one sold, the larger-delta leg (the lower strike for calls, the higher for puts) gives its 4.7.7 direction when it carries at least as many units as the other; otherwise, and for any other shape, no single direction. Read from the legs alone, after netting the units at each strike. A second person's own script checks it before merge, against a prediction registered on the ticket first.
 
 ### Decisions taken in the walkthrough, 1–3 October 2026
 
