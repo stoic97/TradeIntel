@@ -49,4 +49,4 @@ content = store.get(digest)
 print(f"decrypted {digest[:12]}...: {len(content)} bytes")
 PY
 
-echo "--- restore drill passed. Record the date in docs/runbooks/deletion-log.md's sibling notes."
+echo "--- restore drill passed. Record the date as a line in /srv/scope/data/deletion-log.md on the server (never in git)."

@@ -54,7 +54,7 @@ the real server before the first partner uploads:
 2. Confirm the file is gone from the file-store directory on the droplet.
 3. Confirm it is gone from the database.
 4. Confirm the backup containing it ages out, and record the date it does.
-5. Write the row in `deletion-log.md`.
+5. Write the row in the deletion log on the server, `/srv/scope/data/deletion-log.md` (never in git; see data-deletion.md).
 
 Until step 4 has been seen to happen once, the 30-day sentence in the consent text
 is a setting we believe rather than one we have watched work.
