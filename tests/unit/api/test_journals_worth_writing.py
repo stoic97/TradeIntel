@@ -289,7 +289,13 @@ def test_every_other_trade_can_still_be_answered(engine, client):
 
 
 def test_a_day_of_two_trades_asks_both_and_hides_nothing(engine, client):
-    html = client.get(f"/journals/{_journal_ids(engine)['2025-02-13']}").text
+    journal_id = _journal_ids(engine)["2025-02-13"]
+    # TICKET-906: an old day the report doesn't name asks "Do you remember this day?"
+    # before its questions. He says yes; what it asks then is what this test holds.
+    first = client.get(f"/journals/{journal_id}").text
+    client.post(f"/journals/{journal_id}/remember",
+                data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)})
+    html = client.get(f"/journals/{journal_id}").text
     assert _trade_heads(_outside_the_rest(html)) == ["Trade 1", "Trade 2"]
     assert "<details" not in html
     assert "The trades, one at a time" in _readable(html)

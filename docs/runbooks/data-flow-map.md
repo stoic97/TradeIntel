@@ -20,7 +20,7 @@ count taken from his history is his data too.
 
 | System | What it holds | Encrypted | Retention | Deletion reaches it |
 |---|---|---|---|---|
-| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
+| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words), whether he remembered a Journal's day (yes or no, with the day's age; TICKET-906) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
 | The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in backups | Until deleted | Yes, same module |
 | Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |

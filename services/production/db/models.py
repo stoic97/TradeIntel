@@ -381,6 +381,27 @@ class LeavingCardAnswer(Base, _InsertOnly):
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class JournalRememberAnswer(Base, _InsertOnly):
+    """TICKET-906: his answer to "Do you remember this day?", with the day's age.
+
+    One per trader per trading day, never edited: the first stands, so a later version of
+    that day's Journal does not ask again. A fixed answer, yes or no, counted - never a
+    typed word, so consent v1 is untouched. The day's age (calendar days from the trading
+    day to the answer, in IST) is what lets NEW_DAY_WITHIN_DAYS be checked against what
+    traders say. Deletion takes it with everything else of his.
+    """
+
+    __tablename__ = "journal_remember_answer"
+    __table_args__ = (UniqueConstraint("trader_id", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
+    trading_day: Mapped[str] = mapped_column(String(10))
+    answer: Mapped[str] = mapped_column(String(3))
+    day_age_days: Mapped[int] = mapped_column(Integer)
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)
