@@ -28,6 +28,11 @@ __pycache__/
 .env
 .ipynb_checkpoints/
 .DS_Store
+# Tool caches: ignored here, not only by the files the tools write themselves (TICKET-929).
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
 
 # Build output
 *.egg-info/
