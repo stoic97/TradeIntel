@@ -71,3 +71,27 @@ def to_start_with(journals: list, flags: dict[str, list[Flag]]) -> list:
     by_day = {j.period_start: j for j in journals if j.period_start == j.period_end}
     named = [by_day[day] for day in flags if day in by_day]
     return named[:k.JOURNALS_ON_SURFACE]
+
+WORTH, NEW, REMEMBER, PERIOD = "worth", "new", "remember", "period"
+"""How a Journal is offered (TICKET-906)."""
+
+
+def offer(journal, flags: dict[str, list[Flag]], new_days: set[str]) -> str:
+    """How a Journal is offered, decided in one place.
+
+    PERIOD: it covers more than a day (a week, ten trades). It is not a day, so it is not on
+    a day cell and is never asked "Do you remember this day?" - it opens as before.
+    WORTH: the report has named the day (flags_by_day: the longest losing run, the busiest
+    day, the five worst days). NEW: the day is within NEW_DAY_WITHIN_DAYS of today
+    (recency.new_days, from the caller). Both ask straight away. REMEMBER: any other day
+    asks whether he remembers it first.
+
+    Every reason is a property of the day's trades or its date, never a judgement about him.
+    """
+    if journal.period_start != journal.period_end:
+        return PERIOD
+    if flags.get(journal.period_start):
+        return WORTH
+    if journal.period_start in new_days:
+        return NEW
+    return REMEMBER

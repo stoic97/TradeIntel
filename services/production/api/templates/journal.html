@@ -9,6 +9,9 @@
   <p class="label label--plain">Journal</p>
   <h1 class="title num-title">{{ journal.period_start|day }}{% if journal.period_end != journal.period_start %} – {{ journal.period_end|day }}{% endif %}</h1>
   <p class="body-small">{% if back is defined %}<a class="link link--back" href="{{ back.href }}">&lsaquo; Back to {{ back.title }}</a> &middot; {% endif %}<a class="link" href="/journals">Your Journals</a></p>
+  {%- if prev_day or next_day %}
+  <p class="body-small journal__days">{% if prev_day %}<a class="link" rel="prev" href="/journals/{{ prev_day.id }}">‹ {{ prev_day.period_start|day }}</a>{% endif %}{% if next_day %}<a class="link" rel="next" href="/journals/{{ next_day.id }}">{{ next_day.period_start|day }} ›</a>{% endif %}</p>
+  {%- endif %}
   {{ uncounted_line(uncounted) }}
   {%- if journal.id in changed_ids %}
   <p class="body-small">Version <span class="num">{{ journal.version_no }}</span>. {% if read_again %}Scope read your file again with newer code, which changed this period.{% elif set_aside is defined and set_aside %}Rows you confirmed as duplicates were set aside, which changed this period.{% else %}A later upload changed this period.{% endif %} The <a class="link" href="/journals/{{ earlier_id }}">earlier version</a> is kept.</p>
@@ -24,6 +27,18 @@
     <p class="mirror mirror--card">{{ size_line }}</p>
     {%- endif %}
   </section>
+  {%- if ask_first %}
+  {#- TICKET-906: an old day that is not worth a look asks this first. Its words wait
+      for D9. A form, so a link can't store an answer. -#}
+  <form class="journal__section remember" method="post" action="/journals/{{ journal.id }}/remember">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2 class="card-title">Do you remember this day?</h2>
+    <div class="remember__actions">
+      <button class="btn btn--primary" type="submit" name="answer" value="yes">Yes</button>
+      <button class="btn btn--secondary" type="submit" name="answer" value="no">No</button>
+    </div>
+  </form>
+  {%- else %}
   <form class="journal__section" method="post" action="/journals/{{ journal.id }}/field">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="field" value="note">
@@ -50,6 +65,7 @@
     {%- endif %}
   </section>
   {%- endif %}
+  {%- endif %}{#- /ask_first -#}
   {%- if ask_wtp %}
   <form class="journal__section question" id="one-question" method="post" action="/journals/{{ journal.id }}/wtp">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

@@ -39,7 +39,15 @@ from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
-from services.production.journal import fields, leaving, prose, wtp
+from services.production.journal import (
+    fields,
+    leaving,
+    month_view,
+    prose,
+    recency,
+    remember,
+    wtp,
+)
 from services.production.journal import generate as gen
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
@@ -120,6 +128,19 @@ def _flags_on(journal: m.Journal, flags: dict) -> list[worth.Flag]:
     return flags.get(journal.period_start, [])
 
 
+def _offered(journals: list[m.Journal], record: list[mx.Trip]) -> dict[int, str]:
+    """How each Journal is offered (days_worth_a_look.offer), by one rule for every page.
+
+    One day, one state, one destination (TICKET-906): Your Journals and the calendar read
+    the same answer for the same Journal, so a day can't be worth a look on one and
+    nothing on the other.
+    """
+    flags = worth.flags_by_day(record)
+    new = recency.new_days(
+        [j.period_start for j in journals if j.period_start == j.period_end], recency.today())
+    return {j.id: worth.offer(j, flags, new) for j in journals}
+
+
 @router.get("/journals", response_class=HTMLResponse)
 def journal_list(request: Request):
     with make_session(request.app.state.engine) as sess:
@@ -168,17 +189,62 @@ def _leaving_card(request: Request, answer: str | None, csrf_token: str | None):
 
 
 @router.get("/journals/catch-up", response_class=HTMLResponse)
-def journal_catch_up(request: Request):
+def journal_catch_up(request: Request, month: str | None = None):
+    """Every Journal, a month at a time (TICKET-906; kit screen 18c).
+
+    A day Journal sits on its date, offered as days_worth_a_look.offer says. A week or
+    ten-trade Journal is not a day - a marker on one date would claim something happened
+    that day - so it is listed under the grid for each month it overlaps.
+    """
     with make_session(request.app.state.engine) as sess:
         trader, elsewhere = _gate(request, sess)
         if elsewhere is not None:
             return elsewhere
-        flags = worth.flags_by_day(_record(sess, trader))
-        first = worth.to_start_with(gen.newest_first(sess, trader=trader), flags)
+        current = gen.newest_first(sess, trader=trader)
+        days = {j.period_start: j for j in current if j.period_start == j.period_end}
+        periods = [j for j in current if j.period_start != j.period_end]
+        dated = [*days, *(d for p in periods for d in (p.period_start, p.period_end))]
+        try:
+            shown = month_view.month(dated, month)
+        except ValueError:
+            raise HTTPException(status_code=404) from None
+        strip = sorted((p for p in periods
+                        if shown and p.period_start[:7] <= shown.key <= p.period_end[:7]),
+                       key=lambda p: p.period_start)
         return page(request, "journals_catch_up.html", title="Earlier Journals",
-                    journals=gen.catch_up(sess, trader=trader, first=first),
-                    started=len(first),
+                    shown=shown, days=days, strip=strip,
+                    offered=_offered(current, _record(sess, trader)),
+                    answered=remember.answered_days(sess, trader),
+                    prev_title=month_view.title(shown.prev) if shown and shown.prev else None,
+                    next_title=month_view.title(shown.next) if shown and shown.next else None,
                     changed_ids=gen.changed_by_upload(sess, trader=trader))
+
+
+@router.post("/journals/{journal_id}/remember")
+def journal_remember(request: Request, journal_id: int, answer: str = Form(None),
+                     csrf_token: str = Form(None)):
+    """Yes or No to "Do you remember this day?", kept with the day's age (TICKET-906).
+
+    A form, not a link: a link anyone could send must not store an answer. Yes opens the
+    day's questions; No goes back to its month, where the day stays, answered and writable.
+    """
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader, elsewhere = _gate(request, sess)
+        if elsewhere is not None:
+            return elsewhere
+        journal = _owned(sess, trader, journal_id)
+        its_month = journal.period_start[:7]
+        try:
+            remember.record(sess, trader=trader, journal=journal, answer=answer or "",
+                            on=recency.today())
+        except (remember.NotAnAnswer, remember.NotADay):
+            raise HTTPException(status_code=400) from None
+        sess.commit()
+    if answer == remember.NO:
+        return RedirectResponse(f"/journals/catch-up?month={its_month}", status_code=303)
+    return RedirectResponse(f"/journals/{journal_id}", status_code=303)
 
 
 @router.get("/journals/{journal_id}", response_class=HTMLResponse)
@@ -225,6 +291,21 @@ def journal_page(request: Request, journal_id: int):
             for t in trades
         }
         ask_wtp = wtp.ask_here(sess, trader=trader, journal=journal)
+        # TICKET-906: a day neither worth a look nor new asks "Do you remember this day?"
+        # first - unless he has answered it, or written on it, already.
+        how = worth.offer(journal, worth.flags_by_day(record),
+                          recency.new_days([journal.period_start], recency.today()))
+        ask_first = (how == worth.REMEMBER
+                     and journal.period_start not in remember.answered_days(sess, trader))
+        # Previous and next across trading days: a day with no trades has no page.
+        day_list = sorted((j for j in gen.newest_first(sess, trader=trader)
+                           if j.period_start == j.period_end), key=lambda j: j.period_start)
+        at = None
+        if one_day:
+            at = next((i for i, j in enumerate(day_list)
+                       if j.period_start == journal.period_start), None)
+        prev_day = day_list[at - 1] if at else None
+        next_day = day_list[at + 1] if at is not None and at + 1 < len(day_list) else None
         sess.commit()
         return page(
             request, "journal.html", title=f"Your Journal, {formatting.day(journal.period_start)}",
@@ -253,6 +334,7 @@ def journal_page(request: Request, journal_id: int):
             set_aside=bool(imp and persist.set_aside_more(sess, imp)),
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
+            ask_first=ask_first, prev_day=prev_day, next_day=next_day,
         )
 
 

@@ -163,9 +163,21 @@ def test_the_rest_stays_behind_earlier(engine, client):
     assert "You have 4 earlier Journals" in text
 
 
-def test_earlier_holds_every_other_day_newest_first(engine, client):
+def test_the_calendar_holds_every_day_each_with_one_state(engine, client):
+    """TICKET-906: this said earlier held every other day - no day on both lists.
+
+    The calendar holds every day. The guard is now one day, one state, one destination:
+    a day the list starts with reads worth a look on the calendar too, and leads to the
+    same Journal from both.
+    """
     html = client.get("/journals/catch-up").text
-    assert _listed_days(engine, html) == EARLIER, "no day is on both lists, none on neither"
+    assert _listed_days(engine, html) == sorted(START_WITH + EARLIER), "every day, in date order"
+    surface = client.get("/journals").text
+    ids = _journal_ids(engine)
+    for day in START_WITH:
+        cell = re.search(rf'<a\b[^>]*data-day="{day}"[^>]*>', html).group(0)
+        assert 'data-state="worth"' in cell, day
+        assert f'href="/journals/{ids[day]}"' in cell and f'href="/journals/{ids[day]}"' in surface, day
 
 
 def test_earlier_no_longer_calls_itself_behind_the_most_recent(client):
@@ -277,7 +289,13 @@ def test_every_other_trade_can_still_be_answered(engine, client):
 
 
 def test_a_day_of_two_trades_asks_both_and_hides_nothing(engine, client):
-    html = client.get(f"/journals/{_journal_ids(engine)['2025-02-13']}").text
+    journal_id = _journal_ids(engine)["2025-02-13"]
+    # TICKET-906: an old day the report doesn't name asks "Do you remember this day?"
+    # before its questions. He says yes; what it asks then is what this test holds.
+    first = client.get(f"/journals/{journal_id}").text
+    client.post(f"/journals/{journal_id}/remember",
+                data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)})
+    html = client.get(f"/journals/{journal_id}").text
     assert _trade_heads(_outside_the_rest(html)) == ["Trade 1", "Trade 2"]
     assert "<details" not in html
     assert "The trades, one at a time" in _readable(html)

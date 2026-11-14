@@ -209,8 +209,19 @@ def journal_for(engine, day: str) -> int:  # noqa: F811
         return sess.scalars(select(m.Journal.id).where(m.Journal.period_start == day)).one()
 
 
+def _say_yes(client, jid: int) -> None:  # noqa: F811
+    """TICKET-906: an old day asks "Do you remember this day?" before its trades. Say yes."""
+    first = client.get(f"/journals/{jid}").text
+    client.post(
+        f"/journals/{jid}/remember",
+        data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)},
+    )
+
+
 def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):  # noqa: F811
-    page = text(uploaded.get(f"/journals/{journal_for(engine, '2026-10-14')}").text)
+    jid = journal_for(engine, '2026-10-14')
+    _say_yes(uploaded, jid)
+    page = text(uploaded.get(f"/journals/{jid}").text)
     assert "Trade 1 — +₹1,300" in page
     assert "Trade 2 — +₹200" in page
     assert "Trade 3" not in page
@@ -218,6 +229,7 @@ def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):  # noqa: F81
 
 def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
     jid = journal_for(engine, "2026-10-14")
+    _say_yes(uploaded, jid)
     page = uploaded.get(f"/journals/{jid}").text
     form = re.search(r'name="trip_id" value="([^"]+)"', page).group(1)
     assert form == spread(engine).trip_id
@@ -229,9 +241,10 @@ def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
     assert response.status_code in (200, 303)
 
 
-def test_home_counts_the_spread_in_the_verdict_and_its_day_as_two_trades(uploaded):
+def test_home_counts_the_spread_in_the_verdict_and_its_day_as_two_trades(uploaded, engine):  # noqa: F811
     """14 Oct made +1,500 from the spread and one trade; 15 Oct -400; 16 Oct +100. Home lists only
     days the report names, and a winning day isn't one, so the day's count is on its own Journal."""
     assert "Your option trades made ₹1,200" in text(uploaded.get("/").text)
-    day = re.search(r'/journals/(\d+)"', uploaded.get("/journals/catch-up").text).group(1)
+    day = journal_for(engine, "2026-10-14")
+    _say_yes(uploaded, day)
     assert uploaded.get(f"/journals/{day}").text.count('class="card journal-trade"') == 2
