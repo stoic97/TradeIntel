@@ -41,9 +41,19 @@ def help_regex() -> re.Pattern[str]:
 
 
 def test_make_test_runs_the_whole_suite_and_test_fast_is_the_one_that_stops():
-    assert re.search(r"\bpytest tests -q\b", targets()["test"])
+    assert re.search(r"\bpytest tests$", targets()["test"].strip())
     assert "-x" not in targets()["test"], "make test is a deploy check: it runs to the end"
     assert "-x" in targets()["test-fast"]
+
+
+def test_no_target_quietens_pytest_past_its_count_line():
+    """pyproject's addopts already says -q. A second -q makes it -qq, which drops the line
+    that says how many passed, failed and xfailed: the line every gate pastes."""
+    addopts = re.search(r'^addopts = "([^"]*)"', Path("pyproject.toml").read_text(), re.MULTILINE)
+    assert addopts and "-q" in addopts.group(1).split()
+    for name, recipe in targets().items():
+        if "pytest" in recipe:
+            assert not re.search(r"\s-q+\b", recipe), f"{name}: {recipe.strip()}"
 
 
 def test_make_help_lists_every_target():

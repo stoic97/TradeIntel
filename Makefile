@@ -3,6 +3,8 @@
 PREREG := services/research/prereg/framework_v1.yaml
 # Every Python tool runs through uv, as the docs do: no activated venv needed (TICKET-929).
 UV := uv run
+# pytest takes -q from pyproject's addopts. Do not add another: -qq drops the final count
+# line, and a run that does not say how many passed cannot be checked.
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -14,13 +16,13 @@ hash-lock: ## Write the hash of the pre-commitment file (kickoff only; CEO sign-
 	@shasum -a 256 $(PREREG) > $(PREREG).sha256 && cat $(PREREG).sha256
 
 test: ## Run the whole suite to the end (the deploy check; what CI runs)
-	$(UV) pytest tests -q
+	$(UV) pytest tests
 
 test-fast: ## Run the suite, stopping at the first failure (local use)
-	$(UV) pytest tests -x -q
+	$(UV) pytest tests -x
 
 test-repro: ## Run every transformation twice; hashes must match
-	$(UV) pytest tests/reproducibility -q
+	$(UV) pytest tests/reproducibility
 
 lint: ## Lint Python
 	$(UV) ruff check .
