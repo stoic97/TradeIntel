@@ -24,7 +24,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 |---|---|---|
 | Code for import, accounts, consent, upload, Mirror, Journal, eligibility, deletion | Built and merged; about 700 tests | `main` |
 | App on the droplet `139.59.38.160`, Caddy, systemd, backups | Running | `deploy/`, `docs/runbooks/deploy.md` |
-| Deletion gate on the real server | **Done 22 Oct** through the page | `docs/runbooks/deletion-log.md` |
+| Deletion gate on the real server | **Done 22 Oct** through the page | the deletion log on the server, `/srv/scope/data/deletion-log.md` |
 | Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, on `main`** (PR #2, 27 Oct) | `accounts/consent.py` |
 | Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Done, on `main`** (PR #2) | `base.html`, `scope.css` |
 | Link from plusev.in to scope.plusev.in | In `plusev-web/content/copy.ts` | — |
@@ -253,7 +253,7 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 1. `dig +short scope.plusev.in` → `139.59.38.160`; `https://scope.plusev.in` loads with a padlock.
 2. `make test` green in TradeIntel; `npm run lint && npm run typecheck && npm test && npm run build` green in plusev-web.
 3. A real (not development-data) account reaching `/consent` sees the consent page, not "Scope is not open yet".
-4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to `docs/runbooks/deletion-log.md`.
+4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to the deletion log on the server, `/srv/scope/data/deletion-log.md` (never in git).
 5. ₹ renders in Plex on the server (not a fallback font).
 6. `/scope/data` on plusev-web, the consent text and `docs/runbooks/data-flow-map.md` say the same thing about storage, access and backups.
 7. Sign-up is open at `https://scope.plusev.in` (TICKET-841): the first trader signs up there.

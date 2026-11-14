@@ -58,15 +58,33 @@ Keep this list current. If data is ever stored somewhere not on this list, add i
 3. Delete every derived artefact for his ID: CTR, features, outputs, notebook cells, inspection reports.
 4. Check cloud sync and backups; delete or expire there too.
 5. Confirm nothing in the repo references his data (it never should — `.gitignore` blocks it; check anyway: `git log --all -S "<his id>"`).
-6. Write one row to `docs/runbooks/deletion-log.md` (append-only): date requested · date completed · trader ID (not name) · what was deleted · what was retained (this log row only) · who did it.
+6. Write one row to the deletion log, **on the server**: `/srv/scope/data/deletion-log.md` (see "Where the deletion log lives" below). Append-only: date requested · date completed · trader ID (not name) · what was deleted · what was retained (this log row only) · who did it.
 7. Tell him it is done and what was retained (the log row), the same day.
 
 ## After both parts
 
-Write one row in `deletion-log.md` covering both halves, and note the date the
+Write one row in the deletion log on the server (`/srv/scope/data/deletion-log.md`) covering both halves, and note the date the
 last backup holding his data ages out. The row is the only thing retained outside
 the app's own deletion record.
 
 ## What is retained
 
 Only the deletion-log row. No name, no trades, no derived numbers.
+
+## Where the deletion log lives
+
+On the server, beside the data it describes: **`/srv/scope/data/deletion-log.md`**,
+owned by root, mode 600, append-only (never edit or remove a row). It is covered by
+the server's backups like the database next to it. The app also writes its own
+`deletion_record` row for every deletion through the page; the log is the human
+record of the steps the app cannot see (chat, backups, local copies).
+
+**Never in git** (TICKET-930). A row identifies a person whose data was just deleted,
+and git history cannot be deleted, so a log in the repository would outlive every
+deletion it records. Until 14 Nov 2026 the log was `docs/runbooks/deletion-log.md`;
+its one row (22 Oct 2026, the `stoic97` deletion-gate fixture, development data) was
+moved to the server file, and the repository copy was removed without rewriting history.
+
+To read it: `ssh root@scope.plusev.in cat /srv/scope/data/deletion-log.md`.
+To append a row: `ssh root@scope.plusev.in`, then edit the file with the row at the
+end. Do not paste rows into tickets, PRs or chat.

@@ -6,7 +6,8 @@ end to end. ``require_reviewed`` refuses an unreviewed version for a real accoun
 it can be shown to a development-data account and in tests, and nowhere else.
 
 Version 1 was reviewed on 22 October 2026: the deletion runbook was run on the
-server through the page (docs/runbooks/deletion-log.md), the data-flow map was
+server through the page (logged in /srv/scope/data/deletion-log.md on the server, never
+in git: TICKET-930), the data-flow map was
 corrected to the weekly backups the server actually keeps, and the rendered page
 was read against that map by Rikk, who did not write it. Any change to the
 wording below is a new version, unreviewed until someone reads it again.

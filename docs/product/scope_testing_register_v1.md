@@ -38,4 +38,4 @@
 |---|---|---|
 | TR-D5 | Sign-up and sign-in match the code (login id and password); every email promise removed from the design — there is no email in v1 (ADR-007) | Handoff §5, §6 |
 | TR-D6 | Every existing screen in the design uses the app's own wording | Handoff §6 |
-| TR-D7 | Deletion gate run on the server through the page, 22 Oct | TradeIntel `docs/runbooks/deletion-log.md` |
+| TR-D7 | Deletion gate run on the server through the page, 22 Oct | the deletion log on the server, `/srv/scope/data/deletion-log.md` (moved out of git, TICKET-930) |
