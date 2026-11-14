@@ -27,7 +27,50 @@ scope.plusev.in {
 	}
 }
 
-# Before DNS exists, comment out the block above and use this one. Caddy issues
+# Staging (TICKET-948): the same app on 127.0.0.1:8001, behind a browser password on
+# every path, /robots.txt included. Same headers as production, plus noindex.
+#
+# The username and bcrypt hash are NOT in this file: the repository is public, and a hash
+# here is a password anyone can attack offline. Caddy reads them from its environment, set
+# by a drop-in only root can read (the first-install block in deploy/refresh-staging.sh).
+# The password itself lives only in the founder's password manager. If the two variables
+# are missing, `systemctl reload caddy` fails and Caddy keeps the configuration it was
+# already running, production included.
+staging.scope.plusev.in {
+	basic_auth {
+		{$SCOPE_STAGING_USER} {$SCOPE_STAGING_HASH}
+	}
+
+	handle /robots.txt {
+		respond "User-agent: *
+Disallow: /
+" 200
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8001
+	}
+
+	encode gzip
+
+	log {
+		output file /var/log/caddy/scope-staging.log {
+			roll_size 10mb
+			roll_keep_for 336h
+		}
+		format console
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		X-Robots-Tag "noindex, nofollow"
+	}
+}
+
+# Before DNS exists, comment out the production block above and use this one. Caddy issues
 # its own certificate; the browser warns, which is correct and is why this is not
 # the production block.
 # https://203.0.113.10, https://127.0.0.1 {
