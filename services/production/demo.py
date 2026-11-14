@@ -74,3 +74,5 @@ def has_real_record(sess: Session, trader: m.Trader) -> bool:
         .where(m.Import.trader_id == trader.id, m.Import.source_account != ACCOUNT)
         .limit(1)
     ).first() is not None
+
+from services.research import evaluation  # noqa: F401  deliberate Rule 5 breach (throwaway, do not merge)
