@@ -74,3 +74,19 @@ exit status is `tail`'s, so the `&&` chain saw success. Same class as SR-003, in
 form that matters most. **Any command whose exit status gates a commit runs with
 `set -o pipefail`, or is not piped at all.** Where a gate's output is long, trim it
 after the gate has been judged, not in the same pipeline.
+
+### SR-011 — a frozen document changes only by a version bump; an accepted ADR is never edited
+
+*14 Nov 2026.* The repo audit (TICKET-927, finding C3) found frozen documents edited in
+place under the same version: the research spec three times after its freeze (24 Oct,
+12 Nov, 13 Nov; the last a `feat` commit), still named and headed v1.0 and still naming
+Thesis v1.4 as its parent; the workbook once (24 Oct); and the Phase 0 plan once (24 Oct).
+ADR-007, Accepted on 16 Oct, was rewritten by a `feat` commit on 5 Nov to say what the
+code now did. The product's claim is that every number traces to rules fixed in advance;
+a fixed rule that moves silently, with `git blame` as its only record, undoes the claim.
+**A frozen document changes only by a version bump plus a dated row at the top of its
+change log, saying what changed, why, and which ticket. An Accepted ADR is never edited:
+it is superseded by a new ADR, or gains a dated entry in an Amendments section appended
+at its end, and its original Decision text stays as it was.** `tests/unit/repo/test_frozen_docs.py`
+holds each frozen file's version and digest, so an edit that skips the bump fails CI.
+Applied retroactively in TICKET-931.

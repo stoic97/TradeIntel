@@ -1,6 +1,14 @@
-# PlusEV · Trade DNA — Brainstorm Workbook v1.1 (Frozen)
+# PlusEV · Trade DNA — Brainstorm Workbook v1.1.1 (Frozen)
 
 *29 September 2026 · The thinking floor · Companion: Product Thesis v1.5 — Baseline, frozen 30 September 2026 and amended 1 and 24 October 2026 (referenced as T§)*
+
+**Change log** (newest first). Under SR-011 this workbook changes only by a version bump and a row here.
+
+| Version | Date | What changed | Why | Ticket · commit |
+|---|---|---|---|---|
+| v1.1.1 | 14 Nov 2026 | This change log; the title names this version. No content changes | Repo audit C3: the 24 Oct edit was made under v1.1 | TICKET-931 |
+| v1.1, edited without a bump | 24 Oct 2026 | The companion line: Product Thesis v1.4 → v1.5, "amended 1 and 24 October 2026". No thinking changed | The thesis it references was superseded | no ticket · `b868b55` |
+| v1.1 | 29 Sep 2026 | Frozen, with the two same-day freeze corrections recorded in the Status paragraph | | `e16e8e2` (first commit to this repository) |
 
 **Status: FROZEN on 29 September 2026.** This workbook is the reference for Phase 0. It is reopened only when Phase 0 produces evidence that changes a DECIDED item, or when a HYPOTHESIS is promoted or refuted (§17). The thesis is the living document.
 
