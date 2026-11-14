@@ -1,9 +1,8 @@
 """Which way the underlying had to move for a trip to make money [TICKET-890].
 
 Bought call -> long. Bought put -> short. A sold option inverts the bought answer.
-A future or share takes its own side. A multi-leg position is none: positions._links
-joins only a bought leg to a sold one, so every position the product can build holds
-both directions. The rule is written once in the research spec (TICKET-888) and once
+A future or share takes its own side. A multi-leg position follows the convention
+of spec 4.7.8 (TICKET-902), pinned in test_multi_leg_direction.py. The rule is written once in the research spec (TICKET-888) and once
 in services/shared/option_direction.py; these tests pin what both say.
 
 Direction is read from the legs, never from the result: a winner and a loser of the
@@ -91,13 +90,18 @@ def test_the_answer_is_not_the_contract_side():
     assert {u.value for u in U} == {"long", "short", "none"}
 
 
-# ------------------------------------------------------------ multi-leg (gate 2, ruling Q2 c)
+# ------------------------------------------------------------ multi-leg (spec 4.7.8, TICKET-902)
 
-def test_every_multi_leg_position_is_none_because_links_join_only_bought_to_sold():
-    """The debit vertical of test_positions.py: bought 23000 CE at 30, sold 23100 CE at 10."""
+def test_a_debit_vertical_is_long_under_the_multi_leg_convention():
+    """The debit vertical of test_positions.py: bought 23000 CE at 30, sold 23100 CE at 10.
+
+    Pinned NONE while 4.7.8 was open. The TICKET-902 rulings give a vertical the direction of
+    its larger-delta leg (here the bought lower call). The whole convention is pinned in
+    test_multi_leg_direction.py.
+    """
     vertical = one([leg(LONG, 23000, 30), leg(SHORT, 23100, 10, seconds=2)])
     assert {t.direction for t in vertical.legs} == {LONG, SHORT}
-    assert od.underlying_direction(vertical) is U.NONE
+    assert od.underlying_direction(vertical) is U.LONG
 
 
 # ------------------------------------------------------------ never the result (gate 4)
