@@ -29,9 +29,9 @@ from services.production.api.settings import Settings
 from services.production.ctr import reconstruct as rc
 from services.production.ctr.intake import outcomes as oc
 from services.production.db import models as m
+from services.production.db.session import make_session
 from services.production.journal import constants as k
 from services.production.journal import wtp as WTP
-from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
 from tests.conftest import TEST_SECRET_KEY
 
@@ -1190,7 +1190,7 @@ def test_the_feed_opens_with_a_trader_signing_up_and_consenting(app, engine):
 def test_a_budget_line_says_one_was_set_and_never_the_amount(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal("98765"),
+        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal(98765),
                                          effective_from="2026-03-02",
                                          declared_at=THEN + timedelta(hours=1)))
         sess.commit()

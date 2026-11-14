@@ -1,0 +1,65 @@
+# CI (TICKET-928). Every pull request and every push to main runs the checks the tech
+# stack promised for stage 0 (docs/architecture/tech-stack.md, CI row): the import
+# boundary, ruff, and the whole test suite. Branch protection on main requires this
+# job ("CI / checks") to pass before a PR can merge.
+#
+# One job on purpose, so branch protection has one check to require. The boundary step
+# runs first and needs nothing installed, so a Rule 5 breach fails in seconds.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same PR or branch cancels the run it replaces.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      UV_FROZEN: "1" # never re-lock in CI: install exactly what uv.lock says
+    steps:
+      - uses: actions/checkout@v4
+
+      # Methodology Rule 5: production (and shared) code must not import research.
+      # TD-008's import-boundary job, unblocked now that more than one engineer merges.
+      - name: Import boundary (production and shared must not import research)
+        run: |
+          if grep -rnE '^\s*(from|import) services\.research' services/production services/shared; then
+            echo "::error::services/production or services/shared imports services.research (methodology Rule 5)"
+            exit 1
+          fi
+          echo "boundary clean"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python (from .python-version)
+        run: uv python install
+
+      # Default groups are dev + research (pyproject [tool.uv]), so this installs the
+      # research stack too: tests/unit/engine, evaluation, models and
+      # test_sold_trades_accounted.py need scipy and pymc. The server still installs
+      # with --no-group research; this is the test environment, not the server's.
+      - name: Install (uv sync --frozen)
+        run: uv sync --frozen
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      # The whole suite, no -x: a red run lists every failure, not the first.
+      - name: Tests
+        run: uv run pytest tests -q
