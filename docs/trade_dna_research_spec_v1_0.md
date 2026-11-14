@@ -208,7 +208,7 @@ The worked example, and the reason the check is in this section at all: on 6 Nov
 
 **4.7.5 · What a bar may be used to claim, and what it may not.**
 
-**Permitted: direction after an entry.** Whether the underlying moved in a trade's direction over a stated interval, as a count of trades. This is a question about the close of one minute against the close of another, and a 1-minute bar answers it exactly.
+**Permitted: direction after an entry.** Whether the underlying moved in a trade's direction over a stated interval, as a count of trades. This is a question about the close of one minute against the close of another, and a 1-minute bar answers it exactly. The interval starts at the close of the entry minute: a move measured from anything earlier is contaminated by the entry itself.
 
 **Forbidden: exit capture, and anything else that needs the path inside a bar.** `docs/phase0/method-findings.md` measures the bias: bar-sampled MFE overstates exit capture by roughly **0.33 ÷ √(hold ÷ bar interval)**, and the bias differs by holding time. At a median hold under ten minutes, 1-minute bars overstate capture by about **+0.12** and 5-minute bars by about **+0.26** — larger than the effects E2 and E4′ are looking for. So for a trader of that kind those two tests are **impossible without tick data, not degraded.** A bar-derived capture figure is not a weaker version of the right answer; it is a different number that happens to look like one.
 
@@ -240,7 +240,7 @@ That is the state until the convention exists, and it is a convention rather tha
 
 **The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. On T-001's history it is under 1% of trips; on a spread trader's history it would be most of the book, which is precisely why it is deferred to a convention rather than guessed at here.
 
-**4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
+**4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. That minute is the bar before the entry minute, read on its own, its close against its own open; it is not the close of that bar against the close of the one before it (the close-to-close sentence in 4.7.5 is about direction after an entry). Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
 
 ## 5. The Evidence Standard
 
