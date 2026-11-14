@@ -138,6 +138,24 @@ Run `deploy/restore-drill.sh` by hand the first time, then monthly. It restores
 the latest backup into `/tmp` and decrypts one stored file with the live key —
 the part a database-only check misses.
 
+## Staging
+
+A second Scope on the same droplet, so a person can check a change before a trader
+sees it: `https://staging.scope.plusev.in`, behind a browser password (founder's
+password manager), on port 8001, in `/srv/scope-staging`, with its own database and
+session key. It runs `main`; production does not.
+
+Refresh it by hand, as root, right before testing — never on a timer:
+
+    /srv/scope-staging/deploy/refresh-staging.sh
+
+It restores the newest backup from `/var/backups/scope` into staging, checks out
+`origin/main`, starts `scope-staging`, and prints the version it runs. Migrations
+newer than production apply at startup, as they do in production. First install is
+the numbered block at the top of the script. Staging is never backed up; it is
+rebuilt from production's backups on every refresh. `deploy/scope-staging.service`
+can write only `/srv/scope-staging/data`.
+
 ## 6. Before the first partner uploads
 
 The release gate, PRD section 10. None of it is optional and none of it is code:
