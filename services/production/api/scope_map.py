@@ -40,6 +40,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         1,
         "Where your results came from",
         (
+            Fact("hidden", "What your tradebook has been hiding", "notold"),
             Fact("worst-days", "Your worst trading days", "worst"),
             Fact("money", "Where the money came from", "money"),
         ),
@@ -267,7 +268,7 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
         return [t for t in mx.same_day_trips(trips) if t.trading_day == ctx["days"].busiest_day]
-    if key in ("math", "clock"):
+    if key in ("math", "clock", "hidden"):
         return mx.same_day_trips(trips)
     if key == "risk":
         return list(trips)

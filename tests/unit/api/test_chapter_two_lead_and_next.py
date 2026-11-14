@@ -167,7 +167,8 @@ def test_the_button_comes_after_the_feedback_question(pages):
 
 def test_chapter_one_goes_on_to_its_first_page(pages):
     """TICKET-903: one order; chapter 1 no longer jumps to chapter 2."""
-    assert (S.fact_href("worst-days"), f"Next: {S.FACTS['worst-days'].title}") in links(pages["/mirror/chapter/1"])
+    first = S.chapter(1).facts[0]  # TICKET-910 put the plain-counts page first
+    assert (S.fact_href(first.key), f"Next: {first.title}") in links(pages["/mirror/chapter/1"])
 
 
 def test_the_other_chapters_get_no_new_button(pages):

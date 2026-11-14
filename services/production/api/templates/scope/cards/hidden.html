@@ -1,0 +1,7 @@
+{#- The plain-counts page's story card (TICKET-910). New copy (D9). -#}
+{% from "_components.html" import story_card, trades_behind %}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">Plain counts, not a finding: each book's first half of its days beside its second.</span>
+  {%- endif %}
+{% endcall %}

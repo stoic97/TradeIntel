@@ -25,7 +25,7 @@ from math import ceil
 from statistics import median
 from typing import Any
 
-from services.shared.conditions import b2_shuffle
+from services.shared.conditions import b2_shuffle, halves_shuffle
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
 
@@ -1742,3 +1742,130 @@ def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
         else s.JournalUnit.PER_N_TRIPS
     )
     return JournalUnitDefault(counts.normal_day, unit, s.ResultState.COUNTED_FACT)
+
+
+# ---------- What your tradebook has been hiding (TICKET-910) ----------
+
+
+@dataclass(frozen=True)
+class HalfCounts:
+    """One half of a book's own trading days, or all of them: plain counts, never a finding.
+
+    The running net starts from zero on the half's first day; a new high is a running net above
+    every one before it and above zero. Break-even is math_row's own row for the same trades.
+    """
+
+    first_day: str
+    last_day: str
+    days: int
+    trades: int
+    green_days: int  # days whose net is above zero; a level day is not green
+    green_day_percent: int
+    months: int
+    green_months: int
+    days_since_high: int | None  # None: the running net never rose above zero
+    net_per_trade: Decimal
+    math: MathRow
+
+
+@dataclass(frozen=True)
+class BookHalves:
+    """A book on its own trading days, split in date order (an odd count puts the middle day in
+    the second half). Below the minimum only the book, the counts and the state are set, so a
+    page has no figure to print by mistake. The control is the change in net per trade, checked
+    by shuffling whole days between the halves (halves_shuffle); it is shown, never promoted."""
+
+    book: str
+    trades: int
+    held_past_day: int
+    state: s.ResultState
+    first: HalfCounts | None = None
+    second: HalfCounts | None = None
+    whole: HalfCounts | None = None
+    change_in_net_per_trade: Decimal | None = None
+    control: halves_shuffle.HalvesResult | None = None
+
+
+def _same_day_by_book(trips: list[Trip]) -> dict[str, list[Trip]]:
+    books: dict[str, list[Trip]] = {}
+    for trip in same_day_trips(trips):
+        books.setdefault(trade_book(trip), []).append(trip)
+    return books
+
+
+def _first_days(trips: list[Trip]) -> set[str]:
+    """The first half of these trades' own trading days, in date order."""
+    days = sorted({t.trading_day for t in trips})
+    return set(days[: halves_shuffle.first_half_size(len(days))])
+
+
+def half_of(trips: list[Trip]) -> dict[str, str]:
+    """Each same-day trade's half of its own book's trading days: "first" or "second"."""
+    out: dict[str, str] = {}
+    for book_trips in _same_day_by_book(trips).values():
+        first = _first_days(book_trips)
+        for trip in book_trips:
+            out[trip.trip_id] = "first" if trip.trading_day in first else "second"
+    return out
+
+
+def _half_counts(book: str, trips: list[Trip]) -> HalfCounts:
+    days = _by_day(trips)
+    nets = [sum((t.net for t in day), Decimal(0)) for day in days.values()]
+    months: dict[str, Decimal] = {}
+    for day, net in zip(days, nets, strict=True):
+        months[day[:7]] = months.get(day[:7], Decimal(0)) + net
+    running, high, high_at = Decimal(0), Decimal(0), None
+    for i, net in enumerate(nets):
+        running += net
+        if running > high:
+            high, high_at = running, i
+    green = sum(1 for net in nets if net > 0)
+    return HalfCounts(
+        first_day=next(iter(days)),
+        last_day=next(reversed(days)),
+        days=len(days),
+        trades=len(trips),
+        green_days=green,
+        green_day_percent=_share(green, len(days)),
+        months=len(months),
+        green_months=sum(1 for net in months.values() if net > 0),
+        days_since_high=None if high_at is None else len(nets) - 1 - high_at,
+        net_per_trade=sum((t.net for t in trips), Decimal(0)) / len(trips),
+        math=math_row(book, trips),
+    )
+
+
+def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[BookHalves]:
+    """Every book's plain counts on its own same-day trades, first half against second.
+
+    A position held past the day is counted nowhere here, only said. The control runs where each
+    half has BOOK_ROW_MINIMUM trades, the framework's standard minimum; below it p is None.
+    """
+    held: dict[str, int] = {}
+    for trip in trips:
+        if not trip.closed_same_day:
+            held[trade_book(trip)] = held.get(trade_book(trip), 0) + 1
+    rows: list[BookHalves] = []
+    for book, book_trips in sorted(_same_day_by_book(trips).items()):
+        first_days = _first_days(book_trips)
+        if len(book_trips) < minimum or not first_days:
+            rows.append(BookHalves(book, len(book_trips), held.get(book, 0),
+                                   s.ResultState.INSUFFICIENT_SAMPLE))
+            continue
+        first = [t for t in book_trips if t.trading_day in first_days]
+        second = [t for t in book_trips if t.trading_day not in first_days]
+        one, two = _half_counts(book, first), _half_counts(book, second)
+        change = two.net_per_trade - one.net_per_trade
+        if len(first) >= BOOK_ROW_MINIMUM and len(second) >= BOOK_ROW_MINIMUM:
+            days = _by_day(book_trips).values()
+            control = halves_shuffle.halves_test(
+                [float(sum((t.net for t in day), Decimal(0))) for day in days],
+                [len(day) for day in days],
+            )
+        else:
+            control = halves_shuffle.HalvesResult(float(change), None)
+        rows.append(BookHalves(book, len(book_trips), held.get(book, 0),
+                               s.ResultState.COUNTED_FACT, one, two,
+                               _half_counts(book, book_trips), change, control))
+    return rows

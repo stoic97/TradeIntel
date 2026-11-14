@@ -113,7 +113,7 @@ def test_the_counts_for_each_half_and_the_whole_book():
                   h.days_since_high, h.net_per_trade)
            for name, h in (("first", oil.first), ("second", oil.second), ("whole", oil.whole))}
     assert got == {
-        "first": (3, 4, 2, 67, 1, 1, 2, Decimal("10")),
+        "first": (3, 4, 2, 67, 1, 1, 2, Decimal(10)),
         "second": (3, 4, 1, 33, 1, 1, 1, Decimal("27.5")),
         "whole": (6, 8, 3, 50, 2, 2, 1, Decimal("18.75")),
     }
@@ -198,7 +198,7 @@ def test_the_page_is_the_first_of_the_report(client):
     assert S.page_number("hidden") == 1  # TICKET-903's one order: every surface reads it
     html = _page(client)
     assert "CHAPTER 1 \u00b7 FACT 1 OF 3" in html
-    assert f"1 of {len(S.PAGES)}" in page_text(html)
+    assert re.search(rf'class="rail__count[^"]*">1 of {len(S.PAGES)}<', html)  # page_text writes it [N] of [N]
     assert 'data-dwell-line="hidden"' in html
     chapter = client.get(S.chapter_href(1)).text
     assert chapter.index(TITLE) < chapter.index("Your worst trading days")
@@ -253,3 +253,22 @@ def test_the_kits_stylesheet_is_untouched():  # gate 7
     app = Path("services/production/api/static/css/components.css").read_bytes()
     kit = Path("docs/design/scope-kit/static/css/components.css").read_bytes()
     assert app == kit
+
+
+# ---- the money wedge on a phone (founder, 14 Nov): fewer words, a plus may go, never a minus
+
+def _money_wedge(trips):
+    return SF.facts(SF.record_context(trips), IMP)["money"]["wedge"]
+
+
+def test_the_money_wedge_on_a_phone_drops_a_plus():
+    wedge = _money_wedge(BOOKS)  # the best same-day trade made +200
+    assert wedge["figure"].startswith("+")
+    assert wedge["phone_figure"] == wedge["figure"].removeprefix("+")
+    assert wedge["phone_label"].replace("\n", " ") == "best trade"
+
+
+def test_the_money_wedge_on_a_phone_never_drops_a_minus():
+    wedge = _money_wedge([trip(1, "2026-01-05", -40), trip(2, "2026-01-06", -10)])  # the best lost
+    assert not wedge["figure"].startswith("+")
+    assert wedge["phone_figure"] == wedge["figure"]
