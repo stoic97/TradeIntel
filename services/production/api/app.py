@@ -9,7 +9,6 @@ accident as well as by intent.
 
 from __future__ import annotations
 
-import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -42,6 +41,7 @@ from services.production.api import (
     routes_rules,
     routes_sample,
     routes_upload,
+    version,
 )
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
@@ -56,14 +56,8 @@ door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
 
 def code_version() -> str:
-    try:
-        sha = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, check=True, cwd=HERE,
-        ).stdout.strip()
-        return sha or "unknown"
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "unknown"
+    """The tag being run, else the short sha (TICKET-948). /health and the admin page show it."""
+    return version.describe(HERE)
 
 
 def _body_too_large(scope) -> HTMLResponse:

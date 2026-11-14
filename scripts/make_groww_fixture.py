@@ -138,6 +138,7 @@ def build(orders: list[tuple] | None = None) -> bytes:
         for name, body in parts.items():
             info = zipfile.ZipInfo(name, date_time=(2026, 11, 13, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3  # "made on Unix", whatever OS runs this: same bytes everywhere
             book.writestr(info, body)
     return buffer.getvalue()
 
