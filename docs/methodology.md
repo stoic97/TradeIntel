@@ -16,6 +16,53 @@ This document is the destination. It is written for a team of ten with cloud inf
 | **1** | Phase 1 — first paying subscribers | §6 README rule · §9 import-linter in CI · §11 `develop` branch and PR template · §12 CI gates (lint, type, unit, reproducibility, hash, boundaries) · §13 coverage targets · §14 managed secret store, separate from the fund's · §15 the deletion service · faithfulness suite on the composer |
 | **2** | Phase 2 — team of ten | §12 nightly Research Gate · `infra/` as Terraform · quarterly secret audit · everything else |
 
+### Proposed change to the stage table — awaiting the founder's ruling (TICKET-937)
+
+*Drafted 14 Nov 2026 by Harshad Yadav from the repo audit (TICKET-927, finding H4). Runner ≠ ruler: the
+table above stays in force until the founder rules, and the ruling is recorded in the line at the end of
+this section, with its date.*
+
+**Why.** The table describes a one-person repository. Today there are five committers on `main`, and a
+live app with open sign-up since 5 Nov 2026 (TICKET-841), though no paying subscriber yet, so stage 1's
+trigger has not been met. Three of stage 0's own items were not met: `make hash-check` failed on every
+run; branches are `fix/`, `feat/`, `docs/`, `refactor/` rather than `feature/*`; and `WALL.md` does not
+exist (TD-010, overdue since 7 Oct).
+
+**Proposed: the current stage stays 0, its description changes, and four stage-1 items switch on now.**
+
+| Item (stage 1 in the table above) | Proposed | Why |
+|---|---|---|
+| Stage 0's "When" | "Phase 0 — now. A live app with open sign-up and five committers; no paying subscriber yet" | Says what is true; stage 1's trigger, first paying subscribers, is unchanged |
+| §12 CI gates: **lint, unit, reproducibility, boundaries** | **On now**: one CI job on every PR and push to `main` (TICKET-928) runs ruff, the whole suite (`tests/reproducibility` included) and the Rule 5 import-boundary check; branch protection requires it | Five people merge to a live app; nothing checked a PR before it landed |
+| §12 CI gate: **hash** | On at the lock: CI runs `make hash-check` once the framework is locked; until then it has nothing to check | See §4 below |
+| §12 CI gate: **type** (mypy) | Deferred to stage 1 | No strict type baseline exists to gate against; adding one is its own ticket |
+| §9 **import-linter** | The boundary is **on now** as CI's grep step (TICKET-928); the import-linter tool stays deferred | The grep enforces Rule 5's one direction; import-linter earns its place when there is more than one contract |
+| §11 **PR template** | **On now** (TICKET-936), with `CONTRIBUTING.md` | The rules five people follow are now in the repo |
+| §11 **`develop` branch** | Deferred | One deploy target and no staging environment: `develop` would add a promotion step with nothing to promote to. `main` plus PRs, CI and branch protection |
+| Branches (stage 0: "`main` + `feature/*`") | `main` + `fix/`, `feat/`, `docs/`, `refactor/`, as in `CONTRIBUTING.md` | The merge practice adopted on 4 Nov 2026; 121 of 127 merges already use these |
+| §13 **coverage** | **Reported, not gated**, from a follow-up ticket that adds `pytest-cov` (a dependency change) and prints coverage in CI; no target until there is a baseline | A target set without a baseline is a number picked to pass |
+| §6 README per directory | Deferred | Unchanged reason: the layout is still settling |
+| §14 managed secret store | Deferred | One server; secrets are in `/etc/scope` (mode 600), outside git and backups |
+| §15 deletion service | Deferred | Deletion through the page works and is tested; the manual runbook covers what the app cannot see (the log is on the server, TICKET-930) |
+| Faithfulness suite | Deferred | No LLM writes anything a trader reads |
+
+**§4 before the lock (proposed, and built in TICKET-937).** `make hash-check` says "not locked yet" and
+passes while `framework_v1.yaml` is `status: draft` with no `.sha256`. Once the file is locked, it fails
+on a changed file, on `status: locked` without a `.sha256`, and on a `.sha256` written while still a
+draft (`scripts/hash_check.py`, `tests/unit/repo/test_hash_check.py`).
+
+**§3 `WALL.md` (two options for the founder).**
+- **(a)** Sign now: `WALL.md` at the root, from ADR-002 and §3 (a draft is in TICKET-937's PR), with the
+  deviation minuted at its true date. A partner export was imported on 7 Oct 2026 before any signature.
+  TD-010 closes when it merges signed.
+- **(b)** Keep ADR-002's timing, "when the accounts are split" (stage 1): record the deviation at its true
+  date, and re-date TD-010 to stage 1 with that reason.
+
+ADR-002 ties the signature to the account split; TD-010 and the Developer Manual §10.1 tie it to "before
+partner data is ingested", which has already happened. **Proposed: (a).**
+
+**Founder's ruling:** *not yet ruled. Record here: date · accepted as proposed, or what changed.*
+
 **Two corrections to the text below, applied on adoption:** the hash command on macOS is `shasum -a 256` (Linux: `sha256sum`); the Makefile uses the portable form. The pre-registration file lives at `services/research/prereg/framework_v1.yaml`, as Research Specification §13.1 names it.
 
 ---

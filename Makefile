@@ -9,8 +9,8 @@ UV := uv run
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-hash-check: ## Verify the pre-commitment file matches its committed hash
-	@shasum -a 256 -c $(PREREG).sha256
+hash-check: ## Verify the pre-commitment file against its locked hash (says "not locked yet" before the lock)
+	@$(UV) python scripts/hash_check.py
 
 hash-lock: ## Write the hash of the pre-commitment file (kickoff only; CEO sign-off)
 	@shasum -a 256 $(PREREG) > $(PREREG).sha256 && cat $(PREREG).sha256
