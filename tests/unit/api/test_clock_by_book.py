@@ -282,23 +282,21 @@ def test_that_link_opens_the_trades_it_counts():
     assert (listing["shown"], listing["total"]) == (29, 197)
 
 
-def test_the_page_ends_with_the_button_into_the_next_chapter():
-    page = fact_page("clock", TRIPS)
-    name = S.chapter(3).name
-    label = f"Chapter 3: {name}"
-    assert f'href="{S.chapter_href(3)}">{label}</a>' in unescape(page)
-    assert page.index(label) > page.index('id="evidence-title"')
+def test_the_way_into_the_next_chapter_is_the_spines():
+    """TICKET-903: no button of its own; Next says it crosses into chapter 3."""
+    assert "Chapter 3: " not in unescape(fact_page("clock", TRIPS))
+    assert S.next_step("clock")["label"] == f"Next, chapter 3: {S.FACTS['down'].title}"
 
 
 def test_the_button_is_there_with_nothing_to_show_too():
     held = [t for t in TRIPS if t.trip_id == "held1"]
-    assert f"Chapter 3: {S.chapter(3).name}" in readable(fact_page("clock", held))
+    assert f"Chapter 3: {S.chapter(3).name}" not in readable(fact_page("clock", held))  # TICKET-903
 
 
 def test_the_button_takes_the_chapters_name_from_the_map(monkeypatch):
     changed = replace(S.CHAPTERS[2], name="A new name")
     monkeypatch.setattr(S, "CHAPTERS", (*S.CHAPTERS[:2], changed, S.CHAPTERS[3]))
-    assert SF.facts(CTX, IMP)["clock"]["next"]["label"] == "Chapter 3: A new name"
+    assert "next" not in SF.facts(CTX, IMP)["clock"]  # TICKET-903: scope_map decides it
 
 
 @pytest.mark.parametrize(

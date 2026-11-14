@@ -2,24 +2,42 @@
 # Tradebooks and per-trader findings live outside this repo, under the deletion
 # runbook (docs/runbooks/data-deletion.md). Git history cannot be deleted on
 # request, so a trader fact committed here breaks the promise made to recruits.
-data/raw/
-data/partners/
-data/private/
-# Corpus A regenerates from code + seed + the logged price file; only its manifest
-# digest is recorded (scripts/build_corpus_a.py).
-data/corpus/
+#
+# Everything under data/ is ignored except the synthetic paths below (TICKET-930):
+# a file dropped anywhere else in data/ cannot be committed by accident.
+data/*
+!data/fixtures/
+!data/golden/
+!data/market/
+data/market/*
+!data/market/CROSSINGS.md
+# A synthetic research run (planted signal, fixed seed; scripts/run_null_rate_b2.py).
+# Kept while the research seat wants it; remove these two lines to stop tracking it.
+!data/null_rate/
 raw/
 private/
+
+# Data file types, ignored anywhere in the tree: tradebooks, broker contract notes
+# (.pdf), exports and databases.
 *.csv
+*.tsv
 *.xlsx
 *.xls
 *.parquet
 *.zip
+*.jsonl
+*.pdf
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-*
 
 # Synthetic fixtures and their goldens are the only data files allowed.
 # They contain no real trader's trades.
 !data/fixtures/**
 !data/golden/**
+!data/null_rate/**
+!tests/fixtures/**
 
 # Python
 __pycache__/

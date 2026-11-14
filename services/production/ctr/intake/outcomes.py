@@ -20,10 +20,12 @@ cannot proceed.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from services.production.ctr.adapters import dhan_tradebook, filemap
+from services.production.ctr.adapters import dhan_tradebook, filemap, groww_orders
+from services.production.ctr.adapters.base import ParseResult
 from services.shared.schemas import scope_v1 as s
 
 ADAPTER_DIR = Path(__file__).resolve().parents[1] / "adapters"
@@ -40,6 +42,8 @@ class Adapter:
     adapter_id: str
     header: tuple[str, ...]
     filemap_path: Path
+    parse: Callable[..., ParseResult]
+    """The adapter's reader: CSV lines from its header down -> :class:`ParseResult`."""
 
     def file_map(self) -> filemap.FileMap:
         return filemap.load(self.filemap_path)
@@ -50,8 +54,20 @@ ADAPTERS: tuple[Adapter, ...] = (
         adapter_id=dhan_tradebook.FORMAT_ID,
         header=dhan_tradebook.HEADER,
         filemap_path=ADAPTER_DIR / "dhan_filemap.yaml",
+        parse=dhan_tradebook.parse,
+    ),
+    Adapter(
+        adapter_id=groww_orders.FORMAT_ID,
+        header=groww_orders.HEADER,
+        filemap_path=ADAPTER_DIR / "groww_filemap.yaml",
+        parse=groww_orders.parse,
     ),
 )
+
+
+def headers() -> tuple[tuple[str, ...], ...]:
+    """Every header an adapter is selected by, for finding one under a preamble."""
+    return tuple(a.header for a in ADAPTERS)
 
 
 @dataclass(frozen=True)

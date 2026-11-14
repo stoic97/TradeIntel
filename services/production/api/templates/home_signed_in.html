@@ -2,7 +2,7 @@
     look, and the upload. The sentence is Scope home's own (_verdict.html); the days are the first
     of the Journal tab's list. No tab is current: home is none of the three. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import home_lockup, money, uncounted_line %}
+{% from "_components.html" import button, home_lockup, money, uncounted_line %}
 {% from "_verdict.html" import verdict_sentence %}
 {% set nav = "home" %}
 {% block content %}
@@ -18,6 +18,9 @@
     {%- endif %}
     <span class="scope-card__foot"><span>Open your report</span><span aria-hidden="true">›</span></span>
   </a>
+  {%- if continue_step is defined and continue_step %}
+  <p class="home__continue">{{ button(continue_step.label, href=continue_step.href, block=true) }}</p>
+  {%- endif %}
   {{ uncounted_line(imp.trips_refused) }}
   {%- if latest %}
   <section class="latest">

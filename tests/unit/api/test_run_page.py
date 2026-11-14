@@ -268,15 +268,12 @@ def test_a_run_at_the_end_of_the_file_has_no_after_section_and_keeps_its_close()
 # ---------- The next button ----------
 
 
-def test_the_page_ends_with_a_link_to_the_clock_and_says_nothing_about_that_hour():
+def test_the_page_ends_by_the_run_and_says_nothing_about_that_hour():
+    """TICKET-903: no "See the clock" of its own; the way on is the spine's Next."""
     html = fact_page("run", trips=EVENING)
     assert "This run started at 18:00." in readable(html)
     assert "opened in the" not in readable(html)
-    assert re.search(
-        r'<a class="btn btn--primary btn--block" href="/mirror/fact/clock[^"]*">See the clock</a>',
-        html,
-    )
-    assert html.rindex("See the clock") > html.rindex("The trades behind this")
+    assert "See the clock" not in html
 
 
 def test_a_run_across_days_says_the_date_it_started():

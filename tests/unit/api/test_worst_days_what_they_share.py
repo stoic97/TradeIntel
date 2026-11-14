@@ -275,12 +275,9 @@ def test_each_block_asks_is_this_day_wrong():
     assert html.count('action="/mirror/feedback/day"') == 5
 
 
-def test_the_next_button_shows_after_the_blocks_and_again_at_the_bottom():
-    html = fact_page("worst-days", FOUR_CRUDE_EVENINGS)
-    label = "Your 5 best and 5 worst trades"
-    assert html.count(label) == 2
-    assert html.rindex("</details>") < html.index(label)
-    assert 'href="/mirror/fact/money"' in html
+def test_the_page_has_no_next_button_of_its_own():
+    """TICKET-903: Previous and Next come from scope_map, once, at the end (test_report_spine)."""
+    assert "Your 5 best and 5 worst trades" not in fact_page("worst-days", FOUR_CRUDE_EVENINGS)
 
 
 def test_every_trade_stays_within_reach():
@@ -342,10 +339,9 @@ def test_the_share_page_goes_to_worst_days(client):
     assert gone.headers["location"].startswith("/mirror/fact/worst-days")
 
 
-def test_the_chapter_page_leads_on_to_chapter_two(client):
-    html = client.get("/mirror/chapter/1").text
-    assert "Chapter 2: your patterns" in readable(html)
-    assert 'href="/mirror/chapter/2' in html
+def test_the_chapter_page_leads_on_to_its_first_page(client):
+    """TICKET-903: chapter 1 goes on to its own first page, from scope_map."""
+    assert "Next: Your worst trading days" in readable(client.get("/mirror/chapter/1").text)
 
 
 def test_a_flag_is_kept_with_its_day_and_note(client):

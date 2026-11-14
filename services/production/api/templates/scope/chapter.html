@@ -3,7 +3,6 @@
     Every sentence is the Mirror's own, word for word (test_wording_reference.py). -#}
 {% extends "layout.html" %}
 {% from "_components.html" import button, dial, dials, gross_line, uncounted_line %}
-{% from "scope/_next.html" import chapter_four %}
 {% set nav = "scope" %}
 {% block stage %}
 <header class="stage on-navy" aria-label="The Scope">
@@ -31,9 +30,6 @@
   {%- endif %}
   {%- if next_step %}
   <p class="chapter__next">{{ button(next_step.label, next_step.href) }}</p>
-  {%- endif %}
-  {%- if chapter.number == 3 %}
-  {{ chapter_four(facts["busiest"].chapter_four) }}
   {%- endif %}
   {%- if chapter.number == 4 %}
   {% include "scope/_lineage.html" %}

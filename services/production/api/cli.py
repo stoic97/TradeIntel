@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,6 +29,7 @@ from pathlib import Path
 from sqlalchemy import or_, select
 
 from services.production.accounts.file_store import FileStore
+from services.production.api import version
 from services.production.ctr.intake import persist
 from services.production.ctr.intake import pipeline as pl
 from services.production.db import models as m
@@ -55,18 +55,8 @@ def file_store() -> FileStore:
 
 
 def code_version() -> str:
-    """The commit this import ran on. 'dirty' when the tree has uncommitted changes."""
-    try:
-        sha = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        dirty = subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
-        ).stdout.strip()
-        return f"{sha}-dirty" if dirty else sha
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "unknown"
+    """The tag or commit this import ran on. 'dirty' when the tree has uncommitted changes."""
+    return version.describe(Path(__file__).resolve().parent, dirty=True)
 
 
 def _log(sess, actor: str, action: str, target: str | None) -> None:
@@ -176,7 +166,8 @@ def cmd_delete_trader(args: argparse.Namespace) -> None:
 
 def cmd_import(args: argparse.Namespace) -> None:
     path = Path(args.file)
-    text = path.read_text()
+    content = path.read_bytes()
+    text = pl.text_of(content)
     engine = make_engine(args.db)
     run_migrations(engine)
 
@@ -189,7 +180,7 @@ def cmd_import(args: argparse.Namespace) -> None:
         # it was found. ADR-007 says raw files are encrypted at rest; this is the
         # path that was not.
         store = file_store()
-        kept = store.put(text.encode("utf-8"))
+        kept = store.put(content)
         digest = kept.sha256
 
         existing = persist.existing_days(

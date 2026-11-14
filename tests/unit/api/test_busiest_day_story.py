@@ -486,30 +486,28 @@ def buttons(html: str) -> list[tuple[str, str]]:
             re.findall(r'<a class="btn[^"]*" href="([^"]+)">(.*?)</a>', html, re.DOTALL)]
 
 
-def test_the_chapter_four_button_uses_the_chapters_real_title():
+def test_the_way_into_chapter_four_uses_its_real_title():
+    """TICKET-903: the spine's Next names the chapter it crosses into, from scope_map."""
     assert S.chapter(4).name == "What we read"
-    assert ("/mirror/chapter/4", f"Chapter 4: {S.chapter(4).name}") in buttons(fact_page("busiest", DAY))
+    assert S.next_step("busiest")["label"] == f"Next, chapter 4: {S.FACTS['unread'].title}"
+    assert "Chapter 4: What we read" not in readable(fact_page("busiest", DAY))
 
 
-def test_the_down_page_ends_with_the_next_fact_then_chapter_four():
-    page = fact_page("down", DOWN)
-    assert buttons(page)[-2:] == [
-        ("/mirror/fact/busiest?enter=lens", "Next: Your busiest day"),
-        ("/mirror/chapter/4", "Chapter 4: What we read"),
-    ]
-    assert page.rindex("Next: Your busiest day") > page.index("The trades behind this")
+def test_the_down_page_has_one_way_on():
+    """TICKET-903: one next step, the spine's, and no jump to chapter 4 beside it."""
+    assert S.next_step("down")["label"] == "Next: Your busiest day"
+    assert "Chapter 4: What we read" not in readable(fact_page("down", DOWN))
 
 
-def test_the_busiest_page_ends_with_chapter_four():
-    page = fact_page("busiest", DAY)
-    assert buttons(page)[-1] == ("/mirror/chapter/4", "Chapter 4: What we read")
-    assert page.rindex("Chapter 4: What we read") > page.index("The trades behind this")
+def test_the_busiest_page_has_no_button_of_its_own():
+    """TICKET-903: its way on is the spine's Next (test_report_spine)."""
+    assert "Chapter 4: What we read" not in readable(fact_page("busiest", DAY))
 
 
-def test_the_chapter_page_ends_with_chapter_four_after_the_question():
-    page = chapter_page(3, DAY)
-    assert buttons(page)[-1] == ("/mirror/chapter/4", "Chapter 4: What we read")
-    assert page.rindex("Chapter 4: What we read") > page.index("Does this match your trading?")
+def test_the_chapter_page_goes_on_to_its_first_page():
+    """TICKET-903: a chapter goes on to its own first page, not to chapter 4."""
+    assert "Chapter 4: What we read" not in readable(chapter_page(3, DAY))
+    assert S.chapter_step(3)["label"] == f"Next: {S.FACTS['down'].title}"
 
 
 @pytest.mark.parametrize("n", [1, 2, 4])
@@ -522,20 +520,18 @@ def test_no_other_chapter_gains_the_button(n):
     [lambda t: fact_page("busiest", t), lambda t: fact_page("down", t), lambda t: chapter_page(3, t)],
     ids=["busiest", "down", "chapter"],
 )
-def test_the_one_number_is_mentioned_while_chapter_four_still_asks_for_it(page):
-    """Chapter 4's risk fact offers "Set your number" only with no declared budget. Set, the
-    line would describe something no longer there."""
-    no_budget = [*DAY]
-    assert NUMBER_LINE in readable(page(no_budget))
+def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):
+    """TICKET-903: Limits left the walk. The number is offered on the risk page and in Account,
+    not on the way out of chapter 3, with a budget or without one."""
+    assert "the one number" not in readable(page([*DAY]))
     declared = [replace(t, risk_unit_source=s.RiskUnitSourceV1.DECLARED_BUDGET) for t in DAY]
-    text = readable(page(declared))
-    assert "the one number" not in text
-    assert "Chapter 4: What we read" in text
+    assert "the one number" not in readable(page(declared))
 
 
 def test_a_fact_in_a_state_still_goes_on():
-    assert buttons(fact_page("busiest", []))[-1] == ("/mirror/chapter/4", "Chapter 4: What we read")
-    assert buttons(fact_page("down", []))[-1] == ("/mirror/chapter/4", "Chapter 4: What we read")
+    """TICKET-903: the way on is scope_map's, so a page in a state has it as surely as any."""
+    assert S.next_step("busiest")["href"] == S.fact_href("unread")
+    assert S.next_step("down")["href"] == S.fact_href("busiest")
 
 
 def test_the_opening_card_sentence_is_untouched():

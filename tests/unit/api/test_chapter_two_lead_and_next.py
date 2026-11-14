@@ -155,17 +155,19 @@ def links(html: str) -> list[tuple[str, str]]:
     return [(unescape(h), unescape(re.sub(r"<[^>]+>", "", t)).strip()) for h, t in found]
 
 
-def test_the_overview_ends_with_a_button_into_chapter_three(pages):
-    assert (S.chapter_href(3), CTA) in links(pages["/mirror/chapter/2"])
+def test_the_overview_goes_on_to_its_first_page(pages):
+    """TICKET-903: a chapter goes on to its own first page, from scope_map."""
+    assert (S.fact_href("math"), f"Next: {S.FACTS['math'].title}") in links(pages["/mirror/chapter/2"])
 
 
 def test_the_button_comes_after_the_feedback_question(pages):
     html = pages["/mirror/chapter/2"]
-    assert html.index(FEEDBACK) < html.index(unescape(CTA).split(",")[0] + ",")
+    assert html.index(FEEDBACK) < html.rindex(f"Next: {S.FACTS['math'].title}")  # TICKET-903
 
 
-def test_chapter_one_keeps_its_own_button(pages):
-    assert (S.chapter_href(2), "Chapter 2: your patterns") in links(pages["/mirror/chapter/1"])
+def test_chapter_one_goes_on_to_its_first_page(pages):
+    """TICKET-903: one order; chapter 1 no longer jumps to chapter 2."""
+    assert (S.fact_href("worst-days"), f"Next: {S.FACTS['worst-days'].title}") in links(pages["/mirror/chapter/1"])
 
 
 def test_the_other_chapters_get_no_new_button(pages):
@@ -174,23 +176,27 @@ def test_the_other_chapters_get_no_new_button(pages):
 
 
 def test_the_math_page_goes_to_the_next_fact(pages):
-    assert (S.fact_href("run"), "Next: Longest losing run") in links(pages[S.fact_href("math")])
+    """TICKET-903: the spine's Next, named for where it goes."""
+    assert f'href="{S.fact_href("run")}" aria-label="Next: Longest losing run"' in pages[S.fact_href("math")]
 
 
 def test_the_run_page_goes_to_the_next_fact(pages):
-    hrefs = [h for h, _ in links(pages[S.fact_href("run")])]
-    assert S.fact_href("clock") in hrefs
+    """TICKET-903: the spine's Next."""
+    assert f'href="{S.fact_href("clock")}" aria-label="Next: The clock"' in pages[S.fact_href("run")]
 
 
-def test_the_last_fact_goes_to_chapter_three(pages):
-    assert S.chapter_href(3) in [h for h, _ in links(pages[S.fact_href("clock")])]
+def test_the_last_fact_goes_on_into_chapter_three(pages):
+    """TICKET-903: Next says so when it crosses into a new chapter."""
+    label = f"Next, chapter 3: {S.FACTS['down'].title}"
+    assert f'href="{S.fact_href("down")}" aria-label="{label}"' in pages[S.fact_href("clock")]
 
 
 def test_a_run_with_no_story_still_has_a_way_on():
     figs = SF.facts(SF.record_context(make([100, 100, 100] * 12, symbol="WIDGET")), IMP)
-    assert figs["run"]["next"] == {"label": "Next: The clock", "href": S.fact_href("clock")}
+    assert "next" not in figs["run"]  # TICKET-903: scope_map decides the way on, for every page
+    assert S.next_step("run")["href"] == S.fact_href("clock")
     template = Path("services/production/api/templates/scope/facts/run.html").read_text(encoding="utf-8")
-    assert "next_fact(f.next)" in template
+    assert "next_fact(f.next)" not in template
 
 
 def test_the_overviews_line_on_the_demo_file_is_served(pages):

@@ -24,7 +24,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 |---|---|---|
 | Code for import, accounts, consent, upload, Mirror, Journal, eligibility, deletion | Built and merged; about 700 tests | `main` |
 | App on the droplet `139.59.38.160`, Caddy, systemd, backups | Running | `deploy/`, `docs/runbooks/deploy.md` |
-| Deletion gate on the real server | **Done 22 Oct** through the page | `docs/runbooks/deletion-log.md` |
+| Deletion gate on the real server | **Done 22 Oct** through the page | the deletion log on the server, `/srv/scope/data/deletion-log.md` |
 | Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, on `main`** (PR #2, 27 Oct) | `accounts/consent.py` |
 | Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Done, on `main`** (PR #2) | `base.html`, `scope.css` |
 | Link from plusev.in to scope.plusev.in | In `plusev-web/content/copy.ts` | — |
@@ -52,7 +52,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | 2 | **Chapter** | The dial re-divided into that chapter's facts (2–4); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
 | 3 | **Fact** | White page. The 56 px lens pinned top-left with the path beside it on one line (`Scope › Where your… › Your worst trading days`); the Mirror's sentences, figures, tables; then "The trades behind this": every trade, never a sample | Nothing except the lens and the path |
 
-**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, tabs, dropdowns, text fields, next/previous fact or "related" anywhere in the Scope.
+**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, dropdowns or text fields anywhere in the Scope. Every report page has the rail, Previous and Next, and All pages, all in scope_map's one order, and on a phone the report bar (TICKET-903, ruled 13 Nov 2026, round 2 section N).
 
 ### Chapters and facts (the Mirror's own headings)
 
@@ -253,7 +253,7 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 1. `dig +short scope.plusev.in` → `139.59.38.160`; `https://scope.plusev.in` loads with a padlock.
 2. `make test` green in TradeIntel; `npm run lint && npm run typecheck && npm test && npm run build` green in plusev-web.
 3. A real (not development-data) account reaching `/consent` sees the consent page, not "Scope is not open yet".
-4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to `docs/runbooks/deletion-log.md`.
+4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to the deletion log on the server, `/srv/scope/data/deletion-log.md` (never in git).
 5. ₹ renders in Plex on the server (not a fallback font).
 6. `/scope/data` on plusev-web, the consent text and `docs/runbooks/data-flow-map.md` say the same thing about storage, access and backups.
 7. Sign-up is open at `https://scope.plusev.in` (TICKET-841): the first trader signs up there.

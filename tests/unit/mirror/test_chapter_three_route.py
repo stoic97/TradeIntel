@@ -38,17 +38,17 @@ def test_the_served_pages_open_with_the_title_and_the_sentence(client, monkeypat
 # ---------- The story and where the pages go next, served [TICKET-827] ----------
 
 
-def test_the_served_chapter_ends_with_the_way_into_chapter_four(client):
+def test_the_served_chapter_goes_on_to_its_first_page(client):
+    """TICKET-903: a chapter goes on to its own first page, from scope_map."""
     page = client.get("/mirror/chapter/3").text
-    assert page.rindex("Chapter 4: What we read") > page.index("Does this match your trading?")
-    assert 'href="/mirror/chapter/4"' in page
+    assert page.rindex("Next: After two straight losses") > page.index("Does this match your trading?")
 
 
 def test_the_served_busiest_page_tells_the_day_and_goes_on(client):
     page = client.get("/mirror/fact/busiest").text
     day = formatting.day(mx.day_counts(TRIPS).busiest_day)
     assert f"{day}: {mx.day_counts(TRIPS).busiest_trips} trades." in readable(page)
-    assert 'href="/mirror/chapter/4"' in page
+    assert 'aria-label="Next, chapter 4: What we read"' in page  # TICKET-903: the spine's Next
 
 
 def test_the_served_down_page_goes_to_the_next_fact(client):

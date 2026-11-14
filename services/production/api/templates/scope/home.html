@@ -12,8 +12,8 @@
   <div class="stage__dial">
   {{ dials(view) }}
   </div>
-  {%- if start %}
-  <div class="home__start">{{ button(start.label, href=start.href, kind="on-navy", block=true) }}</div>
+  {%- if continue_step is defined and continue_step %}
+  <div class="home__start">{{ button(continue_step.label, href=continue_step.href, kind="on-navy", block=true) }}</div>
   {%- endif %}
 </header>
 {% endblock %}
