@@ -115,7 +115,7 @@
   </section>
   {%- endif %}
   <p class="provenance">Journal unit for this upload: {{ imp.density_default_unit }}.</p>
-  <p class="provenance provenance--tight">Read by Scope version {{ imp.code_version }} using {{ imp.adapter_id }}. Every figure above can be reproduced from your file and these versions.</p>
+  <p class="provenance provenance--tight">Read by Scope version {{ imp.code_version|identifier }} using {{ imp.adapter_id }}. Every figure above can be reproduced from your file and these versions.</p>
   <div class="screen__actions"><a class="btn btn--primary btn--block" href="/guess">See your record</a></div>
   {%- endif %}
 {% endblock %}
