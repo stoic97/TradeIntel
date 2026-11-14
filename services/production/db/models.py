@@ -81,6 +81,24 @@ class ConsentEvent(Base, _InsertOnly):
     wording_shown: Mapped[str] = mapped_column(Text)
 
 
+class BrokerConnection(Base):
+    """TICKET-896: the stored key behind a read-only broker pull. One row per trader per broker.
+
+    Not insert-only: disconnecting deletes the row, and so does /delete. The key is held
+    encrypted (the same Fernet key as uploaded files) and never logged. The consent for it
+    is a ``broker_pull`` row in the ledger, kept apart from the diagnosis consent.
+    """
+
+    __tablename__ = "broker_connection"
+    __table_args__ = (UniqueConstraint("trader_id", "broker",
+                                       name="uq_broker_connection_trader_broker"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    broker: Mapped[str] = mapped_column(String(32))
+    token_ciphertext: Mapped[str] = mapped_column(Text)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RiskBudgetDeclaration(Base, _InsertOnly):
     """PRD 5.5. A percentage requires the capital, or no trip has a denominator."""
 
