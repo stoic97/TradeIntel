@@ -56,7 +56,7 @@ def before(entry_ts: datetime, bars: pm.BarTable, direction: int = 1):
     """(agreed, measured, reasons left out) of the before-count for one trip."""
     entry = pm.Entry("t1", "UNDER", entry_ts, direction)
     result = pm.count([entry], {"UNDER": bars}, draws=10)
-    return result.before.agreed, result.before.measured, [u.reason for u in result.unmeasured]
+    return result.before.agreed, result.before.measured, [u.reason for u in (*result.unmeasured, *result.unmeasured_before)]
 
 
 def profile(name: str) -> dict[str, str]:
@@ -127,7 +127,7 @@ def test_a_timestamp_with_no_zone_is_refused_not_read_in_the_machines_own_zone()
 # ---- Gate 1 (the part this module can hold): a mis-stamped bar gives no figure -------------
 def test_bars_stamped_with_seconds_give_no_figure_rather_than_a_shifted_one():
     late = table({k.replace(second=59): v for k, v in NEIGHBOURS.bars.items()})
-    assert before(ist(DAY, "10:15", 30), late) == (0, 0, [pm.Reason.NO_BAR])
+    assert before(ist(DAY, "10:15", 30), late) == (0, 0, [pm.Reason.NO_PRIOR_BAR])
 
 
 # ---- Gate 3: the session's open and close, in the instrument's own zone ---------------------
@@ -148,7 +148,7 @@ def test_the_first_minute_of_the_nse_session_cannot_be_measured_and_is_not_yeste
     bars = session_bars("NSE_NIFTY", [PREV_DAY, DAY])
     assert ist(PREV_DAY, "15:29") in bars.bars  # yesterday's last bar is there to be misused
     # 09:15:20: the minute before is 09:14, before the open.
-    assert before(ist(DAY, "09:15", 20), bars) == (0, 0, [pm.Reason.NO_BAR])
+    assert before(ist(DAY, "09:15", 20), bars) == (0, 0, [pm.Reason.NO_PRIOR_BAR])
     # 09:16:05: the minute before is 09:15, the session's first bar.
     assert before(ist(DAY, "09:16", 5), bars) == (1, 1, [])
 
@@ -157,24 +157,26 @@ def test_the_last_bar_of_the_nse_session_starts_one_minute_before_session_end():
     bars = session_bars("NSE_NIFTY", [DAY])
     assert ist(DAY, "15:29") in bars.bars and ist(DAY, "15:30") not in bars.bars
     assert before(ist(DAY, "15:29", 40), bars) == (1, 1, [])  # 15:28 before, 15:29 entered
-    assert before(ist(DAY, "15:30", 10), bars) == (0, 0, [pm.Reason.NO_BAR])  # past the close
+    # Past the close the bar before (15:29) still exists, so the before count reads it (D5);
+    # the entry-minute bar does not, so every after count leaves the trip out.
+    assert before(ist(DAY, "15:30", 10), bars) == (1, 1, [])
 
 
 def test_crude_open_and_close_in_its_own_session():
     bars = session_bars("MCX_CRUDEOIL", [PREV_DAY, DAY])
     assert ist(PREV_DAY, "23:29") in bars.bars  # last night's last bar is there to be misused
-    assert before(ist(DAY, "09:00", 10), bars) == (0, 0, [pm.Reason.NO_BAR])  # 08:59: not open
+    assert before(ist(DAY, "09:00", 10), bars) == (0, 0, [pm.Reason.NO_PRIOR_BAR])  # 08:59: not open
     assert before(ist(DAY, "09:01", 0), bars) == (1, 1, [])  # 09:00, the first bar
     assert before(ist(DAY, "23:29", 30), bars) == (1, 1, [])  # 23:28 before, 23:29 entered
     late_utc = datetime(2026, 6, 2, 17, 59, 30, tzinfo=UTC)  # 23:29:30 IST
     assert before(late_utc, bars) == (1, 1, [])
-    assert before(ist(DAY, "23:30", 5), bars) == (0, 0, [pm.Reason.NO_BAR])  # past the close
+    assert before(ist(DAY, "23:30", 5), bars) == (1, 1, [])  # past the close: 23:29 is there
 
 
 # ---- Gate 4: a minute with no data cannot be measured -------------------------------------
 def test_a_missing_minute_cannot_be_measured_and_is_never_the_bar_before_it():
     gap = table({ist(DAY, "10:13"): UP, ist(DAY, "10:15"): UP, ist(DAY, "10:16"): UP})
-    assert before(ist(DAY, "10:15", 30), gap) == (0, 0, [pm.Reason.NO_BAR])
+    assert before(ist(DAY, "10:15", 30), gap) == (0, 0, [pm.Reason.NO_PRIOR_BAR])
 
 
 def test_a_flat_minute_is_data_and_agrees_with_neither_side():
@@ -218,9 +220,9 @@ def test_every_demo_entry_lines_up_on_the_minute_before_and_on_no_other():
         right = table({_at(m0 - 60): DOWN, _at(m0): UP})
         assert before(ts, right) == (0, 1, []), ts  # long; the minute before fell
         late = table({_at(m0): UP, _at(m0 + 60): UP})  # one minute late: starts at the entry
-        assert before(ts, late) == (0, 0, [pm.Reason.NO_BAR]), ts
+        assert before(ts, late) == (0, 0, [pm.Reason.NO_PRIOR_BAR]), ts
         early = table({_at(m0 - 120): UP, _at(m0): UP})  # one bar early
-        assert before(ts, early) == (0, 0, [pm.Reason.NO_BAR]), ts
+        assert before(ts, early) == (0, 0, [pm.Reason.NO_PRIOR_BAR]), ts
 
 # ---- Gate 1, the part that needs no loader: a stamping check that names the series -----------
 def stamping_fault(
@@ -272,7 +274,7 @@ def test_a_series_not_stamped_at_the_start_of_the_minute_is_refused_by_name(name
 
 def test_bars_with_no_zone_never_match_a_trade_so_the_book_is_unmeasured_not_shifted():
     naive = table({k.replace(tzinfo=None): v for k, v in NEIGHBOURS.bars.items()})
-    assert before(ist(DAY, "10:15", 30), naive) == (0, 0, [pm.Reason.NO_BAR])
+    assert before(ist(DAY, "10:15", 30), naive) == (0, 0, [pm.Reason.NO_PRIOR_BAR])
 
 # ---- Gate 3 again: the day a trade is covered on is its IST day, not its UTC day -------------
 def test_the_day_a_trade_is_covered_on_is_its_ist_day():
@@ -282,3 +284,12 @@ def test_the_day_a_trade_is_covered_on_is_its_ist_day():
     # A series that stops the day before does not cover DAY, whatever the UTC date says.
     stale = table({ist(PREV_DAY, "23:28"): UP, ist(PREV_DAY, "23:29"): UP})
     assert before(ist(DAY, "00:00", 20), stale) == (0, 0, [pm.Reason.NOT_COVERED])
+
+
+def test_an_entry_past_the_close_has_its_prior_bar_but_no_entry_minute_bar():
+    bars = session_bars("NSE_NIFTY", [DAY])
+    entry = pm.Entry("t1", "UNDER", ist(DAY, "15:30", 10), 1)
+    result = pm.count([entry], {"UNDER": bars}, draws=10)
+    assert (result.before.agreed, result.before.measured) == (1, 1)
+    for h in pm.HORIZONS:
+        assert [u.reason for u in result.unmeasured_after[h]] == [pm.Reason.NO_ENTRY_BAR]
