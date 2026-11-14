@@ -22,13 +22,15 @@ count taken from his history is his data too.
 |---|---|---|---|---|
 | The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
 | The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in backups | Until deleted | Yes, same module |
+| The droplet's disk — SQLite database, `broker_connection` table (TICKET-896; not in use yet) | One trader's connection key for his broker, with the broker's name and the time it was made | Yes, Fernet, the same key as the file store | Until he disconnects or deletes his account | Yes, `accounts/deletion.py`, and the Disconnect action |
+| Dhan's trading API (TICKET-896; not in use yet) | Receives our request for his trades, carrying his connection key, and sends his trades back. Nothing else of his is sent | In transit, HTTPS | Theirs | No: we delete our key and our copy; what Dhan holds is Dhan's |
 | Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |
 | The trader's own browser | A signed session cookie. No trade data | Signed, not encrypted | 30 days, or sign-out | n/a |
 | The app's memory | The network address a new account came from, only in memory, so the sign-up cap can count it. Never written to the database or a file | No | An hour, or until a restart | Nothing of his to delete |
 | The server's logs | Request paths and status codes. **No request bodies, no uploaded content, no figures** | No | Rotated at 14 days | Nothing of his to delete |
 
-**That is the entire list.** No analytics. No error reporting. No email service.
+**That is the entire list today.** The two broker rows above are listed ahead of the connector (TICKET-896) and are not in use until it is built and its consent text is reviewed. When that happens the "no outbound HTTP client" statement under release-gate item 2 stops being true and is rewritten in the connector ticket. No analytics. No error reporting. No email service.
 No CDN: every asset, including HTMX, is served from `static/`. No third-party
 font. A test asserts that no rendered page contains an absolute URL, so adding one
 breaks the build rather than quietly adding a row to this table.

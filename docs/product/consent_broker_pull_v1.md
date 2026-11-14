@@ -28,7 +28,7 @@ The words live in `services/production/accounts/consent.py` (`BROKER_PULL`, `bro
 3. The sign-up door (`api/door.py`): "You give us: The trade file your broker lets you download. Never your broker login." A connection holds a key made from the trader's broker login. Also "Cost: Free today" against subscribers-only.
 4. `what_deletion_covers` does not mention a stored key. The broker text adds it.
 5. The delete pages say two rows survive (the consent record and the deletion record). `delete_trader` deletes the consent rows, and `admin.html` says so; only the deletion record survives. This predates 896 and is not fixed here.
-6. `docs/runbooks/data-flow-map.md` has no row for the key. It needs one before the text is reviewed.
+6. `docs/runbooks/data-flow-map.md` had no row for the key or for Dhan, says the consent text may name no system that is not on its list, and says there is "no outbound HTTP client" (release-gate item 2). Two rows are added here, marked not in use yet. Item 2 must be rewritten when the connector is switched on (the connector ticket).
 
 ## Open with Pawan
 
