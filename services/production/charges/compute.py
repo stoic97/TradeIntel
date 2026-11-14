@@ -103,7 +103,7 @@ def order_charges(seg: R.Segment, side: str, value: Decimal, on: date, *, broker
     statutory = R.statutory(seg, side, value, on, as_of=as_of, table=table)
     out = {component.value: amount for component, amount in statutory.items()}
     kind = _plan_kind(seg)
-    billed = ((Decimal(1), value),)
+    billed = orders if orders is not None else ((Decimal(1), value),)
     fee = sum((share * B.per_order(broker, kind, order_value, own=own)
                for share, order_value in billed), ZERO)
     gst = R.rate(seg, R.Component.GST, side, on, as_of=as_of, table=table).rate

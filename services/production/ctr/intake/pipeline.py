@@ -17,15 +17,15 @@ Persistence writes the plan; it decides nothing.
 from __future__ import annotations
 
 import hashlib
-import json  # noqa: F401
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-from services.production.charges import brokerage as brokerage_presets  # noqa: F401
+from services.production.charges import brokerage as brokerage_presets
 from services.production.charges import compute as charges
-from services.production.charges import rates  # noqa: F401
+from services.production.charges import rates
 from services.production.ctr import reconstruct as rc
 from services.production.ctr.adapters import filemap
 from services.production.ctr.intake import day_versions as dv
@@ -205,10 +205,11 @@ class ImportPlan:
             ",".join(sorted(self.missing_fields)),
             self.density_default_unit or "",
             ",".join(self.instruments_without_profile),
-            self.fees_source,
-            self.charges_provenance or "",
-            ",".join(self.trip_fees_source),
         ]
+        if self.charges_provenance is not None:
+            # Only where charges were worked out (TICKET-912), so a plan without them hashes
+            # byte for byte as it did before.
+            parts += [self.fees_source, self.charges_provenance, ",".join(self.trip_fees_source)]
         parts.extend(
             f"{r.row_no}|{r.status}|{r.flag.value if r.flag else ''}|{r.dup_group or ''}"
             for r in self.rows
@@ -311,7 +312,65 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
                       tuple[tuple[str, str | None, str], ...]]:
     """Each trip's charges (TICKET-912). Returns the trips, each one's source, how many the
     rate table doesn't reach, the provenance and his day totals against ours."""
-    return trips, ("none",) * len(trips), 0, None, ()
+    if fees_in_file:
+        return trips, ("tradebook",) * len(trips), 0, None, ()
+    if given is None:
+        return trips, ("none",) * len(trips), 0, None, ()
+    fills_by_id = {f.fill_id: f for f in fills}
+    trips_per_fill: dict[str, int] = {}
+    for t in trips:
+        for fid in t.fill_ids:
+            trips_per_fill[fid] = trips_per_fill.get(fid, 0) + 1
+    priced: list[RoundTrip] = []
+    sources: list[str] = []
+    ours: list[Decimal | None] = []
+    for t in trips:
+        entry_orders, exit_orders = _orders(t, fills_by_id, trips_per_fill)
+        got = charges.trip_charges(
+            broker=t.broker, exchange=t.exchange, segment=t.segment.value,
+            direction=t.direction.value, entry_ts=t.entry_ts, exit_ts=t.exit_ts,
+            quantity=t.quantity, entry_price=t.entry_price, exit_price=t.exit_price,
+            own=given.own_per_order, as_of=given.as_of,
+            entry_orders=entry_orders, exit_orders=exit_orders)
+        if got.covered:
+            priced.append(t.model_copy(update={"fees": got.total}))
+            sources.append("calculated")
+            ours.append(got.total)
+        else:
+            priced.append(t)
+            sources.append("not_priced")
+            ours.append(None)
+
+    scales: list[tuple[str, str | None, str]] = []
+    for day in sorted(given.statement_days):
+        at = [i for i, d in enumerate(days) if d == day]
+        if not at:
+            continue
+        his = given.statement_days[day]
+        known = [ours[i] for i in at if ours[i] is not None]
+        mine = sum(known, Decimal(0)) if len(known) == len(at) else None
+        for i, share in zip(at, charges.share_day(his, [ours[i] for i in at]), strict=True):
+            priced[i] = priced[i].model_copy(update={"fees": share})
+            sources[i] = "statement"
+        scales.append((day, None if mine is None else str(mine), str(his)))
+
+    start, table_rows, _raw = rates.load()
+    as_of = max(r.added for r in table_rows if given.as_of is None or r.added <= given.as_of)
+    brokers = sorted({t.broker for t in trips})
+    provenance = json.dumps({
+        "rate_table_as_of": as_of.isoformat(),
+        "rate_table_starts": start.isoformat(),
+        "brokerage": {
+            b: ({"plan": p.name, "read_on": p.read_on} if (p := brokerage_presets.presets().get(b))
+                else None)
+            for b in brokers
+        },
+        "own_per_order": None if given.own_per_order is None else str(given.own_per_order),
+        "orders_counted": {b: ("order id" if b == "groww" else "one per entry and one per exit")
+                           for b in brokers},
+    }, sort_keys=True)
+    return (priced, tuple(sources), sources.count("not_priced"), provenance, tuple(scales))
+
 
 def plan_import(
     text: str,
