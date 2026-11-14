@@ -211,7 +211,7 @@ def day_link(iso_date: str):
 
 def identifier(value):
     """An identifier a trader may quote back - a version hash, an adapter name - written as text,
-    never as a figure. A short git hash is all digits about one time in 27 (6145022), and as a
+    never as a figure. A short git hash is all digits about one time in 27 (6145022, noqa: figure), and as a
     bare value it would read, and be checked, as a number (TICKET-952)."""
     from services.production.api.figures import Written
     return Written(value)
