@@ -115,6 +115,8 @@ FACTORS: tuple[Factor, ...] = (
     F("Results", "Best and worst trades", K.ONLY_AFTER, S.WORKED_OUT, facts=("money",)),
     F("Results", "Wins, losses and break-even", K.ONLY_AFTER, S.WORKED_OUT, filters=("result",),
       facts=("math",)),
+    F("Results", "First half of a book's days against its second", K.ONLY_AFTER, S.WORKED_OUT,
+      filters=("half",), facts=("hidden",)),
     F("Results", "Your result over time", K.ONLY_AFTER, S.IN_YOUR_FILE,
       checks=("S11", "S12")),
     F("Results", "Where your results come from, cell by cell", K.ONLY_AFTER,

@@ -260,7 +260,7 @@ def test_continue_moves_to_the_first_page_not_yet_read(client, engine):
 
 
 def test_a_view_kept_under_an_old_key_counts(client, engine):
-    read(engine, "fx", "worst-days", "best-worst-trades")  # the long page's key for money
+    read(engine, "fx", "hidden", "worst-days", "best-worst-trades")  # the long page's key for money
     assert continues(client.get("/mirror").text) == [
         ("/mirror/fact/math", f"Continue: {TITLE['math']}")]
 
@@ -333,13 +333,13 @@ def test_the_busiest_day_offers_that_days_questions(demo):
 
 
 def test_the_reveal_goes_on_to_the_report():
-    """Its one way on is the report's first page, from scope_map; Limits left the walk. Read from
+    """Its one way on is the days its button names, by key (TICKET-910); Limits left the walk. Read from
     the template and the route: in a test the reveal waits behind the guess."""
     template = (TEMPLATES / "reveal.html").read_text(encoding="utf-8")
     assert 'href="/budget"' not in template and "/eligibility" not in template
     assert "worst_href" in template
     route = Path("services/production/api/routes_reveal.py").read_text(encoding="utf-8")
-    assert "worst_href=SM.fact_href(SM.PAGES[0].key)" in route
+    assert 'worst_href=SM.fact_href("worst-days")' in route  # by key, so a reorder cannot move it (TICKET-910)
 
 
 def test_limits_no_longer_send_on_to_the_checks_page(client):
