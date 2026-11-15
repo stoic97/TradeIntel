@@ -41,6 +41,13 @@ jobs:
           fi
           echo "boundary clean"
 
+      # PyTensor links no BLAS on a bare runner, which changes summation order and
+      # threading and moves a sampler's trajectory even under a fixed seed. Two
+      # marginal research results landed on the wrong side of their thresholds
+      # because of it: B2's p_hold and tau_day's r_hat. Pin the numerics.
+      - name: BLAS for PyTensor
+        run: sudo apt-get update && sudo apt-get install -y libopenblas-dev
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:

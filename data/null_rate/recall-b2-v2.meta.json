@@ -1,0 +1,15 @@
+{
+  "chains": 4,
+  "code_commit": "e66f34f7f64c6e218221d0a8da3a93e6f3e2407b",
+  "code_dirty": false,
+  "draws": 1000,
+  "n_adversarial": 0,
+  "n_clean": 0,
+  "numpy": "2.4.6",
+  "planted": true,
+  "python": "3.11.17",
+  "seed": 20261010,
+  "version": 2,
+  "warmup": 1000,
+  "window_days": 90
+}
