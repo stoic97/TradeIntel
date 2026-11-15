@@ -1,0 +1,37 @@
+# Brokerage presets, one per broker (TICKET-912).
+#
+# Brokerage is the one charge that is not statutory: it is the broker's own price, so it
+# is not in rates.yaml. Each preset below is the broker's published plan as it read on
+# `read_on`, with the page it was read from. The trader can change it (gate 2).
+#
+# Ruled 14 Nov 2026 (founder, TICKET-912 Q2):
+# - The published plan is the preset from 1 Oct 2024 onward, where the rate table starts;
+#   before that nothing is applied (a trade is fully priced or not priced). Neither broker
+#   publishes a dated history of its plans, and the page says it is the broker's published
+#   plan, not his statement.
+# - Per executed order, never per row. Groww's export carries the order id; Dhan's doesn't,
+#   so a Dhan trade counts one order per entry and one per exit of each leg.
+#
+# A plan is `flat` rupees per executed order, optionally capped at `pct` of the order's
+# value ("whichever is lower"), and optionally floored at `min` (itself no more than
+# `min_pct` of the order's value). Every figure is a quoted string, read as a Decimal.
+# The keys are the brokers as the adapters name them (`Fill.broker`).
+brokers:
+  dhan:
+    name: Dhan
+    read_on: "2026-11-14"
+    source: "dhan.co/pricing, and Dhan's help article 'What are the trading / investing charges for Dhan?'"
+    plans:
+      OPT: {flat: "20"}
+      FUT: {flat: "20", pct: "0.0003"}
+      EQ_INTRADAY: {flat: "20", pct: "0.0003"}
+      EQ_DELIVERY: {flat: "0"}
+  groww:
+    name: Groww
+    read_on: "2026-11-14"
+    source: "groww.in/pricing/futures-and-options, and Groww's help article 'How much is the brokerage?'"
+    plans:
+      OPT: {flat: "20"}
+      FUT: {flat: "20"}
+      EQ_INTRADAY: {flat: "20", pct: "0.001", min: "5", min_pct: "0.025"}
+      EQ_DELIVERY: {flat: "20", pct: "0.001", min: "5", min_pct: "0.025"}
