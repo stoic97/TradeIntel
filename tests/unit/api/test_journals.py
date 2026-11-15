@@ -136,11 +136,26 @@ def test_the_list_shows_five_at_most_and_counts_the_rest(engine, client):
     assert "catch-up" in body.lower() or "earlier journal" in body.lower()
 
 
-def test_the_catch_up_list_holds_everything_the_surface_does_not(engine, client):
+def _every_month(client) -> str:
+    page = client.get("/journals/catch-up").text
+    html = page
+    while (prev := re.search(r'<a\b[^>]*\brel="prev"[^>]*>', page)):
+        page = client.get(re.search(r'href="([^"]+)"', prev.group(0)).group(1).replace("&amp;", "&")).text
+        html += page
+    return html
+
+
+def test_a_journal_on_both_pages_is_one_day_with_one_destination(engine, client):
+    """TICKET-906: the calendar holds every day, so the five are on both pages.
+
+    This said "no Journal is on both lists", a proxy for no confusing duplication while
+    both were lists. The guard it kept is now one day, one destination: a day on Your
+    Journals leads to the same Journal from the calendar, and the calendar holds them all.
+    """
     shown = _linked(client.get("/journals").text)
-    listed = _linked(client.get("/journals/catch-up").text)
-    assert not shown & listed, "no Journal is on both lists"
-    assert shown | listed == {j.id for j in _journals(engine)}, "and none is on neither"
+    listed = _linked(_every_month(client))
+    assert shown <= listed, "every day on Your Journals is on the calendar, to the same Journal"
+    assert listed == {j.id for j in _journals(engine)}, "and the calendar holds every Journal"
 
 
 def test_a_journal_renders_the_prose_the_generator_wrote(engine, client):

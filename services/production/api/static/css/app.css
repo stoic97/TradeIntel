@@ -378,3 +378,22 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .home__book-years { display: block; }
 .replay__chart { width: 100%; height: auto; margin: var(--space-4) 0; color: var(--color-navy); }
 .rules__chips { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
+
+/* The Journal calendar (TICKET-906). The kit draws 18c as a list; the ticket makes it a month.
+   Seven columns fit a 390 px phone: 44 px cells, the touch-target floor, with 6 px gaps. A day
+   with a Journal is a link; worth a look is a ring and answered a dot, and each cell also says
+   so in words for a screen reader, so neither rests on colour alone. */
+.calendar { margin-top: var(--space-6); }
+.calendar__month { margin-bottom: var(--space-2); }
+.calendar__nav, .journal__days { display: flex; justify-content: space-between; gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); }
+.calendar__head, .calendar__week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.calendar__head { margin-bottom: var(--space-1); font-size: 11px; line-height: 16px; text-align: center; color: var(--color-faint); }
+.calendar__week + .calendar__week { margin-top: 6px; }
+.calendar__day { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 8px; font-size: 14px; color: var(--color-faint); text-decoration: none; }
+a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
+.calendar__day--worth, .calendar__key--worth { box-shadow: inset 0 0 0 1.5px var(--color-action-blue); }
+.calendar__day--answered::after { content: ""; position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--color-ink); }
+.calendar__legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-4); }
+.calendar__key { display: inline-block; width: 12px; height: 12px; margin-right: 4px; border-radius: 3px; vertical-align: middle; }
+.calendar__key--answered { width: 5px; height: 5px; border-radius: 50%; background: var(--color-ink); }
+.remember__actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }

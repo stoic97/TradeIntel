@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from services.production.journal import month_view
 from services.shared.schemas import scope_v1 as s
 from tests.unit.api.templating import TEMPLATES, template_env
 
@@ -68,7 +69,14 @@ CONTEXT = {
                    journal(2, "2026-09-07", "2026-09-07")],
         "total": 8, "catch_up_count": 3},
     "journals.html#none": {"latest": [], "total": 0, "catch_up_count": 0},
-    "journals_catch_up.html": {"journals": [journal(1, "2026-09-01", "2026-09-02")]},
+    # TICKET-906: the catch-up list is a month calendar. One day worth a look and answered,
+    # and a two-day Journal in the strip under the grid.
+    "journals_catch_up.html": {
+        "shown": month_view.month(["2026-09-08"], None),
+        "days": {"2026-09-08": journal(3, "2026-09-08", "2026-09-08")},
+        "offered": {3: "worth"}, "answered": {"2026-09-08"},
+        "strip": [journal(1, "2026-09-01", "2026-09-02")],
+        "prev_title": None, "next_title": None},
     "journal.html": {
         "journal": journal(3, "2026-09-08", "2026-09-08", version=2),
         "paragraphs": ["You took 8 trades.", "Your worst came at 10:00."],
@@ -95,8 +103,12 @@ SAID = {
     "journals.html#none": (
         "Journals Your Journals Your Journals start with your first upload. Send us a tradebook and one is written for every complete trading day in it."
     ),
+    # TICKET-906 (gate 1): the catch-up list became a month calendar, so its sentence about
+    # "every other day, newest first" went - the calendar holds every day. New words, pending
+    # D9: the month's name, Mon-Sun, "worth a look" / "answered" (read aloud on a cell) and
+    # the two key labels. "Back to your Journals" is the page's own earlier link.
     "journals_catch_up.html": (
-        "Journals Earlier Journals Everything behind the five most recent, newest first. Back to the latest. 01 Sep 2026 – 02 Sep 2026"
+        "Journals Earlier Journals Back to your Journals. September 2026 Mon Tue Wed Thu Fri Sat Sun 1 2 3 4 5 6 7 8, worth a look, answered 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 Worth a look Answered 01 Sep 2026 – 02 Sep 2026"
     ),
     "journal.html": (
         "Journal 08 Sep 2026 Your Journals Version 2. A later upload changed this period. The earlier version is kept. You took 8 trades. Your worst came at 10:00. Your own note Nothing on this page is required. Anything you want to add about this period? tired Save The trades, one at a time In the order you opened them. Result is gross — your export carries no charges. Trade 1 — −₹1,200 Where was your stop? What was the trade? Was the stop on the chart when you entered? yes / no Save One question, and it changes nothing about your account Would you pay for this? Yes No Maybe If not, what would change that? Send"

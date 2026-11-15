@@ -1,13 +1,40 @@
-{#- Earlier Journals (kit screen 18c), in the app's words. -#}
+{#- Every Journal, a month at a time (kit screen 18c, TICKET-906). One date, one link, one
+    state: the cell carries what days_worth_a_look.offer said and whether he has answered.
+    A week or ten-trade Journal is not a day, so it is listed under the grid. New words
+    (weekdays, the month's name, the two key labels) wait for D9. -#}
 {% extends "layout.html" %}
 {% set nav = "journal" %}
 {% block content %}
   <p class="label label--plain">Journals</p>
   <h1 class="title fact__title">Earlier Journals</h1>
-  {%- if started %}
-  <p class="body">Every other day, newest first. <a class="link" href="/journals">Back to your Journals</a>.</p>
-  {%- else %}
-  <p class="body">Everything behind the five most recent, newest first. <a class="link" href="/journals">Back to the latest</a>.</p>
+  <p class="body"><a class="link" href="/journals">Back to your Journals</a>.</p>
+  {%- if shown %}
+  <section class="calendar" aria-label="{{ shown.title }}">
+    <h2 class="card-title calendar__month">{{ shown.title }}</h2>
+    {%- if shown.prev or shown.next %}
+    <p class="body-small calendar__nav">{% if shown.prev %}<a class="link" rel="prev" href="/journals/catch-up?month={{ shown.prev }}">‹ {{ prev_title }}</a>{% endif %}{% if shown.next %}<a class="link" rel="next" href="/journals/catch-up?month={{ shown.next }}">{{ next_title }} ›</a>{% endif %}</p>
+    {%- endif %}
+    <div class="calendar__head" aria-hidden="true"><span>Mon</span> <span>Tue</span> <span>Wed</span> <span>Thu</span> <span>Fri</span> <span>Sat</span> <span>Sun</span></div>
+    {%- for week in shown.weeks %}
+    <div class="calendar__week">
+      {%- for d in week %}
+      {%- if d is none %}
+      <span class="calendar__day calendar__day--outside"></span>
+      {%- elif d in days %}
+      {%- set j = days[d] %}{% set state = offered[j.id] %}
+      <a class="calendar__day calendar__day--{{ state }}{% if d in answered %} calendar__day--answered{% endif %}" href="/journals/{{ j.id }}" data-day="{{ d }}" data-state="{{ state }}"{% if d in answered %} data-answered="yes"{% endif %}><span class="num">{{ shown.number(d) }}</span>{% if state == "worth" %}<span class="visually-hidden">, worth a look</span>{% endif %}{% if d in answered %}<span class="visually-hidden">, answered</span>{% endif %}</a>
+      {%- else %}
+      <span class="calendar__day calendar__day--none" data-day="{{ d }}"><span class="num">{{ shown.number(d) }}</span></span>
+      {%- endif %}
+      {%- endfor %}
+    </div>
+    {%- endfor %}
+    <p class="body-small calendar__legend"><span class="calendar__key calendar__key--worth" aria-hidden="true"></span>Worth a look <span class="calendar__key calendar__key--answered" aria-hidden="true"></span>Answered</p>
+  </section>
+  {%- if strip %}
+  {% with latest = strip, reasons = None %}{% include "_journal_index.html" %}{% endwith %}
   {%- endif %}
-  {% with latest = journals %}{% include "_journal_index.html" %}{% endwith %}
+  {%- else %}
+  <p class="body">Your Journals start with your first upload. <a class="link" href="/upload">Send us a tradebook</a> and one is written for every complete trading day in it.</p>
+  {%- endif %}
 {% endblock %}

@@ -16,6 +16,7 @@ JOURNALS_ON_SURFACE = 5
 WTP_DAYS_SINCE_FIRST_UPLOAD = 14
 WTP_PRICE_INR = 500
 DEFAULT_TRIPS_PER_JOURNAL = 10
+NEW_DAY_WITHIN_DAYS = 7
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_UPLOAD_ROWS = 50_000
@@ -56,6 +57,15 @@ ARGUMENTS: dict[str, str] = {
         "When a trader's days are too thin for a daily Journal, ten trades is a "
         "stretch of trading he can remember as a stretch -- long enough to hold a "
         "pattern, short enough that the first trade in it is still recent."
+    ),
+    "NEW_DAY_WITHIN_DAYS": (
+        "Arbitrary, and labelled so (the founder's ruling on TICKET-906, 13 Nov 2026). A "
+        "day within seven calendar days of today asks its questions straight away; an "
+        "older one first asks whether he remembers it, because a trader cannot honestly "
+        "answer about a Tuesday eight months ago. Seven is a trading week and its weekend. "
+        "It is measured from today, not the export date, so a stale upload only makes the "
+        "prompt more careful. Every Yes and No is kept with the day's age, which is how "
+        "this number gets checked, and changed if three or fourteen is the right window."
     ),
     "MAX_UPLOAD_BYTES": (
         "Uploads are processed synchronously (ADR 007), so a pathological file would "
