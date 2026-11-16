@@ -91,7 +91,7 @@ FACTORS: tuple[Factor, ...] = (
     # Sequence
     F("Sequence", "Trade number in the day", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B5",)),
     F("Sequence", "Last trade's result", K.AT_CLICK, S.WORKED_OUT, checks=("B2",),
-      facts=("down",)),
+      facts=("down",), filters=("after", "then")),
     F("Sequence", "Time since the last close", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B1",)),
     F("Sequence", "The day so far", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B12",)),
     F("Sequence", "Same strike again", K.AT_CLICK, S.IN_YOUR_FILE),

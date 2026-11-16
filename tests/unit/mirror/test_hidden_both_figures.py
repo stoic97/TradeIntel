@@ -131,19 +131,20 @@ def _view(minimum: int = 2) -> tuple[dict, dict]:
     return ctx, {p["state"]: p for p in rows}
 
 
-def _ids(obj) -> set[str]:
-    if isinstance(obj, mx.Trip):
-        return {obj.trip_id}
-    if isinstance(obj, dict):
-        found = {obj["trip_id"]} if isinstance(obj.get("trip_id"), str) else set()
-        return found.union(*(_ids(v) for v in obj.values()))
-    if isinstance(obj, (list, tuple, set, frozenset)):
-        return set().union(*(_ids(v) for v in obj))
-    return set()
-
-
 def _listed(ctx: dict, query: dict) -> set[str]:
-    return _ids(TL.listing("hidden", ctx, query, {}))
+    """The trades the list shows: the ones listing hands scope_map.groups to draw."""
+    shown: list[mx.Trip] = []
+    real = S.groups
+
+    def spy(key, ctx_, only=None):
+        shown.extend(only or [])
+        return real(key, ctx_, only=only)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(S, "groups", spy)
+        listed = TL.listing("hidden", ctx, query, {})
+    assert listed["shown"] == len(shown)
+    return {t.trip_id for t in shown}
 
 
 class _Text(HTMLParser):
@@ -231,13 +232,16 @@ def test_the_figures_are_decided_once_per_request():
 
 def test_each_figure_reads_as_a_fact_with_its_label_covered():  # gate 1
     _, p = _view()
-    assert p["win"]["record_words"] == "net on 6 trades opened right after a win that day"
-    assert p["win"]["then_words"] == (
+    # the counts inside the words are figures too, so the words are read as the page reads them
+    assert _text(str(p["win"]["record_words"])) == (
+        "net on 6 trades opened right after a win that day")
+    assert _text(str(p["win"]["then_words"])) == (
         "net on 1 trade opened right after a win that day while your earlier ones after a win,"
         " 2 or more, were down overall")
     assert formatting.rupees(Decimal(65)) in str(p["win"]["record"])
     assert formatting.rupees(Decimal(200)) in str(p["win"]["then"])
-    assert p["loss"]["record_words"] == "net on 1 trade opened right after a loss that day"
+    assert _text(str(p["loss"]["record_words"])) == (
+        "net on 1 trade opened right after a loss that day")
     assert p["loss"]["then"] == "not enough trades yet" and not p["loss"]["then_words"]
 
 

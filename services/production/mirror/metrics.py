@@ -15,17 +15,18 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from bisect import bisect_left
 from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from functools import lru_cache
-from itertools import pairwise
+from itertools import accumulate, pairwise
 from math import ceil
 from statistics import median
 from typing import Any
 
-from services.shared.conditions import b2_shuffle, halves_shuffle
+from services.shared.conditions import b2_shuffle, halves_shuffle, leave_out, previous_result
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
 
@@ -1868,4 +1869,91 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
         rows.append(BookHalves(book, len(book_trips), held.get(book, 0),
                                s.ResultState.COUNTED_FACT, one, two,
                                _half_counts(book, book_trips), change, control))
+    return rows
+
+
+# ---------- Both figures on the hiding page: previous result (TICKET-919) ----------
+
+THEN_MINIMUM = BOOK_ROW_MINIMUM
+"""How many earlier trades in a state, in the book and exited before the entry, there must be
+before the figure from only what was known then may count a trade. The value is the framework's
+minimum (framework_v1.yaml, minimums.condition: 30, marked arbitrary there), reused rather than
+invented; using it as this warm-up is new to TICKET-919 and is arbitrary (founder, 16 Nov 2026)."""
+
+PREVIOUS_STATES = ("win", "loss")
+"""The two states a previous result puts a trade in. A level previous result is neither."""
+
+
+@dataclass(frozen=True)
+class PreviousResult:
+    """One book's same-day trades after a win, or after a loss, set out two ways (TICKET-919).
+
+    On the record: every trade in the state. With only what was known then: the trades in it
+    opened while the state's earlier trades in the book, exited before the entry, numbered
+    ``minimum`` or more and were down overall. Each figure is set against random sets of the same
+    size from the book's trades that have a previous result (leave_out). Plain counts and their
+    control: never a finding, a saving or a cost. ``reached`` is False while no trade had
+    ``minimum`` earlier ones, and then there is no second figure and no band for it."""
+
+    book: str
+    state: str
+    record_ids: tuple[str, ...]
+    record_net: Decimal
+    record_band: leave_out.ChanceBand
+    reached: bool
+    then_ids: tuple[str, ...] = ()
+    then_net: Decimal = Decimal(0)
+    then_band: leave_out.ChanceBand | None = None
+    minimum: int = THEN_MINIMUM
+
+
+def _result_of(net: Decimal) -> str:
+    return "win" if net > 0 else "loss" if net < 0 else "level"
+
+
+def previous_states(trips: list[Trip], across_books: bool = True) -> dict[str, str]:
+    """Each same-day trade's previous result that day, "win", "loss" or "level"; a trade with
+    none is left out. Until TICKET-918 rules, the prior is read across books (across_books)."""
+    groups = [same_day_trips(trips)] if across_books else list(_same_day_by_book(trips).values())
+    out: dict[str, str] = {}
+    for group in groups:
+        priors = previous_result.previous_of(b2_observations(group))
+        for trip, prior in zip(group, priors, strict=True):
+            if prior is not None:
+                out[trip.trip_id] = _result_of(group[prior].net)
+    return out
+
+
+def previous_result_figures(trips: list[Trip], minimum: int = THEN_MINIMUM,
+                            across_books: bool = True) -> list[PreviousResult]:
+    """Each book's trades after a win and after a loss, on the record and with only what was
+    known then, each with its band. A state no trade in the book was in has no row."""
+    states = previous_states(trips, across_books)
+    rows: list[PreviousResult] = []
+    for book, book_trips in sorted(_same_day_by_book(trips).items()):
+        pool = [t for t in sorted(book_trips, key=lambda t: (t.entry_ts, t.trip_id))
+                if t.trip_id in states]
+        nets = [float(t.net) for t in pool]
+        for state in PREVIOUS_STATES:
+            in_state = [t for t in pool if states[t.trip_id] == state]
+            if not in_state:
+                continue
+            by_exit = sorted(in_state, key=lambda t: (t.exit_ts, t.trip_id))
+            exits = [t.exit_ts for t in by_exit]
+            earlier_net = list(accumulate((t.net for t in by_exit), initial=Decimal(0)))
+            picked, reached = [], False
+            for trip in in_state:
+                earlier = bisect_left(exits, trip.entry_ts)  # exited before this entry
+                if earlier >= minimum:
+                    reached = True
+                    if earlier_net[earlier] < 0:
+                        picked.append(trip)
+            record_net = sum((t.net for t in in_state), Decimal(0))
+            then_net = sum((t.net for t in picked), Decimal(0))
+            rows.append(PreviousResult(
+                book, state, tuple(t.trip_id for t in in_state), record_net,
+                leave_out.band_of(nets, float(record_net), len(in_state)), reached,
+                tuple(t.trip_id for t in picked), then_net,
+                leave_out.band_of(nets, float(then_net), len(picked)) if reached else None,
+                minimum))
     return rows

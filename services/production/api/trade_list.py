@@ -120,6 +120,39 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+PREVIOUS_OF = "previous result that day"
+"""The lookup's key for each same-day trade's previous result that day (TICKET-919), read from
+the record that decided the hiding page's figures, never worked out again here."""
+
+CHOSEN = "opened while earlier ones were down"
+"""The lookup's key for the trades the figure from only what was known then counted."""
+
+AFTERS = (("win", "After a win"), ("loss", "After a loss"))
+THENS = (("yes", "Opened while earlier ones were down"), ("no", "The others"))
+
+
+def _previous_lookup(ctx: dict) -> dict:
+    rows = ctx.get("previous_result", ())
+    return {PREVIOUS_OF: {i: r.state for r in rows for i in r.record_ids},
+            CHOSEN: {i for r in rows for i in r.then_ids}}
+
+
+def _after(t: mx.Trip, lookup: dict) -> Choice | None:
+    state = lookup.get(PREVIOUS_OF, {}).get(t.trip_id)
+    for place, (value, label) in enumerate(AFTERS):
+        if state == value:
+            return place, value, label
+    return None
+
+
+def _then(t: mx.Trip, lookup: dict) -> Choice | None:
+    if t.trip_id not in lookup.get(PREVIOUS_OF, {}):
+        return None
+    place = 0 if t.trip_id in lookup.get(CHOSEN, set()) else 1
+    value, label = THENS[place]
+    return place, value, label
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
@@ -136,6 +169,8 @@ FILTERS = (
     Filter("hour", "Hour opened", _hour),
     Filter("year", "Year", _year),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    Filter("after", "Previous result that day", _after, only=frozenset({"hidden"})),
+    Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
 )
 
 
@@ -148,7 +183,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
+    lookup = {**expiries, HALF_OF: mx.half_of(behind), **_previous_lookup(ctx)}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
