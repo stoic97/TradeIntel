@@ -94,6 +94,7 @@ class Trip:
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
     premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
+    point_value: Decimal | None = None  # rupees a one-point move makes on one lot, today's (TICKET-907)
 
     @property
     def is_win(self) -> bool:
@@ -1833,6 +1834,35 @@ def capital_shares(trips: list[Trip], capital: Decimal | None) -> CapitalShares:
         premium_percent=share(premium),
         state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
     )
+
+
+@dataclass(frozen=True)
+class PointsPerLot:
+    """A number in points on one lot of one instrument he trades (TICKET-907)."""
+
+    symbol: str
+    points: Decimal
+    trades: int
+
+
+def points_per_lot(trips: list[Trip], amount: Decimal) -> list[PointsPerLot]:
+    """The number divided by what a point is worth on one lot, per instrument, most traded first.
+
+    By symbol, not by book: CRUDEOIL and CRUDEOILM are one book but ten times apart a point.
+    A share bought outright has no lot, and a trip with no point value has nothing to divide
+    by, so neither has a row. To two places, trailing zeros dropped.
+    """
+    if amount <= 0:
+        raise ValueError("a number to count against is more than zero")
+    by_symbol: dict[str, list[Trip]] = {}
+    for t in trips:
+        if t.point_value and not (t.lines and t.lines[0].segment == "EQ"):
+            by_symbol.setdefault(t.symbol, []).append(t)
+    rows = [
+        PointsPerLot(symbol=sym, points=_trim(_round(amount / ts[0].point_value)), trades=len(ts))
+        for sym, ts in by_symbol.items()
+    ]
+    return sorted(rows, key=lambda r: (-r.trades, r.symbol))
 
 
 def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:

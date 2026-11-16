@@ -319,6 +319,7 @@ def load_for(sess: Session, trader: m.Trader,
             lines=tuple(_line(leg) for leg in legs),
             uncapped=any(leg.uncapped for leg in legs),
             premium=_premium(legs),
+            point_value=profile_for(first).currency_per_point,
         ))
     # Read off each trip's own day, so it holds for whatever trips were built above.
     return [
