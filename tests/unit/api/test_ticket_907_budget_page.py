@@ -25,16 +25,11 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_spread_upload import tradebook
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    CSRF,
-    client,
-    engine,
-    upload,
-)
+from tests.helpers.spread_upload import tradebook
+from tests.helpers.upload import CSRF, upload
 
 
-def _record(client, **extra):  # noqa: F811
+def _record(client, **extra):
     token = CSRF.search(client.get("/budget").text).group(1)
     client.post(
         "/budget",
@@ -49,14 +44,14 @@ def _record(client, **extra):  # noqa: F811
 
 
 @pytest.fixture()
-def loaded(client):  # noqa: F811
+def loaded(client):
     assert upload(client, content=tradebook()).status_code == 303
     _record(client)
     return client
 
 
 @pytest.fixture()
-def with_capital(client):  # noqa: F811
+def with_capital(client):
     assert upload(client, content=tradebook()).status_code == 303
     _record(client, capital_amount="100000")
     return client
@@ -66,7 +61,7 @@ def text(html: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
-def trips_of(engine):  # noqa: F811
+def trips_of(engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         return loader.load_for(sess, trader)[0]
@@ -101,7 +96,7 @@ def test_a_number_that_is_not_one_reads_nothing(loaded, bad):
     assert "same-day trades lost more than" not in text(page.text)
 
 
-def test_the_slider_is_drawn_over_his_own_losses(loaded, engine):  # noqa: F811
+def test_the_slider_is_drawn_over_his_own_losses(loaded, engine):
     html = loaded.get("/budget").text
     assert 'type="range"' in html and 'name="against"' in html
     assert 'hx-get="/budget/against"' in html
@@ -111,7 +106,7 @@ def test_the_slider_is_drawn_over_his_own_losses(loaded, engine):  # noqa: F811
     assert strip.count("<rect") == len(losses)
 
 
-def test_points_per_lot_for_each_instrument_he_trades(loaded, engine):  # noqa: F811
+def test_points_per_lot_for_each_instrument_he_trades(loaded, engine):
     page = text(loaded.get("/budget?against=400").text)
     rows = mx.points_per_lot(trips_of(engine), mx.Decimal("400"))
     assert rows, "the tradebook's instrument has a profile"
@@ -138,7 +133,7 @@ def test_his_deepest_fall_as_a_share_of_his_capital(with_capital):
     )
 
 
-def test_his_biggest_premium_is_shown_when_he_bought_an_option(with_capital, engine):  # noqa: F811
+def test_his_biggest_premium_is_shown_when_he_bought_an_option(with_capital, engine):
     shares = mx.capital_shares(trips_of(engine), mx.Decimal("100000"))
     page = text(with_capital.get("/budget").text)
     if shares.premium:
