@@ -47,9 +47,10 @@ tar -czf "$DEST/files-$STAMP.tar.gz" -C "$DATA" files
 
 chmod 600 "$DEST/scope-$STAMP.db" "$DEST/files-$STAMP.tar.gz"
 
-# By age, across the whole directory: the nightly copies, the restore points a deploy
-# takes, and anything else ever left here are all copies of the data.
-find "$DEST" -type f -mmin "+$((KEEP_DAYS * 1440))" -delete
+# By age, every file sitting in this directory: the nightly copies, the restore points a
+# deploy takes, and anything else ever left here are all copies of the data. -maxdepth 1
+# bounds it, so a SCOPE_BACKUPS pointed somewhere wrong cannot recurse through a tree.
+find "$DEST" -maxdepth 1 -type f -mmin "+$((KEEP_DAYS * 1440))" -delete
 
 echo "backed up to $DEST at $STAMP; keeping $KEEP_DAYS days"
 

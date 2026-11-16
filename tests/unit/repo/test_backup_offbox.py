@@ -78,6 +78,9 @@ def test_every_copy_is_gone_inside_the_30_days_the_consent_text_promises():
     assert finds and all("-name" not in line for line in finds), (
         "the sweep goes by age over the whole directory, restore points and stray copies too"
     )
+    assert all("-maxdepth 1" in line for line in finds), (
+        "only files sitting in the backup directory: a wrong SCOPE_BACKUPS must not recurse"
+    )
 
 
 def test_the_restore_drill_restores_from_the_off_box_copy():
