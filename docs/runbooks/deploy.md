@@ -6,8 +6,8 @@ person has checked on staging, never `main`, and every deploy is logged in
 `docs/runbooks/deploys.md`.*
 
 ADR-007 fixes the shape: one DigitalOcean Basic Droplet in Bangalore, under a
-product-only account, Caddy and Let's Encrypt in front, systemd behind, daily
-droplet backups. Everything below follows from that.
+product-only account, Caddy and Let's Encrypt in front, systemd behind, weekly
+droplet backups (ADR-007, amended 2026-11-16). Everything below follows from that.
 
 **First run: 21 October 2026**, on the cheapest Basic droplet (512 MB, 10 GB) in
 BLR1, which is comfortable for a few dozen traders. Everything below has
@@ -24,16 +24,24 @@ correct a line or two anyway, and commit the correction.
 
 ## 1. The box
 
-Basic droplet, Bangalore (BLR1), Ubuntu LTS. Enable **daily backups** when you
-create it — the consent text's 30-day sentence depends on them existing.
+Basic droplet, Bangalore (BLR1), Ubuntu LTS. Turn on **backups** when you create
+it. The setting, from the droplet's Backups page:
+
+DigitalOcean droplet backups: weekly, the four most recent kept
+
+Each weekly image is deleted when the fourth after it is taken, so it is gone within
+the 30 days the consent text promises. Scope's own nightly copies are in section 5.
 
     apt update && apt upgrade -y
-    apt install -y git curl ufw sqlite3 debian-keyring debian-archive-keyring apt-transport-https
+    apt install -y git curl ufw sqlite3 s3cmd debian-keyring debian-archive-keyring apt-transport-https
     ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable
 
 `sqlite3` is not optional: `backup.sh` takes the backup with the sqlite CLI's
 `.backup`, and without it `cron.daily` fails with "command not found" — a
 backup that silently never happens.
+
+`s3cmd` is not optional either: it carries each night's copy off the droplet
+(section 5).
 
 If `apt upgrade` asks about `sshd_config`, **keep the version currently
 installed**. The image's SSH config is deliberately key-only; the maintainer's
@@ -137,11 +145,50 @@ Sign-up is open at the site's front door, so there is nothing to mint.
 
 ## 5. Backups and the drill
 
-    cp deploy/backup.sh /etc/cron.daily/scope-backup
+Three copies exist besides the live data, and each is gone within the 30 days the
+consent text promises:
 
-Run `deploy/restore-drill.sh` by hand the first time, then monthly. It restores
-the latest backup into `/tmp` and decrypts one stored file with the live key —
-the part a database-only check misses.
+- DigitalOcean droplet backups: weekly, the four most recent kept
+- Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30
+
+`deploy/backup.sh` makes the nightly copy in `/var/backups/scope`, encrypts the
+database copy with the file key (the stored files are encrypted already), and uploads
+both to a Spaces bucket in BLR1 under this product's account. The key never leaves
+`/etc/scope/`. A copy goes once it is 29 days old, on the droplet and in the bucket;
+the bucket's lifecycle rule is the backstop. Without the bucket's config the script
+still makes the local copy, then exits non-zero.
+
+Once, as root on the droplet. Create the bucket first (Spaces, BLR1, this account,
+private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
+
+    cd /srv/scope || exit 1
+    BUCKET=
+    apt install -y s3cmd
+    s3cmd --configure -c /etc/scope/s3cfg
+    chmod 600 /etc/scope/s3cfg
+    printf 'SCOPE_SPACES=s3://%s/scope\n' "$BUCKET" > /etc/scope/spaces.env && chmod 600 /etc/scope/spaces.env
+    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30
+    s3cmd -c /etc/scope/s3cfg getlifecycle "s3://$BUCKET"
+    cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup
+    /etc/cron.daily/scope-backup
+    s3cmd -c /etc/scope/s3cfg ls "s3://$BUCKET/scope/"
+
+`s3cmd --configure` asks for the access key and secret; give `blr1.digitaloceanspaces.com`
+as the endpoint and `%(bucket)s.blr1.digitaloceanspaces.com` as the bucket template, no
+encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Days>30</Days>`; the
+backup prints "backed up to" and then "copied off the droplet"; `ls` lists
+`scope-<stamp>.db.enc` and `files-<stamp>.tar.gz`. `cron.daily` runs the installed copy,
+not the checkout, so every deploy re-installs a changed `backup.sh` (the release train,
+step d).
+
+Run `deploy/restore-drill.sh` by hand the first time, then monthly, alternating with
+`--from-spaces`, which restores the newest copy in the bucket. It restores into `/tmp`
+and decrypts one stored file with the live key — the part a database-only check
+misses. It reads the key from the environment:
+
+    cd /srv/scope || exit 1
+    set -a; . /etc/scope/scope.env; set +a
+    deploy/restore-drill.sh --from-spaces
 
 ## Staging
 
@@ -252,6 +299,7 @@ with `git switch main`.
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl restart scope
 
@@ -268,14 +316,16 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl start scope
 
 Expected (Path B): `integrity_check` prints `ok`. If it does not, `systemctl start scope`
 on the old code (`git checkout "$LIVE"` first if you already moved) and stop the train.
 
-Either path: a changed `scope.service` is not applied by checking out code. The `cmp`
-line installs it only when it differs, and says `unit updated` when it did.
+Either path: a changed `scope.service` or `backup.sh` is not applied by checking out
+code (`cron.daily` runs its own copy). The two `cmp` lines install each only when it
+differs, and say `unit updated` or `backup script updated` when they did.
 
 ### e. Check production
 
@@ -320,6 +370,7 @@ The previous tag is the second line of:
     git checkout --quiet "$PREV"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl restart scope
 
@@ -336,6 +387,7 @@ uploads) is lost; say so in the log.
     git checkout --quiet "$PREV"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl start scope
 

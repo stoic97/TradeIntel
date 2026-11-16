@@ -1,6 +1,6 @@
 # ADR 007: Scope v1 runtime — one Python process, server-rendered, SQLite, one droplet
 
-**Status.** Accepted; amended 2026-11-05 (see Amendments, at the end). **Date.** 2026-10-16. **Deciders.** Founder/CEO, Engineering. **Design.** Project document `scope_v1_technical_design_v1.md` (v1.1); build plan `scope_v1_build_plan_v1.md`.
+**Status.** Accepted; amended 2026-11-05; amended 2026-11-16 (see Amendments, at the end). **Date.** 2026-10-16. **Deciders.** Founder/CEO, Engineering. **Design.** Project document `scope_v1_technical_design_v1.md` (v1.1); build plan `scope_v1_build_plan_v1.md`.
 
 ## Context
 
@@ -59,3 +59,21 @@ Under SR-011 an Accepted ADR is never edited: the Context and Decision above are
 *Recorded on 14 November 2026 (TICKET-931). TICKET-841 had first made this change by rewriting the
 Context and the Login row in place (`bc4e3fb`); SR-011 now forbids that, and the original text was
 restored above.*
+
+### 2026-11-16 — backups leave the droplet; the droplet is backed up weekly (TICKET-941)
+
+- **Hosting**, in the Decision: read "weekly droplet backups" for "daily droplet backups". The
+  consent review of 22 October 2026 found the server keeping weekly backups, and the data-flow
+  map has said so since; this ADR and the deploy runbook still said daily. The setting:
+  DigitalOcean droplet backups: weekly, the four most recent kept.
+- **An off-box copy** is added. Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30.
+  The bucket is DigitalOcean Spaces in Bangalore, under the same product-only account as the
+  droplet: the same host, not a new vendor. The database copy is encrypted with the file key
+  before it leaves; the stored files are encrypted already; the key stays in `/etc/scope/` and
+  the founder's password manager.
+- **Consequences**, the data-flow map: read "the droplet, its backups (DigitalOcean's weekly
+  images, and Scope's nightly copies on the droplet and in Spaces), Let's Encrypt (hostname
+  only), the trader's browser. Nothing else." for the first line.
+- The rest of the Decision is unchanged.
+
+*Recorded on 16 November 2026 (TICKET-941).*

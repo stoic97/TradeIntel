@@ -28,8 +28,14 @@ reaches is the database and the encrypted file store; see
 gone — the store is addressed by the hash of the file's contents, so the blob is
 shared. The deletion record says when this happened.
 
-**Backups are not reached by code.** They roll off within 30 days. Note the date
-the last backup containing him ages out, and check it on that date.
+**Backups are not reached by code.** They roll off within 30 days:
+
+- DigitalOcean droplet backups: weekly, the four most recent kept
+- Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30
+
+Note the date the last backup containing him ages out (the later of the two), and check
+it on that date: the droplet's Backups page, `/var/backups/scope`, and
+`s3cmd -c /etc/scope/s3cfg ls` on the bucket (deploy.md, section 5).
 
 ---
 
