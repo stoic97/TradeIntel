@@ -69,8 +69,9 @@ restored above.*
 - **An off-box copy** is added. Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30.
   The bucket is DigitalOcean Spaces in Bangalore, under the same product-only account as the
   droplet: the same host, not a new vendor. The database copy is encrypted with the file key
-  before it leaves; the stored files are encrypted already; the key stays in `/etc/scope/` and
-  the founder's password manager.
+  before it leaves; the stored files are encrypted already; the key is never uploaded to the
+  bucket. DigitalOcean's weekly images are of the whole disk, so they hold `/etc/scope/` too:
+  the same vendor, gone within 30 days.
 - **Consequences**, the data-flow map: read "the droplet, its backups (DigitalOcean's weekly
   images, and Scope's nightly copies on the droplet and in Spaces), Let's Encrypt (hostname
   only), the trader's browser. Nothing else." for the first line.

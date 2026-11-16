@@ -13,7 +13,8 @@
 # the encrypted files and the key that opens them is one theft, not two. The key
 # lives in /etc/scope/ and in the founder's password manager. The stored files are
 # encrypted already; the database copy is encrypted with the same key before it
-# leaves the droplet, and the key itself never leaves.
+# leaves the droplet, and this script never uploads the key. (DigitalOcean's weekly
+# images are of the whole disk, /etc/scope/ included: same vendor, gone within 30 days.)
 #
 # Install: cp deploy/backup.sh /etc/cron.daily/scope-backup (deploy.md, section 5;
 # every deploy re-installs a changed copy). The off-box copy needs /etc/scope/s3cfg
@@ -46,8 +47,9 @@ tar -czf "$DEST/files-$STAMP.tar.gz" -C "$DATA" files
 
 chmod 600 "$DEST/scope-$STAMP.db" "$DEST/files-$STAMP.tar.gz"
 
-find "$DEST" -name 'scope-*.db' -mmin "+$((KEEP_DAYS * 1440))" -delete
-find "$DEST" -name 'files-*.tar.gz' -mmin "+$((KEEP_DAYS * 1440))" -delete
+# By age, across the whole directory: the nightly copies, the restore points a deploy
+# takes, and anything else ever left here are all copies of the data.
+find "$DEST" -type f -mmin "+$((KEEP_DAYS * 1440))" -delete
 
 echo "backed up to $DEST at $STAMP; keeping $KEEP_DAYS days"
 

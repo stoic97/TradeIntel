@@ -50,7 +50,7 @@ FROZEN: dict[str, Frozen] = {
     "docs/adr/ADR-006-sampler.md": Frozen(
         "Accepted", "9125225d6d1f4eb018668c560be2eda0ab071b14cb3f5fe9c8a7832575c0631c"),
     "docs/adr/ADR-007-scope-v1-runtime.md": Frozen(
-        "amended 2026-11-16", "ee5e3add4d73778429123ee300bdcca39c79597286edb5f9206e04dc3b7730cf"),
+        "amended 2026-11-16", "5d16fff26e63e99e5dce17242bfcd7ecffc8db0698192ba29b5b3ad4327c4867"),
     "docs/adr/ADR-008-market-data-source.md": Frozen(
         "Accepted", "9e6e74f544e82e465b8757ac7e34694a47e532d519dd050b945a76e760569a92"),
 }

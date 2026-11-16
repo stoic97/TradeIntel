@@ -29,8 +29,10 @@ it. The setting, from the droplet's Backups page:
 
 DigitalOcean droplet backups: weekly, the four most recent kept
 
-Each weekly image is deleted when the fourth after it is taken, so it is gone within
-the 30 days the consent text promises. Scope's own nightly copies are in section 5.
+Read on the console on 16 Nov 2026: weekly on Wednesday, 04:00-08:00 UTC; each image
+lives about 27 days, four at a time. An image is of the whole disk, `/etc/scope/`
+included, so it holds the keys too: the same vendor, gone within the 30 days the
+consent text promises. Scope's own nightly copies are in section 5.
 
     apt update && apt upgrade -y
     apt install -y git curl ufw sqlite3 s3cmd debian-keyring debian-archive-keyring apt-transport-https
@@ -153,9 +155,10 @@ consent text promises:
 
 `deploy/backup.sh` makes the nightly copy in `/var/backups/scope`, encrypts the
 database copy with the file key (the stored files are encrypted already), and uploads
-both to a Spaces bucket in BLR1 under this product's account. The key never leaves
-`/etc/scope/`. A copy goes once it is 29 days old, on the droplet and in the bucket;
-the bucket's lifecycle rule is the backstop. Without the bucket's config the script
+both to a Spaces bucket in BLR1 under this product's account. The key is never
+uploaded. Everything in `/var/backups/scope` goes once it is 29 days old, restore points
+and stray copies included, and the bucket's copies go by the same clock; the bucket's
+lifecycle rule is the backstop. Without the bucket's config the script
 still makes the local copy, then exits non-zero.
 
 Once, as root on the droplet. Create the bucket first (Spaces, BLR1, this account,
