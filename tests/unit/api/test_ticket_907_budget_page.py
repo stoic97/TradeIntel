@@ -83,7 +83,7 @@ def test_a_number_none_went_past_says_none(loaded):
 
 
 def test_the_slider_asks_for_the_same_words_without_a_page_load(loaded):
-    fragment = loaded.get("/budget/against?against=400")
+    fragment = loaded.get("/budget/against?against=400", headers={"HX-Request": "true"})
     assert fragment.status_code == 200
     assert "<html" not in fragment.text.lower()
     assert "1 of your 6 same-day trades lost more than ₹400." in text(fragment.text)
@@ -169,3 +169,10 @@ def test_nothing_on_the_page_is_labelled_saved_avoided_kept_or_recommended(with_
     page = text(with_capital.get(path).text).lower()
     for word in ("saved", "avoided", "kept", "recommend", "you should", "suggested"):
         assert not re.search(rf"\b{word}\b", page), word
+
+
+def test_the_slider_read_opened_as_a_page_is_the_page_with_its_way_home(loaded):
+    """Only the slider (htmx) gets the bare read. Typed or reloaded, it is /budget (TICKET-860)."""
+    r = loaded.get("/budget/against?against=400", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/budget?against=400"
