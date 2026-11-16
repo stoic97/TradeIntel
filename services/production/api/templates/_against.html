@@ -1,0 +1,18 @@
+{#- TICKET-907 (FB-0168): a number he is trying, against his own same-day trades. It counts what
+    happened and suggests no number. metrics.past_amount and metrics.points_per_lot decide it;
+    /budget?against= and the slider's /budget/against both print it from here. New words are
+    pending D9 sign-off. -#}
+{%- if against %}
+{%- set n = Figure(against.amount, "rupees")|rupees(signed=false) %}
+{%- if against.count %}
+<p class="mirror"><span class="num">{{ Figure(against.count, "trades")|count }}</span> of your {{ Figure(against.same_day, "trades")|count }} same-day trades lost more than {{ n }}. The part past {{ n }} came to {{ Figure(against.beyond, "rupees")|rupees(signed=false) }}.</p>
+{%- else %}
+<p class="mirror">None of your {{ Figure(against.same_day, "trades")|count }} same-day trades lost more than {{ n }}.</p>
+{%- endif %}
+{%- for row in points %}
+<p class="gross-line">On one lot, {{ n }} is {{ Figure(row.points, "points")|price }} points of {{ row.symbol }}.</p>
+{%- endfor %}
+{%- if against.held_past_day %}
+<p class="gross-line">{{ Figure(against.held_past_day, "trades")|count }} position{{ " held past the day is" if against.held_past_day == 1 else "s held past the day are" }} not counted here.</p>
+{%- endif %}
+{%- endif %}

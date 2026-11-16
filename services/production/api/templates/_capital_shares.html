@@ -1,0 +1,18 @@
+{#- TICKET-907 (FB-0170): his worst day, deepest fall and biggest premium, each as a share of the
+    capital he entered. metrics.capital_shares decides them; the worst day is the Scope's own.
+    His figures only, nothing estimated. New words are pending D9 sign-off. -#}
+{%- if shares and (shares.worst_day or shares.fall or shares.premium) %}
+{%- if shares.capital %}
+{%- if shares.worst_day %}
+<p class="mirror">Your worst day, {{ shares.worst_day.trading_day|day }}, ended at {{ Figure(shares.worst_day.net, "rupees")|rupees }}. That is {{ Figure(shares.worst_day_percent, "percent", of="your capital")|count }}% of your capital.</p>
+{%- endif %}
+{%- if shares.fall %}
+<p class="mirror">Your deepest fall, {% if shares.fall.from_day %}from {{ shares.fall.from_day|day }}{% else %}from the start of your file{% endif %} to {{ shares.fall.to_day|day }}, was {{ Figure(shares.fall.amount, "rupees")|rupees(signed=false) }}. That is {{ Figure(shares.fall_percent, "percent", of="your capital")|count }}% of your capital.</p>
+{%- endif %}
+{%- if shares.premium %}
+<p class="mirror">Your biggest premium on one option was {{ Figure(shares.premium, "rupees")|rupees(signed=false) }}. That is {{ Figure(shares.premium_percent, "percent", of="your capital")|count }}% of your capital.</p>
+{%- endif %}
+{%- else %}
+<p class="gross-line">Enter your trading capital above to see these as a share of it.</p>
+{%- endif %}
+{%- endif %}

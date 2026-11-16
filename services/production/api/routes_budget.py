@@ -26,7 +26,7 @@ Once there is a number, this page says how many of his trades lost more than it
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Form, Request
@@ -117,8 +117,62 @@ def _loss_sizes(sess, trader: m.Trader):
     return mx.loss_sizes(mx.same_day_trips(trips))
 
 
+def _strip(losses: list[Decimal], amount: Decimal | None) -> dict | None:
+    """The slider's scale: one tick per same-day loss, nothing to his biggest (TICKET-907).
+
+    It rests at his biggest loss, past which no trade went, rather than anywhere that could
+    read as a number put to him.
+    """
+    if not losses:
+        return None
+    top = max(1, int(losses[-1].to_integral_value(rounding=ROUND_CEILING)))
+    step = max(1, top // 100)
+    return {
+        "top": top,
+        "step": step,
+        "value": min(int(amount), top) if amount else top,
+        "ticks": [f"{min(loss / top * 100, Decimal('99.4')):.2f}" for loss in losses],
+    }
+
+
+def _history_reads(sess, trader: m.Trader, against: str | None) -> dict:
+    """His own history against a number he is trying, and against his capital (TICKET-907).
+
+    Every figure is his, from the trades loaded; metrics.py decides each one. Nothing here
+    suggests a number: with none typed, the count is not shown at all. A number that is not
+    one above zero reads as none, the capital field's own rule.
+    """
+    nothing = {"against": None, "points": [], "strip": None, "shares": None}
+    try:
+        trips, _ = loader.load_for(sess, trader)
+    except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
+        return nothing
+    if not trips:
+        return nothing
+    amount = _typed_capital(against)
+    losses = sorted(-t.net for t in mx.same_day_trips(trips) if t.is_loss)
+    return {
+        "against": mx.past_amount(trips, amount) if amount else None,
+        "points": mx.points_per_lot(trips, amount) if amount else [],
+        "strip": _strip(losses, amount),
+        "shares": mx.capital_shares(trips, _latest_capital(_history(sess, trader))),
+    }
+
+
+@router.get("/budget/against", response_class=HTMLResponse)
+def budget_against(request: Request, against: str | None = None):
+    """The slider's read: the words /budget?against= prints, without the page (TICKET-907)."""
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        if not has_diagnosis_consent(sess, trader):
+            return RedirectResponse("/consent", status_code=303)
+        return page(request, "_against.html", **_history_reads(sess, trader, against))
+
+
 @router.get("/budget", response_class=HTMLResponse)
-def budget_form(request: Request):
+def budget_form(request: Request, against: str | None = None):
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
@@ -131,7 +185,8 @@ def budget_form(request: Request):
                     today=_today().isoformat(),
                     default_from=_default_from(sess, trader),
                     capital=_latest_capital(_history(sess, trader)),
-                    sizes=_loss_sizes(sess, trader))
+                    sizes=_loss_sizes(sess, trader),
+                    **_history_reads(sess, trader, against))
 
 
 @router.post("/budget")
@@ -161,7 +216,8 @@ def budget_submit(
                         today=_today().isoformat(),
                         default_from=_default_from(sess, trader),
                         capital=_latest_capital(_history(sess, trader)),
-                    sizes=_loss_sizes(sess, trader))
+                    sizes=_loss_sizes(sess, trader),
+                    **_history_reads(sess, trader, None))
 
         try:
             amount = Decimal(value)
