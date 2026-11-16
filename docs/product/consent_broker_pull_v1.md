@@ -1,6 +1,6 @@
 # Consent for a recurring, read-only broker pull
 
-TICKET-896. Status: **draft wording, unreviewed**. Decisions of 12 Nov 2026 (Pawan) are applied as written. Two points are open with Pawan and are marked below.
+TICKET-896. Status: **draft wording, unreviewed**. Decisions of 12 Nov 2026 (Pawan) are applied as written. Pawan ruled on the two open points on 16 Nov 2026; see the last section.
 
 ## The decision
 
@@ -18,7 +18,7 @@ The words live in `services/production/accounts/consent.py` (`BROKER_PULL`, `bro
 - Grant and withdrawal are new rows, as for every consent. Each row stores the exact words shown and its own `terms_version`.
 - A grant counts only against its own text's version (`consent.version_in_force`). Before this change every purpose was compared with the diagnosis text's version, which would have shown a broker grant as "on an older text" and sent the trader back to the consent screen.
 - The diagnosis text stays at version `1`; nobody is asked to agree to it again.
-- New table `broker_connection` (migration `0013`): trader, broker, encrypted key, time. It is deleted on disconnect and by `/delete`; `deletion.py` names it, `nothing_remains` checks it.
+- New table `broker_connection` (migration `0013`): trader, broker, encrypted key, time. It exists only for the length of a fetch (Pawan, 16 Nov): the key is deleted when the fetch ends, and also on disconnect and by `/delete`; `deletion.py` names it, `nothing_remains` checks it.
 - Not built here: the connect and disconnect pages, the subscriber check (no subscriber flag exists in the code yet), and the fetching itself.
 
 ## What today's consent says that a scheduled pull would contradict
@@ -30,7 +30,7 @@ The words live in `services/production/accounts/consent.py` (`BROKER_PULL`, `bro
 5. The delete pages say two rows survive (the consent record and the deletion record). `delete_trader` deletes the consent rows, and `admin.html` says so; only the deletion record survives. This predates 896 and is not fixed here.
 6. `docs/runbooks/data-flow-map.md` had no row for the key or for Dhan, says the consent text may name no system that is not on its list, and says there is "no outbound HTTP client" (release-gate item 2). Two rows are added here, marked not in use yet. Item 2 must be rewritten when the connector is switched on (the connector ticket).
 
-## Open with Pawan
+## Rulings (Pawan, 16 Nov 2026)
 
-- The promise "we can never place, change or cancel an order" against `broker_connector_note_v1.md`: Dhan documents no read-only token, only a static-IP rule on the trader's account.
-- How often: "once each trading day" (this draft) or only when the trader opens Scope, discarding the key after each pull (the 901 note).
+- **The narrower sentence.** Decision 4's "we can never" is a claim about what the key can do, and the 901 note shows Dhan has no read-only key. `READ_ONLY_PROMISE` now says what Scope does plus the plain fact about the key. The text stays unreviewed until the order/modify/cancel rejection test (901 note, step 3) passes on a consenting account.
+- **Fetch on open, no schedule.** "When you open Scope, we fetch the trades you've made since the last time." The key is kept only while a fetch runs, then deleted; the table and the disconnect and delete paths stay for a fetch in progress. A schedule would be a new consent version and he is asked again. The delete-page point (contradiction 5) is left out of this PR and raised as its own ticket.
