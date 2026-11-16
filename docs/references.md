@@ -16,7 +16,7 @@ this repository.
 |---|---|---|---|
 | **PRD**, "PRD §x", "PRD section x" | Scope's product requirements | *Project* `scope_prd_v1_2_frozen.md`, with `claude/scope_prd_v1_2_amendments.md` and `claude/scope_prd_v1_2_decision_list.md` | v1.2, frozen 14 Oct 2026; amendments 19 Oct 2026 |
 | `prd_v0.1_skeleton.md` (in the Phase 0 plan) | The PRD's first skeleton | Not kept; superseded by v1.2 | superseded |
-| **handoff**, "handoff §x", "handoff section x" | The engineering handoff: the Scope UI's phases, gates and release steps | *repo* `docs/product/scope_engineering_handoff_v1.md`; a copy is in the *Project* as `claude/scope_engineering_handoff_v1.md` | v1 |
+| **handoff**, "handoff §x", "handoff section x" | The engineering handoff: the Scope UI's phases, gates and release steps | *repo* `docs/product/scope_engineering_handoff_v1.md`; the only copy (the *Project* keeps a one-line pointer to it) | v1 |
 | **Technical Design**, `scope_v1_technical_design_v1.md` | Scope v1's technical design (cited by ADR-007) | *Project* `scope_v1_technical_design_v1.md` | v1.1, 16 Oct 2026 |
 | **build plan**, `scope_v1_build_plan_v1.md` | Scope v1's build plan (cited by ADR-007) | *Project* `scope_v1_build_plan_v1.md` | v1, 16 Oct 2026 |
 | `scope_v1_build_completion_v1.md` | What the v1 build completed | *Project* `scope_v1_build_completion_v1.md` | v1, 21 Oct 2026 |
