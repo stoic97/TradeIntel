@@ -20,32 +20,11 @@ from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
-from tests.unit.api.test_scope_chapters import TRIPS
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.dates_with_year import FILE, MONTHS
+from tests.helpers.scope_chapters import TRIPS
+from tests.helpers.upload import CSRF, sign_up
 
-MONTHS = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
 BARE_DATE = re.compile(rf"\b\d{{1,2}} (?:{MONTHS})\b(?! \d{{4}})", re.IGNORECASE)
-HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
-DAYS = ["2024-06-14", "2024-11-05", "2025-01-07", "2025-08-14", "2026-03-27", "2026-07-13"]
-
-
-def _day_rows(day: str, loss: int) -> list[str]:
-    # An expiry in the same month: the adapter rejects one too far from the trade.
-    option = f"WIDGETOIL 28 {MONTHS.split('|')[int(day[5:7]) - 1].upper()} 5000 CALL"
-    rows = []
-    for time_in, time_out, sold in (("09:30:00", "09:40:00", 5000 - loss), ("10:00:00", "10:10:00", 5100)):
-        rows.append(f"{day},{time_in},{option},BUY,INTRADAY,MCX,Commodity,100,50.00,5000.00,Traded")
-        rows.append(
-            f"{day},{time_out},{option},SELL,INTRADAY,MCX,Commodity,100,{sold / 100:.2f},{sold:.2f},Traded"
-        )
-    return rows
-
-
-FILE = "\n".join(
-    [HEADER, *[row for i, day in enumerate(DAYS) for row in _day_rows(day, 100 * (i + 1))]]
-) + "\n"
-
-
 @pytest.fixture()
 def client(scope_environment):
     engine = make_engine(os.environ["SCOPE_DB"])

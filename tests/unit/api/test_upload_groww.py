@@ -19,7 +19,7 @@ from services.production.api.app import create_app
 from services.production.ctr.adapters import groww_orders
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
-from tests.unit.api.test_upload import sign_up, upload
+from tests.helpers.upload import sign_up, upload
 
 FIXTURE = Path("data/fixtures/groww_orders_sample.xlsx")
 NAME = "Stocks Order History Nov 1 2026 to Nov 13 2026.xlsx"

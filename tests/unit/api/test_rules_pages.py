@@ -16,9 +16,9 @@ from services.production.db.session import make_session
 from services.production.rules import adherence as A
 from services.production.rules import chips
 from tests.conftest import TEST_FILE_KEY
-from tests.unit.api.test_read_again import send
-from tests.unit.api.test_read_again import words as _words
-from tests.unit.api.test_upload import CSRF, client, engine  # noqa: F401
+from tests.helpers.read_again import send
+from tests.helpers.read_again import words as _words
+from tests.helpers.upload import CSRF
 
 SCREENS = ("/rules", "/rules/today", "/rules/set", "/rules/set?factor=most_trades",
            "/rules/click", "/rules/click?book=Other")
@@ -31,21 +31,21 @@ def words(page: str) -> str:
     return _words(page).replace(" .", ".")
 
 
-def token(client) -> str:  # noqa: F811
+def token(client) -> str:
     return CSRF.search(client.get("/rules/today").text).group(1)
 
 
-def declarations(engine) -> list[m.RuleDeclaration]:  # noqa: F811
+def declarations(engine) -> list[m.RuleDeclaration]:
     with make_session(engine) as sess:
         return list(sess.scalars(select(m.RuleDeclaration).order_by(m.RuleDeclaration.id)))
 
 
-def test_every_screen_opens_signed_in(client):  # noqa: F811
+def test_every_screen_opens_signed_in(client):
     for path in SCREENS:
         assert client.get(path).status_code == 200, path
 
 
-def test_signed_out_they_ask_for_sign_in(engine):  # noqa: F811
+def test_signed_out_they_ask_for_sign_in(engine):
     from fastapi.testclient import TestClient
 
     from services.production.api.app import create_app
@@ -53,7 +53,7 @@ def test_signed_out_they_ask_for_sign_in(engine):  # noqa: F811
         assert TestClient(create_app()).get(path, follow_redirects=False).status_code == 303
 
 
-def test_no_screen_has_a_text_input(client):  # noqa: F811
+def test_no_screen_has_a_text_input(client):
     send(client)
     pages = [client.get(p).text for p in SCREENS]
     pages.append(client.post("/rules/click", data={"book": "Other", "reason": "My setup",
@@ -64,7 +64,7 @@ def test_no_screen_has_a_text_input(client):  # noqa: F811
             assert 'type="hidden"' in tag, tag
 
 
-def test_nothing_is_chosen_in_advance_ranked_or_praised(client):  # noqa: F811
+def test_nothing_is_chosen_in_advance_ranked_or_praised(client):
     send(client)
     for path in SCREENS:
         page = client.get(path).text
@@ -75,7 +75,7 @@ def test_nothing_is_chosen_in_advance_ranked_or_praised(client):  # noqa: F811
             assert nudge not in said, (path, nudge)
 
 
-def test_the_chips_are_shown_alike_in_their_listed_order(client):  # noqa: F811
+def test_the_chips_are_shown_alike_in_their_listed_order(client):
     page = client.get("/rules/today").text
     for key in chips.BEFORE_SESSION:
         f = chips.FACTORS[key]
@@ -85,7 +85,7 @@ def test_the_chips_are_shown_alike_in_their_listed_order(client):  # noqa: F811
         assert len(set(re.findall(r'<button class="([^"]+)"', form))) == 1
 
 
-def test_a_tap_sets_a_dated_rule_for_today(client, engine):  # noqa: F811
+def test_a_tap_sets_a_dated_rule_for_today(client, engine):
     before = datetime.now(UTC)
     r = client.post("/rules/today", data={"factor": "most_trades", "value": "3",
                                           "csrf_token": token(client)}, follow_redirects=False)
@@ -97,7 +97,7 @@ def test_a_tap_sets_a_dated_rule_for_today(client, engine):  # noqa: F811
     assert "At most 3 trades in a day" in words(client.get("/rules/today").text)
 
 
-def test_a_chip_the_lists_dont_hold_is_refused(client, engine):  # noqa: F811
+def test_a_chip_the_lists_dont_hold_is_refused(client, engine):
     for data in ({"factor": "most_trades", "value": "7"}, {"factor": "most_lots", "value": "2"},
                  {"factor": "nonsense", "value": "1"}, {"factor": "most_trades", "value": "x"}):
         r = client.post("/rules/today", data={**data, "csrf_token": token(client)})
@@ -105,7 +105,7 @@ def test_a_chip_the_lists_dont_hold_is_refused(client, engine):  # noqa: F811
     assert declarations(engine) == []
 
 
-def test_a_rule_is_never_edited_a_newer_one_is_added(client, engine):  # noqa: F811
+def test_a_rule_is_never_edited_a_newer_one_is_added(client, engine):
     for value in ("3", "5"):
         client.post("/rules/today", data={"factor": "most_trades", "value": value,
                                           "csrf_token": token(client)})
@@ -116,7 +116,7 @@ def test_a_rule_is_never_edited_a_newer_one_is_added(client, engine):  # noqa: F
     assert not [p for p in routes if p.startswith("/rules") and ("edit" in p or "{" in p)]
 
 
-def test_a_standing_rule_takes_two_taps_and_counts_from_then_on(client, engine):  # noqa: F811
+def test_a_standing_rule_takes_two_taps_and_counts_from_then_on(client, engine):
     page = client.get("/rules/set").text
     assert 'href="/rules/set?factor=most_lots"' in page
     r = client.post("/rules/set", data={"factor": "most_lots", "value": "2",
@@ -126,7 +126,7 @@ def test_a_standing_rule_takes_two_taps_and_counts_from_then_on(client, engine):
     assert rule.applies_to is None and rule.screen == "standing"
 
 
-def test_count_and_cost_come_first_and_not_enough_trades_yet_renders(client, engine):  # noqa: F811
+def test_count_and_cost_come_first_and_not_enough_trades_yet_renders(client, engine):
     send(client)  # six trades, early January 2024, no charges column
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
@@ -142,7 +142,7 @@ def test_count_and_cost_come_first_and_not_enough_trades_yet_renders(client, eng
     assert "Kept on" not in said
 
 
-def test_at_the_number_stated_at_the_start_it_says_how_often_it_was_kept(client, engine, monkeypatch):  # noqa: F811
+def test_at_the_number_stated_at_the_start_it_says_how_often_it_was_kept(client, engine, monkeypatch):
     send(client)
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
@@ -157,7 +157,7 @@ def test_at_the_number_stated_at_the_start_it_says_how_often_it_was_kept(client,
     assert "Not enough trades yet" not in said
 
 
-def test_before_a_trade_two_taps_store_a_note_and_show_his_own_counts(client, engine):  # noqa: F811
+def test_before_a_trade_two_taps_store_a_note_and_show_his_own_counts(client, engine):
     send(client)
     page = client.get("/rules/click").text
     books = re.findall(r'href="/rules/click\?book=([^"]+)"', page)
@@ -174,7 +174,7 @@ def test_before_a_trade_two_taps_store_a_note_and_show_his_own_counts(client, en
     assert bad.status_code == 400
 
 
-def test_deleting_the_account_takes_his_rules_and_notes(client, engine, tmp_path):  # noqa: F811
+def test_deleting_the_account_takes_his_rules_and_notes(client, engine, tmp_path):
     from services.production.accounts import deletion
     from services.production.accounts.file_store import FileStore
     client.post("/rules/today", data={"factor": "most_trades", "value": "3", "csrf_token": token(client)})
@@ -189,6 +189,6 @@ def test_deleting_the_account_takes_his_rules_and_notes(client, engine, tmp_path
         assert deletion.nothing_remains(sess, store, trader.id) == []
 
 
-def test_home_leads_to_the_rules(client):  # noqa: F811
+def test_home_leads_to_the_rules(client):
     send(client)
     assert 'href="/rules"' in client.get("/").text

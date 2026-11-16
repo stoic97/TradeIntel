@@ -9,9 +9,28 @@ from __future__ import annotations
 import pytest
 
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_deletion_page import client, engine, store  # noqa: F401
-from tests.unit.api.test_scope_chapters import chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.deletion_page import (
+    deletion_page_client,
+    deletion_page_engine,
+    deletion_page_store,
+)
+from tests.helpers.scope_chapters import chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
+
+
+@pytest.fixture()
+def client(engine, store):
+    return deletion_page_client(engine, store)
+
+
+@pytest.fixture()
+def engine():
+    return deletion_page_engine()
+
+
+@pytest.fixture()
+def store():
+    return deletion_page_store()
 
 NOTHING = trips_from([100, -50, 30], s.RiskUnitSourceV1.UNAVAILABLE)
 STOP = trips_from([100, -50, 30], s.RiskUnitSourceV1.DEFINED_STOP)
@@ -44,10 +63,10 @@ def test_the_end_of_the_report_reaches_it():
     assert SETTINGS_ROW in fact_page("not-told")
 
 
-def test_the_account_page_reaches_it(client):  # noqa: F811
+def test_the_account_page_reaches_it(client):
     assert SETTINGS_ROW in client.get("/account").text
 
 
-def test_it_comes_first_under_the_settings(client):  # noqa: F811
+def test_it_comes_first_under_the_settings(client):
     page = client.get("/account").text
     assert page.index("What you risk") < page.index("What you agreed to")

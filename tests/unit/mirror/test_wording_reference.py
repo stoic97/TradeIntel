@@ -122,10 +122,9 @@ def test_a_retired_line_is_really_gone(client):
 def test_the_sentence_for_a_share_that_is_not_a_percentage_is_kept_too():
     """With no losing day there is no share of losses, so the pages take the other
     sentence. Rendered from a made-up history: every day on the fixture loses."""
-    from tests.unit.api.test_scope_chapters import trips_from
-    from tests.unit.api.test_scope_facts import fact_page
+    from tests.helpers.scope_chapters import trips_from
+    from tests.helpers.scope_facts import fact_page
 
     worst = page_text(fact_page("worst-days", trips_from([10, 20, 30, 40, 50, 60])))
     for sentence in sentences(SHARE_NOT_A_PERCENTAGE):
         assert sentence in figures_out(worst), sentence
-

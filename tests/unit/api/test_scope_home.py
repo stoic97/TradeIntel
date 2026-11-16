@@ -11,18 +11,11 @@ from services.production.api import dial
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
-from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, TRIPS
+from tests.helpers.scope_chapters import IMP, TRIPS
+from tests.helpers.scope_home import home_page
 
 CTX = SF.record_context(TRIPS)
 FIGS = SF.facts(CTX, IMP)
-
-
-def home_page(trips=TRIPS, imp=IMP) -> str:
-    ctx = SF.record_context(trips)
-    return template_env().get_template("scope/home.html").render(
-        title="Scope", imp=imp, trade_count=len(trips),
-        trading_day_count=len(ctx["days"].counts), **SF.home_context(ctx, imp))
 
 
 def test_home_has_the_four_chapters_in_order_each_scoping_in():

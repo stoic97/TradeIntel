@@ -16,7 +16,7 @@ from services.production.api import formatting
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_no_claims import CLAIM_PATTERNS, NEVER_USED
+from tests.helpers.no_claims import CLAIM_PATTERNS, NEVER_USED
 
 WORST = "/mirror/fact/worst-days"
 RUN = "/mirror/fact/run"

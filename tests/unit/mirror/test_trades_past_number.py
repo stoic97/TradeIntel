@@ -344,7 +344,7 @@ def test_with_a_number_and_no_upload_nothing_about_the_count_shows(engine):
     from fastapi.testclient import TestClient
 
     from services.production.api.app import create_app
-    from tests.unit.api.test_upload import sign_up
+    from tests.helpers.upload import sign_up
 
     fresh = sign_up(TestClient(create_app()), engine, "N-1", "noupload")
     record(fresh)
