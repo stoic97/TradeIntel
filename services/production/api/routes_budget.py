@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Form, Request
@@ -161,7 +162,14 @@ def _history_reads(sess, trader: m.Trader, against: str | None) -> dict:
 
 @router.get("/budget/against", response_class=HTMLResponse)
 def budget_against(request: Request, against: str | None = None):
-    """The slider's read: the words /budget?against= prints, without the page (TICKET-907)."""
+    """The slider's read: the words /budget?against= prints, without the page (TICKET-907).
+
+    Only htmx asks for the bare read; it says so with HX-Request. Typed or reloaded, the address
+    is the page itself, with its way Home (TICKET-860).
+    """
+    if request.headers.get("HX-Request") != "true":
+        query = f"?{urlencode({'against': against})}" if against else ""
+        return RedirectResponse(f"/budget{query}", status_code=303)
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
