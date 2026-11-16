@@ -36,8 +36,16 @@ from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
 
 def _record(client, **extra):  # noqa: F811
     token = CSRF.search(client.get("/budget").text).group(1)
-    client.post("/budget", data={"value": "400", "unit": "INR", "effective_from": "2026-10-14",
-                                 "csrf_token": token, **extra})
+    client.post(
+        "/budget",
+        data={
+            "value": "400",
+            "unit": "INR",
+            "effective_from": "2026-10-14",
+            "csrf_token": token,
+            **extra,
+        },
+    )
 
 
 @pytest.fixture()
@@ -98,7 +106,7 @@ def test_the_slider_is_drawn_over_his_own_losses(loaded, engine):  # noqa: F811
     assert 'type="range"' in html and 'name="against"' in html
     assert 'hx-get="/budget/against"' in html
     assert 'method="get" action="/budget"' in html  # works with no script
-    strip = re.search(r'<svg class="against__losses".*?</svg>', html, re.S).group(0)
+    strip = re.search(r'<svg class="against__losses".*?</svg>', html, re.DOTALL).group(0)
     losses = [t for t in mx.same_day_trips(trips_of(engine)) if t.is_loss]
     assert strip.count("<rect") == len(losses)
 
@@ -116,21 +124,28 @@ def test_points_per_lot_for_each_instrument_he_trades(loaded, engine):  # noqa: 
 
 def test_his_worst_day_as_a_share_of_his_capital(with_capital):
     page = text(with_capital.get("/budget").text)
-    assert re.search(r"Your worst day, 15 Oct \d{4}, ended at −₹400\. That is 1% of your capital\.", page)
+    assert re.search(
+        r"Your worst day, 15 Oct \d{4}, ended at −₹400\. That is 1% of your capital\.", page
+    )
 
 
 def test_his_deepest_fall_as_a_share_of_his_capital(with_capital):
     page = text(with_capital.get("/budget").text)
-    assert re.search(r"Your deepest fall, from 14 Oct \d{4} to 15 Oct \d{4}, was ₹400\. "
-                     r"That is 1% of your capital\.", page)
+    assert re.search(
+        r"Your deepest fall, from 14 Oct \d{4} to 15 Oct \d{4}, was ₹400\. "
+        r"That is 1% of your capital\.",
+        page,
+    )
 
 
 def test_his_biggest_premium_is_shown_when_he_bought_an_option(with_capital, engine):  # noqa: F811
     shares = mx.capital_shares(trips_of(engine), mx.Decimal("100000"))
     page = text(with_capital.get("/budget").text)
     if shares.premium:
-        assert (f"Your biggest premium on one option was {formatting.rupees(shares.premium, signed=False)}. "
-                f"That is {shares.premium_percent}% of your capital.") in page
+        assert (
+            f"Your biggest premium on one option was {formatting.rupees(shares.premium, signed=False)}. "
+            f"That is {shares.premium_percent}% of your capital."
+        ) in page
     else:
         assert "biggest premium" not in page
 
