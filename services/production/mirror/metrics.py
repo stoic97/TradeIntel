@@ -1729,6 +1729,45 @@ def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
     )
 
 
+@dataclass(frozen=True)
+class PastAmount:
+    """Same-day trades that lost more than a number he is considering (TICKET-907).
+
+    trades_past_number's count, against a number he has typed rather than one he recorded.
+    ``beyond`` is the part of those losses past the number, in rupees. A count of what
+    happened: it suggests no number.
+    """
+
+    amount: Decimal
+    count: int
+    trip_ids: list[str]
+    beyond: Decimal
+    same_day: int
+    held_past_day: int
+    state: s.ResultState
+
+
+def past_amount(trips: list[Trip], amount: Decimal) -> PastAmount:
+    """How many same-day trades lost more than ``amount``, and the part past it.
+
+    "More than" is strict, as in trades_past_number: a loss equal to the number, in paise,
+    is not past it. A number of zero or less is not one to count against.
+    """
+    if amount <= 0:
+        raise ValueError("a number to count against is more than zero")
+    same_day = same_day_trips(trips)
+    past = [t for t in same_day if _round(-t.net) > amount]
+    return PastAmount(
+        amount=amount,
+        count=len(past),
+        trip_ids=[t.trip_id for t in past],
+        beyond=sum((_round(-t.net) - amount for t in past), Decimal(0)),
+        same_day=len(same_day),
+        held_past_day=len(trips) - len(same_day),
+        state=s.ResultState.COUNTED_FACT if same_day else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
 def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
     """Trading day unless the median eligible day is thinner than two trips."""
     counts = day_counts(trips)
