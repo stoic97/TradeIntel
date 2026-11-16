@@ -10,9 +10,8 @@ from services.production.api import dial, formatting
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure, through_figure
-from tests.unit.api.test_read_again import send, words
-from tests.unit.api.test_scope_chapters import FIGS, IMP, TRIPS
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.read_again import send, words
+from tests.helpers.scope_chapters import FIGS, IMP, TRIPS
 
 CTX = SF.record_context(TRIPS)
 
@@ -75,7 +74,7 @@ def test_the_hub_wedges_open_the_trades_behind_their_figures():
 
 # ---- the pages
 
-def test_a_facts_large_figure_opens_its_trades(client):  # noqa: F811
+def test_a_facts_large_figure_opens_its_trades(client):
     send(client)
     for key in ("math", "risk", "clock"):
         page = client.get(f"/mirror/fact/{key}").text
@@ -88,7 +87,7 @@ def test_a_facts_large_figure_opens_its_trades(client):  # noqa: F811
     assert '<a class="figure-link"' not in re.search(r'num--hero">(.*?)</span>', unread, re.DOTALL).group(1)
 
 
-def test_what_a_figure_opens_lists_every_trade_it_counted(client):  # noqa: F811
+def test_what_a_figure_opens_lists_every_trade_it_counted(client):
     """The math figure counts same-day trades; its link lists all of them, none missing."""
     from services.production.mirror import metrics as mx
     send(client)
@@ -98,7 +97,7 @@ def test_what_a_figure_opens_lists_every_trade_it_counted(client):  # noqa: F811
     assert listed.count('<article class="trade">') == len(mx.same_day_trips(_trips(client)))
 
 
-def _trips(client):  # noqa: F811
+def _trips(client):
     from sqlalchemy import select
 
     from services.production.db import models as m
@@ -109,7 +108,7 @@ def _trips(client):  # noqa: F811
     return trips
 
 
-def test_a_date_opens_its_day_with_every_trade_on_it(client):  # noqa: F811
+def test_a_date_opens_its_day_with_every_trade_on_it(client):
     send(client)
     trips = _trips(client)
     day = trips[0].trading_day
@@ -121,13 +120,13 @@ def test_a_date_opens_its_day_with_every_trade_on_it(client):  # noqa: F811
     assert page.text.count('<article class="trade">') == count
 
 
-def test_a_day_the_record_does_not_hold_is_not_found(client):  # noqa: F811
+def test_a_day_the_record_does_not_hold_is_not_found(client):
     send(client)
     assert client.get("/mirror/day/1999-01-01").status_code == 404
     assert client.get("/mirror/day/not-a-day").status_code == 404
 
 
-def test_home_writes_a_books_worst_day_as_a_link_to_that_day(client):  # noqa: F811
+def test_home_writes_a_books_worst_day_as_a_link_to_that_day(client):
     send(client)
     page = client.get("/mirror").text
     if "Worst day:" in page:

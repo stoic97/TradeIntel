@@ -10,9 +10,9 @@ from __future__ import annotations
 import pytest
 
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_math_of_trading import make, only_book
-from tests.unit.api.test_scope_chapters import readable
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.math_of_trading import make, only_book
+from tests.helpers.scope_chapters import readable
+from tests.helpers.scope_facts import fact_page
 
 LINE = "closed within 5 minutes"
 NO_QUICK_CLOSES = make([100] * 15 + [-50] * 15, [10] * 30)  # 30 same-day trades, all 10 minutes

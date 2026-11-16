@@ -13,8 +13,8 @@ import pytest
 
 from services.production.api import formatting
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_chapter_three_describes import CLOSED, TITLE, card_of, head_of
-from tests.unit.api.test_scope_chapters import readable
+from tests.helpers.chapter_three_describes import CLOSED, TITLE, card_of, head_of
+from tests.helpers.scope_chapters import readable
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
 TL = mx.two_straight_losses(TRIPS)

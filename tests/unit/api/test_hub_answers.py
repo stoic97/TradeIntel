@@ -18,14 +18,14 @@ from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
+from tests.helpers.hub_answers import CTX
+from tests.helpers.mirror_page import NEVER_USED
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_chapters import TRIPS as FORTY
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.scope_home_verdict import t
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_scope_chapters import TRIPS as FORTY
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_scope_home_verdict import t
-from tests.unit.mirror.test_page import NEVER_USED
 
-CTX = SF.record_context(FORTY)
 FIGS = SF.facts(CTX, IMP)
 
 

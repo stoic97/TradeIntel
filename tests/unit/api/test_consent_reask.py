@@ -15,7 +15,17 @@ from services.production.accounts import consent as cs
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_consent import app_env, signed_in, token  # noqa: F401
+from tests.helpers.consent import consent_app_env, consent_signed_in, token
+
+
+@pytest.fixture()
+def app_env(tmp_path, monkeypatch):
+    return consent_app_env(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def signed_in(app_env):
+    return consent_signed_in(app_env)
 
 ASKED_AGAIN = "We have changed this text since you last agreed, so we are asking again."
 OLD = "0-draft"
@@ -49,38 +59,38 @@ def agree(client, **fields):
 
 
 @pytest.mark.parametrize("path", ["/upload", "/budget", "/mirror", "/eligibility"])
-def test_a_grant_on_an_old_text_closes_the_product(signed_in, path):  # noqa: F811
+def test_a_grant_on_an_old_text_closes_the_product(signed_in, path):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     response = client.get(path, follow_redirects=False)
     assert (response.status_code, response.headers["location"]) == (303, "/consent")
 
 
-def test_a_grant_on_the_current_text_keeps_it_open(signed_in):  # noqa: F811
+def test_a_grant_on_the_current_text_keeps_it_open(signed_in):
     client, engine = signed_in
     grant(engine, s.ConsentPurpose.DIAGNOSIS, cs.CURRENT.version)
     assert client.get("/upload", follow_redirects=False).status_code == 200
 
 
-def test_the_screen_says_why_it_is_asking_again(signed_in):  # noqa: F811
+def test_the_screen_says_why_it_is_asking_again(signed_in):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     assert ASKED_AGAIN in client.get("/consent").text
 
 
-def test_a_first_time_trader_is_not_told_it_changed(signed_in):  # noqa: F811
+def test_a_first_time_trader_is_not_told_it_changed(signed_in):
     client, _ = signed_in
     assert ASKED_AGAIN not in client.get("/consent").text
 
 
-def test_the_engine_box_is_not_ticked_for_him_when_asked_again(signed_in):  # noqa: F811
+def test_the_engine_box_is_not_ticked_for_him_when_asked_again(signed_in):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     page = client.get("/consent").text
     assert 'name="engine_testing" value="yes" checked' not in page
 
 
-def test_agreeing_again_writes_both_against_the_current_text(signed_in):  # noqa: F811
+def test_agreeing_again_writes_both_against_the_current_text(signed_in):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     agree(client, diagnosis="yes", engine_testing="yes")
@@ -90,7 +100,7 @@ def test_agreeing_again_writes_both_against_the_current_text(signed_in):  # noqa
     assert client.get("/upload", follow_redirects=False).status_code == 200
 
 
-def test_leaving_the_engine_box_empty_ends_the_old_engine_grant(signed_in):  # noqa: F811
+def test_leaving_the_engine_box_empty_ends_the_old_engine_grant(signed_in):
     """Otherwise a grant on the old text stays the latest word on that purpose."""
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
@@ -100,14 +110,14 @@ def test_leaving_the_engine_box_empty_ends_the_old_engine_grant(signed_in):  # n
     assert client.get("/upload", follow_redirects=False).status_code == 200
 
 
-def test_nothing_is_written_for_a_purpose_he_never_granted(signed_in):  # noqa: F811
+def test_nothing_is_written_for_a_purpose_he_never_granted(signed_in):
     client, engine = signed_in
     grant(engine, s.ConsentPurpose.DIAGNOSIS)
     agree(client, diagnosis="yes")
     assert s.ConsentPurpose.ENGINE_TESTING not in latest(engine)
 
 
-def test_the_old_rows_are_kept(signed_in):  # noqa: F811
+def test_the_old_rows_are_kept(signed_in):
     """The ledger is a history: asking again adds rows and edits none."""
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
@@ -117,18 +127,18 @@ def test_the_old_rows_are_kept(signed_in):  # noqa: F811
     assert versions.count(OLD) == 2 and versions.count(cs.CURRENT.version) == 2
 
 
-def test_the_ledger_does_not_call_an_old_grant_current(signed_in):  # noqa: F811
+def test_the_ledger_does_not_call_an_old_grant_current(signed_in):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     assert "Currently granted." not in client.get("/settings/consent").text
 
 
-def test_agreeing_again_goes_home_not_to_the_upload(signed_in):  # noqa: F811
+def test_agreeing_again_goes_home_not_to_the_upload(signed_in):
     client, engine = signed_in
     grant_both_on_the_old_text(engine)
     assert agree(client, diagnosis="yes").headers["location"] == "/"
 
 
-def test_a_first_agreement_still_goes_to_the_upload(signed_in):  # noqa: F811
+def test_a_first_agreement_still_goes_to_the_upload(signed_in):
     client, _ = signed_in
     assert agree(client, diagnosis="yes").headers["location"] == "/upload"

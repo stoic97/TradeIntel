@@ -286,7 +286,7 @@ def test_the_rail_and_all_pages_fill_the_pages_read(client, engine):
 @pytest.fixture()
 def demo(engine):
     """A signed-in trader with the synthetic demo file, which has Journals (README rule 1)."""
-    from tests.unit.api.test_upload import sign_up
+    from tests.helpers.upload import sign_up
     c = sign_up(TestClient(create_app()), engine, "S-903", "spine903")
     token = CSRF.search(c.get("/upload").text).group(1)
     assert c.post("/upload/demo", data={"csrf_token": token},

@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 
 from services.shared.schemas import scope_v1 as s
+from tests.helpers.scope_chapters import chapter_page, readable, trips_from
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import chapter_page, readable, trips_from
 
 
 def render(name: str, **context) -> str:

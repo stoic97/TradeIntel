@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_scope_chapters import chapter_page, trips_from
+from tests.helpers.scope_chapters import chapter_page, trips_from
 
 
 def one_day() -> list[mx.Trip]:
