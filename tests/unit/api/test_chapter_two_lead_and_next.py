@@ -22,9 +22,9 @@ from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db.session import make_engine, run_migrations
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_math_of_trading import make
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_upload import sign_up, upload
+from tests.helpers.math_of_trading import make
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.upload import sign_up, upload
 
 DEMO = Path("data/fixtures/demo/demo_tradebook.csv")
 CTA = "Chapter 3, your behaviour: what you did after losing"

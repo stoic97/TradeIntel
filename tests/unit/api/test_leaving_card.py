@@ -19,7 +19,7 @@ from sqlalchemy import select
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import leaving
-from tests.unit.api.test_journals import _journals, _seed, _sign_in
+from tests.helpers.journals import _journals, _seed, _sign_in
 
 TOKEN = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 CARD = '<form class="leaving-card" method="post" action="/leaving-card">'

@@ -12,8 +12,9 @@ from pathlib import Path
 import pytest
 
 from services.production.api import scope_facts as SF
+from tests.helpers.reveal_page import reveal
+from tests.helpers.scope_chapters import TRIPS, readable, trips_from
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, readable, trips_from
 
 KIT = Path("docs/design/scope-kit/screens/12-reveal.html").read_text()
 CTX = SF.record_context(TRIPS)
@@ -42,24 +43,6 @@ def test_the_slice_runs_from_twelve_to_the_share():
 def test_a_share_that_is_not_a_percentage_draws_no_slice():
     view = SF.reveal_view(SF.record_context(trips_from([10, 20, 30, 40, 50, 60])))
     assert not view["shown"] and "slice_length" not in view
-
-
-def reveal(trips=TRIPS, guessed="[guess option 3, TR-009]") -> str:
-    ctx = SF.record_context(trips)
-    return (
-        template_env()
-        .get_template("reveal.html")
-        .render(
-            title="Your five worst days",
-            screen_class="screen--navy on-navy",
-            body_class="reveal",
-            guessed=guessed,
-            imp=IMP,
-            view=SF.reveal_view(ctx),
-            worst_href="/mirror/fact/worst-days?enter=lens",
-            **ctx,
-        )
-    )
 
 
 def test_the_reveal_is_the_kits_navy_page():

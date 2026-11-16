@@ -18,8 +18,8 @@ from decimal import Decimal
 
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_reveal_page import reveal
-from tests.unit.api.test_scope_chapters import readable
+from tests.helpers.reveal_page import reveal
+from tests.helpers.scope_chapters import readable
 
 
 def t(day, at, net, symbol="CRUDEOIL", is_option=True):

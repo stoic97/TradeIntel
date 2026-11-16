@@ -17,7 +17,7 @@ from services.production.api import dial as D
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
 
 
 def trip(i: int, day: str, net: int, minute: int) -> mx.Trip:

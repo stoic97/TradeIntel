@@ -19,7 +19,7 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_no_claims import CLAIM_PATTERNS, NEVER_USED
+from tests.helpers.no_claims import CLAIM_PATTERNS, NEVER_USED
 
 PAGE = "/mirror/fact/not-told"
 TOKEN = re.compile(r'name="csrf_token" value="([^"]+)"')

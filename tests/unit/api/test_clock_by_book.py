@@ -43,8 +43,8 @@ from services.production.api import scope_map as S
 from services.production.api import trade_list as TL
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import IMP, chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
 
 TRIPS = mx.load_trips(
     json.loads(Path("tests/fixtures/mirror_contract/clock_by_book.json").read_text())

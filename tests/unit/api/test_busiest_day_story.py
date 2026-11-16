@@ -29,9 +29,9 @@ from services.production.api import scope_map as S
 from services.production.api import trade_list as TL
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_chapter_three_describes import CLOSED, DOWN, card_of, one_day
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.chapter_three_describes import CLOSED, DOWN, card_of, one_day
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
 
 
 def option(when, kind, net, *, day="2026-09-02", strike=5000, lots=1, held=180, symbol="WIDGETIDX"):

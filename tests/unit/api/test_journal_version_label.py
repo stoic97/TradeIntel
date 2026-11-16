@@ -4,16 +4,27 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from sqlalchemy import select
 
 from services.production.db import models as m
 from services.production.db.session import make_session
-from tests.unit.api.test_journals import client, engine  # noqa: F401
+from tests.helpers.journals import journals_client, journals_engine
+
+
+@pytest.fixture()
+def client(engine):
+    return journals_client(engine)
+
+
+@pytest.fixture()
+def engine():
+    return journals_engine()
 
 LABEL = "A later upload changed this period."
 
 
-def _add_version(engine, trip_ids=None) -> int:  # noqa: F811
+def _add_version(engine, trip_ids=None) -> int:
     """A second version of the newest day: the same trades unless told otherwise."""
     with make_session(engine) as sess:
         first = sess.scalars(select(m.Journal).order_by(m.Journal.period_start.desc())).first()
@@ -29,25 +40,25 @@ def _add_version(engine, trip_ids=None) -> int:  # noqa: F811
         return version.id
 
 
-def test_the_same_trades_do_not_claim_a_change(engine, client):  # noqa: F811
+def test_the_same_trades_do_not_claim_a_change(engine, client):
     assert LABEL not in client.get(f"/journals/{_add_version(engine)}").text
 
 
-def test_the_list_does_not_call_it_a_new_version(engine, client):  # noqa: F811
+def test_the_list_does_not_call_it_a_new_version(engine, client):
     _add_version(engine)
     assert "version 2" not in client.get("/journals").text
 
 
-def test_different_trades_say_so_on_the_page(engine, client):  # noqa: F811
+def test_different_trades_say_so_on_the_page(engine, client):
     assert LABEL in client.get(f"/journals/{_add_version(engine, ['t99'])}").text
 
 
-def test_different_trades_say_so_in_the_list(engine, client):  # noqa: F811
+def test_different_trades_say_so_in_the_list(engine, client):
     _add_version(engine, ["t99"])
     assert "version 2" in client.get("/journals").text
 
 
-def test_a_first_version_says_nothing(engine, client):  # noqa: F811
+def test_a_first_version_says_nothing(engine, client):
     with make_session(engine) as sess:
         first = sess.scalars(select(m.Journal)).first().id
     assert LABEL not in client.get(f"/journals/{first}").text

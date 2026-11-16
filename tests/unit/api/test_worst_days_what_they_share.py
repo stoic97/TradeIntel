@@ -36,10 +36,10 @@ from services.production.db.session import make_engine, make_session, run_migrat
 from services.production.mirror import feedback as FB
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_dates_with_year import FILE as UPLOAD_FILE
-from tests.unit.api.test_scope_chapters import readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.dates_with_year import FILE as UPLOAD_FILE
+from tests.helpers.scope_chapters import readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import CSRF, sign_up
 
 
 def _day(day: str, at: str, nets: list[int], symbol: str = "CRUDEOIL", option=True) -> list[mx.Trip]:
@@ -301,7 +301,7 @@ def test_the_dial_says_findings_not_counts():
 
 
 def _imp():
-    from tests.unit.api.test_scope_chapters import IMP
+    from tests.helpers.scope_chapters import IMP
 
     return IMP
 
