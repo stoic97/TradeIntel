@@ -1768,6 +1768,73 @@ def past_amount(trips: list[Trip], amount: Decimal) -> PastAmount:
     )
 
 
+@dataclass(frozen=True)
+class Fall:
+    """The biggest drop of his running total, from a high point to the lowest day after it.
+
+    ``from_day`` is None when the drop starts at the start of his file: his first day lost.
+    """
+
+    amount: Decimal
+    from_day: str | None
+    to_day: str
+
+
+def deepest_fall(trips: list[Trip]) -> Fall | None:
+    """Day by day through daily_series, the one place a day's net is decided (TICKET-907)."""
+    peak, peak_day, level = Decimal(0), None, Decimal(0)
+    deepest: Fall | None = None
+    for day in daily_series(trips):
+        level += day.net
+        if level > peak:
+            peak, peak_day = level, day.trading_day
+        drop = peak - level
+        if drop > 0 and (deepest is None or drop > deepest.amount):
+            deepest = Fall(amount=drop, from_day=peak_day, to_day=day.trading_day)
+    return deepest
+
+
+@dataclass(frozen=True)
+class CapitalShares:
+    """His worst day, deepest fall and biggest premium, each as a share of his capital.
+
+    TICKET-907 (FB-0170). Each figure is his own, from the trades loaded. A share is a whole
+    percent by _whole_percent's rule, and None when he has entered no capital.
+    """
+
+    capital: Decimal | None
+    worst_day: DayNet | None
+    worst_day_percent: Decimal | None
+    fall: Fall | None
+    fall_percent: Decimal | None
+    premium: Decimal | None
+    premium_percent: Decimal | None
+    state: s.ResultState
+
+
+def capital_shares(trips: list[Trip], capital: Decimal | None) -> CapitalShares:
+    """The worst day is five_worst_days' first, so this page and the Scope name the same day."""
+    worst = five_worst_days(trips).days
+    worst_day = worst[0] if worst and worst[0].net < 0 else None
+    fall = deepest_fall(trips)
+    premiums = [t.premium for t in trips if t.is_option and t.premium]
+    premium = max(premiums) if premiums else None
+
+    def share(part: Decimal | None) -> Decimal | None:
+        return _whole_percent(part, capital) if capital and part else None
+
+    return CapitalShares(
+        capital=capital,
+        worst_day=worst_day,
+        worst_day_percent=share(-worst_day.net) if worst_day else None,
+        fall=fall,
+        fall_percent=share(fall.amount) if fall else None,
+        premium=premium,
+        premium_percent=share(premium),
+        state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
 def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
     """Trading day unless the median eligible day is thinner than two trips."""
     counts = day_counts(trips)
