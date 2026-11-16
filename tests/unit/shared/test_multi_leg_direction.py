@@ -14,16 +14,14 @@ leg into several trips. Nothing here reads a price, a level or a result.
 from __future__ import annotations
 
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import pytest
 
 from services.shared import option_direction as od
 from services.shared.schemas.ctr_v1 import Segment
-from tests.unit.test_positions import LONG, PE, SHORT, leg, one
+from tests.helpers.positions import LONG, PE, SHORT, leg, one
 
 U = od.Underlying
-IST = ZoneInfo("Asia/Kolkata")
 DEMO = Path("data/fixtures/demo/scope_demo_tradebook.csv")
 
 
@@ -95,8 +93,6 @@ def test_the_demo_file_counts_no_trip_out_for_want_of_a_direction(demo):
     convention it was counted out as "no single direction"; now it is long, and no demo trip
     is counted out for want of a direction. If the demo's two-leg positions change, recount
     them by hand before changing this test."""
-    from services.production.mirror import prior_minute as pm
-    from tests.unit.mirror.test_prior_minute import walk
 
     multi = [p for p in demo if len(p.legs) > 1]
     assert len(multi) == 1
@@ -106,14 +102,7 @@ def test_the_demo_file_counts_no_trip_out_for_want_of_a_direction(demo):
     assert legs == [("CE", 5750, "LONG", 10), ("CE", 5850, "SHORT", 10)]
     answers = {p.position_id: od.underlying_direction(p) for p in demo}
     assert answers[vertical.position_id] is U.LONG
-
-    sign = {U.LONG: 1, U.SHORT: -1, U.NONE: None}
-    entries = [pm.Entry(p.position_id, p.legs[0].symbol, p.entry_ts, sign[answers[p.position_id]])
-               for p in demo]
-    days = sorted({p.entry_ts.astimezone(IST).date() for p in demo})
-    result = pm.count(entries, {"NIFTY": walk(1, days), "CRUDEOIL": walk(2, days)})
-    assert result.total == len(demo)
-    assert result.unmeasured_by_reason().get(pm.Reason.NO_DIRECTION, 0) == 0
+    assert [pid for pid, answer in answers.items() if answer is U.NONE] == []
 
 
 def test_every_demo_single_leg_answers_by_the_4_7_7_table(demo):
