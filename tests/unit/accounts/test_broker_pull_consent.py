@@ -63,7 +63,9 @@ def test_the_words_say_what_how_often_read_only_how_long_and_how_to_stop():
     words = cs.broker_pull_wording()
     text = cs.BROKER_PULL
     assert cs.READ_ONLY_PROMISE == (
-        "read-only: we can fetch your trades, we can never place, change or cancel an order."
+        "Read-only: we fetch your trades and nothing else. Scope never places, changes or "
+        "cancels an order. Dhan would only accept an order made with this key from an "
+        "address you register with Dhan yourself, and nothing in Scope asks you to."
     )
     assert cs.READ_ONLY_PROMISE in words
     for part in (text.what_we_fetch, text.how_often, text.how_to_stop,
@@ -146,3 +148,18 @@ def test_deleting_a_connected_trader_leaves_no_key_behind(engine, store):  # noq
         assert sess.scalars(select(m.DeletionRecord)).one().id == record.id
         kept = f"{record.what_removed} {record.what_retained} {record.locations_checked}"
     assert KEY not in kept
+
+
+def test_how_often_is_when_he_opens_scope_not_a_schedule():
+    assert cs.BROKER_PULL.how_often == (
+        "When you open Scope, we fetch the trades you've made since the last time."
+    )
+    words = cs.broker_pull_wording().lower()
+    for scheduled in ("trading day", "every day", "again and again"):
+        assert scheduled not in words, scheduled
+
+
+def test_the_key_is_kept_only_while_a_fetch_runs():
+    words = cs.broker_pull_wording()
+    assert "only while a fetch is running" in words
+    assert "deleted" in cs.BROKER_PULL.what_we_fetch
