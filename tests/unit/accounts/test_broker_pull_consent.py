@@ -23,12 +23,12 @@ from services.production.api.routes_consent import _grants_on_an_older_text, con
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.accounts.test_deletion import a_trader, engine, store  # noqa: F401
+from tests.unit.accounts.conftest import a_trader
 
 KEY = "ciphertext-of-his-broker-key"
 
 
-def connected(sess, store, login_id: str = "connected") -> m.Trader:  # noqa: F811
+def connected(sess, store, login_id: str = "connected") -> m.Trader:
     """A development account with a current diagnosis grant, a broker grant and a key."""
     trader = a_trader(sess, login_id, store, b"his own file\n")
     trader.development_data = True
@@ -94,14 +94,14 @@ def test_the_words_make_no_claim(never):
     assert never not in cs.broker_pull_wording().lower()
 
 
-def test_a_real_account_cannot_grant_on_the_draft(engine, store):  # noqa: F811
+def test_a_real_account_cannot_grant_on_the_draft(engine, store):
     with make_session(engine) as sess:
         trader = a_trader(sess, "real", store, b"his own file\n")
         with pytest.raises(cs.UnreviewedConsentText):
             bc.grant(sess, trader)
 
 
-def test_a_grant_is_a_new_row_and_the_diagnosis_consent_is_untouched(engine, store):  # noqa: F811
+def test_a_grant_is_a_new_row_and_the_diagnosis_consent_is_untouched(engine, store):
     with make_session(engine) as sess:
         trader = connected(sess, store)
         sess.commit()
@@ -114,7 +114,7 @@ def test_a_grant_is_a_new_row_and_the_diagnosis_consent_is_untouched(engine, sto
         assert _grants_on_an_older_text(sess, trader) == set()
 
 
-def test_disconnect_is_one_action_and_his_reports_stay(engine, store):  # noqa: F811
+def test_disconnect_is_one_action_and_his_reports_stay(engine, store):
     with make_session(engine) as sess:
         trader = connected(sess, store)
         sess.commit()
@@ -132,7 +132,7 @@ def test_disconnect_is_one_action_and_his_reports_stay(engine, store):  # noqa: 
         assert sess.scalar(select(func.count()).select_from(m.Journal)) == journals
 
 
-def test_deleting_a_connected_trader_leaves_no_key_behind(engine, store):  # noqa: F811
+def test_deleting_a_connected_trader_leaves_no_key_behind(engine, store):
     with make_session(engine) as sess:
         trader = connected(sess, store)
         trader_id = trader.id
