@@ -32,7 +32,6 @@ WIDGET, both years, 60 trades: 27 winners total 2,520, 33 losers total 2,550.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -42,8 +41,9 @@ from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.math_of_trading import make, only_book
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
 
 INSUFFICIENT = s.ResultState.INSUFFICIENT_SAMPLE
 COUNTED = s.ResultState.COUNTED_FACT
@@ -55,35 +55,9 @@ Y2_NETS = [100] * 15 + [-50] * 15
 Y2_MINUTES = [10] * 15 + [2] * 15
 
 
-def make(nets, minutes=None, year=2025, symbol="WIDGET", lots=2, start_id=0, is_option=True,
-         days_held=0, segment=None):
-    """One trade a day, from 1 Jan of the year, closed the same day unless days_held says not."""
-    minutes = minutes or [10] * len(nets)
-    start = datetime.fromisoformat(f"{year}-01-01T09:15:00+05:30")
-    trips = []
-    for i, (net, held) in enumerate(zip(nets, minutes, strict=True)):
-        entry = start + timedelta(days=i)
-        exit_ts = entry + timedelta(days=days_held, minutes=held)
-        lines = ()
-        if segment:
-            lines = (mx.TradeLine(symbol, segment, "Buy", 1, Decimal(1), Decimal(1), Decimal(net)),)
-        trips.append(mx.Trip(
-            f"{symbol}-{year}-{start_id + i}", symbol, entry.date().isoformat(), entry, exit_ts,
-            int((exit_ts - entry).total_seconds()), Decimal(net), lots,
-            s.RiskUnitSourceV1.DECLARED_BUDGET, is_option=is_option, lines=lines,
-        ))
-    return trips
-
-
 YEAR_ONE = make(Y1_NETS, Y1_MINUTES)
 YEAR_TWO = make(Y2_NETS, Y2_MINUTES, year=2026)
 BOTH = YEAR_ONE + YEAR_TWO
-
-
-def only_book(trips) -> mx.BookMath:
-    books = mx.math_by_book(trips)
-    assert len(books) == 1
-    return books[0]
 
 
 # ---------- The two ways to break even, by hand ----------

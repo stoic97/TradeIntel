@@ -18,8 +18,8 @@ import re
 from pathlib import Path
 
 from services.production.api import scope_facts as SF
-from tests.unit.api.test_scope_chapters import TRIPS, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import TRIPS, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
 
 SENTENCE = (
     "On {population} occasions you opened a trade after two earlier trades that day had "

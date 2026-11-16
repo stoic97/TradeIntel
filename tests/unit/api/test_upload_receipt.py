@@ -11,10 +11,10 @@ from sqlalchemy import select
 
 from services.production.db import models as m
 from services.production.db.session import make_session
+from tests.helpers.restyle_journal_pages import CONTEXT, day
+from tests.helpers.scope_chapters import readable
+from tests.helpers.upload import _two_days, upload
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_restyle_journal_pages import CONTEXT, day
-from tests.unit.api.test_scope_chapters import readable
-from tests.unit.api.test_upload import _two_days, client, engine, upload  # noqa: F401
 
 MORE = (
     b"2026-10-15,13:30:00,WIDGETOIL 19 NOV 5100 CALL,BUY,INTRADAY,MCX,"
@@ -24,7 +24,7 @@ MORE = (
 )
 
 
-def latest_page(client, engine) -> str:  # noqa: F811
+def latest_page(client, engine) -> str:
     with make_session(engine) as sess:
         newest = sess.scalars(select(m.Import).order_by(m.Import.id.desc())).first().id
     return client.get(f"/imports/{newest}").text
@@ -37,13 +37,13 @@ def later(**changes) -> str:
     )
 
 
-def test_a_first_upload_keeps_its_days_behind_a_toggle(client, engine):  # noqa: F811
+def test_a_first_upload_keeps_its_days_behind_a_toggle(client, engine):
     upload(client, content=_two_days())
     page = latest_page(client, engine)
     assert page.index("<details") < page.index("Every day, with its row count")
 
 
-def test_the_toggle_says_how_many_days(client, engine):  # noqa: F811
+def test_the_toggle_says_how_many_days(client, engine):
     upload(client, content=_two_days())
     page = latest_page(client, engine)
     with make_session(engine) as sess:
@@ -51,25 +51,25 @@ def test_the_toggle_says_how_many_days(client, engine):  # noqa: F811
     assert f"Show all {days} days" in readable(page)
 
 
-def test_a_first_upload_claims_no_change(client, engine):  # noqa: F811
+def test_a_first_upload_claims_no_change(client, engine):
     upload(client, content=_two_days())
     assert "Since your last upload" not in latest_page(client, engine)
 
 
-def test_a_later_upload_says_what_changed(client, engine):  # noqa: F811
+def test_a_later_upload_says_what_changed(client, engine):
     upload(client, content=_two_days())
     upload(client, content=_two_days() + MORE)
     assert "Since your last upload, 1 day changed: 15 Oct" in readable(latest_page(client, engine))
 
 
-def test_what_changed_shows_before_the_toggle(client, engine):  # noqa: F811
+def test_what_changed_shows_before_the_toggle(client, engine):
     upload(client, content=_two_days())
     upload(client, content=_two_days() + MORE)
     page = latest_page(client, engine)
     assert page.index("Since your last upload") < page.index("<details") < page.index("Rows before")
 
 
-def test_the_receipt_shows_no_result(client, engine):  # noqa: F811
+def test_the_receipt_shows_no_result(client, engine):
     """The guess comes next, and it is asked before anything is shown."""
     upload(client, content=_two_days())
     assert "₹" not in latest_page(client, engine)

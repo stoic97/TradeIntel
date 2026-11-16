@@ -30,15 +30,21 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.api import trade_list as TL
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_trade_rows import articles, text, uploaded  # noqa: F401
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.trade_rows import articles, text, trade_rows_uploaded
+
+
+@pytest.fixture()
+def uploaded(client, engine):
+    return trade_rows_uploaded(client, engine)
 
 HEADLINE = "Your best trades weren't trades."
 HOOK = "Your best and worst trades are in the same place."
@@ -471,17 +477,17 @@ def test_the_card_of_another_trader_says_what_his_lists_came_to():
 # ---------- Through the app ----------
 
 
-def test_a_position_held_eight_days_reads_in_days_on_the_fact_page(uploaded):  # noqa: F811
+def test_a_position_held_eight_days_reads_in_days_on_the_fact_page(uploaded):
     rows = articles(uploaded.get("/mirror/fact/money").text)
     assert any("Widget ETF" in a and "8 days" in a for a in rows)
 
 
-def test_and_on_every_other_list_it_appears_in(uploaded):  # noqa: F811
+def test_and_on_every_other_list_it_appears_in(uploaded):
     rows = articles(uploaded.get("/mirror/fact/risk/trades").text)
     assert any("Widget ETF" in a and "8 days" in a for a in rows)
 
 
-def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):  # noqa: F811
+def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):
     page = uploaded.get("/mirror/fact/money").text
     assert len(lists(page)) == 2
     assert not re.search(r"Day \d", text(page))

@@ -16,36 +16,36 @@ from services.production.ctr.reconstruct import reconstruct
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas.ctr_v1 import Side
-from tests.unit.api.test_spread_upload import loaded, text, tradebook
-from tests.unit.api.test_upload import client, engine, upload  # noqa: F401
-from tests.unit.test_reconstruction import fill
+from tests.helpers.reconstruction import fill
+from tests.helpers.spread_upload import loaded, text, tradebook
+from tests.helpers.upload import upload
 
 TRADES = 6
 
 
 @pytest.fixture()
-def uploaded(client, engine):  # noqa: F811
+def uploaded(client, engine):
     assert upload(client, content=tradebook()).status_code == 303
     return client
 
 
-def _import_id(engine) -> int:  # noqa: F811
+def _import_id(engine) -> int:
     with make_session(engine) as sess:
         return sess.scalars(select(m.Import.id)).one()
 
 
-def test_the_receipt_counts_a_spread_as_one_trade(uploaded, engine):  # noqa: F811
+def test_the_receipt_counts_a_spread_as_one_trade(uploaded, engine):
     with make_session(engine) as sess:
         assert sess.scalars(select(m.Import)).one().trips_reconstructed == TRADES
 
 
-def test_the_legs_are_all_kept_behind_that_count(uploaded, engine):  # noqa: F811
+def test_the_legs_are_all_kept_behind_that_count(uploaded, engine):
     """Guard: the count changes, the rows do not."""
     with make_session(engine) as sess:
         assert len(sess.scalars(select(m.Trip)).all()) == 7
 
 
-def test_the_upload_review_page_states_the_record_count(uploaded, engine):  # noqa: F811
+def test_the_upload_review_page_states_the_record_count(uploaded, engine):
     page = text(uploaded.get(f"/imports/{_import_id(engine)}").text)
     assert f"Trades rebuilt {TRADES} trades" in page
 
@@ -59,12 +59,12 @@ def test_the_unread_fact_states_the_record_count(uploaded):
     assert f"Trades reconstructed {TRADES}" in page
 
 
-def test_the_record_itself_counts_the_same(uploaded, engine):  # noqa: F811
+def test_the_record_itself_counts_the_same(uploaded, engine):
     """Guard: this is the figure the others have to agree with."""
     assert len(loaded(engine)) == TRADES
 
 
-def test_the_record_keeps_one_total(uploaded, engine):  # noqa: F811
+def test_the_record_keeps_one_total(uploaded, engine):
     """Guard: counting a spread once does not move a rupee."""
     assert sum(t.net for t in loaded(engine)) == Decimal(1200)
 

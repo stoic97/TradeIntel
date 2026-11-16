@@ -5,9 +5,8 @@ from __future__ import annotations
 from services.production.api import scope_facts as SF
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle as T
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.scope_chapters import IMP, TRIPS, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
 
 WATCHING = "Something showed up here, but it didn't clear the bar a finding has to clear. Upload more months to confirm."
 CLOSED = "No difference we can stand behind."
@@ -51,8 +50,8 @@ def test_the_facts_carry_the_level_from_the_one_test():
     assert figs["down"]["post_loss_needs"]["condition"] > 0
 
 
-def test_scope_home_says_how_many_checks_the_bar_corrects_for(client):  # noqa: F811
-    from tests.unit.api.test_read_again import send, words
+def test_scope_home_says_how_many_checks_the_bar_corrects_for(client):
+    from tests.helpers.read_again import send, words
     send(client)
     said = words(client.get("/mirror").text)
     assert ("Every finding here clears a bar corrected for every check we run on your trades: "

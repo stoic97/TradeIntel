@@ -20,7 +20,7 @@ from services.production.api import routes_upload
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
-from tests.unit.api.test_upload import DUPES, sign_up, upload
+from tests.helpers.upload import DUPES, sign_up, upload
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 

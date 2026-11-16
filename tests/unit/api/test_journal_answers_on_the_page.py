@@ -6,15 +6,26 @@ from __future__ import annotations
 import json
 import re
 
+import pytest
 from sqlalchemy import func, select
 
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import fields as fl
-from tests.unit.api.test_journals import client, engine  # noqa: F401
+from tests.helpers.journals import journals_client, journals_engine
 
 
-def _changed_day(engine) -> tuple[int, int]:  # noqa: F811
+@pytest.fixture()
+def client(engine):
+    return journals_client(engine)
+
+
+@pytest.fixture()
+def engine():
+    return journals_engine()
+
+
+def _changed_day(engine) -> tuple[int, int]:
     """Answers on version 1 of the day, then a version 2 without t03."""
     with make_session(engine) as sess:
         v1 = sess.scalars(select(m.Journal).where(m.Journal.period_start == "2026-09-01")).first()
@@ -32,22 +43,22 @@ def _changed_day(engine) -> tuple[int, int]:  # noqa: F811
         return v1.id, v2.id
 
 
-def test_the_note_is_on_the_current_page(engine, client):  # noqa: F811
+def test_the_note_is_on_the_current_page(engine, client):
     _, v2 = _changed_day(engine)
     assert "NOTE-ON-THE-DAY" in client.get(f"/journals/{v2}").text
 
 
-def test_an_answer_for_a_trade_still_there_is_on_it(engine, client):  # noqa: F811
+def test_an_answer_for_a_trade_still_there_is_on_it(engine, client):
     _, v2 = _changed_day(engine)
     assert "KEPT-TRADE" in client.get(f"/journals/{v2}").text
 
 
-def test_an_answer_for_a_trade_no_longer_there_is_not(engine, client):  # noqa: F811
+def test_an_answer_for_a_trade_no_longer_there_is_not(engine, client):
     _, v2 = _changed_day(engine)
     assert "GONE-TRADE" not in client.get(f"/journals/{v2}").text
 
 
-def test_the_sentence_links_to_the_earlier_version(engine, client):  # noqa: F811
+def test_the_sentence_links_to_the_earlier_version(engine, client):
     v1, v2 = _changed_day(engine)
     assert (
         f'The <a class="link" href="/journals/{v1}">earlier version</a> is kept.'
@@ -55,12 +66,12 @@ def test_the_sentence_links_to_the_earlier_version(engine, client):  # noqa: F81
     )
 
 
-def test_that_answer_is_on_the_page_it_links_to(engine, client):  # noqa: F811
+def test_that_answer_is_on_the_page_it_links_to(engine, client):
     v1, _ = _changed_day(engine)
     assert "GONE-TRADE" in client.get(f"/journals/{v1}").text
 
 
-def test_saving_an_unchanged_answer_writes_nothing(engine, client):  # noqa: F811
+def test_saving_an_unchanged_answer_writes_nothing(engine, client):
     _, v2 = _changed_day(engine)
     page = client.get(f"/journals/{v2}").text
     token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page).group(1)

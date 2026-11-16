@@ -24,7 +24,7 @@ from services.production.api import admin_view
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_session
-from tests.unit.api.test_upload import DUPES, PNL, sign_up, upload
+from tests.helpers.upload import DUPES, PNL, sign_up, upload
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 LINE = "This is a demo file, not your trading."

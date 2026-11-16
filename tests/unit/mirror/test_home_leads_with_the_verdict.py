@@ -24,8 +24,8 @@ from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_journals_worth_writing import FILE
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.journals_worth_writing import FILE
+from tests.helpers.upload import CSRF, sign_up
 
 
 def _readable(html: str) -> str:

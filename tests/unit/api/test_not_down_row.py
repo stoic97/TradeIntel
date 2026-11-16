@@ -35,8 +35,8 @@ import pytest
 
 from services.production.api import formatting
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_chapter_three_describes import DOWN, one_day
-from tests.unit.api.test_scope_chapters import chapter_page, readable
+from tests.helpers.chapter_three_describes import DOWN, one_day
+from tests.helpers.scope_chapters import chapter_page, readable
 
 FIXTURE = Path("tests/fixtures/mirror_contract")
 HISTORY = DOWN + one_day([40, 20], "2026-09-02")

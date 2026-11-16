@@ -26,12 +26,12 @@ from services.production.ctr.adapters import filemap
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import constants as k
-from tests.unit.api.test_add_charges import FILE as CHARGES_TRADES
-from tests.unit.api.test_add_charges import FULL
-from tests.unit.api.test_admin_page import ADMIN, TEMPLATES, add_trader, signed_in
-from tests.unit.api.test_rate_limits import sign_up as bare_sign_up
-from tests.unit.api.test_rate_limits import stored_files
-from tests.unit.api.test_upload import DUPES, sign_up, upload
+from tests.helpers.add_charges import FILE as CHARGES_TRADES
+from tests.helpers.add_charges import FULL
+from tests.helpers.admin_page import ADMIN, TEMPLATES, add_trader, signed_in
+from tests.helpers.rate_limits import sign_up as bare_sign_up
+from tests.helpers.rate_limits import stored_files
+from tests.helpers.upload import DUPES, sign_up, upload
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 CLEAN = DUPES / "clean.csv"

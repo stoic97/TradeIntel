@@ -26,11 +26,10 @@ from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
 from services.production.journal import constants as k
-from tests.unit.api.test_upload import sign_up as sign_up_with_consent
-from tests.unit.api.test_upload import upload
+from tests.helpers.rate_limits import CSRF, PASSWORD, sign_up, stored_files, trader_id
+from tests.helpers.upload import sign_up as sign_up_with_consent
+from tests.helpers.upload import upload
 
-CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
-PASSWORD = "a-long-enough-password"
 GOOD = Path("data/fixtures/demo/demo_tradebook.csv")
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -47,17 +46,6 @@ def app(engine):
     return create_app()
 
 
-def sign_up(client, login_id, password=PASSWORD):
-    client.cookies.clear()
-    csrf = CSRF.search(client.get("/signup").text).group(1)
-    return client.post(
-        "/signup",
-        data={"login_id": login_id, "display_name": login_id, "password": password,
-              "csrf_token": csrf},
-        follow_redirects=False,
-    )
-
-
 def traders(engine) -> int:
     with make_session(engine) as sess:
         return sess.scalar(select(func.count()).select_from(m.Trader))
@@ -71,21 +59,6 @@ def raw_files(engine) -> int:
 def files_on_disk() -> list[Path]:
     root = Path(os.environ["SCOPE_FILES"])
     return [p for p in root.rglob("*") if p.is_file()] if root.exists() else []
-
-
-def trader_id(engine, login_id) -> int:
-    with make_session(engine) as sess:
-        return sess.scalars(select(m.Trader.id).where(m.Trader.login_id == login_id)).one()
-
-
-def stored_files(engine, login_id, count, at) -> None:
-    """Files this account already sent, without paying to read each one."""
-    owner = trader_id(engine, login_id)
-    with make_session(engine) as sess:
-        for n in range(count):
-            sess.add(m.RawFile(trader_id=owner, sha256=f"{login_id}{at.isoformat()}{n}", original_name="old.csv",
-                               size=1, stored_path="old", uploaded_at=at))
-        sess.commit()
 
 
 def full_disk(monkeypatch, percent) -> None:
