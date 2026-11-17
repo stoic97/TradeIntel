@@ -1,13 +1,15 @@
-"""TICKET-907 (FB-0168): the number he is considering, in points per lot, per instrument he trades.
+"""TICKET-907 (FB-0168; C2 ruled by Pawan, 17 Nov): the number in points per lot, one line per book.
 
-A point on one lot is worth the instrument profile's currency_per_point (MCX_CRUDEOIL: 100,
-NSE_NIFTY: 65), at today's lot. The loader puts it on each trip as point_value.
+A point on one lot is worth the instrument profile's currency_per_point at today's lot
+(MCX_CRUDEOIL 100, MCX_CRUDEOILM 10, NSE_NIFTY 65); the loader puts it on each trip as
+point_value. CRUDEOIL and CRUDEOILM are one book (book_of) but ten times apart a point, so
+the crude line names both.
 
 Hand-worked, against 2000:
-  CRUDEOIL 100/point -> 20 points      three trades, listed first
-  NIFTY     65/point -> 30.77 points   2000 / 65 = 30.769..., to two places
-  RELIANCE shares (EQ) -> no row: a share has no lot to count points on
-  a trip with no point value -> no row: nothing to divide by
+  crude: CRUDEOIL 2000/100 = 20 points (3 trades), CRUDEOILM 2000/10 = 200 points (1 trade)
+  NIFTY: 2000/65 = 30.769... -> 30.77 points (1 trade)
+  RELIANCE shares (EQ) -> no line: a share has no lot
+  a trip with no point value -> no line: nothing to divide by
 """
 
 from __future__ import annotations
@@ -53,6 +55,7 @@ def history() -> list[mx.Trip]:
         trip("a", "CRUDEOIL", "100"),
         trip("b", "CRUDEOIL", "100", "OPT"),
         trip("c", "CRUDEOIL", "100"),
+        trip("m", "CRUDEOILM", "10"),
         trip("d", "NIFTY", "65", "OPT"),
         trip("e", "RELIANCE", "1", "EQ"),
         trip("f", "MYSTERY", None),
@@ -63,22 +66,25 @@ def test_a_trip_carries_no_point_value_unless_the_loader_gives_it_one():
     assert trip("x", "CRUDEOIL", None).point_value is None
 
 
-def test_the_number_in_points_per_lot_for_each_instrument():
-    rows = {r.symbol: r.points for r in mx.points_per_lot(history(), Decimal(2000))}
-    assert rows == {"CRUDEOIL": Decimal(20), "NIFTY": Decimal("30.77")}
-
-
-def test_the_instrument_he_trades_most_comes_first():
+def test_one_line_per_book_each_contract_with_its_own_points():
     rows = mx.points_per_lot(history(), Decimal(2000))
-    assert [(r.symbol, r.trades) for r in rows] == [("CRUDEOIL", 3), ("NIFTY", 1)]
+    assert [(r.book, r.parts) for r in rows] == [
+        ("crude", (("CRUDEOIL", Decimal(20)), ("CRUDEOILM", Decimal(200)))),
+        ("NIFTY", (("NIFTY", Decimal("30.77")),)),
+    ]
 
 
-def test_shares_and_instruments_with_no_point_value_have_no_row():
-    symbols = {r.symbol for r in mx.points_per_lot(history(), Decimal(2000))}
-    assert "RELIANCE" not in symbols and "MYSTERY" not in symbols
+def test_the_book_he_trades_most_comes_first():
+    rows = mx.points_per_lot(history(), Decimal(2000))
+    assert [(r.book, r.trades) for r in rows] == [("crude", 4), ("NIFTY", 1)]
 
 
-def test_no_trades_no_rows():
+def test_shares_and_instruments_with_no_point_value_have_no_line():
+    books = {r.book for r in mx.points_per_lot(history(), Decimal(2000))}
+    assert "RELIANCE" not in books and "MYSTERY" not in books
+
+
+def test_no_trades_no_lines():
     assert mx.points_per_lot([], Decimal(2000)) == []
 
 

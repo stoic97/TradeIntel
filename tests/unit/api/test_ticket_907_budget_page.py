@@ -106,12 +106,13 @@ def test_the_slider_is_drawn_over_his_own_losses(loaded, engine):
     assert strip.count("<rect") == len(losses)
 
 
-def test_points_per_lot_for_each_instrument_he_trades(loaded, engine):
+def test_points_per_lot_one_line_per_book(loaded, engine):
     page = text(loaded.get("/budget?against=400").text)
-    rows = mx.points_per_lot(trips_of(engine), mx.Decimal("400"))
+    rows = mx.points_per_lot(trips_of(engine), mx.Decimal(400))
     assert rows, "the tradebook's instrument has a profile"
     for row in rows:
-        assert f"On one lot, ₹400 is {formatting.price(row.points)} points of {row.symbol}." in page
+        said = " and ".join(f"{formatting.price(pts)} points of {sym}" for sym, pts in row.parts)
+        assert f"On one lot, ₹400 is {said}." in page
 
 
 # ---------- FB-0170: capital as a share ----------
@@ -176,3 +177,16 @@ def test_the_slider_read_opened_as_a_page_is_the_page_with_its_way_home(loaded):
     r = loaded.get("/budget/against?against=400", follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/budget?against=400"
+
+
+def test_with_no_day_limit_the_page_says_so_not_a_zero(loaded):
+    """Pawan, 17 Nov (Q1): the day-limit declaration is its own ticket; 907 ships this state."""
+    page = text(loaded.get("/budget").text)
+    assert "No day limit is set, so no day is counted against one." in page
+
+
+def test_the_recording_paragraph_promises_nothing_the_journal_does_not_do(loaded):
+    """Pawan, 17 Nov (Q2): nothing reads the number in the Journal yet, so the copy says nothing of it."""
+    html = loaded.get("/budget").text
+    para = re.search(r"Recording a number keeps the number.*?</p>", html, re.DOTALL).group(0)
+    assert "journal" not in para.lower()

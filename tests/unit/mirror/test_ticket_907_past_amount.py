@@ -93,3 +93,10 @@ def test_no_trades_is_not_a_zero():
 def test_a_number_of_zero_or_less_is_not_a_number_to_count_against(bad):
     with pytest.raises(ValueError):
         mx.past_amount(trips(), Decimal(bad))
+
+
+def test_a_trade_inside_the_number_adds_nothing_not_a_negative():
+    """Pawan, 17 Nov (C1): each trade adds max(0, |loss| - number) to the part past it."""
+    assert mx.past_amount([trip("u", "-1500")], Decimal(2000)).beyond == Decimal(0)
+    both = mx.past_amount([trip("u", "-1500"), trip("o", "-2600")], Decimal(2000))
+    assert (both.count, both.beyond) == (1, Decimal(600))
