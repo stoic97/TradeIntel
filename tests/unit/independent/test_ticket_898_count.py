@@ -184,3 +184,18 @@ def test_loader_reads_start_stamped_closes(tmp_path):
         encoding="utf-8",
     )
     assert load_series(p).price_at_edge(_t("09:02:00")) == 101.5
+
+
+def test_an_entry_in_a_minute_with_no_bar_counts_before_and_leaves_every_after_count():
+    # D5. I enters at 09:07:30 and there is no 09:07 bar (a gap, or a late stamp). The code does
+    # not know why, so the reason says only that the bar is missing, never "outside the session".
+    # Prior reads bar 09:06 (104 -> 105, +1, long: with). Every +N starts from the close of the
+    # 09:07 bar, so none can be measured.
+    trip = Trip("I", "MCX_CRUDEOIL", "CALL", "BUY", _t("09:07:30"))
+    r = count([trip], {"CRUDE": _series()}, horizons=(5, 15, 30, 60))
+    assert r.prior.per_trip["I"] == "with"
+    assert (r.prior.with_, r.prior.measured) == (1, 1)
+    for h in (5, 15, 30, 60):
+        assert r.after[h].per_trip["I"] == "missing_entry_minute_bar"
+        assert r.after[h].measured == 0
+        assert dict(r.after[h].unmeasured) == {"missing_entry_minute_bar": 1}
