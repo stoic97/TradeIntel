@@ -1,11 +1,12 @@
-# PlusEV–TradeDNA · Research Specification — v1.0.4 (frozen)
+# PlusEV–TradeDNA · Research Specification — v1.0.5 (frozen)
 
-*3 October 2026, frozen; amended to v1.0.4 on 14 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+*3 October 2026, frozen; amended to v1.0.5 on 17 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
 
 **Change log** (newest first). Under SR-011 this document changes only by a version bump and a row here. The first three rows after v1.0 were recorded on 14 November 2026: they had been made in place, under v1.0.
 
 | Version | Date | What changed | Why | Ticket · commit |
 |---|---|---|---|---|
+| v1.0.5 | 17 Nov 2026 | §4.7.5 and §4.7.9, one sentence each: the interval after an entry starts at the close of the entry minute, and the prior minute is the bar before the entry minute read on its own, its close against its own open | The founder ruled both on 13 Nov (TICKET-898, D1 and D2); the code and the independent count apply them. No other rule changes | TICKET-898 |
 | v1.0.4 | 14 Nov 2026 | §4.7.8, the multi-leg direction convention (it said the question was open), the 4.7.7 table's multi-leg row, and its Annex I entry ("What changed from v1.0.3 → v1.0.4") | The founder ruled the convention on 12 and 13 Nov; the code applies it from the legs alone | TICKET-902 |
 | v1.0.3 | 14 Nov 2026 | This change log. The header names this version and its parent, Thesis v1.5 (it still said v1.4), and says "frozen" (it said "freeze candidate", though the README and the Status paragraph call it frozen). No rule changes | Repo audit C3: three post-freeze edits were made under v1.0 | TICKET-931 |
 | v1.0.2 | 13 Nov 2026 | §5.5a, the finding bar, and its Annex I entry ("What changed from v1.0.1 → v1.0.2") | The live gate did not correct for the number of checks tried | TICKET-909 · `a4f9836` |
