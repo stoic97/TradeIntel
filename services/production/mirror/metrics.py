@@ -94,6 +94,7 @@ class Trip:
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
     premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
+    point_value: Decimal | None = None  # rupees a one-point move makes on one lot, today's (TICKET-907)
 
     @property
     def is_win(self) -> bool:
@@ -1727,6 +1728,149 @@ def trades_past_number(trips: list[Trip]) -> TradesPastNumber:
         held_past_day=len(trips) - len(same_day),
         state=s.ResultState.COUNTED_FACT if measured else s.ResultState.INSUFFICIENT_SAMPLE,
     )
+
+
+@dataclass(frozen=True)
+class PastAmount:
+    """Same-day trades that lost more than a number he is considering (TICKET-907).
+
+    trades_past_number's count, against a number he has typed rather than one he recorded.
+    ``beyond`` is the part of those losses past the number, in rupees. A count of what
+    happened: it suggests no number.
+    """
+
+    amount: Decimal
+    count: int
+    trip_ids: list[str]
+    beyond: Decimal
+    same_day: int
+    held_past_day: int
+    state: s.ResultState
+
+
+def past_amount(trips: list[Trip], amount: Decimal) -> PastAmount:
+    """How many same-day trades lost more than ``amount``, and the part past it.
+
+    "More than" is strict, as in trades_past_number: a loss equal to the number, in paise,
+    is not past it. A number of zero or less is not one to count against.
+    """
+    if amount <= 0:
+        raise ValueError("a number to count against is more than zero")
+    same_day = same_day_trips(trips)
+    past = [t for t in same_day if _round(-t.net) > amount]
+    return PastAmount(
+        amount=amount,
+        count=len(past),
+        trip_ids=[t.trip_id for t in past],
+        beyond=sum((_round(-t.net) - amount for t in past), Decimal(0)),
+        same_day=len(same_day),
+        held_past_day=len(trips) - len(same_day),
+        state=s.ResultState.COUNTED_FACT if same_day else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+@dataclass(frozen=True)
+class Fall:
+    """The biggest drop of his running total, from a high point to the lowest day after it.
+
+    ``from_day`` is None when the drop starts at the start of his file: his first day lost.
+    """
+
+    amount: Decimal
+    from_day: str | None
+    to_day: str
+
+
+def deepest_fall(trips: list[Trip]) -> Fall | None:
+    """Day by day through daily_series, the one place a day's net is decided (TICKET-907)."""
+    peak, peak_day, level = Decimal(0), None, Decimal(0)
+    deepest: Fall | None = None
+    for day in daily_series(trips):
+        level += day.net
+        if level > peak:
+            peak, peak_day = level, day.trading_day
+        drop = peak - level
+        if drop > 0 and (deepest is None or drop > deepest.amount):
+            deepest = Fall(amount=drop, from_day=peak_day, to_day=day.trading_day)
+    return deepest
+
+
+@dataclass(frozen=True)
+class CapitalShares:
+    """His worst day, deepest fall and biggest premium, each as a share of his capital.
+
+    TICKET-907 (FB-0170). Each figure is his own, from the trades loaded. A share is a whole
+    percent by _whole_percent's rule, and None when he has entered no capital.
+    """
+
+    capital: Decimal | None
+    worst_day: DayNet | None
+    worst_day_percent: Decimal | None
+    fall: Fall | None
+    fall_percent: Decimal | None
+    premium: Decimal | None
+    premium_percent: Decimal | None
+    state: s.ResultState
+
+
+def capital_shares(trips: list[Trip], capital: Decimal | None) -> CapitalShares:
+    """The worst day is five_worst_days' first, so this page and the Scope name the same day."""
+    worst = five_worst_days(trips).days
+    worst_day = worst[0] if worst and worst[0].net < 0 else None
+    fall = deepest_fall(trips)
+    premiums = [t.premium for t in trips if t.is_option and t.premium]
+    premium = max(premiums) if premiums else None
+
+    def share(part: Decimal | None) -> Decimal | None:
+        return _whole_percent(part, capital) if capital and part else None
+
+    return CapitalShares(
+        capital=capital,
+        worst_day=worst_day,
+        worst_day_percent=share(-worst_day.net) if worst_day else None,
+        fall=fall,
+        fall_percent=share(fall.amount) if fall else None,
+        premium=premium,
+        premium_percent=share(premium),
+        state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
+
+
+@dataclass(frozen=True)
+class PointsPerLot:
+    """A number in points on one lot, for one book he trades (TICKET-907).
+
+    One line per book (C2, Pawan 17 Nov). A book can hold contracts a point apart in value,
+    crude's CRUDEOIL and CRUDEOILM ten times apart, so each keeps its own figure: ``parts`` is
+    (symbol, points), most traded first.
+    """
+
+    book: str
+    parts: tuple[tuple[str, Decimal], ...]
+    trades: int
+
+
+def points_per_lot(trips: list[Trip], amount: Decimal) -> list[PointsPerLot]:
+    """The number over what a point is worth on one lot today, one row per book, most traded first.
+
+    A share bought outright has no lot, and a trip with no point value has nothing to divide
+    by, so neither has a row. To two places, trailing zeros dropped.
+    """
+    if amount <= 0:
+        raise ValueError("a number to count against is more than zero")
+    books: dict[str, dict[str, list[Trip]]] = {}
+    for t in trips:
+        if t.point_value and not (t.lines and t.lines[0].segment == "EQ"):
+            books.setdefault(book_of(t.symbol), {}).setdefault(t.symbol, []).append(t)
+    rows = []
+    for book, symbols in books.items():
+        ordered = sorted(symbols.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+        rows.append(PointsPerLot(
+            book=book,
+            parts=tuple((sym, _trim(_round(amount / ts[0].point_value))) for sym, ts in ordered),
+            trades=sum(len(ts) for _, ts in ordered),
+        ))
+    return sorted(rows, key=lambda r: (-r.trades, r.book))
 
 
 def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
