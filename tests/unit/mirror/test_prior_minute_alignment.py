@@ -157,8 +157,8 @@ def test_the_last_bar_of_the_nse_session_starts_one_minute_before_session_end():
     bars = session_bars("NSE_NIFTY", [DAY])
     assert ist(DAY, "15:29") in bars.bars and ist(DAY, "15:30") not in bars.bars
     assert before(ist(DAY, "15:29", 40), bars) == (1, 1, [])  # 15:28 before, 15:29 entered
-    # Past the close the bar before (15:29) still exists, so the before count reads it (D5);
-    # the entry-minute bar does not, so every after count leaves the trip out.
+    # No 15:30 bar exists: the bar before (15:29) is there, so the before count reads it (D5);
+    # the entry-minute bar is not, so every after count leaves the trip out.
     assert before(ist(DAY, "15:30", 10), bars) == (1, 1, [])
 
 
@@ -170,7 +170,7 @@ def test_crude_open_and_close_in_its_own_session():
     assert before(ist(DAY, "23:29", 30), bars) == (1, 1, [])  # 23:28 before, 23:29 entered
     late_utc = datetime(2026, 6, 2, 17, 59, 30, tzinfo=UTC)  # 23:29:30 IST
     assert before(late_utc, bars) == (1, 1, [])
-    assert before(ist(DAY, "23:30", 5), bars) == (1, 1, [])  # past the close: 23:29 is there
+    assert before(ist(DAY, "23:30", 5), bars) == (1, 1, [])  # no 23:30 bar: 23:29 is there
 
 
 # ---- Gate 4: a minute with no data cannot be measured -------------------------------------
@@ -286,10 +286,30 @@ def test_the_day_a_trade_is_covered_on_is_its_ist_day():
     assert before(ist(DAY, "00:00", 20), stale) == (0, 0, [pm.Reason.NOT_COVERED])
 
 
-def test_an_entry_past_the_close_has_its_prior_bar_but_no_entry_minute_bar():
+def _assert_counted_before_and_left_out_of_every_after(result, trip_id):
+    """D5: the bar before the entry minute is there, the entry-minute bar is not."""
+    assert (result.before.agreed, result.before.measured) == (1, 1)
+    assert result.unmeasured == () and result.unmeasured_before == ()
+    for h in pm.HORIZONS:
+        assert (result.after[h].agreed, result.after[h].measured) == (0, 0)
+        left_out = [(u.trip_id, u.reason) for u in result.unmeasured_after[h]]
+        assert left_out == [(trip_id, pm.Reason.NO_ENTRY_BAR)]
+
+
+def test_an_entry_in_a_minute_with_no_bar_is_counted_before_and_left_out_of_every_after_count():
+    # D5. The code does not know why the entry-minute bar is missing (a gap, a late broker stamp,
+    # or a minute after the session), so the reason says only that the bar is missing.
     bars = session_bars("NSE_NIFTY", [DAY])
     entry = pm.Entry("t1", "UNDER", ist(DAY, "15:30", 10), 1)
     result = pm.count([entry], {"UNDER": bars}, draws=10)
-    assert (result.before.agreed, result.before.measured) == (1, 1)
-    for h in pm.HORIZONS:
-        assert [u.reason for u in result.unmeasured_after[h]] == [pm.Reason.NO_ENTRY_BAR]
+    _assert_counted_before_and_left_out_of_every_after(result, "t1")
+
+
+def test_the_same_holds_on_a_winter_crude_date_where_the_missing_bar_is_a_data_gap():
+    # 1 Dec 2026: the US is on standard time, MCX non-agri runs to 23:55, so 23:30:05 is inside
+    # the session and the missing 23:30 bar is a gap in the data. The answer is the same as above.
+    winter = date(2026, 12, 1)
+    bars = table({ist(winter, "23:28"): UP, ist(winter, "23:29"): UP})
+    entry = pm.Entry("t2", "UNDER", ist(winter, "23:30", 5), 1)
+    result = pm.count([entry], {"UNDER": bars}, draws=10)
+    _assert_counted_before_and_left_out_of_every_after(result, "t2")
