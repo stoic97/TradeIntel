@@ -1838,31 +1838,39 @@ def capital_shares(trips: list[Trip], capital: Decimal | None) -> CapitalShares:
 
 @dataclass(frozen=True)
 class PointsPerLot:
-    """A number in points on one lot of one instrument he trades (TICKET-907)."""
+    """A number in points on one lot, for one book he trades (TICKET-907).
 
-    symbol: str
-    points: Decimal
+    One line per book (C2, Pawan 17 Nov). A book can hold contracts a point apart in value,
+    crude's CRUDEOIL and CRUDEOILM ten times apart, so each keeps its own figure: ``parts`` is
+    (symbol, points), most traded first.
+    """
+
+    book: str
+    parts: tuple[tuple[str, Decimal], ...]
     trades: int
 
 
 def points_per_lot(trips: list[Trip], amount: Decimal) -> list[PointsPerLot]:
-    """The number divided by what a point is worth on one lot, per instrument, most traded first.
+    """The number over what a point is worth on one lot today, one row per book, most traded first.
 
-    By symbol, not by book: CRUDEOIL and CRUDEOILM are one book but ten times apart a point.
     A share bought outright has no lot, and a trip with no point value has nothing to divide
     by, so neither has a row. To two places, trailing zeros dropped.
     """
     if amount <= 0:
         raise ValueError("a number to count against is more than zero")
-    by_symbol: dict[str, list[Trip]] = {}
+    books: dict[str, dict[str, list[Trip]]] = {}
     for t in trips:
         if t.point_value and not (t.lines and t.lines[0].segment == "EQ"):
-            by_symbol.setdefault(t.symbol, []).append(t)
-    rows = [
-        PointsPerLot(symbol=sym, points=_trim(_round(amount / ts[0].point_value)), trades=len(ts))
-        for sym, ts in by_symbol.items()
-    ]
-    return sorted(rows, key=lambda r: (-r.trades, r.symbol))
+            books.setdefault(book_of(t.symbol), {}).setdefault(t.symbol, []).append(t)
+    rows = []
+    for book, symbols in books.items():
+        ordered = sorted(symbols.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+        rows.append(PointsPerLot(
+            book=book,
+            parts=tuple((sym, _trim(_round(amount / ts[0].point_value))) for sym, ts in ordered),
+            trades=sum(len(ts) for _, ts in ordered),
+        ))
+    return sorted(rows, key=lambda r: (-r.trades, r.book))
 
 
 def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
