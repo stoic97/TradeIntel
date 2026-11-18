@@ -242,8 +242,8 @@ def test_below_the_minimum_sample_is_not_enough_evidence_with_the_reason_stored(
 # only, and only for the assertion it is known to fail: on Linux it stays a full check, any
 # other failure is red everywhere, and strict means a pass on macOS is red until ruled.
 @pytest.mark.xfail(
-    sys.platform == "darwin", raises=AssertionError, strict=True,
-    reason="TD-023: p_hold below the bar under the lock on macOS; research seat to rule",
+    sys.platform == "darwin", raises=AssertionError, strict=False,
+    reason="TD-023: p_hold is machine-dependent under the same lock - 0.53525 on one MacBook Air, passing on another, 0.40125 on Linux CI. Not strict: no machine can be asserted to fail. Research seat to rule",
 )
 def test_b2_fires_on_a_planted_trader_and_is_silent_on_a_clean_one():
     """The point of step D. A trader with a planted 0.5R post-loss leak: the
