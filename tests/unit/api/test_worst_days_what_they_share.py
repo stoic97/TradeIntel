@@ -36,10 +36,10 @@ from services.production.db.session import make_engine, make_session, run_migrat
 from services.production.mirror import feedback as FB
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_dates_with_year import FILE as UPLOAD_FILE
-from tests.unit.api.test_scope_chapters import readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.dates_with_year import FILE as UPLOAD_FILE
+from tests.helpers.scope_chapters import readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import CSRF, sign_up
 
 
 def _day(day: str, at: str, nets: list[int], symbol: str = "CRUDEOIL", option=True) -> list[mx.Trip]:
@@ -288,19 +288,20 @@ def test_every_trade_stays_within_reach():
 # ---------- Chapter 1 has two facts ----------
 
 
-def test_chapter_one_has_two_facts():
-    assert [f.key for f in S.chapter(1).facts] == ["worst-days", "money"]
+def test_chapter_one_has_the_plain_counts_then_its_two_facts():
+    assert [f.key for f in S.chapter(1).facts] == ["hidden", "worst-days", "money"]  # TICKET-910
 
 
 def test_the_dial_says_findings_not_counts():
     ctx = SF.record_context(FOUR_CRUDE_EVENINGS)
-    items = SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
+    items = [i for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
+             if i["name"] != S.FACTS["hidden"].title]  # TICKET-910: its wedge is a plain count
     assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
         ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
 
 
 def _imp():
-    from tests.unit.api.test_scope_chapters import IMP
+    from tests.helpers.scope_chapters import IMP
 
     return IMP
 
@@ -341,7 +342,7 @@ def test_the_share_page_goes_to_worst_days(client):
 
 def test_the_chapter_page_leads_on_to_its_first_page(client):
     """TICKET-903: chapter 1 goes on to its own first page, from scope_map."""
-    assert "Next: Your worst trading days" in readable(client.get("/mirror/chapter/1").text)
+    assert f"Next: {S.chapter(1).facts[0].title}" in readable(client.get("/mirror/chapter/1").text)
 
 
 def test_a_flag_is_kept_with_its_day_and_note(client):

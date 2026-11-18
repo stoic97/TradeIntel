@@ -22,19 +22,10 @@ from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as sc
+from tests.helpers.scope_chapters import IMP, readable
+from tests.helpers.scope_chapters import TRIPS as FORTY
+from tests.helpers.scope_home_verdict import t
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, readable
-from tests.unit.api.test_scope_chapters import TRIPS as FORTY
-
-
-def t(day, net, symbol="CRUDEOIL", is_option=True, held_days=0, at="10:00"):
-    entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
-    exit_ts = entry + timedelta(days=held_days, minutes=10)
-    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None, Decimal(net)),)
-    return mx.Trip(
-        f"{symbol}-{day}-{at}", symbol, day, entry, exit_ts, int((exit_ts - entry).total_seconds()),
-        Decimal(net), 1, sc.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
-    )
 
 
 def days_from(start: date, n: int) -> list[str]:

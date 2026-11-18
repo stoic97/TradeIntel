@@ -65,6 +65,7 @@ class Finding:
 K, R = Known, Rung
 
 LABELS: dict[str, Finding] = {f.key: f for f in (
+    Finding("hidden", K.ONLY_AFTER, R.SEEN),       # plain counts over the record
     Finding("worst-days", K.ONLY_AFTER, R.SEEN),   # which days were worst: known after them
     Finding("share", K.ONLY_AFTER, R.SEEN),
     Finding("money", K.ONLY_AFTER, R.SEEN),        # best and worst trades, by result

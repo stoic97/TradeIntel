@@ -19,8 +19,7 @@ from services.production.db.session import make_session
 from services.production.mirror.prior_minute import IST, Bar, BarTable
 from services.production.replay import blind as B
 from services.production.replay import sources
-from tests.unit.api.test_read_again import send, words
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.read_again import send, words
 
 DAYS = [date(2024, 1, 1) + timedelta(days=i) for i in range(31)]
 
@@ -51,13 +50,13 @@ def plain(page: str) -> str:
     return re.sub(r'name="csrf_token" value="[^"]+"', "", page)
 
 
-def rows(engine) -> dict[str, int]:  # noqa: F811
+def rows(engine) -> dict[str, int]:
     with make_session(engine) as sess:
         return {t.name: sess.scalar(select(func.count()).select_from(t))
                 for t in m.Base.metadata.sorted_tables}
 
 
-def test_it_is_closed_whenever_the_rule_for_its_count_is_unsigned(client, monkeypatch):  # noqa: F811
+def test_it_is_closed_whenever_the_rule_for_its_count_is_unsigned(client, monkeypatch):
     send(client)
     monkeypatch.setattr(B, "PREREG_SIGNED", False)
     said = words(client.get("/replay").text)
@@ -71,20 +70,20 @@ def test_the_pre_registration_is_signed_before_anyone_real_plays():
     assert "| Research | Rikk | 13 November 2026 |" in doc
 
 
-def test_it_is_closed_without_bars(client, monkeypatch):  # noqa: F811
+def test_it_is_closed_without_bars(client, monkeypatch):
     send(client)
     monkeypatch.setattr(B, "PREREG_SIGNED", True)
     assert "one-minute prices for your trades' dates, and those aren't here yet" in words(
         client.get("/replay").text)
 
 
-def test_it_states_the_age_cutoff(client, bars):  # noqa: F811
+def test_it_states_the_age_cutoff(client, bars):
     send(client)
     said = words(client.get("/replay").text)
     assert f"Only trades more than {B.OLD_AFTER_DAYS} days old are used" in said
 
 
-def test_a_card_shows_no_date_and_no_answer(client, bars):  # noqa: F811
+def test_a_card_shows_no_date_and_no_answer(client, bars):
     send(client)
     said = words(client.get("/replay/card").text)
     assert "Take it" in said and "Skip it" in said
@@ -92,7 +91,7 @@ def test_a_card_shows_no_date_and_no_answer(client, bars):  # noqa: F811
         assert leak not in said, leak
 
 
-def test_the_page_before_the_reveal_does_not_move_when_the_future_does(client, bars, monkeypatch):  # noqa: F811
+def test_the_page_before_the_reveal_does_not_move_when_the_future_does(client, bars, monkeypatch):
     """Change every bar at or after the first card's moment: the card page is identical."""
     send(client)
     first = client.get("/replay/card").text
@@ -113,14 +112,14 @@ def test_the_page_before_the_reveal_does_not_move_when_the_future_does(client, b
     assert plain(client.get("/replay/card").text) == plain(first)
 
 
-def test_the_reveal_says_whose_it_was_and_the_points_before_charges(client, bars):  # noqa: F811
+def test_the_reveal_says_whose_it_was_and_the_points_before_charges(client, bars):
     send(client)
     said = words(client.get("/replay/reveal?calls=T").text)
     assert ("One of your own entries" in said) != ("A random moment" in said)
     assert "points, before charges" in said and "2024" in said
 
 
-def test_the_count_comes_first_against_a_coin_and_with_no_rupee_or_percent(client, bars):  # noqa: F811
+def test_the_count_comes_first_against_a_coin_and_with_no_rupee_or_percent(client, bars):
     send(client)
     first = client.get("/replay/card").text
     cards = int(re.search(r"of\s*(?:<[^>]+>)*\s*(\d+)\s*(?:<[^>]+>)*\s*</p>", first).group(1))
@@ -133,7 +132,7 @@ def test_the_count_comes_first_against_a_coin_and_with_no_rupee_or_percent(clien
             assert word not in text.lower(), (page, word)
 
 
-def test_playing_stores_nothing(client, bars, engine):  # noqa: F811
+def test_playing_stores_nothing(client, bars, engine):
     send(client)
     before = rows(engine)
     for path in ("/replay", "/replay/card", "/replay/reveal?calls=T", "/replay/card?calls=T",

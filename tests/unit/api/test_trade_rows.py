@@ -36,74 +36,24 @@ from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import TRIPS, trips_from
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    DUPES,
-    client,
-    engine,
-    upload,
-)
+from tests.helpers.scope_chapters import TRIPS, trips_from
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.trade_rows import articles, text, trade_rows_uploaded, tradebook
+from tests.helpers.upload import DUPES, upload
 
 OPENED = datetime.fromisoformat("2026-11-19T09:30:00+05:30")
 CLOSED = datetime.fromisoformat("2026-11-19T09:40:00+05:30")
 
-OPTION_ROWS = [
-    ("2026-11-19", "09:30:00", 5000, "CALL", "BUY", "10.00"),
-    ("2026-11-19", "09:40:00", 5000, "CALL", "SELL", "12.50"),
-    ("2026-11-17", "14:00:00", 5000, "PUT", "BUY", "120.00"),
-    ("2026-11-17", "14:20:00", 5000, "PUT", "SELL", "114.00"),
-    ("2026-10-15", "10:00:00", 5200, "CALL", "SELL", "20.00"),
-    ("2026-10-15", "11:00:00", 5200, "CALL", "BUY", "25.00"),
-    ("2026-10-14", "09:30:00", 5100, "CALL", "BUY", "10.00"),
-    ("2026-10-14", "09:30:05", 5000, "CALL", "SELL", "30.00"),
-    ("2026-10-14", "15:00:00", 5100, "CALL", "SELL", "4.00"),
-    ("2026-10-14", "15:00:05", 5000, "CALL", "BUY", "11.00"),
-    ("2025-11-03", "11:00:00", 5400, "CALL", "BUY", "60.00"),
-    ("2025-11-03", "11:30:00", 5400, "CALL", "SELL", "70.00"),
-]
-SHARE_ROWS = [
-    ("2026-10-20", "10:00:00", "BUY", "100.00"),
-    ("2026-10-28", "10:00:00", "SELL", "110.00"),
-]
-
-
-def tradebook(extra: tuple[str, ...] = ()) -> bytes:
-    header = (DUPES / "clean.csv").read_text().splitlines()[0]
-    options = [
-        f"{day},{time},WIDGETOIL 19 NOV {strike} {kind},{side},INTRADAY,MCX,Commodity,100,"
-        f"{price},{Decimal(price) * 100:.2f},Traded"
-        for day, time, strike, kind, side, price in OPTION_ROWS
-    ]
-    shares = [
-        f"{day},{time},Widget ETF,{side},DELIVERY,NSE,Equity,10,{price},"
-        f"{Decimal(price) * 10:.2f},Traded"
-        for day, time, side, price in SHARE_ROWS
-    ]
-    return ("\n".join([header, *options, *shares, *extra]) + "\n").encode()
-
-
 @pytest.fixture()
-def uploaded(client, engine):  # noqa: F811
-    response = upload(client, content=tradebook())
-    assert response.status_code == 303
-    return client
-
-
-def text(html: str) -> str:
-    return " ".join(re.sub(r"<[^>]+>", " ", html).replace("&#39;", "'").split())
-
-
-def articles(html: str) -> list[str]:
-    """Each trade on a page, as a reader reads it."""
-    return [text(a) for a in re.findall(r'<article class="trade">.*?</article>', html, re.DOTALL)]
+def uploaded(client, engine):
+    return trade_rows_uploaded(client, engine)
 
 
 def row_for(html: str, instrument: str) -> str:
     return next(a for a in articles(html) if a.startswith(instrument))
 
 
-def every_trade(client, query: str = "") -> str:  # noqa: F811
+def every_trade(client, query: str = "") -> str:
     """The risk fact's list: every trade, holdings too, whichever way they are measured."""
     got = client.get(f"/mirror/fact/risk/trades{query}")
     assert got.status_code == 200
@@ -253,7 +203,7 @@ def test_a_list_of_exactly_the_limit_stays_on_the_page():
     assert '<article class="trade">' not in fact_page("math", trips=over)
 
 
-def test_every_trade_behind_a_long_fact_is_reachable_through_the_link(client, engine):  # noqa: F811
+def test_every_trade_behind_a_long_fact_is_reachable_through_the_link(client, engine):
     """Handoff: every trade, never a sample. The link takes nothing away."""
     contract = "WIDGETOIL 19 NOV 5000 CALL"
     tail = "INTRADAY,MCX,Commodity,100"
@@ -280,7 +230,7 @@ def test_only_a_fact_with_trades_has_a_list(uploaded, key):
     assert uploaded.get(f"/mirror/fact/{key}/trades").status_code == 404
 
 
-def test_the_list_is_signed_in_only(engine):  # noqa: F811
+def test_the_list_is_signed_in_only(engine):
     from fastapi.testclient import TestClient
 
     from services.production.api.app import create_app
@@ -383,7 +333,7 @@ def test_the_form_offers_all_six_filters_when_each_has_a_choice(uploaded):
         assert f'name="{name}"' in page
 
 
-def test_a_filter_with_nothing_to_choose_between_is_left_off(client, engine):  # noqa: F811
+def test_a_filter_with_nothing_to_choose_between_is_left_off(client, engine):
     header = (DUPES / "clean.csv").read_text().splitlines()[0]
     rows = [
         "2026-11-17,09:30:00,WIDGETOIL 19 NOV 5000 CALL,BUY,INTRADAY,MCX,Commodity,100,10.00,1000.00,Traded",
@@ -441,7 +391,7 @@ def test_one_definition_of_a_book(symbol, segment, want):
 # ---------- The expiry, with no new column ----------
 
 
-def test_the_expiry_is_read_from_the_rows_already_stored(uploaded, engine):  # noqa: F811
+def test_the_expiry_is_read_from_the_rows_already_stored(uploaded, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         trips, imp = loader.load_for(sess, trader)

@@ -83,6 +83,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
         "book_math": mx.math_by_book(same_day),
+        "book_halves": mx.book_halves(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -148,6 +149,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 def _state(key: str, ctx: dict) -> str:
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
+    if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
+        return "not-enough"  # no book has the minimum of same-day trades
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -169,6 +172,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "hidden":
+        return Figure(f"{formatting.count(_counted_days(ctx))} days", "days")
     if key == "worst-days":
         return Figure(formatting.rupees(ctx["worst_days"].sum), "rupees")
     if key == "share":
@@ -233,6 +238,90 @@ def _busiest_story(ctx: dict) -> dict | None:
         "strip_has_positions": any(t.side == "both" for t in st.strip),
     }
 
+
+
+NOT_ENOUGH_YET = "not enough trades yet"
+HIDDEN_COLUMNS = ("First half", "Second half", "All its days")
+HIDDEN_ROWS = (
+    ("days", "Days traded"),
+    ("green_days", "Green days"),
+    ("green_months", "Green months"),
+    ("new_high", "Days since a new high"),
+    ("net_per_trade", "Net per trade"),
+    ("win", "You win"),
+    ("break_even", "Break even at"),
+)
+"""The plain-counts page's rows (TICKET-910), in the order its table writes them. New copy (D9)."""
+
+
+def _counted_days(ctx: dict) -> int:
+    """Trading days with a same-day trade: what the plain-counts page counts from."""
+    return len({t.trading_day for t in mx.same_day_trips(ctx["trips"])})
+
+
+def _hidden_link(text: str, noun: str, href: str):
+    """A count on the plain-counts page, opening the trades it was counted from (TICKET-905)."""
+    return formatting.opens(Figure(text, noun, opens=href))
+
+
+def _hidden_cell(half, href: str, row: str):
+    """One count of one half, written, and opening that half's trades."""
+    if row == "days":
+        return _hidden_link(formatting.count(half.days), "days", href)
+    if row == "green_days":
+        return (_hidden_link(formatting.count(half.green_days), "days", href) + " ("
+                + _hidden_link(formatting.count(half.green_day_percent), "percent", href) + "%)")
+    if row == "green_months":
+        return (_hidden_link(formatting.count(half.green_months), "months", href) + " of "
+                + _hidden_link(formatting.count(half.months), "months", href))
+    if row == "new_high":
+        if half.days_since_high is None:
+            return "no new high yet"
+        return _hidden_link(formatting.count(half.days_since_high), "days", href)
+    if row == "net_per_trade":
+        return _hidden_link(formatting.rupees(half.net_per_trade), "rupees", href)
+    if half.math.win_percent is None:
+        return NOT_ENOUGH_YET
+    if row == "win":
+        return _hidden_link(str(half.math.win_percent), "percent", href) + "%"
+    if half.math.break_even_percent is None:
+        return "\u2014"
+    return _hidden_link(str(half.math.break_even_percent), "percent", href) + "%"
+
+
+def _hidden_view(ctx: dict) -> dict:
+    """The plain-counts page (TICKET-910): each book's own halves, as its table writes them.
+
+    Every count opens the same-day trades of its book and half, built here from the rows
+    metrics.book_halves decided, never by a page. The p sits beside the change in net per trade
+    it checks. Nothing here is called a finding, ranked or priced."""
+    books = []
+    for r in ctx["book_halves"]:
+        every = S.see_all_href("hidden", book=r.book)
+        if r.state is not COUNTED:
+            books.append({"book": r.book, "counted": False,
+                          "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
+            continue
+        halves = (
+            (r.first, S.see_all_href("hidden", book=r.book, half="first")),
+            (r.second, S.see_all_href("hidden", book=r.book, half="second")),
+            (r.whole, every),
+        )
+        rows = []
+        for row, label in HIDDEN_ROWS:
+            rows.append({"label": label, "control": None,
+                         "cells": [_hidden_cell(half, href, row) for half, href in halves]})
+            if row == "net_per_trade":
+                change = _hidden_link(formatting.rupees(r.change_in_net_per_trade), "rupees", every)
+                p = r.control.p if r.control is not None else None
+                checked = (NOT_ENOUGH_YET if p is None
+                           else _hidden_link(f"{p:.3f}", "share of shuffles", every))
+                rows.append({"label": "Change, second half against first", "control": None,
+                             "cells": ["", "", change]})
+                rows.append({"label": "Whole days shuffled between the halves: p",
+                             "control": "net-per-trade", "cells": ["", "", checked]})
+        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
+    return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 
 def _break_even_lines(ctx: dict) -> list[dict]:
@@ -614,6 +703,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["busiest"]["story"] = _busiest_story(ctx)
+    out["hidden"].update(_hidden_view(ctx))
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     two_losses = ctx["two_losses"]
     same_day = mx.same_day_trips(trips)
@@ -768,12 +858,17 @@ def _clock_view(ctx: dict) -> dict:
 
 def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     """Each fact's wedge on its chapter's dial (TICKET-880). Same figures its page shows."""
+    if key == "hidden":
+        n = formatting.count(_counted_days(ctx))
+        return _wedge(Figure(n, "days", of="traded, in two halves"))
     if key == "worst-days":
         return _wedge(Figure(len(ctx["worst_days"].days), "days",
                              of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
     if key == "money" and ctx["best"]:
-        return _wedge(Figure(formatting.rupees(ctx["best"][0].net), "rupees", of="your best trade"),
-                      shown=formatting.rupees(ctx["best"][0].net))
+        # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
+        best = formatting.rupees(ctx["best"][0].net)
+        return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
+                      phone="best\ntrade", phone_shown=best.removeprefix("+"))
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))

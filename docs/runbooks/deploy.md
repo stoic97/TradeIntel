@@ -1,8 +1,13 @@
-# Runbook — putting Scope on a server
+# Runbook — putting Scope on a server, and every deploy after
+
+*v2, 14 November 2026. Sections 1–6 put Scope on a new box, once. **Every deploy after
+that is the release train** (below, after Staging): production runs only a tag that a
+person has checked on staging, never `main`, and every deploy is logged in
+`docs/runbooks/deploys.md`.*
 
 ADR-007 fixes the shape: one DigitalOcean Basic Droplet in Bangalore, under a
-product-only account, Caddy and Let's Encrypt in front, systemd behind, daily
-droplet backups. Everything below follows from that.
+product-only account, Caddy and Let's Encrypt in front, systemd behind, weekly
+droplet backups (ADR-007, amended 2026-11-16). Everything below follows from that.
 
 **First run: 21 October 2026**, on the cheapest Basic droplet (512 MB, 10 GB) in
 BLR1, which is comfortable for a few dozen traders. Everything below has
@@ -19,16 +24,26 @@ correct a line or two anyway, and commit the correction.
 
 ## 1. The box
 
-Basic droplet, Bangalore (BLR1), Ubuntu LTS. Enable **daily backups** when you
-create it — the consent text's 30-day sentence depends on them existing.
+Basic droplet, Bangalore (BLR1), Ubuntu LTS. Turn on **backups** when you create
+it. The setting, from the droplet's Backups page:
+
+DigitalOcean droplet backups: weekly, the four most recent kept
+
+Read on the console on 16 Nov 2026: weekly on Wednesday, 04:00-08:00 UTC; each image
+lives about 27 days, four at a time. An image is of the whole disk, `/etc/scope/`
+included, so it holds the keys too: the same vendor, gone within the 30 days the
+consent text promises. Scope's own nightly copies are in section 5.
 
     apt update && apt upgrade -y
-    apt install -y git curl ufw sqlite3 debian-keyring debian-archive-keyring apt-transport-https
+    apt install -y git curl ufw sqlite3 s3cmd debian-keyring debian-archive-keyring apt-transport-https
     ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable
 
 `sqlite3` is not optional: `backup.sh` takes the backup with the sqlite CLI's
 `.backup`, and without it `cron.daily` fails with "command not found" — a
 backup that silently never happens.
+
+`s3cmd` is not optional either: it carries each night's copy off the droplet
+(section 5).
 
 If `apt upgrade` asks about `sshd_config`, **keep the version currently
 installed**. The image's SSH config is deliberately key-only; the maintainer's
@@ -132,11 +147,262 @@ Sign-up is open at the site's front door, so there is nothing to mint.
 
 ## 5. Backups and the drill
 
-    cp deploy/backup.sh /etc/cron.daily/scope-backup
+Three copies exist besides the live data, and each is gone within the 30 days the
+consent text promises:
 
-Run `deploy/restore-drill.sh` by hand the first time, then monthly. It restores
-the latest backup into `/tmp` and decrypts one stored file with the live key —
-the part a database-only check misses.
+- DigitalOcean droplet backups: weekly, the four most recent kept
+- Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30
+
+`deploy/backup.sh` makes the nightly copy in `/var/backups/scope`, encrypts the
+database copy with the file key (the stored files are encrypted already), and uploads
+both to a Spaces bucket in BLR1 under this product's account. The key is never
+uploaded. Everything in `/var/backups/scope` goes once it is 29 days old, restore points
+and stray copies included, and the bucket's copies go by the same clock; the bucket's
+lifecycle rule is the backstop. Without the bucket's config the script
+still makes the local copy, then exits non-zero.
+
+Once, as root on the droplet. Create the bucket first (Spaces, BLR1, this account,
+private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
+
+    cd /srv/scope || exit 1
+    BUCKET=
+    apt install -y s3cmd
+    s3cmd --configure -c /etc/scope/s3cfg
+    chmod 600 /etc/scope/s3cfg
+    printf 'SCOPE_SPACES=s3://%s/scope\n' "$BUCKET" > /etc/scope/spaces.env && chmod 600 /etc/scope/spaces.env
+    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30
+    s3cmd -c /etc/scope/s3cfg getlifecycle "s3://$BUCKET"
+    cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup
+    /etc/cron.daily/scope-backup
+    s3cmd -c /etc/scope/s3cfg ls "s3://$BUCKET/scope/"
+
+`s3cmd --configure` asks for the access key and secret; give `blr1.digitaloceanspaces.com`
+as the endpoint and `%(bucket)s.blr1.digitaloceanspaces.com` as the bucket template, no
+encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Days>30</Days>`; the
+backup prints "backed up to" and then "copied off the droplet"; `ls` lists
+`scope-<stamp>.db.enc` and `files-<stamp>.tar.gz`. `cron.daily` runs the installed copy,
+not the checkout, so every deploy re-installs a changed `backup.sh` (the release train,
+step d).
+
+Run `deploy/restore-drill.sh` by hand the first time, then monthly, alternating with
+`--from-spaces`, which restores the newest copy in the bucket. It restores into `/tmp`
+and decrypts one stored file with the live key — the part a database-only check
+misses. It reads the key from the environment:
+
+    cd /srv/scope || exit 1
+    set -a; . /etc/scope/scope.env; set +a
+    deploy/restore-drill.sh --from-spaces
+
+## Staging
+
+A second Scope on the same droplet, so a person can check a change before a trader
+sees it: `https://staging.scope.plusev.in`, behind a browser password (founder's
+password manager), on port 8001, in `/srv/scope-staging`, with its own database and
+session key. It runs `main`; production does not.
+
+Refresh it by hand, as root, right before testing — never on a timer:
+
+    /srv/scope-staging/deploy/refresh-staging.sh
+
+It restores the newest backup from `/var/backups/scope` into staging, checks out
+`origin/main`, starts `scope-staging`, and prints the version it runs. Migrations
+newer than production apply at startup, as they do in production. First install is
+the numbered block at the top of the script. Staging is never backed up; it is
+rebuilt from production's backups on every refresh. `deploy/scope-staging.service`
+can write only `/srv/scope-staging/data`.
+
+## The release train — every deploy after the first
+
+Seven steps, in this order, each by the person named. A block is pasted whole, after its
+placeholder line (`TAG=`, `SHA=`, `PREV=`, `RP=`, right under the `cd`) is filled with
+the real value; never paste one with an example value still in it. An SSH session idle for half an
+hour is reset: reconnect before pasting, or the block runs on your laptop.
+
+| Step | Who | Where |
+|---|---|---|
+| a. Refresh staging | the tester | droplet, root |
+| b. UAT on staging | the tester (never the author of a ticket they check) | browser |
+| c. Tag | **the founder only**, after a Pass is recorded | laptop |
+| d. Deploy the tag | founder (or whoever the founder names) | droplet, root |
+| e. Check production | same person | droplet and browser |
+| f. Log it | same person | `docs/runbooks/deploys.md` |
+| g. Tell the traders | customer team | the loop tracker |
+
+### a. Refresh staging from `main`
+
+    /srv/scope-staging/deploy/refresh-staging.sh
+
+Expected, last lines:
+
+    ==> 9/9 check /health through Caddy
+    without the password: 401, as it must be
+    from the app on :8001: {"status":"ok","code_version":"3f2a1bc"}
+
+    Staging is refreshed and running 3f2a1bc.
+
+That sha is **what will be tagged**. Write it at the top of the train page. If the script
+stops, it names the step; fix that before anyone tests.
+
+### b. UAT on staging
+
+The tester works through every ticket on the train against its gate, then the fixed pass
+in `docs/runbooks/uat-smoke.md` on a phone and a laptop. Results go in the loop tracker
+(feedback-loop repo: `tracker/record_verify.py`, Verify result Pass / Fail / Can't
+check), on the train page (`trains/<date>.md`), and as a `uat-pass` / `uat-fail` label on
+each Jira ticket. The tester's page there, `onboarding/tester.md`, is the whole station.
+
+Nothing is tagged until every ticket on the train has a result and the smoke pass is a
+Pass on both devices. A Fail does not stop the train if the founder takes that ticket off
+it: its fix rides the next train.
+
+### c. Tag the sha that passed (founder only)
+
+On the founder's laptop, in a clean clone. Tag the sha staging ran in step a, not
+whatever `main` is now: `main` may have moved since the test.
+
+    SHA=3f2a1bc; TAG=v2026.11.14; MSG="train: TICKET-..., TICKET-..."
+    git fetch --quiet origin
+    git merge-base --is-ancestor "$SHA" origin/main && echo "on main"
+    git tag -a "$TAG" -m "$MSG" "$SHA"
+    git push origin "$TAG"
+
+Expected: `on main`, then `* [new tag]  v2026.11.14 -> v2026.11.14`. A second train the
+same day is `v2026.11.14.2`. Tags are annotated and are never moved or deleted once
+pushed; a wrong tag is fixed by a new one.
+
+### d. Deploy the tag
+
+Every block starts with `cd /srv/scope || exit 1`, so pasted in the wrong window it does
+nothing. First, where production is and what the tag changes:
+
+    cd /srv/scope || exit 1
+    TAG=v2026.11.14
+    git status --short
+    git fetch --quiet --tags origin
+    LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD); echo "live: $LIVE"
+    git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/
+    git diff "$LIVE" "$TAG" -- migrations/versions | grep -nE "op\.(drop_|alter_column)" || echo "no destructive migration"
+
+Expected: `git status --short` prints **nothing**. Any line there means someone changed
+the box by hand: stop and find out who before going on. `live:` is the previous tag (a
+sha only on the first train, or after a deploy that skipped the train). The last line
+decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
+line → **Path B**.
+
+Production then sits on a detached HEAD at the tag. That is correct, and `git status
+--short` still reports local changes, so the guard above still works. Do not "fix" it
+with `git switch main`.
+
+**Path A** (no migration, or only additive ones). Back up the live database, then deploy:
+
+    cd /srv/scope || exit 1
+    TAG=v2026.11.14
+    RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
+    sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP"
+    git checkout --quiet "$TAG"
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
+    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
+    chown -R scope:scope /srv/scope
+    systemctl restart scope
+
+**Path B** (a migration drops or alters something). Stop first, so the snapshot is an
+exact restore point; rollback for this release is that snapshot, not a checkout:
+
+    cd /srv/scope || exit 1
+    TAG=v2026.11.14
+    systemctl stop scope
+    sqlite3 /srv/scope/data/scope.db "PRAGMA wal_checkpoint(TRUNCATE);"
+    RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
+    sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP"
+    sqlite3 "$RP" "PRAGMA integrity_check;"
+    git checkout --quiet "$TAG"
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
+    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
+    chown -R scope:scope /srv/scope
+    systemctl start scope
+
+Expected (Path B): `integrity_check` prints `ok`. If it does not, `systemctl start scope`
+on the old code (`git checkout "$LIVE"` first if you already moved) and stop the train.
+
+Either path: a changed `scope.service` or `backup.sh` is not applied by checking out
+code (`cron.daily` runs its own copy). The two `cmp` lines install each only when it
+differs, and say `unit updated` or `backup script updated` when they did.
+
+### e. Check production
+
+Startup takes about five seconds; a `curl` straight after the restart can answer 502
+with nothing wrong.
+
+    cd /srv/scope || exit 1
+    journalctl -u scope --since "-3 min" --no-pager | grep -E "Application startup complete|Traceback"
+    sqlite3 /srv/scope/data/scope.db "select version_num from alembic_version;"
+    ls migrations/versions | sort | tail -1
+    curl -s https://scope.plusev.in/health; echo
+    curl -s -o /dev/null -w '%{http_code}\n' https://scope.plusev.in/login
+
+Expected: `Application startup complete` and no `Traceback`. The alembic revision matches
+the newest migration file (the startup log prints no alembic lines, and `alembic current`
+cannot run on its own). `/health` says `"code_version":"v2026.11.14"`, **the tag**: a sha
+there means the checkout did not land on the tag. `/login` answers `200`.
+
+### f. Log it
+
+Add the entry at the top of `docs/runbooks/deploys.md`, in the shape the entries there
+use: tag, previous tag, time IST, who ran it, the restore point printed in step d, the
+alembic revision from step e, the train's ticket ids. Open it as a one-file PR titled
+`deploy: v2026.11.14`. No login ids, passwords or keys in it; the repository is public.
+
+### g. Close the loop
+
+Every ticket on the train that passed is now live. The tracker shows those rows at
+*6b Verified*; the customer team tells each trader who raised one, as the loop says.
+
+### Rollback
+
+The previous tag is the second line of:
+
+    cd /srv/scope || exit 1
+    git tag --sort=-creatordate | head -2
+
+**After Path A** (code only):
+
+    cd /srv/scope || exit 1
+    PREV=v2026.11.07
+    git checkout --quiet "$PREV"
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
+    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
+    chown -R scope:scope /srv/scope
+    systemctl restart scope
+
+An additive migration stays applied; older code ignores the new column or table.
+
+**After Path B** (database restore): the older code expects what the migration removed,
+so the restore point goes back with it. Anything written after the snapshot (sign-ups,
+uploads) is lost; say so in the log.
+
+    cd /srv/scope || exit 1
+    PREV=v2026.11.07; RP=/var/backups/scope/scope-20261114T093000Z.db
+    systemctl stop scope
+    cp "$RP" /srv/scope/data/scope.db && rm -f /srv/scope/data/scope.db-wal /srv/scope/data/scope.db-shm
+    git checkout --quiet "$PREV"
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
+    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
+    chown -R scope:scope /srv/scope
+    systemctl start scope
+
+Then step e, and a log entry for the rollback.
+
+### Hotfixes
+
+A bug on the 24-hour clock does not wait for the train, and does not skip staging. Its PR
+merges to `main`; staging is refreshed (step a); the author **and one other person** check
+it there the same day; the founder tags that sha with the day's next number
+(`v2026.11.14.2`) and it deploys by step d like any train, logged by step f. No path
+deploys `main` directly.
 
 ## 6. Before the first partner uploads
 

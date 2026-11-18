@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from services.production.db import models as m
 from services.production.db.session import make_session
-from tests.unit.api.test_upload import _two_days, client, engine, upload  # noqa: F401
+from tests.helpers.upload import _two_days, upload
 
 
 def with_a_sold_option() -> bytes:
@@ -19,7 +19,7 @@ def with_a_sold_option() -> bytes:
     return _two_days() + sold.encode()
 
 
-def test_a_sold_option_is_counted_so_the_line_does_not_show(client, engine):  # noqa: F811
+def test_a_sold_option_is_counted_so_the_line_does_not_show(client, engine):
     """[TICKET-810] ended what TICKET-811's line was waiting for."""
     upload(client, content=with_a_sold_option())
     with make_session(engine) as sess:

@@ -22,8 +22,8 @@ from services.production.journal import sections as sec
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import trips_from
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import trips_from
+from tests.helpers.scope_facts import fact_page
 
 
 def history() -> list[mx.Trip]:

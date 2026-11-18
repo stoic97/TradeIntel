@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from services.production.api import dial
-from tests.unit.api.test_scope_home import home_page
+from tests.helpers.scope_home import home_page
 
 CSS = Path("services/production/api/static/css/app.css").read_text()
 

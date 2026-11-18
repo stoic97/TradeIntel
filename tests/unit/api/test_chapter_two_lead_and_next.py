@@ -22,9 +22,9 @@ from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db.session import make_engine, run_migrations
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_math_of_trading import make
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_upload import sign_up, upload
+from tests.helpers.math_of_trading import make
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.upload import sign_up, upload
 
 DEMO = Path("data/fixtures/demo/demo_tradebook.csv")
 CTA = "Chapter 3, your behaviour: what you did after losing"
@@ -167,7 +167,8 @@ def test_the_button_comes_after_the_feedback_question(pages):
 
 def test_chapter_one_goes_on_to_its_first_page(pages):
     """TICKET-903: one order; chapter 1 no longer jumps to chapter 2."""
-    assert (S.fact_href("worst-days"), f"Next: {S.FACTS['worst-days'].title}") in links(pages["/mirror/chapter/1"])
+    first = S.chapter(1).facts[0]  # TICKET-910 put the plain-counts page first
+    assert (S.fact_href(first.key), f"Next: {first.title}") in links(pages["/mirror/chapter/1"])
 
 
 def test_the_other_chapters_get_no_new_button(pages):

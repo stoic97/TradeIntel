@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
-from sqlalchemy import event, func, select
+from sqlalchemy import event, select
 
 from services.production import demo
 from services.production.accounts import auth
@@ -29,60 +29,48 @@ from services.production.api.settings import Settings
 from services.production.ctr import reconstruct as rc
 from services.production.ctr.intake import outcomes as oc
 from services.production.db import models as m
+from services.production.db.session import make_session
 from services.production.journal import constants as k
 from services.production.journal import wtp as WTP
-from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.conftest import TEST_SECRET_KEY
+from tests.helpers.admin_page import (
+    ADMIN,
+    PLANTED_RUPEES,
+    RUNNING,
+    TEMPLATES,
+    THEN,
+    add_budget,
+    add_consent,
+    add_dwell,
+    add_field_entry,
+    add_import,
+    add_journal,
+    add_trader,
+    admin_client,
+    admin_page_app,
+    admin_page_engine,
+    every_route,
+    row_counts,
+    row_of,
+    signed_in,
+    view,
+)
 
-ADMIN = "boss"
 PASSWORD = "a-long-enough-password"
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
-TEMPLATES = Path("services/production/api/templates")
-THEN = datetime(2026, 3, 2, 4, 30, tzinfo=UTC)
-RUNNING = "aaa1111"
 OLD = "bbb2222"
 
-PLANTED_RUPEES = "₹98,765"
 """What a trader might type, or a refusal might carry. It must not reach the page."""
 
 
 @pytest.fixture()
 def app(monkeypatch):
-    monkeypatch.setenv("ADMIN_LOGIN_IDS", ADMIN)
-    application = create_app()
-    application.state.code_version = RUNNING
-    return application
+    return admin_page_app(monkeypatch)
 
 
 @pytest.fixture()
 def engine(app):
-    return app.state.engine
-
-
-def add_trader(engine, login_id, *, dev=False, name=None, joined=THEN) -> int:
-    with make_session(engine) as sess:
-        trader = m.Trader(display_name=name or login_id.title(), login_id=login_id,
-                          password_hash="not-a-real-hash", created_at=joined,
-                          development_data=dev)
-        sess.add(trader)
-        sess.commit()
-        return trader.id
-
-
-def signed_in(app, trader_id: int | None = None) -> TestClient:
-    client = TestClient(app, follow_redirects=False)
-    if trader_id is not None:
-        with make_session(app.state.engine) as sess:
-            trader = sess.get(m.Trader, trader_id)
-            password_hash = trader.password_hash if trader else "an account that has gone"
-        session = auth.new_session(trader_id, password_hash, TEST_SECRET_KEY)
-        client.cookies.set(auth.SESSION_COOKIE, auth.seal_session(session, TEST_SECRET_KEY))
-    return client
-
-
-def admin_client(app, engine) -> TestClient:
-    return signed_in(app, add_trader(engine, ADMIN))
+    return admin_page_engine(app)
 
 
 def admin_page(app, engine) -> str:
@@ -91,55 +79,9 @@ def admin_page(app, engine) -> str:
     return response.text
 
 
-def add_import(sess, trader_id, *, version=RUNNING, outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
-               rejection=None, rows=(10, 8, 2), at=THEN, source="A", trips=0,
-               raw_file_id=None, adapter=("made-up", "1"), reconstruction=None) -> m.Import:
-    if raw_file_id is None:
-        raw = m.RawFile(trader_id=trader_id, sha256=f"{trader_id}-{at.isoformat()}-{version}",
-                        original_name="tradebook.csv", size=1, stored_path="nowhere", uploaded_at=at)
-        sess.add(raw)
-        sess.flush()
-        raw_file_id = raw.id
-    imp = m.Import(trader_id=trader_id, raw_file_id=raw_file_id, source_account=source,
-                   trips_reconstructed=trips,
-                   adapter_id=adapter[0], adapter_version=adapter[1], filemap_version="1",
-                   reconstruction_version=reconstruction,
-                   code_version=version, outcome=outcome, rejection_text=rejection,
-                   rows_in=rows[0], rows_parsed=rows[1], rows_excluded=rows[2],
-                   fees_available=False, version_no=1, created_at=at)
-    sess.add(imp)
-    sess.flush()
-    return imp
-
-
 def add_record(sess, trader_id, *, source="A", at=THEN) -> m.Import:
     """An upload the report can read: it is the import with trades that a report reads."""
     return add_import(sess, trader_id, source=source, at=at, trips=1)
-
-
-def add_dwell(sess, trader_id, key, event_name="view", *, ms=60_000, surface="mirror_line", at=THEN):
-    sess.add(m.DwellEvent(trader_id=trader_id, surface=surface, key=key, event=event_name,
-                          at=at, duration_ms=ms))
-
-
-def add_journal(sess, trader_id, import_id, *, opened=None) -> m.Journal:
-    journal = m.Journal(trader_id=trader_id, import_id=import_id, unit=s.JournalUnit.DAY,
-                        period_start="2026-03-02", period_end="2026-03-02", version_no=1,
-                        generated_at=THEN, opened_at=opened, trip_ids="[]", sections="{}")
-    sess.add(journal)
-    sess.flush()
-    return journal
-
-
-def add_field_entry(sess, journal_id, value=f"felt fine at {PLANTED_RUPEES}", at=THEN):
-    sess.add(m.JournalFieldEntry(journal_id=journal_id, field="note", value=value, entered_at=at,
-                                 capture_phase=s.CapturePhase.AFTER_CLOSE))
-
-
-def add_budget(sess, trader_id, at=THEN):
-    sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, value=Decimal(4321), unit="PCT",
-                                     capital_amount=Decimal(876543), effective_from="2026-03-02",
-                                     declared_at=at))
 
 
 def add_charges(sess, trader_id, *, days="{}", at=THEN) -> m.ChargeStatement:
@@ -149,11 +91,6 @@ def add_charges(sess, trader_id, *, days="{}", at=THEN) -> m.ChargeStatement:
     sess.flush()
     return m.ChargeStatement(trader_id=trader_id, raw_file_id=raw.id, reader="made-up", days=days,
                              uploaded_at=at)
-
-
-def add_consent(sess, trader_id, *, granted=True, purpose=s.ConsentPurpose.DIAGNOSIS, at=THEN):
-    sess.add(m.ConsentEvent(trader_id=trader_id, purpose=purpose, scope="v1", terms_version="1",
-                            granted=granted, at=at, method="web", wording_shown="the words"))
 
 
 def seed_everything(engine, trader_id: int) -> None:
@@ -194,24 +131,6 @@ def seed_everything(engine, trader_id: int) -> None:
         add_budget(sess, trader_id)
         sess.add(add_charges(sess, trader_id, days='{"2026-03-02": "55504"}'))
         sess.commit()
-
-
-def view(app, engine) -> dict:
-    from services.production.api import admin_view
-
-    with make_session(engine) as sess:
-        return admin_view.build(sess, running_version=app.state.code_version,
-                                production=app.state.settings.production)
-
-
-def row_of(the_view: dict, login_id: str) -> dict:
-    return next(r for r in the_view["rows"] if r["login_id"] == login_id)
-
-
-def row_counts(engine) -> dict[str, int]:
-    with make_session(engine) as sess:
-        return {t.name: sess.scalar(select(func.count()).select_from(t))
-                for t in m.Base.metadata.sorted_tables}
 
 
 # ---------- Who sees it ----------
@@ -285,16 +204,6 @@ def test_another_method_is_a_404_too_not_a_405_that_says_something_is_here(app, 
 
 def test_a_method_refused_elsewhere_is_still_a_405(app):
     assert signed_in(app).delete("/signup").status_code == 405
-
-
-def every_route(routes):
-    """app.routes holds each include_router as a wrapper, so a flat walk finds no route at all."""
-    for route in routes:
-        included = getattr(route, "original_router", None)
-        if included is not None:
-            yield from every_route(included.routes)
-        else:
-            yield route
 
 
 def test_the_walk_of_the_routes_really_reaches_them(app):
@@ -1190,7 +1099,7 @@ def test_the_feed_opens_with_a_trader_signing_up_and_consenting(app, engine):
 def test_a_budget_line_says_one_was_set_and_never_the_amount(app, engine):
     trader_id = add_trader(engine, "someone")
     with make_session(engine) as sess:
-        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal("98765"),
+        sess.add(m.RiskBudgetDeclaration(trader_id=trader_id, unit="rupees", value=Decimal(98765),
                                          effective_from="2026-03-02",
                                          declared_at=THEN + timedelta(hours=1)))
         sess.commit()

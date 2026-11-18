@@ -13,15 +13,10 @@ import pytest
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    DUPES,
-    client,
-    engine,
-    upload,
-)
-from tests.unit.mirror.test_run_story import DAY, EVENING, spread, trip
+from tests.helpers.mirror_run_story import DAY, EVENING, spread, trip
+from tests.helpers.scope_chapters import IMP, chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import DUPES, upload
 
 
 def page_of(trips=EVENING) -> str:
@@ -420,7 +415,7 @@ def spread_file() -> bytes:
     return ("\n".join([header, *rows]) + "\n").encode()
 
 
-def test_a_position_of_several_legs_reads_as_one_trade(client, engine):  # noqa: F811
+def test_a_position_of_several_legs_reads_as_one_trade(client, engine):
     assert upload(client, content=spread_file()).status_code == 303
     html = client.get("/mirror/fact/run").text
     page = readable(html)

@@ -1,6 +1,17 @@
-# PlusEV–TradeDNA · Research Specification — v1.0 (freeze candidate)
+# PlusEV–TradeDNA · Research Specification — v1.0.4 (frozen)
 
-*3 October 2026 · Supersedes Draft 2.1 · Child of Product Thesis v1.4 — Baseline (frozen; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+*3 October 2026, frozen; amended to v1.0.4 on 14 November 2026 (change log below) · Supersedes Draft 2.1 · Child of Product Thesis v1.5 — Baseline (frozen 24 October 2026, superseding v1.4; T§) · Workbook v1.1 (frozen; B§) · Owner: research lead · Ruler: CEO*
+
+**Change log** (newest first). Under SR-011 this document changes only by a version bump and a row here. The first three rows after v1.0 were recorded on 14 November 2026: they had been made in place, under v1.0.
+
+| Version | Date | What changed | Why | Ticket · commit |
+|---|---|---|---|---|
+| v1.0.4 | 14 Nov 2026 | §4.7.8, the multi-leg direction convention (it said the question was open), the 4.7.7 table's multi-leg row, and its Annex I entry ("What changed from v1.0.3 → v1.0.4") | The founder ruled the convention on 12 and 13 Nov; the code applies it from the legs alone | TICKET-902 |
+| v1.0.3 | 14 Nov 2026 | This change log. The header names this version and its parent, Thesis v1.5 (it still said v1.4), and says "frozen" (it said "freeze candidate", though the README and the Status paragraph call it frozen). No rule changes | Repo audit C3: three post-freeze edits were made under v1.0 | TICKET-931 |
+| v1.0.2 | 13 Nov 2026 | §5.5a, the finding bar, and its Annex I entry ("What changed from v1.0.1 → v1.0.2") | The live gate did not correct for the number of checks tried | TICKET-909 · `a4f9836` |
+| v1.0.1 | 12 Nov 2026 | §4.7, the bars convention, and its Annex I entry ("What changed from v1.0 → v1.0.1") | The spec had no section on market data the trader did not supply | TICKET-888 · `47a11cc` |
+| v1.0, edited without a bump | 24 Oct 2026 | Annex J: a status line, "Applied 24 October 2026 in Thesis v1.5". No rule changed | Recorded the thesis v1.5 pass | no ticket · `b868b55` |
+| v1.0 | 3 Oct 2026 | Frozen | | `e16e8e2` |
 
 **Status.** This is the version the CEO asked for after the walkthrough: every conflict the walkthrough found is resolved here, with the decision and its reason recorded in Annex I. It is frozen on upload to project knowledge. One recommendation stands beside the freeze rather than against it: Draft 2.1 was never reviewed by outside eyes, and every earlier freeze in this project followed a review round, so a single external review of this version before the week-1 kickoff is cheap insurance. If that review finds nothing material, nothing moves; if it does, the fix is a v1.1 before any data is seen, which costs nothing.
 
@@ -228,17 +239,23 @@ A claim refuses itself when its series does not cover the trader's dates. The pr
 | Sold put | long |
 | Future or stock, bought | long |
 | Future or stock, sold | short |
-| Multi-leg position | **no single direction** — see 4.7.8 |
+| Multi-leg position | by 4.7.8: its larger-delta leg's direction, or **no single direction** |
 
 A sold option inverts the bought answer. A future's direction needs no rule, and answering "none" for one would remove every futures trip from every count, which on a crude history is most of the book.
 
 The executable form of this table is `services/shared/option_direction.py`, whose docstring cites this item; this item names that module by path. One rule, two pointers, neither one a copy. It sits in `shared` because both production and research may read it and neither may read the other (methodology Rule 5).
 
-**4.7.8 · Multi-leg direction is open, and open visibly.** `positions._links` requires that two legs link only if their directions differ, so **every** multi-leg position the product can build holds one bought leg and one sold leg. Applying 4.7.7 leg by leg therefore returns "no single direction" for every spread, butterfly and ratio — as the rule, not as an edge case.
+**4.7.8 · Multi-leg direction: the convention.** `positions._links` joins two legs only if their directions differ, so every multi-leg position the product can build holds a bought leg and a sold leg, and applying 4.7.7 leg by leg would answer "no single direction" for every spread. The convention, ruled by the founder on TICKET-902 (12 and 13 Nov 2026), reads the legs alone, after netting the units at each strike:
 
-That is the state until the convention exists, and it is a convention rather than a coding choice: a debit call vertical is directionally long, a credit *put* vertical is also long, a butterfly is direction-neutral, and a ratio spread can change sign with the underlying's level. Under the loop's 4 November decision a convention that touches numbers is checked by a second person with their own script before it is built.
+| Position | Direction |
+|---|---|
+| Two strikes, one option type, one expiry, one leg bought and one sold, and the larger-delta leg (the lower strike for calls, the higher for puts) carries at least as many units as the other | that leg's 4.7.7 direction |
+| The same, with fewer units on the larger-delta leg | **no single direction**: net delta changes sign with the underlying's level |
+| Any other shape: a butterfly, a call against a put, three or more strikes | **no single direction** |
 
-**The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. On T-001's history it is under 1% of trips; on a spread trader's history it would be most of the book, which is precisely why it is deferred to a convention rather than guessed at here.
+So a debit call vertical is long and a credit call vertical short; a debit put vertical is short and a credit *put* vertical long; equal units count as fixed. No price, level or result is read. Under the loop's 4 November decision a convention that touches numbers is checked by a second person with their own script. For this convention the founder ruled (13 Nov) that the check comes before merge rather than before the build, against a prediction registered on the ticket before the check was run.
+
+**The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. A position the convention leaves without a direction is counted out the same way.
 
 **4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
 
@@ -1086,6 +1103,10 @@ The CEO asked for every open conflict to be decided and the document rewritten t
 ### What changed from v1.0.1 → v1.0.2 (13 November 2026)
 
 **§5.5a added: the finding bar corrects for the number of checks tried.** Found by a trader reviewing the product, not by us: the live gate cleared p ≤ 0.05 with no correction, so with eighteen core tests about one trader in two would get a finding by luck, and the trader's own rule already divided by the number of checks. Ruled by the research seat on 12 November: Westfall–Young step-down min-p on the shared within-day shuffle, over a family of eighteen fixed by this version (a check that can't run stays in at p = 1), 10,000 draws, Holm as the fallback, the same sign in both halves of his own days as a hard condition, and three levels on the page. Bonferroni was considered and turned down as too strict for checks that share one trader's trades.
+
+### What changed from v1.0.3 → v1.0.4 (14 November 2026)
+
+**§4.7.8 now states the multi-leg direction convention.** It had said the question was open, so every spread, butterfly and ratio answered "no single direction". Ruled by the founder on TICKET-902 (12 November; the ratio row amended 13 November, once the ratio `test_positions.py` builds was shown to keep its sign at every level): with two strikes, one option type and one expiry, one leg bought and one sold, the larger-delta leg (the lower strike for calls, the higher for puts) gives its 4.7.7 direction when it carries at least as many units as the other; otherwise, and for any other shape, no single direction. Read from the legs alone, after netting the units at each strike. A second person's own script checks it before merge, against a prediction registered on the ticket first.
 
 ### Decisions taken in the walkthrough, 1–3 October 2026
 

@@ -92,13 +92,14 @@ def test_a_glossary_entry_is_one_line_to_add():
 
 
 def hub_items(trips, number=None):
-    from tests.unit.api.test_hub_answers import IMP
+    from tests.helpers.scope_chapters import IMP
 
     return SF.home_view(SF.record_context(trips), IMP, number=number)["items"]
 
 
 def test_the_agreed_wording_on_the_desktop_dial():
-    from tests.unit.api.test_hub_answers import CTX, FORTY
+    from tests.helpers.hub_answers import CTX
+    from tests.helpers.scope_chapters import TRIPS as FORTY
 
     words = [f"{i['figure']} {i['label']}".replace("\n", " ") for i in hub_items(FORTY)[:3]]
     assert words[0] == f"5 days lost {CTX['share'].share_percent}% of all you lost"
@@ -107,7 +108,8 @@ def test_the_agreed_wording_on_the_desktop_dial():
 
 
 def test_a_uncapped_wedge_reads_as_agreed():
-    from tests.unit.api.test_hub_answers import FORTY, mx
+    from services.production.mirror import metrics as mx
+    from tests.helpers.scope_chapters import TRIPS as FORTY
 
     trips = [mx.replace(x, uncapped=True) if i < 3 else x for i, x in enumerate(FORTY)]
     item = hub_items(trips)[3]
@@ -179,7 +181,8 @@ def test_a_dial_with_no_short_form_keeps_the_kits_sizes():
 @pytest.mark.parametrize("size", ["phone", "desktop"])
 def test_every_chapter_dial_stays_clear_inside_its_wedge(pages, size):
     """The drawn wedges, at the size each is drawn, against the layout's own measure."""
-    from tests.unit.api.test_hub_answers import CTX, IMP
+    from tests.helpers.hub_answers import CTX
+    from tests.helpers.scope_chapters import IMP
 
     figs = SF.facts(CTX, IMP)
     z = G.SIZES[size]
@@ -212,7 +215,7 @@ def test_the_kit_stylesheet_is_untouched():
     import hashlib
     from pathlib import Path
 
-    from tests.unit.api.test_figures import KIT_SHA
+    from tests.helpers.figures import KIT_SHA
 
     css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(css).hexdigest() == KIT_SHA

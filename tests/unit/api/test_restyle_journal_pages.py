@@ -12,72 +12,12 @@ check no longer adds up its own days: the route says whether it is a first uploa
 from __future__ import annotations
 
 import re
-import types
-from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from services.shared.schemas import scope_v1 as s
+from tests.helpers.restyle_journal_pages import CONTEXT, PROMPTS
 from tests.unit.api.templating import TEMPLATES, template_env
-
-NS = types.SimpleNamespace
-
-
-def an_import(outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS, fees=False):
-    return NS(id=7, outcome=outcome,
-              rejection_text="This looks like a profit-and-loss statement.",
-              rows_in=1240, rows_parsed=1236, rows_excluded=4, trips_reconstructed=410,
-              fees_available=fees, density_default_unit="day", code_version="abc123",
-              adapter_id="dhan_tradebook_v1")
-
-
-def row(n, why=""):
-    return NS(row_no=n, reason=why, raw_text="2026-09-07,NIFTY,BUY,50,101.5")
-
-
-def day(d, before, after, shrank=False, diff="new"):
-    return NS(trading_day=d, rows_before=before, rows_after=after, day_shrank=shrank,
-              diff=NS(value=diff))
-
-
-def journal(id_, start, end, version=1, opened=True):
-    return NS(id=id_, period_start=start, period_end=end, version_no=version,
-              opened_at=opened)
-
-
-PROMPTS = (("planned_sl", "Where was your stop?"), ("rationale", "What was the trade?"),
-           ("stop_existed_at_entry", "Was the stop on the chart when you entered? yes / no"))
-
-CONTEXT = {
-    "import_review.html#first": {
-        "imp": an_import(), "rejected": [row(12, "no price")],
-        "groups": {"g1": [row(30), row(31)]}, "excluded": [], "first_upload": True,
-        "changed_days": [], "shrunk_days": [],
-        "days": [day("2026-09-07", 0, 120), day("2026-09-08", 0, 90)]},
-    "import_review.html#later": {
-        "imp": an_import(fees=True), "rejected": [], "groups": {}, "excluded": [],
-        "first_upload": False, "changed_days": ["2026-09-08"], "shrunk_days": ["2026-09-08"],
-        "days": [day("2026-09-07", 120, 120, diff="unchanged"),
-                 day("2026-09-08", 90, 80, shrank=True)]},
-    "import_review.html#refused": {
-        "imp": an_import(outcome=s.ImportOutcome.REJECTED), "rejected": [], "groups": {},
-        "excluded": [], "days": [], "first_upload": True},
-    "journals.html": {
-        "latest": [journal(3, "2026-09-08", "2026-09-08", version=2, opened=False),
-                   journal(2, "2026-09-07", "2026-09-07")],
-        "total": 8, "catch_up_count": 3},
-    "journals.html#none": {"latest": [], "total": 0, "catch_up_count": 0},
-    "journals_catch_up.html": {"journals": [journal(1, "2026-09-01", "2026-09-02")]},
-    "journal.html": {
-        "journal": journal(3, "2026-09-08", "2026-09-08", version=2),
-        "paragraphs": ["You took 8 trades.", "Your worst came at 10:00."],
-        "rows": [{"trip_id": "t1", "label": "Trade 1", "net": Decimal(-1200)}],
-        "answers": {"t1": {"planned_sl": NS(value="100"), "rationale": None,
-                           "stop_existed_at_entry": None}},
-        "prompts": PROMPTS, "fees_available": False, "note": NS(value="tired"),
-        "ask_wtp": True, "wtp_question": "Would you pay for this?"},
-}
 
 SAID = {
     "import_review.html#first": (
@@ -95,8 +35,12 @@ SAID = {
     "journals.html#none": (
         "Journals Your Journals Your Journals start with your first upload. Send us a tradebook and one is written for every complete trading day in it."
     ),
+    # TICKET-906 (gate 1): the catch-up list became a month calendar, so its sentence about
+    # "every other day, newest first" went - the calendar holds every day. New words, pending
+    # D9: the month's name, Mon-Sun, "worth a look" / "answered" (read aloud on a cell) and
+    # the two key labels. "Back to your Journals" is the page's own earlier link.
     "journals_catch_up.html": (
-        "Journals Earlier Journals Everything behind the five most recent, newest first. Back to the latest. 01 Sep 2026 – 02 Sep 2026"
+        "Journals Earlier Journals Back to your Journals. September 2026 Mon Tue Wed Thu Fri Sat Sun 1 2 3 4 5 6 7 8, worth a look, answered 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 Worth a look Answered 01 Sep 2026 – 02 Sep 2026"
     ),
     "journal.html": (
         "Journal 08 Sep 2026 Your Journals Version 2. A later upload changed this period. The earlier version is kept. You took 8 trades. Your worst came at 10:00. Your own note Nothing on this page is required. Anything you want to add about this period? tired Save The trades, one at a time In the order you opened them. Result is gross — your export carries no charges. Trade 1 — −₹1,200 Where was your stop? What was the trade? Was the stop on the chart when you entered? yes / no Save One question, and it changes nothing about your account Would you pay for this? Yes No Maybe If not, what would change that? Send"
