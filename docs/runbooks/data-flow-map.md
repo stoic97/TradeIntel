@@ -20,9 +20,11 @@ count taken from his history is his data too.
 
 | System | What it holds | Encrypted | Retention | Deletion reaches it |
 |---|---|---|---|---|
-| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
-| The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in backups | Until deleted | Yes, same module |
-| Weekly droplet backups (DigitalOcean) | Last week's copy of both of the above | As on disk | Roll off within 30 days: DigitalOcean keeps the four most recent weekly backups | No — by retention, not by code. Checked by the runbook |
+| The droplet's disk — SQLite database | Every table: account, consent, imports, rows, trips, Journals, fields, dwell, the guess, chapter feedback, the leaving card (shown once; his answer in his own words), whether he remembered a Journal's day (yes or no, with the day's age; TICKET-906) | No, file permissions only | Until deleted | Yes, `accounts/deletion.py` |
+| The droplet's disk — file store | The uploaded file, byte for byte | Yes, Fernet, key in `/etc/scope/`, never in the repo or in Scope's own backups (DigitalOcean's weekly images are of the whole disk, so they hold it too) | Until deleted | Yes, same module |
+| Weekly droplet backups (DigitalOcean) | An image of the whole disk: last week's copy of both of the above, and `/etc/scope/` with the keys | As on disk | DigitalOcean droplet backups: weekly, the four most recent kept. Each is gone within 30 days | No — by retention, not by code. Checked by the runbook |
+| Scope's nightly copies on the droplet (`/var/backups/scope`, `deploy/backup.sh`) | Each night's copy of both of the above, the restore points a deploy takes, and anything else left in the directory; all go by age | Database: no, file permissions only. Files: yes, as on disk | Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30 | No — by retention, not by code. Checked by the runbook |
+| DigitalOcean Spaces, BLR1, the product account (TICKET-941) | The same nightly copy, off the droplet | Yes: the database copy is encrypted with the file key before it leaves; the files are encrypted already; the key is never uploaded | Scope's own nightly copies: 29 days on the droplet and in Spaces (BLR1); the Spaces lifecycle rule deletes at 30 | No — by retention, not by code. Checked by the runbook |
 | Let's Encrypt | The hostname `scope.plusev.in`. No trader data of any kind | n/a | Theirs | n/a |
 | The trader's own browser | A signed session cookie. No trade data | Signed, not encrypted | 30 days, or sign-out | n/a |
 | The app's memory | The network address a new account came from, only in memory, so the sign-up cap can count it. Never written to the database or a file | No | An hour, or until a restart | Nothing of his to delete |
@@ -54,7 +56,7 @@ the real server before the first partner uploads:
 2. Confirm the file is gone from the file-store directory on the droplet.
 3. Confirm it is gone from the database.
 4. Confirm the backup containing it ages out, and record the date it does.
-5. Write the row in `deletion-log.md`.
+5. Write the row in the deletion log on the server, `/srv/scope/data/deletion-log.md` (never in git; see data-deletion.md).
 
 Until step 4 has been seen to happen once, the 30-day sentence in the consent text
 is a setting we believe rather than one we have watched work.

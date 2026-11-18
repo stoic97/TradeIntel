@@ -19,6 +19,7 @@ from markupsafe import Markup
 
 from services.production.api.app import TEMPLATES, create_app
 from services.production.api.figures import Figure, NoNoun, Written
+from tests.helpers.figures import KIT_SHA
 from tests.unit.api import figure_pages
 
 TEMPLATE_ROOT = Path("services/production/api/templates")
@@ -186,6 +187,27 @@ def test_no_bare_number_reaches_a_page_in_any_scene(marking):
     assert found == {}
 
 
+def test_a_version_hash_is_an_identifier_even_when_it_is_all_digits(marking):
+    """The lineage line names the Scope version: the short git hash of the code that read the
+    file. One hash in about 27 is all digits (6145022), and read as a bare number it failed the
+    scenes test whenever CI's merge commit drew one. It is an identifier a trader may quote
+    back, not a figure, and the page says so."""
+    from types import SimpleNamespace
+
+    imp = SimpleNamespace(id=7, code_version="6145022", rows_in=40, adapter_id="dhan_tradebook_v1")
+    html = TEMPLATES.env.get_template("scope/_lineage.html").render(imp=imp)
+    assert "6145022" in html
+    assert bare_in_text(html) == []
+
+
+def test_every_page_that_names_the_version_writes_it_as_an_identifier():
+    """Both provenance lines (the lineage on the report, the line on the import page) and any
+    added later: a bare code_version is a number one commit in 27."""
+    for path in Path("services/production/api/templates").rglob("*.html"):
+        for use in re.findall(r"\{\{[^}]*code_version[^}]*\}\}", path.read_text(encoding="utf-8")):
+            assert "|identifier" in use.replace(" ", ""), f"{path}: {use}"
+
+
 def test_that_rendering_check_catches_a_bare_number_in_text(marking):
     html = TEMPLATES.env.from_string("<p>{{ n }} trades</p>").render(n=3)
     assert bare_in_text(html)
@@ -209,6 +231,3 @@ def test_the_kit_stylesheet_is_untouched():
     """Its digest on main before this work: a figure changes nothing about how a page is drawn."""
     css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(css).hexdigest() == KIT_SHA
-
-
-KIT_SHA = "01e8fe7836a1d3a9364111f14807399e041d0c3cd6fa3f4d164e4f857aa0d04d"

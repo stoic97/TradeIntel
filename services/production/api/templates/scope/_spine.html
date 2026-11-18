@@ -1,0 +1,50 @@
+{#- The report's spine (TICKET-903; Rikk's ruling of 13 Nov 2026, round 2 section N,
+    mockups/nav_v2.html). Every page, link and label comes from scope_map.spine(): nothing is
+    ordered or named here. No script: All pages opens as #all-pages (CSS :target), so it works
+    with JavaScript off. On a phone the report bar takes the place of the tabs (app.css). -#}
+{% from "_components.html" import path %}
+
+{% macro rail(s, chapter, index, back_href, fact) -%}
+<div class="rail" data-spine="rail">
+  {{ path(chapter.facts|length, index, chapter.name, back_href, fact.title, size="full") }}
+  <span class="rail__count num">{{ Figure(s.number, "page") }} of {{ Figure(s.total, "pages") }}</span>
+  <ol class="rail__segs" aria-label="The report's pages">
+    {%- for c in s.chapters %}
+    <li class="rail__group">
+      {%- for p in c.pages %}<a class="rail__seg{% if p.read %} rail__seg--read{% endif %}" href="{{ p.href }}" data-page="{{ p.key }}"{% if p.read %} data-read{% endif %}{% if p.current %} aria-current="page"{% endif %} aria-label="{{ Figure(p.number, "page") }}. {{ p.title }}{% if p.read %}, read{% endif %}" title="{{ Figure(p.number, "page") }}. {{ p.title }}"></a>{% endfor -%}
+    </li>
+    {%- endfor %}
+  </ol>
+  <a class="rail__all" href="#all-pages">All {{ Figure(s.total, "pages") }} pages</a>
+</div>
+{%- endmacro %}
+
+{% macro steps(s) -%}
+<nav class="pn" aria-label="Previous and next" data-spine="pn">
+  {%- if s.previous %}<a class="pn__prev" rel="prev" href="{{ s.previous.href }}" aria-label="{{ s.previous.label }}"><small>&lsaquo; {{ s.previous.small }}</small><b>{{ s.previous.title }}</b></a>{% endif -%}
+  <a class="pn__next" rel="next" href="{{ s.next.href }}" aria-label="{{ s.next.label }}"><small>{{ s.next.small }} &rsaquo;</small><b>{{ s.next.title }}</b></a>
+</nav>
+{%- endmacro %}
+
+{% macro all_pages(s, answers) -%}
+<section class="all-pages" id="all-pages" aria-label="All pages of the report" data-spine="all-pages">
+  <p class="all-pages__head"><b>Your report</b> <a class="all-pages__close" href="#">Close</a></p>
+  {%- for c in s.chapters %}
+  <h2 class="all-pages__chapter">{{ c.name }}</h2>
+  <ol class="all-pages__list">
+    {%- for p in c.pages %}
+    <li><a class="all-pages__page{% if p.read %} all-pages__page--read{% endif %}{% if p.current %} all-pages__page--current{% endif %}" href="{{ p.href }}" data-page="{{ p.key }}"{% if p.read %} data-read{% endif %}{% if p.current %} aria-current="page"{% endif %}><span class="all-pages__tick" aria-hidden="true">{% if p.read %}&check;{% else %}{{ Figure(p.number, "page") }}{% endif %}</span><span class="all-pages__name">{{ p.title }}</span><span class="all-pages__answer">{{ answers[p.key] }}</span></a></li>
+    {%- endfor %}
+  </ol>
+  {%- endfor %}
+  <p class="all-pages__tabs"><a href="/">Home</a><a href="/journals">Journal</a><a href="/account">Account</a></p>
+</section>
+{%- endmacro %}
+
+{% macro report_bar(s) -%}
+<nav class="rbar" aria-label="Report" data-spine="rbar">
+  {%- if s.previous %}<a class="rbar__prev" rel="prev" href="{{ s.previous.href }}" aria-label="{{ s.previous.label }}"><small>&lsaquo; {{ s.previous.small }}</small>{{ s.previous.title }}</a>{% else %}<span class="rbar__none"></span>{% endif -%}
+  <a class="rbar__mid" href="#all-pages">{{ Figure(s.number, "page") }} of {{ Figure(s.total, "pages") }}<br>All pages</a>
+  <a class="rbar__next" rel="next" href="{{ s.next.href }}" aria-label="{{ s.next.label }}"><small>{{ s.next.small }} &rsaquo;</small>{{ s.next.title }}</a>
+</nav>
+{%- endmacro %}

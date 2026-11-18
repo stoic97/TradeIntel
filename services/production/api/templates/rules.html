@@ -1,0 +1,40 @@
+{#- Rules he set, counted (TICKET-922). Cost and trade count first; a verdict on keeping the
+    rule only once the number stated at the start is reached. Never a suggestion. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import money %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
+  <h1 class="title">Rules you set</h1>
+  <p class="body">Each one is yours, set by tapping and dated before it was tested. Scope counts whether it was kept, trade by trade. It never suggests one.</p>
+  <p class="body"><a class="link" href="/rules/today">Before the session</a></p>
+  <p class="body"><a class="link" href="/rules/set">Set a rule</a></p>
+  <p class="body"><a class="link" href="/rules/click">Before a trade</a></p>
+  {%- if notes %}
+  <p class="body-small">Before a trade: <span class="num">{{ Figure(notes, "notes")|count }}</span> noted, <span class="num">{{ Figure(notes_matched, "notes")|count }}</span> matched to a trade in your file so far.</p>
+  {%- endif %}
+  {%- if not counts %}
+  <p class="body">You haven't set a rule yet.</p>
+  {%- endif %}
+  {%- for c in counts %}
+  <section class="import__section">
+    <h2 class="card-title">{{ c.rule.text }}</h2>
+    <p class="body-small">Set {{ c.rule.declared_at|local_day }}, {% if c.rule.applies_to == c.rule.applies_from %}for that day{% else %}from that day on{% endif %}.</p>
+    <p class="body"><span class="num">{{ Figure(c.trades|length, "trades")|count }}</span> {{ "trade" if c.trades|length == 1 else "trades" }} counted.
+    {%- if c.fees is not none %} Charges on them: {{ money(c.fees, signed=false) }}.{% elif not fees_known %} Your file has no charges, so their cost isn't known.{% endif %}</p>
+    {%- if c.enough %}
+    <p class="lead">Kept on <span class="num">{{ Figure(c.kept, "trades")|count }}</span> of <span class="num">{{ Figure(c.trades|length, "trades")|count }}</span> trades.</p>
+    {%- else %}
+    <p class="lead">Not enough trades yet: <span class="num">{{ Figure(c.trades|length, "trades")|count }}</span> of <span class="num">{{ Figure(verdict_at, "trades")|count }}</span>.</p>
+    {%- endif %}
+    {%- if c.trades %}
+    <details><summary class="link">Trade by trade</summary>
+      <table class="table"><thead><tr><th class="table__day">Day</th><th>Opened</th><th></th></tr></thead><tbody>
+      {%- for t in c.trades %}
+        <tr><td>{{ t.trading_day|day }}</td><td>{{ t.opened }}</td><td class="table__text">{{ "Kept" if t.kept else "Broken" }}</td></tr>
+      {%- endfor %}
+      </tbody></table>
+    </details>
+    {%- endif %}
+  </section>
+  {%- endfor %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{#- One trading day (TICKET-905): every trade he opened that day, and the day's journal
+    where there is one. Reached from any date the report writes. Nothing here is computed:
+    the trades are the record's own, listed as every fact lists them. -#}
+{% extends "layout.html" %}
+{% from "_components.html" import trades %}
+{% set nav = "scope" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/mirror">‹ Scope</a></p>
+  <p class="label label--plain">One trading day</p>
+  <h1 class="title">{{ when }}</h1>
+  <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day, every one of them.</p>
+  {%- if journal_href %}
+  <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
+  {%- endif %}
+  {{ trades(groups) }}
+{% endblock %}

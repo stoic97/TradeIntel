@@ -24,71 +24,29 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    CSRF,
-    DUPES,
-    client,
-    engine,
-    upload,
-)
-
-ROWS = [
-    ("2026-10-14", "09:30:00", 5100, "BUY", "10.00"),
-    ("2026-10-14", "09:30:05", 5000, "SELL", "30.00"),
-    ("2026-10-14", "12:00:00", 5300, "BUY", "5.00"),
-    ("2026-10-14", "12:30:00", 5300, "SELL", "7.00"),
-    ("2026-10-14", "15:00:00", 5100, "SELL", "4.00"),
-    ("2026-10-14", "15:00:05", 5000, "BUY", "11.00"),
-    ("2026-10-15", "10:00:00", 5200, "SELL", "20.00"),
-    ("2026-10-15", "11:00:00", 5200, "BUY", "25.00"),
-    ("2026-10-15", "12:00:00", 5400, "BUY", "3.00"),
-    ("2026-10-15", "12:30:00", 5400, "SELL", "4.00"),
-    ("2026-10-16", "09:30:00", 5500, "BUY", "2.00"),
-    ("2026-10-16", "10:00:00", 5500, "SELL", "2.50"),
-    ("2026-10-16", "11:00:00", 5600, "BUY", "2.00"),
-    ("2026-10-16", "11:30:00", 5600, "SELL", "2.50"),
-]
-
-
-def tradebook() -> bytes:
-    header = (DUPES / "clean.csv").read_text().splitlines()[0]
-    lines = [
-        f"{day},{time},WIDGETOIL 19 NOV {strike} CALL,{side},INTRADAY,MCX,Commodity,100,"
-        f"{price},{Decimal(price) * 100:.2f},Traded"
-        for day, time, strike, side, price in ROWS
-    ]
-    return ("\n".join([header, *lines]) + "\n").encode()
+from tests.helpers.spread_upload import loaded, text, tradebook
+from tests.helpers.upload import CSRF, upload
 
 
 @pytest.fixture()
-def uploaded(client, engine):  # noqa: F811
+def uploaded(client, engine):
     response = upload(client, content=tradebook())
     assert response.status_code == 303
     return client
 
 
-def text(html: str) -> str:
-    return " ".join(re.sub(r"<[^>]+>", " ", html).replace("&#39;", "'").split())
-
-
-def loaded(engine):  # noqa: F811
-    with make_session(engine) as sess:
-        trader = sess.scalars(select(m.Trader)).one()
-        return loader.load_for(sess, trader)[0]
-
-
-def spread(engine):  # noqa: F811
+def spread(engine):
     return next(t for t in loaded(engine) if t.legs)
 
 
-def test_nothing_is_refused(uploaded, engine):  # noqa: F811
+def test_nothing_is_refused(uploaded, engine):
     with make_session(engine) as sess:
         assert sess.scalars(select(m.SkippedTrip)).all() == []
         assert sess.scalars(select(m.Import)).one().trips_refused == 0
         assert len(sess.scalars(select(m.Trip)).all()) == 7
 
 
-def test_the_two_legs_share_a_position_and_the_rest_have_none(uploaded, engine):  # noqa: F811
+def test_the_two_legs_share_a_position_and_the_rest_have_none(uploaded, engine):
     with make_session(engine) as sess:
         rows = sess.scalars(select(m.Trip)).all()
     linked = [r for r in rows if r.position_id]
@@ -96,7 +54,7 @@ def test_the_two_legs_share_a_position_and_the_rest_have_none(uploaded, engine):
     assert len({r.position_id for r in linked}) == 1
 
 
-def test_every_leg_keeps_its_strike_and_type(uploaded, engine):  # noqa: F811
+def test_every_leg_keeps_its_strike_and_type(uploaded, engine):
     with make_session(engine) as sess:
         rows = sess.scalars(select(m.Trip)).all()
     assert {(r.option_type, int(r.strike)) for r in rows if r.position_id} == {
@@ -104,13 +62,13 @@ def test_every_leg_keeps_its_strike_and_type(uploaded, engine):  # noqa: F811
     }
 
 
-def test_the_record_reads_positions(uploaded, engine):  # noqa: F811
+def test_the_record_reads_positions(uploaded, engine):
     trips = loaded(engine)
     assert len(trips) == 6
     assert sum(t.net for t in trips) == Decimal(1200)
 
 
-def test_the_spread_is_its_legs_added_up(uploaded, engine):  # noqa: F811
+def test_the_spread_is_its_legs_added_up(uploaded, engine):
     p = spread(engine)
     assert p.net == Decimal(1300)
     assert p.trading_day == "2026-10-14"
@@ -132,7 +90,7 @@ def test_a_spread_is_one_trade_with_its_legs_shown(uploaded):
     assert "Sold 5000 CE +₹1,900" in page
 
 
-def test_the_leg_alone_is_not_ranked(uploaded, engine):  # noqa: F811
+def test_the_leg_alone_is_not_ranked(uploaded, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         trips = loader.load_for(sess, trader)[0]
@@ -140,13 +98,13 @@ def test_the_leg_alone_is_not_ranked(uploaded, engine):  # noqa: F811
     assert Decimal(-600) not in {t.net for t in trips}
 
 
-def test_a_naked_sale_shows_uncapped_and_its_money_counts(uploaded, engine):  # noqa: F811
+def test_a_naked_sale_shows_uncapped_and_its_money_counts(uploaded, engine):
     naked = next(t for t in loaded(engine) if t.net == Decimal(-500))
     assert naked.risk_unit_source is s.RiskUnitSourceV1.UNCAPPED
     assert "Uncapped" in text(uploaded.get("/mirror/fact/risk").text)
 
 
-def test_a_capped_spread_is_not_labelled_uncapped(uploaded, engine):  # noqa: F811
+def test_a_capped_spread_is_not_labelled_uncapped(uploaded, engine):
     assert spread(engine).risk_unit_source is s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS
 
 
@@ -170,20 +128,20 @@ def test_chapter_four_says_it_in_plain_words(uploaded, path):
     assert "Its rupees are counted." in page
 
 
-def test_a_declared_budget_still_outranks_a_structure(uploaded, engine):  # noqa: F811
+def test_a_declared_budget_still_outranks_a_structure(uploaded, engine):
     page = uploaded.get("/budget").text
     uploaded.post("/budget", data={"value": "3000", "unit": "INR", "effective_from": "2026-10-01",
                                    "csrf_token": CSRF.search(page).group(1)})
     assert spread(engine).risk_unit_source is s.RiskUnitSourceV1.DECLARED_BUDGET
 
 
-def declare_a_budget(client):  # noqa: F811
+def declare_a_budget(client):
     page = client.get("/budget").text
     client.post("/budget", data={"value": "3000", "unit": "INR", "effective_from": "2026-10-01",
                                  "csrf_token": CSRF.search(page).group(1)})
 
 
-def test_a_budget_measures_the_naked_sale_and_it_still_reads_uncapped(uploaded, engine):  # noqa: F811
+def test_a_budget_measures_the_naked_sale_and_it_still_reads_uncapped(uploaded, engine):
     """A budget outranks a risk figure (Annex H section 6). Uncapped is not a figure: the
     position can still lose without limit, so the label stays (the ticket's gate)."""
     declare_a_budget(uploaded)
@@ -199,25 +157,37 @@ def test_a_budget_leaves_the_plain_words_in_place(uploaded):
     assert "1 trade was a sold option with no cap on its loss" in page
 
 
-def test_a_capped_spread_never_reads_uncapped_under_a_budget(uploaded, engine):  # noqa: F811
+def test_a_capped_spread_never_reads_uncapped_under_a_budget(uploaded, engine):
     declare_a_budget(uploaded)
     assert spread(engine).uncapped is False
 
 
-def journal_for(engine, day: str) -> int:  # noqa: F811
+def journal_for(engine, day: str) -> int:
     with make_session(engine) as sess:
         return sess.scalars(select(m.Journal.id).where(m.Journal.period_start == day)).one()
 
 
-def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):  # noqa: F811
-    page = text(uploaded.get(f"/journals/{journal_for(engine, '2026-10-14')}").text)
+def _say_yes(client, jid: int) -> None:
+    """TICKET-906: an old day asks "Do you remember this day?" before its trades. Say yes."""
+    first = client.get(f"/journals/{jid}").text
+    client.post(
+        f"/journals/{jid}/remember",
+        data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)},
+    )
+
+
+def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):
+    jid = journal_for(engine, '2026-10-14')
+    _say_yes(uploaded, jid)
+    page = text(uploaded.get(f"/journals/{jid}").text)
     assert "Trade 1 — +₹1,300" in page
     assert "Trade 2 — +₹200" in page
     assert "Trade 3" not in page
 
 
-def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
+def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):
     jid = journal_for(engine, "2026-10-14")
+    _say_yes(uploaded, jid)
     page = uploaded.get(f"/journals/{jid}").text
     form = re.search(r'name="trip_id" value="([^"]+)"', page).group(1)
     assert form == spread(engine).trip_id
@@ -229,9 +199,10 @@ def test_a_journal_answer_on_a_spread_is_saved(uploaded, engine):  # noqa: F811
     assert response.status_code in (200, 303)
 
 
-def test_home_counts_the_spread_in_the_verdict_and_its_day_as_two_trades(uploaded):
+def test_home_counts_the_spread_in_the_verdict_and_its_day_as_two_trades(uploaded, engine):
     """14 Oct made +1,500 from the spread and one trade; 15 Oct -400; 16 Oct +100. Home lists only
     days the report names, and a winning day isn't one, so the day's count is on its own Journal."""
     assert "Your option trades made ₹1,200" in text(uploaded.get("/").text)
-    day = re.search(r'/journals/(\d+)"', uploaded.get("/journals/catch-up").text).group(1)
+    day = journal_for(engine, "2026-10-14")
+    _say_yes(uploaded, day)
     assert uploaded.get(f"/journals/{day}").text.count('class="card journal-trade"') == 2

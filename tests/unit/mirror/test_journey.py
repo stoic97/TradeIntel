@@ -80,10 +80,8 @@ def test_the_one_number_is_the_kits_form_in_the_apps_words(client):
     ) in page
     assert 'type="radio" name="unit" value="PCT"><span class="body">per cent of my trading' in page
     assert '<button class="btn btn--primary btn--block" type="submit">Record it</button>' in page
-    assert (
-        '<a class="btn btn--text" href="/eligibility">'
-        "Next: what we can and cannot check on your history</a>"
-    ) in page
+    assert 'href="/eligibility"' not in page  # TICKET-903: Limits no longer sends on to the checks page
+
     assert "<select" not in page  # the kit's radios, not the old drop-down
 
 

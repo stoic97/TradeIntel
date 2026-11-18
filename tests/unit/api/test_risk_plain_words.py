@@ -12,9 +12,9 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import client, engine, upload  # noqa: F401
+from tests.helpers.scope_chapters import chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import upload
 
 LOSSES = [-100 * i for i in range(1, 21)]
 GUIDE = (
@@ -102,9 +102,10 @@ def test_with_a_budget_it_does_not():
     assert "Set your number" not in fact_page("risk", budget())
 
 
-def test_it_goes_on_to_the_last_fact():
-    assert 'href="/mirror/fact/not-told"' in fact_page("risk", nothing())
-    assert 'href="/mirror/fact/not-told"' in fact_page("risk", budget())
+def test_its_way_on_is_the_spines_not_its_own():
+    """TICKET-903: Next comes from scope_map on every report page (test_report_spine)."""
+    assert "Next: what we have not told you" not in fact_page("risk", nothing())
+    assert "Next: what we have not told you" not in fact_page("risk", budget())
 
 
 def test_the_table_uses_the_new_label():
@@ -125,23 +126,23 @@ def test_the_trade_group_uses_the_new_label():
     assert LABEL in page and OLD_LABEL not in page
 
 
-def test_the_budget_page_shows_the_guide(client, engine, monkeypatch):  # noqa: F811
+def test_the_budget_page_shows_the_guide(client, engine, monkeypatch):
     """On a real upload. The fixture's file has a few losses, so the minimum comes down."""
     monkeypatch.setattr(mx, "LOSS_SIZES_MINIMUM", 1)
     upload(client, content=_with_a_loss())
     assert "Half your losing trades lost ₹100 or less." in " ".join(client.get("/budget").text.split())
 
 
-def test_the_budget_page_says_nothing_with_too_few(client, engine):  # noqa: F811
+def test_the_budget_page_says_nothing_with_too_few(client, engine):
     upload(client, content=_with_a_loss())
     assert "Half your losing trades" not in client.get("/budget").text
 
 
-def test_the_budget_page_says_nothing_with_no_upload(client):  # noqa: F811
+def test_the_budget_page_says_nothing_with_no_upload(client):
     assert "Half your losing trades" not in client.get("/budget").text
 
 
-def test_an_old_refusal_reads_in_plain_words(client, engine):  # noqa: F811
+def test_an_old_refusal_reads_in_plain_words(client, engine):
     """Stored before sold options were counted. New uploads refuse none of them."""
     upload(client, content=_with_a_loss())
     with make_session(engine) as sess:
@@ -157,7 +158,7 @@ def test_an_old_refusal_reads_in_plain_words(client, engine):  # noqa: F811
 
 
 def _with_a_loss() -> bytes:
-    from tests.unit.api.test_upload import _two_days
+    from tests.helpers.upload import _two_days
 
     loss = (
         "2026-10-15,13:30:00,WIDGETOIL 19 NOV 5100 CALL,BUY,INTRADAY,MCX,"

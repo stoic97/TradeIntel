@@ -30,15 +30,21 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.api import trade_list as TL
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_trade_rows import articles, text, uploaded  # noqa: F401
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.scope_chapters import IMP, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.trade_rows import articles, text, trade_rows_uploaded
+
+
+@pytest.fixture()
+def uploaded(client, engine):
+    return trade_rows_uploaded(client, engine)
 
 HEADLINE = "Your best trades weren't trades."
 HOOK = "Your best and worst trades are in the same place."
@@ -419,10 +425,10 @@ def next_chapter(page: str) -> str:
     return re.search(r'<div class="next-chapter">.*?</div>', page, re.DOTALL)[0]
 
 
-def test_the_button_names_the_next_chapter_by_its_real_title():
-    block = next_chapter(fact_page("money", WHOLE))
-    assert f">Chapter 2: {S.chapter(2).name}<" in block
-    assert f'href="{S.chapter_href(2)}"' in block
+def test_the_next_chapter_is_named_by_the_spine():
+    """TICKET-903: the way into chapter 2 is the spine's Next, named from scope_map."""
+    assert ">Chapter 2" not in next_chapter(fact_page("money", WHOLE))
+    assert S.next_step("money")["label"] == f"Next, chapter 2: {S.FACTS['math'].title}"
 
 
 def test_the_title_is_read_from_the_map(monkeypatch):
@@ -431,7 +437,7 @@ def test_the_title_is_read_from_the_map(monkeypatch):
         for c in S.CHAPTERS
     )
     monkeypatch.setattr(S, "CHAPTERS", renamed)
-    assert ">Chapter 2: A title the map decided<" in next_chapter(fact_page("money", WHOLE))
+    assert "A title the map decided" not in next_chapter(fact_page("money", WHOLE))  # TICKET-903: the spine names it
 
 
 def test_the_page_ends_with_the_button():
@@ -452,7 +458,7 @@ def test_a_same_day_gain_does_not_ask_where_it_went():
 
 def test_with_nothing_closed_the_same_day_the_button_stands_alone():
     block = readable(next_chapter(fact_page("money", ETF)))
-    assert "Everything you closed" not in block and "Chapter 2" in block
+    assert "Everything you closed" not in block and "Chapter 2" not in block  # TICKET-903
 
 
 # ---------- The card ----------
@@ -471,21 +477,21 @@ def test_the_card_of_another_trader_says_what_his_lists_came_to():
 # ---------- Through the app ----------
 
 
-def test_a_position_held_eight_days_reads_in_days_on_the_fact_page(uploaded):  # noqa: F811
+def test_a_position_held_eight_days_reads_in_days_on_the_fact_page(uploaded):
     rows = articles(uploaded.get("/mirror/fact/money").text)
     assert any("Widget ETF" in a and "8 days" in a for a in rows)
 
 
-def test_and_on_every_other_list_it_appears_in(uploaded):  # noqa: F811
+def test_and_on_every_other_list_it_appears_in(uploaded):
     rows = articles(uploaded.get("/mirror/fact/risk/trades").text)
     assert any("Widget ETF" in a and "8 days" in a for a in rows)
 
 
-def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):  # noqa: F811
+def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):
     page = uploaded.get("/mirror/fact/money").text
     assert len(lists(page)) == 2
     assert not re.search(r"Day \d", text(page))
-    assert f"Chapter 2: {S.chapter(2).name}" in text(page)
+    assert "Next, chapter 2" in text(page)  # TICKET-903: the spine's Next
 
 
 def test_no_trade_row_writes_its_hold_in_minutes_by_hand():

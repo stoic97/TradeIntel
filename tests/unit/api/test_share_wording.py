@@ -10,9 +10,9 @@ import pytest
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
-from tests.unit.api.test_reveal_page import reveal
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.reveal_page import reveal
+from tests.helpers.scope_chapters import IMP, TRIPS, chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
 
 SENTENCE = "5 of your 8 trading days (about 63%) carried about 96% of your losses."
 OLD = "of your result"

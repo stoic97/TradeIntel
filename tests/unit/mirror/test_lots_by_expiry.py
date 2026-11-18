@@ -28,11 +28,17 @@ from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    client,
-    engine,
-    upload,
-)
+from tests.helpers.upload import upload, upload_client, upload_engine
+
+
+@pytest.fixture()
+def client(engine):
+    return upload_client(engine)
+
+
+@pytest.fixture()
+def engine():
+    return upload_engine()
 
 TRADED = date(2026, 10, 15)
 NOV_2026 = date(2026, 11, 19)
@@ -181,7 +187,7 @@ def _round_trip(opened: str, closed: str, name: str, quantity: str = "100") -> l
     ]
 
 
-def _lots_by_hour(client, engine, content: bytes) -> dict[int, int]:  # noqa: F811
+def _lots_by_hour(client, engine, content: bytes) -> dict[int, int]:
     assert upload(client, content=content).status_code == 303
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
@@ -189,7 +195,7 @@ def _lots_by_hour(client, engine, content: bytes) -> dict[int, int]:  # noqa: F8
     return {t.entry_ts.hour: t.lots for t in trips}
 
 
-def test_the_record_reads_each_contract_at_its_own_expirys_size(client, engine):  # noqa: F811
+def test_the_record_reads_each_contract_at_its_own_expirys_size(client, engine):
     content = _tradebook([
         *_round_trip("10:00:00", "10:30:00", "19 NOV"),
         *_round_trip("11:00:00", "11:30:00", "21 JAN"),
@@ -197,7 +203,7 @@ def test_the_record_reads_each_contract_at_its_own_expirys_size(client, engine):
     assert _lots_by_hour(client, engine, content) == {10: 5, 11: 4}
 
 
-def test_a_share_on_the_same_day_keeps_its_answer(client, engine):  # noqa: F811
+def test_a_share_on_the_same_day_keeps_its_answer(client, engine):
     content = _tradebook([
         *_round_trip("10:00:00", "10:30:00", "19 NOV"),
         ("11:00:00", "Widget ETF", "BUY", "NSE,Equity", "100"),
@@ -206,7 +212,7 @@ def test_a_share_on_the_same_day_keeps_its_answer(client, engine):  # noqa: F811
     assert _lots_by_hour(client, engine, content) == {10: 5, 11: 100}
 
 
-def test_one_contract_at_one_instant_under_two_expiries_keeps_todays_answer(client, engine):  # noqa: F811
+def test_one_contract_at_one_instant_under_two_expiries_keeps_todays_answer(client, engine):
     """The stored row cannot be told apart from its twin, so its expiry is not read."""
     content = _tradebook([
         *_round_trip("10:00:00", "10:30:00", "19 NOV"),
@@ -216,7 +222,7 @@ def test_one_contract_at_one_instant_under_two_expiries_keeps_todays_answer(clie
 
 
 def test_a_quantity_only_one_size_divides_does_not_read_the_raw_file(
-    client, engine, monkeypatch  # noqa: F811
+    client, engine, monkeypatch
 ):
     """Every page loads the record, and parsing the whole file each time would be waste."""
     content = _tradebook(_round_trip("10:00:00", "10:30:00", "19 NOV", quantity="40"))

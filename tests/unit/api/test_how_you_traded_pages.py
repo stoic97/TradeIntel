@@ -106,7 +106,7 @@ def test_the_page_leads_with_the_count_its_card_leads_with(client):
     """A bare percentage read aloud states nothing: the page's largest figure has to say
     what the card's says."""
     page = client.get("/mirror/fact/math").text
-    hero = re.search(r'num--hero">(.*?)</span>', page, re.DOTALL)[1].strip()
+    hero = re.sub(r"<[^>]+>", "", re.search(r'num--hero">(.*?)</span>', page, re.DOTALL)[1]).strip()
     assert re.fullmatch(r"\d+ of 100 trades", hero)
 
 

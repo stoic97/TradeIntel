@@ -352,13 +352,16 @@ def lookup(
     resolves to NSE cash equity, an NSE option with no file of its own does not.
     ``segment`` may be the enum or its value; the stored row carries the value.
     """
+    segment_value = getattr(segment, "value", segment)
     exact = profiles.get((exchange, symbol))
-    if exact is not None:
+    # A named share's profile is its options' and futures' (RELIANCE, lot 500). A share
+    # bought outright is not that contract: it is cash equity, so it goes to the
+    # segment profile below (TICKET-895: 10 RELIANCE shares are not 1/50th of a lot).
+    if exact is not None and not (segment_value == "EQ" and exact.expiry_rule != "none"):
         return exact
     wildcard = profiles.get((exchange, SEGMENT_WILDCARD))
     if wildcard is None:
         return None
-    segment_value = getattr(segment, "value", segment)
     if wildcard.segment == segment_value:
         return wildcard
     return None

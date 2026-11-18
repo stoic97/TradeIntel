@@ -105,11 +105,27 @@ def _year(t: mx.Trip, _expiries: dict) -> Choice:
     return year, year, year
 
 
+HALF_OF = "half of its book's days"
+"""The lookup's key for each same-day trade's half of its own book's days (TICKET-910). The
+other readers find each contract's expiry in the same lookup."""
+
+HALVES = (("first", "First half"), ("second", "Second half"))
+
+
+def _half(t: mx.Trip, lookup: dict) -> Choice | None:
+    half = lookup.get(HALF_OF, {}).get(t.trip_id)
+    for place, (value, label) in enumerate(HALVES):
+        if half == value:
+            return place, value, label
+    return None
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
     label: str
     read: Callable[[mx.Trip, dict], Choice | None]
+    only: frozenset[str] | None = None  # the facts whose list offers it; None: every list
 
 
 FILTERS = (
@@ -119,6 +135,7 @@ FILTERS = (
     Filter("dte", "Days to expiry", _expiry),
     Filter("hour", "Hour opened", _hour),
     Filter("year", "Year", _year),
+    Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
 )
 
 
@@ -131,8 +148,11 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
+    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
     for f in FILTERS:
-        read = [(t, f.read(t, expiries)) for t in behind]
+        if f.only is not None and key not in f.only:
+            continue
+        read = [(t, f.read(t, lookup)) for t in behind]
         offered = sorted({choice for _, choice in read if choice is not None}, key=lambda c: c[0])
         if len(offered) < 2:
             continue

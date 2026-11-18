@@ -16,12 +16,13 @@ from services.production.api import formatting
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_no_claims import CLAIM_PATTERNS, NEVER_USED
+from tests.helpers.no_claims import CLAIM_PATTERNS, NEVER_USED
 
 WORST = "/mirror/fact/worst-days"
 RUN = "/mirror/fact/run"
 BLOCK = re.compile(r'<details class="day-block" id="day-([^"]+)">(.*?)</details>', re.DOTALL)
-JOURNAL = re.compile(r'href="/journals/(\d+)"')
+# TICKET-903: the link names the page it came from, so the journal links back.
+JOURNAL = re.compile(r'href="/journals/(\d+)\?from=(?:worst-days|run)"')
 ASKS = re.compile(r"You lost (\d+) in a row on (\d{2} \w{3} \d{4})\. What do you remember\?")
 
 

@@ -1,10 +1,14 @@
 # PlusEV Scope — engineering handoff
 
-_v1 · 27 October 2026 · For the engineer building the new Scope UI and taking it live. **This is the one document to work from.** It replaces the navigation spec, user story, flow map, backend-gaps note, UI engineering plan, design-prompt kit, app–site connection note and launch runbook (all removed from the project on 27 Oct; their content is folded in here). Checked against `stoic97/TradeIntel` `main` at 1020a3c and `stoic97/plusev-web` `main` at 9bde8af, plus the founder's local working tree._
+_v1 · 27 October 2026 · For the engineer building and running the Scope UI. **It is the Scope UI's build spec.** It replaced the navigation spec, user story, flow map, backend-gaps note, UI engineering plan, design-prompt kit, app–site connection note and launch runbook (all removed from the project on 27 Oct; their content is folded in here)._
 
-**Where it lives:** in the repo at `docs/product/scope_engineering_handoff_v1.md`, with the testing register beside it, and in the claude.ai Project "TradDNA" (ask the founder for access to read the PRD and other Project docs named in §15). Keep the two copies the same.
+**Checked against `main` at `b50ca2d` on 16 November 2026** (TICKET-935): every path in backticks below resolves in this repo at that commit. The lines about plusev-web were last checked against its main at 9bde8af on 27 October.
 
-**If anything elsewhere disagrees with this document, this document wins.** That includes the design kit's README, older PRD text and any canvas note. Raise a conflict with the founder instead of guessing.
+**Paths:** a path in backticks is relative to the root of this repo. One that starts with `/` is a route of the app, a page of the website or a path on the server, and the sentence says which. Files kept elsewhere (plusev-web, the claude.ai Project) are named in plain text, without backticks.
+
+**Where it lives:** here, `docs/product/scope_engineering_handoff_v1.md`. This file is the only copy. The claude.ai Project "TradDNA" (ask the founder for access to read the PRD and other Project docs named in §15) keeps only a one-line pointer to this file; a full copy found there is out of date.
+
+**Where the design kit (`docs/design/scope-kit/`), the screens (`docs/design/screens/`) or a design canvas disagrees with this document, this document wins.** That includes the design kit's README and any canvas note. Anything else that disagrees with it (older PRD text, another doc, the code on `main`): raise the conflict with the founder instead of guessing.
 
 ---
 
@@ -22,25 +26,27 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 
 | Thing | State | Evidence |
 |---|---|---|
-| Code for import, accounts, consent, upload, Mirror, Journal, eligibility, deletion | Built and merged; about 700 tests | `main` |
+| Code for import, accounts, consent, upload, Mirror, Journal, eligibility, deletion | Built and merged; 3,023 `def test_` functions in 219 test files at `b50ca2d` | `main` |
 | App on the droplet `139.59.38.160`, Caddy, systemd, backups | Running | `deploy/`, `docs/runbooks/deploy.md` |
-| Deletion gate on the real server | **Done 22 Oct** through the page | `docs/runbooks/deletion-log.md` |
-| Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, on `main`** (PR #2, 27 Oct) | `accounts/consent.py` |
-| Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Done, on `main`** (PR #2) | `base.html`, `scope.css` |
-| Link from plusev.in to scope.plusev.in | In `plusev-web/content/copy.ts` | — |
-| `scope.plusev.in` with TLS | Believed live (the deletion gate ran through the page); **verify**: `dig +short scope.plusev.in` → `139.59.38.160`, padlock in a browser | — |
-| New Scope UI | Designed and prototyped; **not built** | §3, step 2 |
+| Deletion gate on the real server | **Done 22 Oct** through the page | the deletion log on the server, `/srv/scope/data/deletion-log.md` |
+| Consent text reviewed (v1, read by Rikk on 22 Oct) | **Done, on `main`** (PR #2, 27 Oct) | `services/production/accounts/consent.py` |
+| Site chrome in the app (navy hero, stacked lockup, Plex fonts) | **Done, on `main`** (PR #2) | `services/production/api/templates/layout.html`, `services/production/api/static/css/app.css` |
+| Link from plusev.in to scope.plusev.in | In plusev-web's content/copy.ts (checked 27 Oct, not since) | — |
+| `scope.plusev.in` with TLS | **Live**: on 16 November 2026 the dev PC got HTTP 200 from `https://scope.plusev.in`, and `scope.plusev.in` resolved to `139.59.38.160`. To recheck: `dig +short scope.plusev.in` → `139.59.38.160`, padlock in a browser | — |
+| New Scope UI | **Built, on `main`**: Scope home, the four chapters and the fact pages (`/mirror`, `/mirror/chapter/{n}`, `/mirror/fact/{key}`), templates in `services/production/api/templates/scope/` | `services/production/api/routes_mirror.py` |
+
+§9 and §10 below are the build plan as written on 27 October, kept for their decisions; they are not a status list.
 
 ## 3. Step 0: before you write code
 
 | # | Who | Action |
 |---|---|---|
 | 1 | Founder | ~~Commit and push consent v1 and the site chrome~~ **Done 27 Oct, PR #2.** |
-| 2 | Founder | **The design in the repo.** Done: `docs/design/screens/` (81 screens, pre-polish look) and `screens/latest/` (final dial and motion), with `docs/design/README.md` saying which to trust. The engineering kit in `docs/design/scope-kit/` (31 Oct). **To follow:** a final full export replacing `screens/`. |
+| 2 | Founder | **The design in the repo.** Done: `docs/design/screens/` (81 screens, pre-polish look) and `docs/design/screens/latest/` (final dial and motion), with `docs/design/README.md` saying which to trust. The engineering kit in `docs/design/scope-kit/` (31 Oct). **To follow:** a final full export replacing `docs/design/screens/`. |
 | 3 | Founder | **Share the two Claude Design canvases with the engineer** (Share menu on each): "PlusEV Scope Prototype" (the clickable prototype, Play mode) and "PlusEV Scope Design System" (tokens, components, brand book). |
 | 4 | Founder | **Decisions in §13.** D1 and D5 answered 27 Oct; D2 is open but doesn't block Phases 0–3. |
-| 4b | Founder | **Brand PR for the font rule.** The brand docs are mirrored from `plusev-web/docs/brand/` and change only by PR (their README, "How to make a change"). `BRAND_RULES_CARD.md` "How it looks" and C12 still say "Serif for display"; the 26 Oct decision (§7 here) needs a `docs/brand-…` PR with a change-log row, then the Project mirror refreshed. Not blocking the build: §7 of this document is what to build. |
-| 5 | Engineer | Read this document, open the prototype in Play, then open `docs/design/scope-kit/components.html` and `screens/preview/` in a browser. |
+| 4b | Founder | **Brand PR for the font rule.** The brand docs are mirrored from plusev-web's docs/brand/ and change only by PR (their README, "How to make a change"). BRAND_RULES_CARD.md "How it looks" and C12 still say "Serif for display"; the 26 Oct decision (§7 here) needs a docs/brand-… PR in plusev-web with a change-log row, then the Project mirror refreshed. Not blocking the build: §7 of this document is what to build. |
+| 5 | Engineer | Read this document, open the prototype in Play, then open `docs/design/scope-kit/components.html` and the screens in `docs/design/scope-kit/screens/` in a browser. |
 
 ## 4. Navigation: the Scope
 
@@ -52,13 +58,13 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | 2 | **Chapter** | The dial re-divided into that chapter's facts (2–4); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
 | 3 | **Fact** | White page. The 56 px lens pinned top-left with the path beside it on one line (`Scope › Where your… › Your worst trading days`); the Mirror's sentences, figures, tables; then "The trades behind this": every trade, never a sample | Nothing except the lens and the path |
 
-**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, tabs, dropdowns, text fields, next/previous fact or "related" anywhere in the Scope.
+**Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, dropdowns or text fields anywhere in the Scope. Every report page has the rail, Previous and Next, and All pages, all in scope_map's one order, and on a phone the report bar (TICKET-903, ruled 13 Nov 2026, round 2 section N).
 
 ### Chapters and facts (the Mirror's own headings)
 
 | # | Chapter | Facts, in slice order | Fact key |
 |---|---|---|---|
-| 1 | Where your results came from | Your worst trading days · Share of your result · Where the money came from | `worst-days` · `share` · `money` |
+| 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Share of your result · Where the money came from | `hidden` · `worst-days` · `share` · `money` |
 | 2 | Your patterns | How long you hold · Strike rate · Longest losing run · The clock | `hold` · `strike` · `run` · `clock` |
 | 3 | Your behaviour | After two straight losses · Your busiest day | `down` · `busiest` |
 | 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
@@ -89,12 +95,12 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 
 | # | Screen | Route | Status | Notes |
 |---|---|---|---|---|
-| 0 | Front door, signed out | `/` | Restyle `home.html` | Navy door |
+| 0 | Front door, signed out | `/` | Restyle `services/production/api/templates/home.html` | Navy door |
 | 1 | Scope page | plusev.in/scope | Restyle (plusev-web) | Navy door |
 | 2a–2c | Demo on an invented trader: guess, reveal, its trades | plusev.in/scope | New (plusev-web, static) | Stores nothing; TR-010 |
 | 3 | Create your account | `/signup`, and on the front door `/` | Restyle | Name, login id, password (≥ 12). **No email anywhere in v1** (ADR-007) |
 | 4 | Sign in | `/login` | Restyle | One error for any failure |
-| 5, 5b, 5c | Consent, what you agreed to, consent declined | `/consent`, `/settings/consent` | Restyle; 5c new | Consent text in full from `consent.py` |
+| 5, 5b, 5c | Consent, what you agreed to, consent declined | `/consent`, `/settings/consent` | Restyle; 5c new | Consent text in full from `services/production/accounts/consent.py` |
 | 6, 7a, 7b, 7c | Upload, broker not open, not a tradebook, Scope not open | `/upload` | Restyle | |
 | 8 | Calculating | during `POST /upload` | New | D1 = (a): the strip animates as "Reading your file" while the request runs, then the real final counts; no live counts, no backend change |
 | 9 | Import check | `/imports/{id}` | Restyle | Exit goes to 10, not 13 |
@@ -113,7 +119,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | Edge | Six edge-state screens | as above | New / restyle | §4 |
 | Desktop | Scope home, Chapter 1, worst-days fact at 1440 | same routes | New | Dial beside the story |
 
-**Journey order:** sign up → consent → upload → calculating → import check → guess → reveal → one number → Scope home → Journal → leaving card. `landing_for()` in `routes_identity.py` decides where a returning trader lands.
+**Journey order:** sign up → consent → upload → calculating → import check → guess → reveal → one number → Scope home → Journal → leaving card. `landing_for()` in `services/production/api/routes_identity.py` decides where a returning trader lands.
 
 **Navigation chrome:** in-app pages use a bottom nav **Scope · Journal · Account** (Scope active in blue). Sign out moves to the Account page (D6). Fact pages have no bottom nav.
 
@@ -121,11 +127,11 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 
 | Source | Used for | Rule |
 |---|---|---|
-| `templates/mirror.html` (and the drawer captions in `routes_mirror.DRAWERS`) | Every Mirror sentence, heading and table label | **Word for word.** Only the figures are variables |
-| The app's other templates and `accounts/consent.py` | Every other existing screen | **Word for word**, including the consent text, delete page, upload-closed and instrument pages |
+| `tests/fixtures/mirror_wording/mirror_v1.json`, the frozen Mirror wording (`tests/unit/mirror/test_wording_reference.py` holds every page to it); the pages are the templates in `services/production/api/templates/scope/` | Every Mirror sentence, heading and table label | **Word for word.** Only the figures are variables |
+| The app's other templates and `services/production/accounts/consent.py` | Every other existing screen | **Word for word**, including the consent text, delete page, upload-closed and instrument pages |
 | `docs/design/scope-kit/README.md`, new-copy list | Lines the app has no wording for (captions, card lines, guess, calculating, leaving card, signed-in home) | **Pending copy-owner sign-off (D9).** Build with them; don't invent more |
-| `journal/prose.py`, `journal/wtp.py`, `routes_journal.PER_TRIP_PROMPTS` | Journal sentences, the price question, per-trade questions | As in code |
-| `Brand Strategy/BRAND_RULES_CARD.md`, "The words" | Tagline "See what your tradebook has been hiding.", status line "In development.", master message, "No buy or sell calls, ever.", the honest-limit line, the CTA | Fixed, verbatim; only the founder changes them |
+| `services/production/journal/prose.py`, `services/production/journal/wtp.py`, `routes_journal.PER_TRIP_PROMPTS` | Journal sentences, the price question, per-trade questions | As in code |
+| The brand rules card (BRAND_RULES_CARD.md in the Project's Brand Strategy folder), "The words" | Tagline "See what your tradebook has been hiding.", status line "In development.", master message, "No buy or sell calls, ever.", the honest-limit line, the CTA | Fixed, verbatim; only the founder changes them |
 
 **Never:** guaranteed, profitable, winning, signal, tip, guru, mentor, fund, platform, tilt, emotional, psychology, disease, cure, DNA, revenge, "AI-powered", a bare "R", any opening date, a score or grade, a cause, advice, a comparison with other traders, "No issues detected", "your plan / your system / your rule" (TR-006). The existing no-claims test enforces most of this; extend it to every new template.
 
@@ -133,7 +139,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 
 ## 7. Visual design
 
-The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is the code form. The rules in short:
+The design system canvas is the reference; `docs/design/scope-kit/static/css/tokens.css` is the code form. The rules in short:
 
 **Colour roles**
 
@@ -155,9 +161,9 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 - **Fonts:** IBM Plex Mono for every number, figure, state and label (tabular figures); IBM Plex Sans semibold for headings and UI; Source Serif 4 only for the Mirror's sentences. Self-hosted only, **with latin-ext** so ₹ renders (§8, T2).
 - **Type scale:** mono hero 56 / large 32 / medium 22 / small 15 / label 11; Sans title 34 / heading 22 / card title 17 / UI 15; serif 22 on fact pages, 19 on cards; gross line 13.
 - Spacing on a 4 px base; card radius 16; controls pill; at most two elevation levels; hairlines 1 and 1.5 px. No gradients, glow, glass or shadows beyond elevation 1. One motion per screen. Touch targets ≥ 44 px; text ≥ 4.5:1.
-- **The mark:** the bracket mark already in `base.html` (D5). Lockup: the mark at the wordmark's height, "PlusEV" in Plex Sans semibold, "Scope" beneath in Plex Mono; ink on white, white on navy; the mark alone only for favicon, app icon and tab.
+- **The mark:** the bracket mark, `services/production/api/static/icons/mark.svg` (D5); on pages the `lockup` macro in `services/production/api/templates/_components.html` draws it, and `services/production/api/templates/layout.html` uses it through `home_lockup`. Lockup: the mark at the wordmark's height, "PlusEV" in Plex Sans semibold, "Scope" beneath in Plex Mono; ink on white, white on navy; the mark alone only for favicon, app icon and tab.
 
-**The Scope dial** (geometry functions in `scope-geometry.js`, to port to Python):
+**The Scope dial** (geometry functions in `docs/design/scope-kit/static/js/scope-geometry.js`, to port to Python):
 - Phone dial 260 px; lens 56 px; desktop dial 440 px in a 640 px stage, story beside it.
 - Bezel: outer tick ring with three weights (major at each divider, mid every 30°, minor between), white hairlines at reduced opacity on navy; a thin inner ring where the ink arc runs. Dividers stop short of the centre and the bezel.
 - **Names are upright and horizontal, never curved.** Each sits outside the bezel at its slice's arc midpoint on a 12 px hairline leader. Right half: left-aligned. Left half: right-aligned. Twelve or six o'clock: centred. On Home they sit in the four corners. Two lines maximum; three allowed only for "Where the money came from", "Where your results came from" and "What we have not told you".
@@ -186,26 +192,26 @@ The design system canvas is the reference; `docs/design/scope-kit/tokens.css` is
 
 ## 8. Technical approach
 
-Stack stays: FastAPI + Jinja + HTMX, one stylesheet, `dwell.js`. No SPA, no chart library, no CDN. The rendered HTML may reference no absolute URL except `https://plusev.in` (`tests/unit/api/test_app_skeleton.py`).
+Stack stays: FastAPI + Jinja + HTMX, plain CSS in `services/production/api/static/css/` (five stylesheets, linked from `services/production/api/templates/layout.html`), `services/production/api/static/js/dwell.js`. No SPA, no chart library, no CDN. The rendered HTML may reference no absolute URL except `https://plusev.in` (`tests/unit/api/test_app_skeleton.py`).
 
 | # | Decision |
 |---|---|
-| T1 | Tokens as CSS custom properties: bring `tokens.css`, `components.css` and `motion.css` from the kit into `static/`; retire the old `scope.css` rules they replace |
-| T2 | **Fonts: add the latin-ext WOFF2 files** for IBM Plex Sans, IBM Plex Mono and Source Serif 4 to `api/static/fonts/` (the current files are latin only, so ₹ falls back to a system font). Same fix in plusev-web: `subsets: ["latin", "latin-ext"]` in `app/layout.tsx` (three places) |
-| T3 | The dial is **server-rendered SVG** from one Jinja macro backed by a Python port of `scope-geometry.js` (`services/production/api/scope_geometry.py`), measured with real values. Unit-test the port against the JS on the kit's sample values |
+| T1 | Tokens as CSS custom properties: the kit's stylesheets in `docs/design/scope-kit/static/css/` (tokens, components, motion) are in the app at `services/production/api/static/css/` |
+| T2 | **Fonts: add the latin-ext WOFF2 files** for IBM Plex Sans, IBM Plex Mono and Source Serif 4 to `services/production/api/static/fonts/` (done in the app: the latin-ext files are on `main` and `services/production/api/static/css/fonts.css` loads them, TR-013). Same fix in plusev-web: `subsets: ["latin", "latin-ext"]` in plusev-web's app/layout.tsx (three places; not checked since 27 Oct) |
+| T3 | The dial is **server-rendered SVG** from one Jinja macro backed by a Python port of `docs/design/scope-kit/static/js/scope-geometry.js` (`services/production/api/scope_geometry.py`), measured with real values. Unit-test the port against the JS on the kit's sample values |
 | T4 | Charts are server-rendered SVG macros (share bar, daily net, diverging best/worst, paired bars, trades per day, by hour, run squares, hold dots, trade strip) |
 | T5 | Real URLs per level (§5) so back, deep links and the reveal's link work |
-| T6 | Motion with the View Transitions API via `hx-boost` and HTMX `transition:true`, CSS from `motion.css`; unsupported browsers switch instantly. The kit's `?enter=` parameter tells the page which transition to play |
-| T7 | Pages format, they don't compute: fact pages read `_mirror_context()` and the existing trade lists. One place decides each figure (`mirror/metrics.py`) |
-| T8 | `base.html` gets two blocks, `stage` (navy) and `content` (white), chosen per page; the bottom nav replaces the header nav in-app |
+| T6 | Motion with the View Transitions API via `hx-boost` and HTMX `transition:true`, CSS from `services/production/api/static/css/motion.css`; unsupported browsers switch instantly. The kit's `?enter=` parameter tells the page which transition to play |
+| T7 | Pages format, they don't compute: fact pages read `_mirror_context()` and the existing trade lists. One place decides each figure (`services/production/mirror/metrics.py`) |
+| T8 | `services/production/api/templates/layout.html` gets two blocks, `stage` (navy) and `content` (white), chosen per page; the bottom nav replaces the header nav in-app |
 
 ## 9. Backend work (testing register TR-012)
 
 | # | Item | Size | Notes |
 |---|---|---|---|
-| B1 | Instrument symbol on each trade | XS | `trip.symbol` into `mirror/loader.py` and `mx.Trip` |
+| B1 | Instrument symbol on each trade | XS | `trip.symbol` into `services/production/mirror/loader.py` and `mx.Trip` |
 | B2 | Chart series: net and trade count per trading day; minutes held per trade | S | From `Trip.trading_day`, `net`, `holding_seconds`; `_by_day` exists |
-| B3 | Trade lists for strike rate, longest losing run, busiest day | S | New `DRAWERS` keys; data exists (`LosingRun.trip_ids`, day counts, win/loss); captions from the kit's new-copy list |
+| B3 | Trade lists for strike rate, longest losing run, busiest day | S | New trade lists in `FACTS` (`services/production/api/scope_map.py`, which took over the old Mirror drawers); data exists (`LosingRun.trip_ids`, day counts, win/loss); captions from the kit's new-copy list |
 | B4 | Accurate / Not sure / Wrong: table, migration, endpoint; one answer per chapter (1–3) per trader; three optional reasons | S | Wrong facts · Right facts, wrong reading · I've already changed this |
 | B5 | **Fills under each trade**, with "Row in your file" | L | `RoundTrip.fill_ids` exists at reconstruction but the `trip` table doesn't keep it; needs a migration (trip → fill link, parsed fill fields) and a route. **May follow v1** (D4): the trade list is then the end of a fact page |
 | B6 | The guess: table + route; one answer (a label or "I don't know") before the reveal | S | Labels from TR-009 |
@@ -227,7 +233,7 @@ Dwell events stay as they are, keyed by fact page (`surface: mirror_line`).
 
 ## 11. Tests and checks
 
-- Every Mirror sentence on the Scope pages matches `mirror.html` word for word (extend the existing wording tests); every existing screen keeps the app's wording.
+- Every Mirror sentence on the Scope pages matches `tests/fixtures/mirror_wording/mirror_v1.json` word for word (`tests/unit/mirror/test_wording_reference.py`); every existing screen keeps the app's wording.
 - The no-claims / never-use test runs over every new template.
 - The no-absolute-URL test covers every new page.
 - Each fact page lists every trade behind it; the count matches the fact.
@@ -253,7 +259,7 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 1. `dig +short scope.plusev.in` → `139.59.38.160`; `https://scope.plusev.in` loads with a padlock.
 2. `make test` green in TradeIntel; `npm run lint && npm run typecheck && npm test && npm run build` green in plusev-web.
 3. A real (not development-data) account reaching `/consent` sees the consent page, not "Scope is not open yet".
-4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to `docs/runbooks/deletion-log.md`.
+4. On the server, with a fixture account: sign up → consent → upload `data/fixtures/demo/demo_tradebook.csv` → calculating → import check → guess → reveal → one number → Scope home → each chapter → each fact → Journal → leaving card → delete. Then add a row to the deletion log on the server, `/srv/scope/data/deletion-log.md` (never in git).
 5. ₹ renders in Plex on the server (not a fallback font).
 6. `/scope/data` on plusev-web, the consent text and `docs/runbooks/data-flow-map.md` say the same thing about storage, access and backups.
 7. Sign-up is open at `https://scope.plusev.in` (TICKET-841): the first trader signs up there.
@@ -263,12 +269,12 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 | # | Decision | Options | Recommendation | Answer |
 |---|---|---|---|---|
 | D1 | **Calculating**: the import runs synchronously inside `POST /upload`, so no live counts exist while it runs | (a) Show the strip as a plain "Reading your file" state during the request, then the real final counts on arrival; (b) background job + progress endpoint | (a) for v1 | **(a)**, founder, 27 Oct |
-| D2 | **WhatsApp link** on the leaving card is an absolute URL the skeleton test refuses | (i) the founder's WhatsApp group, `https://chat.whatsapp.com/KKn9At6cW5JJlkkB3uamGr` (tracking parameters removed); (ii) a 1:1 chat, `https://wa.me/<number>`, which matches the 24 Oct rule "1:1 WhatsApp before any group"; (iii) `mailto:team@plusev.in` | Either WhatsApp option needs the host exempted by name in `test_app_skeleton.py` (as `plusev.in` is) and a row in the data-flow map | **Open**, founder. Needed by Phase 4 (leaving card) |
+| D2 | **WhatsApp link** on the leaving card is an absolute URL the skeleton test refuses | (i) the founder's WhatsApp group; (ii) a 1:1 chat, `https://wa.me/<number>`, which matches the 24 Oct rule "1:1 WhatsApp before any group"; (iii) `mailto:team@plusev.in` | Either WhatsApp option needs the host exempted by name in `tests/unit/api/test_app_skeleton.py` (as `plusev.in` is) and a row in the data-flow map | **Open**, founder. Needed by Phase 4 (leaving card) |
 | D3 | **Guess labels and question** (TR-009) | Research seat freezes them; build with placeholders | — | |
 | D4 | **Fills (B5)** in v1 or after | Ship v1 with the trade list as the end of a fact page | After v1 | |
-| D5 | **The mark**: the app and plusev.in draw the bracket-and-dots mark; the design drew a bar-with-dots glyph | Pick one | — | **The bracket mark** (`plusev-web/app/mark.tsx`, already in `base.html`), founder, 27 Oct. The trade strip is the product's motif only (loader, trade records, motion), never the logo |
+| D5 | **The mark**: the app and plusev.in draw the bracket-and-dots mark; the design drew a bar-with-dots glyph | Pick one | — | **The bracket mark** (plusev-web's app/mark.tsx; in the app, `services/production/api/static/icons/mark.svg`), founder, 27 Oct. The trade strip is the product's motif only (loader, trade records, motion), never the logo |
 | D6 | **Sign out** once the header nav goes | On the Account page | Account page | |
-| D7 | ~~"In development." tag~~ | **Resolved:** it is the brand's fixed status line (`BRAND_RULES_CARD.md`, changeable only by the founder). Keep it | — | Keep |
+| D7 | ~~"In development." tag~~ | **Resolved:** it is the brand's fixed status line (BRAND_RULES_CARD.md, changeable only by the founder). Keep it | — | Keep |
 | D8 | **₹[price] in the willingness-to-pay question** vs the "no cost figure" brand rule | Keep the figure (research question) or drop it | — | |
 | D9 | **New copy** in the kit's list | Copy owner signs off before Phase 4 | — | |
 | D10 | ~~The founder's WhatsApp link~~ | Folded into D2 | — | — |
@@ -284,15 +290,17 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 
 ## 15. Documents
 
-**Read these** (claude.ai project "TradDNA" unless a repo path):
+**Read these, in this repo:**
 - This document.
-- `claude/scope_testing_register_v1.md` (repo copy: `docs/product/scope_testing_register_v1.md`): every open bug, feature and change; new items go here.
-- Frozen PRD `scope_prd_v1_2_frozen.md` and `claude/scope_prd_v1_2_amendments.md`: product rules not restated here.
-- `claude/trade_dna_product_thesis_v1.5.md` and `trade_dna_research_spec_v1_0.md`: background only; nothing in this build depends on them.
-- `Brand Strategy/BRAND_RULES_CARD.md` and `C12_distinctive_assets_v1_2.md`: brand rules. **Typography is as in §7 of this document** (decided 26 Oct; it replaced "serif for display").
-- Repo: `docs/runbooks/` (deploy, data-flow map, deletion), `docs/adr/` (ADR-007 is the runtime), `docs/deferrals.md` (TD tickets), `docs/design/` (the kit and the screens, after §3).
+- `docs/product/scope_testing_register_v1.md`: every open bug, feature and change; new items go here.
+- `docs/trade_dna_product_thesis_v1.5.md` and `docs/trade_dna_research_spec_v1_0.md`: background only; nothing in this build depends on them.
+- `docs/runbooks/` (deploy, data-flow map, deletion), `docs/adr/` (ADR-007 is the runtime), `docs/deferrals.md` (TD tickets), `docs/design/` (the kit and the screens, after §3).
 
-**History, don't build from:** `scope_v1_build_plan_v1.md`, `scope_v1_technical_design_v1.md`, `scope_v1_build_completion_v1.md` (its "nothing deployed" status is out of date), `scope_thin_slice_plan_v1.md`, the `_v1_1` brand files where a `_v1_2` exists, and the older Phase 0 and thesis files.
+**In the claude.ai Project "TradDNA"** (not in this repo; ask the founder for access):
+- The frozen PRD, scope_prd_v1_2_frozen.md, and its amendments, scope_prd_v1_2_amendments.md: product rules not restated here.
+- Brand Strategy/BRAND_RULES_CARD.md and C12_distinctive_assets_v1_2.md: brand rules. **Typography is as in §7 of this document** (decided 26 Oct; it replaced "serif for display").
+
+**History, don't build from** (in the Project): scope_v1_build_plan_v1.md, scope_v1_technical_design_v1.md, scope_v1_build_completion_v1.md (its "nothing deployed" status is out of date), scope_thin_slice_plan_v1.md, the `_v1_1` brand files where a `_v1_2` exists, and the older Phase 0 and thesis files.
 
 ## 16. Decision log (design phase, 24–27 October 2026)
 

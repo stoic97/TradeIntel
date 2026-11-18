@@ -1,0 +1,31 @@
+# Which underlying's 1-minute series measures a trade, by instrument (TICKET-889).
+#
+# Data, versioned, and recorded on use: an import must be able to say which mapping produced its
+# figures (PRD section 9 applies the same rule to instrument profiles). Change a mapping by raising
+# "version". Add an underlying with an entry here and its series file under SCOPE_MARKET_DIR
+# (data/market by default), written by the refresh script with its manifest (TICKET-893's format):
+# no code changes.
+#
+# profiles: "EXCHANGE:SYMBOL" as in ctr/profiles/*.yaml. One series per underlying, so an option
+# and its mini share one: crude with crude mini, gold with gold mini (spec 4.7.3).
+# series: the file under SCOPE_MARKET_DIR, with its manifest beside it as <name>.json.
+# synthetic: generated in code from a seed, for test fixtures only; never a real instrument.
+version: "1"
+underlyings:
+  NIFTY: {profiles: ["NSE:NIFTY"], series: nifty_1m.csv}
+  BANKNIFTY: {profiles: ["NSE:BANKNIFTY"], series: banknifty_1m.csv}
+  SENSEX: {profiles: ["BSE:SENSEX"], series: sensex_1m.csv}
+  CRUDEOIL: {profiles: ["MCX:CRUDEOIL", "MCX:CRUDEOILM"], series: crude_1m_current.csv}
+  GOLD: {profiles: ["MCX:GOLD", "MCX:GOLDM"], series: gold_1m.csv}
+  SILVER: {profiles: ["MCX:SILVERM"], series: silver_1m.csv}
+  RELIANCE: {profiles: ["NSE:RELIANCE"], series: reliance_1m.csv}
+  HDFCBANK: {profiles: ["NSE:HDFCBANK"], series: hdfcbank_1m.csv}
+  SBIN: {profiles: ["NSE:SBIN"], series: sbin_1m.csv}
+  # The Mirror contract fixture's instrument (MCX_WIDGETOIL.yaml): a seeded synthetic series over
+  # the fixture's days, so the fixture keeps working with no network and no data file.
+  WIDGETOIL: {profiles: ["MCX:WIDGETOIL"], synthetic: {seed: 889, from: "2026-08-31", to: "2026-09-11", start: "5000"}}
+# A share on NSE (NSE_EQUITY.yaml, symbol "*") is measured against its own bars: the stock is its
+# own underlying, and its series is <symbol lowercased>_1m.csv. An entry above wins over this.
+stocks: {profiles: ["NSE:*"], series: "{symbol}_1m.csv"}
+# Not mapped, deliberately: CME_ES (another vendor for one profile, out of scope). A profile with
+# no entry answers "no series for this underlying".

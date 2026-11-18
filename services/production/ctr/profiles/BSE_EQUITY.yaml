@@ -1,0 +1,16 @@
+# BSE cash equity -- the whole segment, as NSE_EQUITY.yaml is for NSE (TICKET-895). A
+# share bought on BSE is one unit per unit, one rupee per point, has no expiry and trades
+# in the same IST session; Groww's order history routes some share orders there (27 of
+# 204 in the first real file). It applies only to trades the adapter marked Equity.
+exchange: BSE
+symbol: "*"
+segment: EQ
+version: "1"
+contract_multiplier: "1"        # one share per unit; the "lots" figure is shares
+tick_size: "0.01"               # as NSE's; nothing in v1 reads tick_size
+currency_per_point: "1"
+currency: INR
+timezone: Asia/Kolkata
+session_start: "09:15"
+session_end: "15:30"
+expiry_rule: none

@@ -1,0 +1,31 @@
+{#- The published factor map (TICKET-921). Every word here is the product's: no figure
+    from anyone's file, and none of the spec's own confidence tiers. Rows come from
+    api/factor_map.py; this template formats them and decides nothing. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="label label--plain">What Scope looks at</p>
+  <h1 class="title">Every factor, and how far each has got</h1>
+  <p class="body">Family, factor, when you could have known it, and where Scope stands on it today. The status is Scope's, not anyone's results.</p>
+  {%- if his is none %}
+  <p class="body-small">Signed in with an upload, this page also says which of these your own file let us look at.</p>
+  {%- endif %}
+  <dl class="factor-map__key">
+    {%- for status, means in statuses.items() %}
+    <div class="door__row"><dt class="label label--plain">{{ status.value }}</dt><dd class="body">{{ means }}</dd></div>
+    {%- endfor %}
+  </dl>
+  {%- for family, factors in families %}
+  <section class="import__section">
+    <h2 class="card-title">{{ family }}</h2>
+    <table class="table factor-map">
+      <thead><tr><th class="table__wide">Factor</th><th>When it's known</th><th>Status</th>{% if his is not none %}<th>In your file?</th>{% endif %}</tr></thead>
+      <tbody>
+      {%- for f in factors %}
+        <tr data-factor="{{ f.name }}"><td class="table__text">{{ f.name }}</td><td class="table__text">{{ f.known.value }}</td><td class="table__text">{{ f.status.value }}</td>{% if his is not none %}<td class="factor-map__file">{{ his[f.name] }}</td>{% endif %}</tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+  </section>
+  {%- endfor %}
+  <p class="body-small">Only a factor known before the session or at the click can become a rule. One known only afterwards describes what happened.</p>
+{% endblock %}

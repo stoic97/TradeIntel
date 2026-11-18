@@ -1,0 +1,56 @@
+# /etc/systemd/system/scope-staging.service
+#
+# Staging (TICKET-948): the production unit with five lines changed, and only those:
+# Description, WorkingDirectory, EnvironmentFile, the ExecStart path and port, and
+# ReadWritePaths. ProtectSystem=strict plus ReadWritePaths=/srv/scope-staging/data means
+# staging cannot write to production's checkout, data or backups, even by mistake.
+# deploy/refresh-staging.sh is how it is refreshed. It is never backed up.
+#
+# One process, as ADR-007 says. No worker, no queue: reconstruction of a few
+# thousand rows takes seconds, and a second process would be supervision for no
+# v1 benefit.
+
+[Unit]
+Description=PlusEV Scope (staging)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=scope
+Group=scope
+WorkingDirectory=/srv/scope-staging
+
+# The keys live here, root-owned, 0600, and are excluded from backups. A backup
+# holding both the encrypted files and the key that opens them is one theft, not
+# two.
+EnvironmentFile=/etc/scope/staging.env
+
+# Not `uv run`. ProtectSystem=strict leaves only /srv/scope-staging/data writable and
+# uv wants a cache under the service user's home, and uv installed to /root,
+# which ProtectHome=yes puts out of reach anyway. The venv's own uvicorn needs
+# neither uv on PATH nor anywhere to write.
+#
+# The forwarded address is believed from Caddy on this box and from nobody else. These
+# are uvicorn's defaults today, written out because the sign-up cap counts by address:
+# without them every visitor is 127.0.0.1 and all of them share one cap.
+ExecStart=/srv/scope-staging/.venv/bin/uvicorn services.production.api.app:create_app \
+    --factory --host 127.0.0.1 --port 8001 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+
+# Caddy is the only thing that talks to it; it never listens on a public address.
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/scope-staging/data
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

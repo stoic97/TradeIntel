@@ -1,0 +1,10 @@
+# One name and email per person in `git shortlog` and `git log` (TICKET-936).
+# Format: Canonical Name <canonical@email> [Name as committed] <email as committed>
+#
+# Pawan commits as "stoic97" (his GitHub handle) and as "Pawan Rathore", from one email.
+Pawan Rathore <pawan.rathore.iitk@gmail.com>
+# Harshad's email appears in two casings.
+Harshad Yadav <Harshad.y10@gmail.com> <HARSHAD.Y10@gmail.com>
+# One of Rikk's commits came from the shared team address. Mapped by name AND email, so
+# commits from team@plusev.in under any other name are not credited to him.
+rikk-awal <rikk.haq@gmail.com> rikk-awal <team@plusev.in>

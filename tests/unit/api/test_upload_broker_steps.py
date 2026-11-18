@@ -32,7 +32,7 @@ def steps() -> list[str]:
 
 
 def test_it_says_which_brokers_work():
-    assert "Works with: Dhan (more coming)" in idle_part()
+    assert "Works with: Dhan and Groww (more coming)" in idle_part()
 
 
 def test_there_are_three_steps():
@@ -61,3 +61,24 @@ def test_the_existing_description_of_the_file_stays():
 
 def test_the_reading_state_does_not_repeat_the_steps():
     assert "upload__steps" not in page().split('class="upload__reading"', 1)[1]
+
+
+def groww_steps() -> list[str]:
+    listed = re.search(r'<ol class="upload__steps upload__steps--groww[^"]*">(.*?)</ol>',
+                       idle_part(), re.DOTALL)
+    assert listed, "the page has no Groww steps"
+    items = re.findall(r"<li>(.*?)</li>", listed[1], re.DOTALL)
+    return [html.unescape(" ".join(re.sub(r"<[^>]+>", " ", i).split())) for i in items]
+
+
+def test_groww_has_its_own_three_steps_in_its_maps_words():
+    """TICKET-895: the export's name and place are Groww's map's, as Dhan's are Dhan's."""
+    groww = next(a for a in outcomes.ADAPTERS if a.adapter_id == "groww_orders_v1")
+    wanted = groww.file_map().wanted
+    assert len(groww_steps()) == 3
+    assert wanted.broker_name in groww_steps()[0]
+    assert "Order History <from> to <to>.xlsx" in groww_steps()[2]
+
+
+def test_the_file_picker_takes_an_excel_file():
+    assert 'accept=".csv,.txt,.xlsx"' in idle_part()

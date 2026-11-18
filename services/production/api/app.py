@@ -9,7 +9,6 @@ accident as well as by intent.
 
 from __future__ import annotations
 
-import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 from services.production.api import (
     dial,
     door,
+    findings,
     formatting,
     limits,
     routes_admin,
@@ -31,13 +31,17 @@ from services.production.api import (
     routes_deletion,
     routes_eligibility,
     routes_events,
+    routes_factors,
     routes_home,
     routes_identity,
     routes_journal,
     routes_mirror,
+    routes_replay,
     routes_reveal,
+    routes_rules,
     routes_sample,
     routes_upload,
+    version,
 )
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
@@ -47,18 +51,13 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
 dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
+findings.register(TEMPLATES.env)  # a finding's two labels, read only from a Finding
 door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
 
 def code_version() -> str:
-    try:
-        sha = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, check=True, cwd=HERE,
-        ).stdout.strip()
-        return sha or "unknown"
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "unknown"
+    """The tag being run, else the short sha (TICKET-948). /health and the admin page show it."""
+    return version.describe(HERE)
 
 
 def _body_too_large(scope) -> HTMLResponse:
@@ -90,10 +89,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_mirror.router)
     app.include_router(routes_sample.router)
     app.include_router(routes_reveal.router)
+    app.include_router(routes_replay.router)
     app.include_router(routes_events.router)
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
+    app.include_router(routes_rules.router)
     app.include_router(routes_eligibility.router)
+    app.include_router(routes_factors.router)
     app.include_router(routes_deletion.router)
     app.include_router(routes_admin.router)
 

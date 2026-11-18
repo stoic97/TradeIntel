@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.unit.api.test_layout import PLAIN, render
+from tests.helpers.layout import PLAIN, render
 
 SCRIPT = Path("services/production/api/static/js/motion.js")
 MOTION_CSS = Path("services/production/api/static/css/motion.css")

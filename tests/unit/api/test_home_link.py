@@ -29,8 +29,8 @@ from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_session
-from tests.unit.api.test_admin_page import every_route
-from tests.unit.api.test_upload import sign_up
+from tests.helpers.admin_page import every_route
+from tests.helpers.upload import sign_up
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 LOCKUP_HOME = re.compile(r'<a class="lockup-link[^"]*" href="/"[^>]*>\s*<span class="lockup">')
@@ -69,11 +69,14 @@ def params(engine) -> dict[str, list[str]]:
         imp = demo.demo_import(sess, trader)
         journal = sess.scalars(select(m.Journal.id).where(m.Journal.import_id == imp.id)
                                .order_by(m.Journal.id)).first()
+        from services.production.mirror import loader
+        day = loader.load_for(sess, trader)[0][0].trading_day
     return {
         "import_id": [str(imp.id)],
         "journal_id": [str(journal)],
         "n": [str(c.number) for c in S.CHAPTERS],
         "key": list(S.FACTS),
+        "iso": [str(day)],
     }
 
 

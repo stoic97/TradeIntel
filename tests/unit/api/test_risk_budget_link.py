@@ -8,8 +8,8 @@ that line too. The Mirror's words are kept as written; only a link is added.
 from __future__ import annotations
 
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
 
 NOTHING = trips_from([100, -50, 30], s.RiskUnitSourceV1.UNAVAILABLE)
 BUDGET = trips_from([100, -50, 30], s.RiskUnitSourceV1.DECLARED_BUDGET)

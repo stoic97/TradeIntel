@@ -1,0 +1,12 @@
+{#- The score (TICKET-924): the count first, then calls against a coin flip, then points on
+    the cards he took, before charges. No composite score, no rating, no rupees. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <h1 class="title">The count</h1>
+  <p class="lead"><span class="num">{{ Figure(score.calls, "calls")|count }}</span> calls. Right on <span class="num">{{ Figure(score.right, "calls")|count }}</span>.</p>
+  <p class="body">A coin flip on <span class="num">{{ Figure(score.calls, "calls")|count }}</span> calls is right on between <span class="num">{{ Figure(score.band[0], "calls")|count }}</span> and <span class="num">{{ Figure(score.band[1], "calls")|count }}</span>, nineteen times in twenty.
+  {%- if inside %} These calls can't be told apart from a coin flip.{% endif %}</p>
+  <p class="body">On the <span class="num">{{ Figure(score.took, "cards")|count }}</span> cards you took, the market moved <span class="num">{{ Figure(took.points, "points") }}</span> points {{ took.way }}, before charges.</p>
+  <p class="body-small">So few calls say little on their own; the count comes first so you can see how few. This is a count against a coin, not a rating.</p>
+  <a class="link" href="/replay">Play again</a>
+{% endblock %}

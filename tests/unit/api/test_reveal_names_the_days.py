@@ -18,8 +18,8 @@ from decimal import Decimal
 
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_reveal_page import reveal
-from tests.unit.api.test_scope_chapters import readable
+from tests.helpers.reveal_page import reveal
+from tests.helpers.scope_chapters import readable
 
 
 def t(day, at, net, symbol="CRUDEOIL", is_option=True):
@@ -131,7 +131,7 @@ def test_one_day_reads_in_the_singular():
 
 
 def test_the_button_says_where_it_goes():
-    assert '<a class="btn btn--text-on-navy" href="/budget">Next: what you risk</a>' in reveal(TRIPS)
+    assert 'href="/budget"' not in reveal(TRIPS)  # TICKET-903: its one way on is the report
     assert ">Continue<" not in reveal(TRIPS)
 
 

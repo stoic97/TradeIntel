@@ -36,10 +36,10 @@ from services.production.db.session import make_engine, make_session, run_migrat
 from services.production.mirror import feedback as FB
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_dates_with_year import FILE as UPLOAD_FILE
-from tests.unit.api.test_scope_chapters import readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.dates_with_year import FILE as UPLOAD_FILE
+from tests.helpers.scope_chapters import readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import CSRF, sign_up
 
 
 def _day(day: str, at: str, nets: list[int], symbol: str = "CRUDEOIL", option=True) -> list[mx.Trip]:
@@ -275,12 +275,9 @@ def test_each_block_asks_is_this_day_wrong():
     assert html.count('action="/mirror/feedback/day"') == 5
 
 
-def test_the_next_button_shows_after_the_blocks_and_again_at_the_bottom():
-    html = fact_page("worst-days", FOUR_CRUDE_EVENINGS)
-    label = "Your 5 best and 5 worst trades"
-    assert html.count(label) == 2
-    assert html.rindex("</details>") < html.index(label)
-    assert 'href="/mirror/fact/money"' in html
+def test_the_page_has_no_next_button_of_its_own():
+    """TICKET-903: Previous and Next come from scope_map, once, at the end (test_report_spine)."""
+    assert "Your 5 best and 5 worst trades" not in fact_page("worst-days", FOUR_CRUDE_EVENINGS)
 
 
 def test_every_trade_stays_within_reach():
@@ -291,19 +288,20 @@ def test_every_trade_stays_within_reach():
 # ---------- Chapter 1 has two facts ----------
 
 
-def test_chapter_one_has_two_facts():
-    assert [f.key for f in S.chapter(1).facts] == ["worst-days", "money"]
+def test_chapter_one_has_the_plain_counts_then_its_two_facts():
+    assert [f.key for f in S.chapter(1).facts] == ["hidden", "worst-days", "money"]  # TICKET-910
 
 
 def test_the_dial_says_findings_not_counts():
     ctx = SF.record_context(FOUR_CRUDE_EVENINGS)
-    items = SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
+    items = [i for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
+             if i["name"] != S.FACTS["hidden"].title]  # TICKET-910: its wedge is a plain count
     assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
         ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
 
 
 def _imp():
-    from tests.unit.api.test_scope_chapters import IMP
+    from tests.helpers.scope_chapters import IMP
 
     return IMP
 
@@ -342,10 +340,9 @@ def test_the_share_page_goes_to_worst_days(client):
     assert gone.headers["location"].startswith("/mirror/fact/worst-days")
 
 
-def test_the_chapter_page_leads_on_to_chapter_two(client):
-    html = client.get("/mirror/chapter/1").text
-    assert "Chapter 2: your patterns" in readable(html)
-    assert 'href="/mirror/chapter/2' in html
+def test_the_chapter_page_leads_on_to_its_first_page(client):
+    """TICKET-903: chapter 1 goes on to its own first page, from scope_map."""
+    assert f"Next: {S.chapter(1).facts[0].title}" in readable(client.get("/mirror/chapter/1").text)
 
 
 def test_a_flag_is_kept_with_its_day_and_note(client):

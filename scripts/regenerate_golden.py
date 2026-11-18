@@ -7,6 +7,8 @@ is to read the diff. So this script prints the diff and refuses to write unless
 
     uv run python scripts/regenerate_golden.py          # show the diff
     uv run python scripts/regenerate_golden.py --yes    # write it
+
+Each broker has its own golden; ``--groww`` regenerates Groww's (TICKET-895).
 """
 from __future__ import annotations
 
@@ -15,13 +17,17 @@ import hashlib
 import sys
 from pathlib import Path
 
+from services.production.ctr.adapters import groww_orders
 from services.production.ctr.adapters.dhan_tradebook import parse
+from services.production.ctr.intake import pipeline as pl
 from services.production.ctr.reconstruct import reconstruct
 from services.production.ctr.snapshot import canonical_json, snapshot
 
 FIXTURE = Path("data/fixtures/dhan_tradebook_sample.csv")
 GOLDEN = Path("data/golden/dhan_tradebook_sample.ctr.json")
 TRADER_ID = "FIXTURE"
+GROWW_FIXTURE = Path("data/fixtures/groww_orders_sample.xlsx")
+GROWW_GOLDEN = Path("data/golden/groww_orders_sample.ctr.json")
 
 
 def build() -> str:
@@ -31,8 +37,21 @@ def build() -> str:
     return canonical_json(snapshot(parsed, recon))
 
 
+def build_groww() -> str:
+    """Groww's golden: the workbook read the way an upload reads it, then parsed."""
+    content = GROWW_FIXTURE.read_bytes()
+    raw_hash = hashlib.sha256(content).hexdigest()
+    lines = pl.text_of(content).splitlines()
+    parsed = groww_orders.parse(lines, trader_id=TRADER_ID, raw_hash=raw_hash)
+    recon = reconstruct(parsed.fills, fees_available=parsed.fees_available)
+    return canonical_json(snapshot(parsed, recon))
+
+
 def main() -> int:
-    fresh = build()
+    global GOLDEN
+    if "--groww" in sys.argv:
+        GOLDEN = GROWW_GOLDEN
+    fresh = build_groww() if "--groww" in sys.argv else build()
     old = GOLDEN.read_text(encoding="utf-8") if GOLDEN.exists() else ""
 
     if fresh == old:

@@ -22,26 +22,9 @@ from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_session
+from tests.helpers.mirror_page import NEVER_USED
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
-
-# Words the product never uses, from PRD 7.5 and the Workbook's never-use list.
-# These are claims by their nature: there is no sentence in which the product may
-# call a trader's behaviour tilt or name his edge.
-NEVER_USED = [
-    "tilt",
-    "revenge",
-    "emotional",
-    "psychology",
-    "disease",
-    "cure",
-    "edge",
-    "alpha",
-    "expectancy",
-    "discipline",
-    "mistake",
-    "should have",
-]
 
 # Patterns that ASSERT a cause, a grade or a recommendation. Banned as claims --
 # which is why the test exempts section 6.7, whose whole job is to say the product

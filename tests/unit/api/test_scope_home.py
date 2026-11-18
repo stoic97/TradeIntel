@@ -11,25 +11,22 @@ from services.production.api import dial
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
-from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, TRIPS
+from tests.helpers.scope_chapters import IMP, TRIPS
+from tests.helpers.scope_home import home_page
 
 CTX = SF.record_context(TRIPS)
 FIGS = SF.facts(CTX, IMP)
 
 
-def home_page(trips=TRIPS, imp=IMP) -> str:
-    ctx = SF.record_context(trips)
-    return template_env().get_template("scope/home.html").render(
-        title="Scope", imp=imp, trade_count=len(trips),
-        trading_day_count=len(ctx["days"].counts), **SF.home_context(ctx, imp))
-
-
 def test_home_has_the_four_chapters_in_order_each_scoping_in():
     view = SF.home_view(CTX, IMP)
     assert [i["name"] for i in view["items"]] == [c.name for c in S.CHAPTERS]
-    assert [i["href"] for i in view["items"]] == [
-        S.chapter_href(c.number, from_home=True) for c in S.CHAPTERS]
+    # Each wedge opens the trades behind its figure (TICKET-905), from its chapter's fact; the
+    # chapters themselves are reached from the list below the dial.
+    figs = SF.facts(CTX, IMP)
+    for c, item in zip(S.CHAPTERS, view["items"], strict=True):
+        assert item["href"] in (figs[SF.HUB_FACT[c.number]]["opens"], None)
+    assert view["items"][0]["href"] == figs["worst-days"]["opens"]
 
 
 def test_without_caption_lines_the_dial_is_the_kits_byte_for_byte():

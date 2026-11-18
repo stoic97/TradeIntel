@@ -1,0 +1,14 @@
+{#- The reveal (TICKET-924): whether it was his, when it was, and what came next, in points
+    before charges. No rupees. -#}
+{% extends "layout.html" %}
+{% block content %}
+  <p class="label label--plain">Card <span class="num">{{ Figure(card.number, "card")|count }}</span> of <span class="num">{{ Figure(cards, "cards")|count }}</span> · you {{ "took it" if took else "skipped it" }}</p>
+  <h1 class="title">{{ "One of your own entries" if revealed.real else "A random moment" }}</h1>
+  <p class="body">{{ when }}, {{ card.underlying }}, {{ "long" if card.direction == 1 else "short" }}.</p>
+  <p class="lead">Over the next <span class="num">{{ Figure(horizon, "minutes")|count }}</span> minutes the market moved {{ moved.way }}: <span class="num">{{ Figure(moved.points, "points") }}</span> points, before charges.</p>
+  {%- if last %}
+  <a class="btn btn--primary btn--block" href="/replay/score?calls={{ calls }}">See the count</a>
+  {%- else %}
+  <a class="btn btn--primary btn--block" href="/replay/card?calls={{ calls }}">Next card</a>
+  {%- endif %}
+{% endblock %}

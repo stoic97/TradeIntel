@@ -113,6 +113,9 @@ class Import(Base, _InsertOnly):
     id: Mapped[int] = mapped_column(primary_key=True)
     trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
     raw_file_id: Mapped[int] = mapped_column(ForeignKey("raw_file.id"))
+    # Every raw file this reading read, oldest first, as a JSON list of ids, when it read
+    # more than one (a Groww trader's stocks and F&O files). Empty: ``raw_file_id`` alone.
+    reads_files: Mapped[str | None] = mapped_column(Text)
     source_account: Mapped[str] = mapped_column(String(100))
     export_date: Mapped[str | None] = mapped_column(String(10))
     export_date_source: Mapped[str | None] = mapped_column(String(16))
@@ -378,6 +381,27 @@ class LeavingCardAnswer(Base, _InsertOnly):
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class JournalRememberAnswer(Base, _InsertOnly):
+    """TICKET-906: his answer to "Do you remember this day?", with the day's age.
+
+    One per trader per trading day, never edited: the first stands, so a later version of
+    that day's Journal does not ask again. A fixed answer, yes or no, counted - never a
+    typed word, so consent v1 is untouched. The day's age (calendar days from the trading
+    day to the answer, in IST) is what lets NEW_DAY_WITHIN_DAYS be checked against what
+    traders say. Deletion takes it with everything else of his.
+    """
+
+    __tablename__ = "journal_remember_answer"
+    __table_args__ = (UniqueConstraint("trader_id", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
+    trading_day: Mapped[str] = mapped_column(String(10))
+    answer: Mapped[str] = mapped_column(String(3))
+    day_age_days: Mapped[int] = mapped_column(Integer)
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -403,13 +427,35 @@ class ChargeStatement(Base, _InsertOnly):
 
 
 class RuleDeclaration(Base, _InsertOnly):
-    """Captured, unused in v1. Collecting from day one is free (PRD 9)."""
+    """A rule the trader set, by tapping, dated before it is tested (TICKET-922).
+
+    ``factor`` and ``value`` are chips from ``rules.chips``; ``text`` keeps the rule's
+    words as they read when he set it. Never updated: a newer one governs only the
+    trades after it. ``applies_from``/``applies_to`` are India dates; one day for a
+    before-the-session commitment, open-ended for a standing rule.
+    """
 
     __tablename__ = "rule_declaration"
     id: Mapped[int] = mapped_column(primary_key=True)
     trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
     text: Mapped[str] = mapped_column(Text)
     declared_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    factor: Mapped[str | None] = mapped_column(String(32))
+    value: Mapped[int | None] = mapped_column(Integer)
+    applies_from: Mapped[str | None] = mapped_column(String(10))
+    applies_to: Mapped[str | None] = mapped_column(String(10))
+    screen: Mapped[str | None] = mapped_column(String(32))
+
+
+class PreTradeNote(Base, _InsertOnly):
+    """Two taps before a click: the book and the reason, matched to a fill on upload."""
+
+    __tablename__ = "pre_trade_note"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    book: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(String(32))
+    entered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
 class AdherenceEvent(Base, _InsertOnly):

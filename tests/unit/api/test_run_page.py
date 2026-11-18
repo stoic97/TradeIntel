@@ -13,15 +13,10 @@ import pytest
 
 from services.production.api import scope_facts as SF
 from services.production.api import scope_geometry as G
-from tests.unit.api.test_scope_chapters import IMP, chapter_page, readable, trips_from
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    DUPES,
-    client,
-    engine,
-    upload,
-)
-from tests.unit.mirror.test_run_story import DAY, EVENING, spread, trip
+from tests.helpers.mirror_run_story import DAY, EVENING, spread, trip
+from tests.helpers.scope_chapters import IMP, chapter_page, readable, trips_from
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.upload import DUPES, upload
 
 
 def page_of(trips=EVENING) -> str:
@@ -268,15 +263,12 @@ def test_a_run_at_the_end_of_the_file_has_no_after_section_and_keeps_its_close()
 # ---------- The next button ----------
 
 
-def test_the_page_ends_with_a_link_to_the_clock_and_says_nothing_about_that_hour():
+def test_the_page_ends_by_the_run_and_says_nothing_about_that_hour():
+    """TICKET-903: no "See the clock" of its own; the way on is the spine's Next."""
     html = fact_page("run", trips=EVENING)
     assert "This run started at 18:00." in readable(html)
     assert "opened in the" not in readable(html)
-    assert re.search(
-        r'<a class="btn btn--primary btn--block" href="/mirror/fact/clock[^"]*">See the clock</a>',
-        html,
-    )
-    assert html.rindex("See the clock") > html.rindex("The trades behind this")
+    assert "See the clock" not in html
 
 
 def test_a_run_across_days_says_the_date_it_started():
@@ -423,7 +415,7 @@ def spread_file() -> bytes:
     return ("\n".join([header, *rows]) + "\n").encode()
 
 
-def test_a_position_of_several_legs_reads_as_one_trade(client, engine):  # noqa: F811
+def test_a_position_of_several_legs_reads_as_one_trade(client, engine):
     assert upload(client, content=spread_file()).status_code == 303
     html = client.get("/mirror/fact/run").text
     page = readable(html)

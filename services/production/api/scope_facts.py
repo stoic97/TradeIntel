@@ -19,11 +19,12 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
-from services.production.api import dial, formatting
+from services.production.api import dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
+from services.shared.conditions import b2_shuffle, multiplicity
 from services.shared.schemas import scope_v1 as s
 
 COUNTED = s.ResultState.COUNTED_FACT
@@ -82,6 +83,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
         "book_math": mx.math_by_book(same_day),
+        "book_halves": mx.book_halves(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -147,6 +149,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 def _state(key: str, ctx: dict) -> str:
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
+    if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
+        return "not-enough"  # no book has the minimum of same-day trades
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -168,6 +172,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "hidden":
+        return Figure(f"{formatting.count(_counted_days(ctx))} days", "days")
     if key == "worst-days":
         return Figure(formatting.rupees(ctx["worst_days"].sum), "rupees")
     if key == "share":
@@ -233,8 +239,89 @@ def _busiest_story(ctx: dict) -> dict | None:
     }
 
 
-def _next_fact(key: str) -> dict:
-    return {"label": f"Next: {S.FACTS[key].title}", "href": S.fact_href(key)}
+
+NOT_ENOUGH_YET = "not enough trades yet"
+HIDDEN_COLUMNS = ("First half", "Second half", "All its days")
+HIDDEN_ROWS = (
+    ("days", "Days traded"),
+    ("green_days", "Green days"),
+    ("green_months", "Green months"),
+    ("new_high", "Days since a new high"),
+    ("net_per_trade", "Net per trade"),
+    ("win", "You win"),
+    ("break_even", "Break even at"),
+)
+"""The plain-counts page's rows (TICKET-910), in the order its table writes them. New copy (D9)."""
+
+
+def _counted_days(ctx: dict) -> int:
+    """Trading days with a same-day trade: what the plain-counts page counts from."""
+    return len({t.trading_day for t in mx.same_day_trips(ctx["trips"])})
+
+
+def _hidden_link(text: str, noun: str, href: str):
+    """A count on the plain-counts page, opening the trades it was counted from (TICKET-905)."""
+    return formatting.opens(Figure(text, noun, opens=href))
+
+
+def _hidden_cell(half, href: str, row: str):
+    """One count of one half, written, and opening that half's trades."""
+    if row == "days":
+        return _hidden_link(formatting.count(half.days), "days", href)
+    if row == "green_days":
+        return (_hidden_link(formatting.count(half.green_days), "days", href) + " ("
+                + _hidden_link(formatting.count(half.green_day_percent), "percent", href) + "%)")
+    if row == "green_months":
+        return (_hidden_link(formatting.count(half.green_months), "months", href) + " of "
+                + _hidden_link(formatting.count(half.months), "months", href))
+    if row == "new_high":
+        if half.days_since_high is None:
+            return "no new high yet"
+        return _hidden_link(formatting.count(half.days_since_high), "days", href)
+    if row == "net_per_trade":
+        return _hidden_link(formatting.rupees(half.net_per_trade), "rupees", href)
+    if half.math.win_percent is None:
+        return NOT_ENOUGH_YET
+    if row == "win":
+        return _hidden_link(str(half.math.win_percent), "percent", href) + "%"
+    if half.math.break_even_percent is None:
+        return "\u2014"
+    return _hidden_link(str(half.math.break_even_percent), "percent", href) + "%"
+
+
+def _hidden_view(ctx: dict) -> dict:
+    """The plain-counts page (TICKET-910): each book's own halves, as its table writes them.
+
+    Every count opens the same-day trades of its book and half, built here from the rows
+    metrics.book_halves decided, never by a page. The p sits beside the change in net per trade
+    it checks. Nothing here is called a finding, ranked or priced."""
+    books = []
+    for r in ctx["book_halves"]:
+        every = S.see_all_href("hidden", book=r.book)
+        if r.state is not COUNTED:
+            books.append({"book": r.book, "counted": False,
+                          "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
+            continue
+        halves = (
+            (r.first, S.see_all_href("hidden", book=r.book, half="first")),
+            (r.second, S.see_all_href("hidden", book=r.book, half="second")),
+            (r.whole, every),
+        )
+        rows = []
+        for row, label in HIDDEN_ROWS:
+            rows.append({"label": label, "control": None,
+                         "cells": [_hidden_cell(half, href, row) for half, href in halves]})
+            if row == "net_per_trade":
+                change = _hidden_link(formatting.rupees(r.change_in_net_per_trade), "rupees", every)
+                p = r.control.p if r.control is not None else None
+                checked = (NOT_ENOUGH_YET if p is None
+                           else _hidden_link(f"{p:.3f}", "share of shuffles", every))
+                rows.append({"label": "Change, second half against first", "control": None,
+                             "cells": ["", "", change]})
+                rows.append({"label": "Whole days shuffled between the halves: p",
+                             "control": "net-per-trade", "cells": ["", "", checked]})
+        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
+    return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 
 def _break_even_lines(ctx: dict) -> list[dict]:
@@ -248,22 +335,6 @@ def _break_even_lines(ctx: dict) -> list[dict]:
         if row.state is s.ResultState.COUNTED_FACT and row.winner_gap is not None and row.winner_gap > 0
     ]
 
-
-def chapter_next(n: int) -> dict | None:
-    """The button that ends a chapter's overview, where it has one."""
-    labels = {1: "Chapter 2: your patterns", 2: "Chapter 3, your behaviour: what you did after losing"}
-    return {"label": labels[n], "href": S.chapter_href(n + 1)} if n in labels else None
-
-
-def _chapter_four(ctx: dict) -> dict:
-    """The way out of chapter 3, by chapter 4's own title. The number is mentioned only while
-    chapter 4 still offers to take it (its risk fact, with no declared budget)."""
-    c = S.chapter(4)
-    return {
-        "label": f"Chapter {c.number}: {c.name}",
-        "href": S.chapter_href(c.number),
-        "names_the_number": ctx["risk"].counts[s.RiskUnitSourceV1.DECLARED_BUDGET] == 0,
-    }
 
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
@@ -603,11 +674,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         kind = fact.chart
         behind = len(S.trades_behind(key, ctx))
         lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
+        opens = None if state else _opens(key, ctx)
         out[key] = {
             "key": key,
+            "finding": findings.of(key),  # both labels, or Unlabelled before any page
             "title": fact.title,
             "state": state,
             "figure": str(lead),
+            "opens": opens,
+            "lead_figure": Figure(lead.value, lead.noun, of=lead.of, opens=opens),
             "noun": lead.noun,
             "href": S.fact_href(key),
             "trade_count": behind,
@@ -628,14 +703,18 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         busiest_date=formatting.day(ctx["days"].busiest_day) if ctx["days"].busiest_day else "",
     )
     out["busiest"]["story"] = _busiest_story(ctx)
-    out["busiest"]["chapter_four"] = out["down"]["chapter_four"] = _chapter_four(ctx)
-    out["down"]["next"] = _next_fact("busiest")
-    out["math"]["next"] = _next_fact("run")
-    out["run"]["next"] = _next_fact("clock")
+    out["hidden"].update(_hidden_view(ctx))
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     two_losses = ctx["two_losses"]
+    same_day = mx.same_day_trips(trips)
+    check = mx.post_loss_check(same_day) if same_day else None
+    out["down"]["post_loss_level"] = check.level if check else None
+    out["down"]["post_loss_needs"] = None if check is None or check.level != "not_enough" else {
+        "condition": max(0, b2_shuffle.MIN_CONDITION - check.n_condition),
+        "comparison": max(0, b2_shuffle.MIN_COMPARISON - check.n_comparison),
+    }
     out["down"]["post_loss_sentence"] = (
-        mx.post_loss_sentence_may_show(mx.same_day_trips(trips))
+        mx.post_loss_sentence_may_show(same_day)
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
@@ -670,7 +749,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["worst-days"].update(
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
-        next_href=S.fact_href("money", lens=False),
         all_trades_href=S.see_all_href("worst-days"),
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
@@ -684,8 +762,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for b, w in zip(ctx["best"], ctx["worst"], strict=False)
     ]
-    money_chapter, _ = S.chapter_of("money")
-    next_chapter = S.chapter(money_chapter.number + 1)
     out["money"].update(
         found=ctx["money_found"],
         best_rows=S.ranked(ctx["best"], ctx),
@@ -693,11 +769,6 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         held_groups=[]
         if out["money"]["see_all"]
         else S.groups("money", ctx, only=ctx["held_past_day"].trips),
-        next={
-            "number": next_chapter.number,
-            "name": next_chapter.name,
-            "href": S.chapter_href(next_chapter.number),
-        },
     )
     out["share"]["worst_day_count"] = len(ctx["worst_days"].days)
     c = ctx["risk"].counts
@@ -775,7 +846,6 @@ def _clock_view(ctx: dict) -> dict:
         )
     wide = [v for v in views if v["trades"] >= mx.CLOCK_MINIMUM_TRADES] or views[:1]
     lead = mx.lead_clock(ctx["clocks"])
-    next_chapter = S.chapter(S.chapter_of("clock")[0].number + 1)
     return {
         "clocks": wide,
         "other_clocks": views[len(wide):],
@@ -783,21 +853,22 @@ def _clock_view(ctx: dict) -> dict:
         "lead_book": lead.book if lead else "",
         "lead": lead.largest if lead else None,
         "lead_label": _hour_words(lead.largest.hour) if lead else "",
-        "next": {
-            "label": f"Chapter {next_chapter.number}: {next_chapter.name}",
-            "href": S.chapter_href(next_chapter.number),
-        },
     }
 
 
 def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     """Each fact's wedge on its chapter's dial (TICKET-880). Same figures its page shows."""
+    if key == "hidden":
+        n = formatting.count(_counted_days(ctx))
+        return _wedge(Figure(n, "days", of="traded, in two halves"))
     if key == "worst-days":
         return _wedge(Figure(len(ctx["worst_days"].days), "days",
                              of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
     if key == "money" and ctx["best"]:
-        return _wedge(Figure(formatting.rupees(ctx["best"][0].net), "rupees", of="your best trade"),
-                      shown=formatting.rupees(ctx["best"][0].net))
+        # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
+        best = formatting.rupees(ctx["best"][0].net)
+        return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
+                      phone="best\ntrade", phone_shown=best.removeprefix("+"))
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
@@ -828,6 +899,28 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     return _wedge(Figure(fig["figure"], fig["noun"], of="on same-day trades"), shown=fig["figure"])
 
 
+def _opens(key: str, ctx: dict) -> str | None:
+    """Every trade behind a fact's figure, from the same record that decided it (TICKET-905).
+    The clock's figure is one hour of one book, so it opens that hour. A fact that counts rows
+    or things rather than trades opens nothing."""
+    if key not in TRADES_BEHIND:
+        return None
+    if not S.trades_behind(key, ctx):
+        return None
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        if lead is not None:
+            return S.see_all_href("clock", book=lead.book, hour=lead.largest.hour)
+    return S.see_all_href(key)
+
+
+TRADES_BEHIND = frozenset(S.FACTS) - {"unread", "not-told"}
+"""The facts whose figure has trades behind it: the same set the trade lists serve."""
+
+HUB_FACT = {1: "worst-days", 2: "math", 3: "busiest", 4: "risk"}
+"""Which fact each chapter's hub wedge takes its figure from, and so what it opens."""
+
+
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre."""
     c = S.chapter(n)
@@ -837,7 +930,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         item = {
             "name": f.title,
             **fig["wedge"],
-            "href": fig["href"],
+            "href": fig["opens"],  # the trades behind the wedge's figure, or nothing (TICKET-905)
             "state": fig["state"],
             "chart": "" if fig["state"] else f.chart,
         }
@@ -989,16 +1082,19 @@ def home_view(
     opened: frozenset[int] = frozenset(),
     number: Decimal | None = None,
     answers: dict[int, dict] | None = None,
+    figs: dict[str, dict] | None = None,
 ) -> dict:
     """Home's dial: each chapter's answer in its wedge, the trader's result in the centre. Read
-    is the dot on the rim, and no words in the wedge."""
-    answers = answers or hub_answers(ctx, facts(ctx, imp), number)
+    is the dot on the rim, and no words in the wedge. Each wedge opens the trades behind its
+    figure (TICKET-905); one whose figure has none behind it is drawn plain."""
+    figs = figs or facts(ctx, imp)
+    answers = answers or hub_answers(ctx, figs, number)
     items = [
         {
             "name": c.name,
             **answers[c.number]["wedge"],
             "opened": c.number in opened,
-            "href": S.chapter_href(c.number, from_home=True),
+            "href": _hub_opens(c.number, answers[c.number], figs),
         }
         for c in S.CHAPTERS
     ]
@@ -1007,13 +1103,17 @@ def home_view(
     return {"kind": "home", "items": items, "centre": centre}
 
 
-def _start(opened: frozenset[int]) -> dict | None:
-    """Where the button goes: chapter 1 at first, then the first chapter still unread."""
-    unread = [c.number for c in S.CHAPTERS if c.number not in opened]
-    if not unread:
+def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
+    """The trades behind a hub wedge's figure: its chapter's fact's own list. Chapter 4's wedge
+    counts trades only when it says how many went past his number or couldn't be sized."""
+    if answer.get("state"):
         return None
-    label = f"Next: chapter {unread[0]}" if opened else f"Start with chapter {unread[0]}"
-    return {"label": label, "href": S.chapter_href(unread[0], from_home=True)}
+    if n == 4:
+        past, uncapped = answer.get("past"), answer.get("uncapped")
+        counts_trades = (past is not None and past.count) or (answer.get("number") is None and uncapped)
+        if not counts_trades:
+            return None
+    return figs[HUB_FACT[n]]["opens"]
 
 
 def home_context(
@@ -1023,7 +1123,8 @@ def home_context(
     figs = facts(ctx, imp)
     answers = hub_answers(ctx, figs, number)
     return {
-        "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers),
+        "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers,
+                          figs=figs),
         "verdict": mx.verdict(ctx["trips"]),
         "chapters": [
             {
@@ -1035,10 +1136,22 @@ def home_context(
             }
             for c in S.CHAPTERS
         ],
-        "start": _start(opened),
         "two_losses": ctx["two_losses"],
         "post_loss": figs["down"],
+        # How many of the finding bar's fixed list run today, and how long the list is.
+        "checks_run": len(mx.CHECKS_RUN),
+        "checks_listed": len(multiplicity.family()),
     }
+
+
+def short_answers(figs: dict[str, dict]) -> dict[str, str]:
+    """Each page's answer in a few words, for All pages (TICKET-903): its chapter wedge, read
+    aloud, so the panel and the dial say the same thing."""
+    out = {}
+    for key in S.FACTS:
+        wedge = figs[key]["wedge"]
+        out[key] = " ".join(f"{wedge['figure']} {wedge['label']}".split())
+    return out
 
 
 REVEAL_C = 150  # the reveal's dial: 300 x 300, the outer ring at 149.5 (kit screen 12)

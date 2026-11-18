@@ -22,19 +22,10 @@ from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as sc
+from tests.helpers.scope_chapters import IMP, readable
+from tests.helpers.scope_chapters import TRIPS as FORTY
+from tests.helpers.scope_home_verdict import t
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_scope_chapters import IMP, readable
-from tests.unit.api.test_scope_chapters import TRIPS as FORTY
-
-
-def t(day, net, symbol="CRUDEOIL", is_option=True, held_days=0, at="10:00"):
-    entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
-    exit_ts = entry + timedelta(days=held_days, minutes=10)
-    lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None, Decimal(net)),)
-    return mx.Trip(
-        f"{symbol}-{day}-{at}", symbol, day, entry, exit_ts, int((exit_ts - entry).total_seconds()),
-        Decimal(net), 1, sc.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
-    )
 
 
 def days_from(start: date, n: int) -> list[str]:
@@ -277,15 +268,17 @@ def start_button(html: str) -> str:
 
 
 def test_there_is_a_way_to_start():
-    html = page()
-    assert start_button(html) == "Start with chapter 1"
-    assert S.chapter_href(1, from_home=True).replace("&", "&amp;") in html
+    """TICKET-903: Continue names the first page not yet read (scope_map.continue_step)."""
+    assert S.continue_step(frozenset())["label"] == f"Continue: {S.PAGES[0].title}"
+    assert "Start with chapter" not in page()
 
 
-def test_once_started_it_points_at_the_next_unread_chapter():
-    assert start_button(page(opened=frozenset({1}))) == "Next: chapter 2"
-    assert start_button(page(opened=frozenset({1, 2, 4}))) == "Next: chapter 3"
-    assert start_button(page(opened=frozenset({2}))) == "Next: chapter 1"
+def test_once_started_it_points_at_the_next_unread_page():
+    """TICKET-903: by page, not by chapter; read pages are skipped, in scope_map's order."""
+    assert S.continue_step(frozenset({S.PAGES[0].key}))["label"] == f"Continue: {S.PAGES[1].title}"
+    read = frozenset({S.PAGES[0].key, S.PAGES[1].key, S.PAGES[3].key})
+    assert S.continue_step(read)["label"] == f"Continue: {S.PAGES[2].title}"
+    assert S.continue_step(frozenset(f.key for f in S.PAGES)) is None
 
 
 def test_with_everything_read_there_is_no_button():
