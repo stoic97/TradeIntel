@@ -68,10 +68,12 @@ def test_the_days_rupees_wait_for_an_answer_or_a_skip(engine, client):
     jid = _day(engine)
     skipped_raw, skipped = _read(client, jid, "?skip=1")
     assert RUPEE in skipped, "control: the skipped page shows the day's rupees"
+    assert "closed down" in skipped, "control: and how the trades closed"
     assert KEY.search(skipped_raw), "the questions are still there after a skip"
     raw, hidden = _read(client, jid)
     assert KEY.search(raw), "the day's questions are on the page"
     assert RUPEE not in hidden
+    assert "closed down" not in hidden and " Net " not in hidden
     assert f'href="/journals/{jid}?skip=1"' in raw
 
 

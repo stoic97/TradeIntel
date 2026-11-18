@@ -24,6 +24,7 @@ the day's shape; the prompts only need to say which trade.
 from __future__ import annotations
 
 import json
+from datetime import timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -40,6 +41,8 @@ from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.journal import (
+    day_answers,
+    day_questions,
     fields,
     leaving,
     month_view,
@@ -49,7 +52,7 @@ from services.production.journal import (
     wtp,
 )
 from services.production.journal import generate as gen
-from services.production.mirror import loader
+from services.production.mirror import feedback, loader
 from services.production.mirror import metrics as mx
 
 router = APIRouter()
@@ -247,6 +250,76 @@ def journal_remember(request: Request, journal_id: int, answer: str = Form(None)
     return RedirectResponse(f"/journals/{journal_id}", status_code=303)
 
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _day_trades(sess, trader: m.Trader, journal: m.Journal) -> list[dict]:
+    """The day's trades as the page lists them: in the order opened, with lots on options."""
+    trades = trades_of(trips_of(sess, trader, journal))
+    sized = {t.trip_id: t.lots for t in _record(sess, trader) if t.is_option}
+    for trade in trades:
+        trade["lots"] = sized.get(trade["trip_id"])
+    return trades
+
+
+def _questions_of(sess, trader: m.Trader,
+                  journal: m.Journal) -> list[day_questions.DayQuestion]:
+    """TICKET-915: the day's questions. A week or ten-trade Journal is not a day: none."""
+    if journal.period_start != journal.period_end:
+        return []
+    return day_questions.questions_for(_day_trades(sess, trader, journal))
+
+
+@router.get("/journals/answers", response_class=HTMLResponse)
+def journal_answers(request: Request):
+    """Everything he has said to the day's questions, newest first (TICKET-915, gate 3).
+
+    His words, the day and when - and nothing else: no result beside an answer, no count, no
+    ranking. Declared before /journals/{journal_id}, which would read "answers" as an id.
+    """
+    with make_session(request.app.state.engine) as sess:
+        trader, elsewhere = _gate(request, sess)
+        if elsewhere is not None:
+            return elsewhere
+        rows = [
+            {"journal_id": r.journal_id, "trading_day": r.trading_day,
+             "question_text": r.question_text, "answer": day_answers.LABELS[r.answer],
+             "when": formatting.day(r.answered_at.astimezone(IST).date().isoformat())}
+            for r in day_answers.history(sess, trader)
+        ]
+        return page(request, "journal_answers.html", title="What you have said", rows=rows)
+
+
+@router.post("/journals/{journal_id}/day-answer")
+def journal_day_answer(request: Request, journal_id: int, key: str = Form(None),
+                       answer: str = Form(None), csrf_token: str = Form(None)):
+    """One answer to one of the day's questions (TICKET-915).
+
+    A form, so a link can't store an answer. "This looks wrong" is also reported the way
+    the report's own days are (feedback.flag_day), so there is one place to read it.
+    """
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader, elsewhere = _gate(request, sess)
+        if elsewhere is not None:
+            return elsewhere
+        journal = _owned(sess, trader, journal_id)
+        try:
+            day_answers.record(sess, trader=trader, journal=journal, key=key or "",
+                               answer=answer or "",
+                               questions=_questions_of(sess, trader, journal))
+        except (day_answers.NotAnAnswer, day_answers.NotAQuestion, day_answers.NotADay):
+            raise HTTPException(status_code=400) from None
+        if answer == day_answers.WRONG:
+            current = loader.current_import(sess, trader)
+            feedback.flag_day(sess, trader=trader,
+                              import_id=current.id if current else journal.import_id,
+                              trading_day=journal.period_start, note=None)
+        sess.commit()
+    return RedirectResponse(f"/journals/{journal_id}", status_code=303)
+
+
 @router.get("/journals/{journal_id}", response_class=HTMLResponse)
 def journal_page(request: Request, journal_id: int):
     with make_session(request.app.state.engine) as sess:
@@ -258,11 +331,6 @@ def journal_page(request: Request, journal_id: int):
         gen.mark_opened(sess, journal)
         sess.commit()
 
-        paragraphs = [
-            para.strip()
-            for para in prose.render(json.loads(journal.sections)).split("\n\n")
-            if para.strip()
-        ]
         trips = trips_of(sess, trader, journal)
         imp = sess.get(m.Import, journal.import_id)
         current = loader.current_import(sess, trader)
@@ -290,6 +358,16 @@ def journal_page(request: Request, journal_id: int):
             }
             for t in trades
         }
+        questions = day_questions.questions_for(trades) if one_day else []
+        skipped = request.query_params.get("skip") == "1"
+        show_figures = (not questions or skipped
+                        or journal.period_start in day_answers.answered_days(sess, trader))
+        # TICKET-915 gate 5: the day's net and how the trades closed wait with the rupees.
+        paragraphs = [
+            para.strip()
+            for para in prose.render(json.loads(journal.sections), show_result=show_figures).split("\n\n")
+            if para.strip()
+        ]
         ask_wtp = wtp.ask_here(sess, trader=trader, journal=journal)
         # TICKET-906: a day neither worth a look nor new asks "Do you remember this day?"
         # first - unless he has answered it, or written on it, already.
@@ -335,6 +413,9 @@ def journal_page(request: Request, journal_id: int):
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
             ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
             ask_first=ask_first, prev_day=prev_day, next_day=next_day,
+            day_questions=questions, show_figures=show_figures,
+            day_latest=day_answers.latest_by_key(sess, trader, journal.period_start),
+            skip_href=f"/journals/{journal.id}?skip=1",
         )
 
 

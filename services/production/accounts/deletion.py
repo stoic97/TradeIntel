@@ -111,6 +111,9 @@ def delete_trader(
     # Whether he remembered a day (TICKET-906). Before the Journals it points at.
     _delete_where(sess, m.JournalRememberAnswer,
                   m.JournalRememberAnswer.trader_id == trader_id, removed)
+    # What he answered to the day's questions (TICKET-915). Before the Journals it points at.
+    _delete_where(sess, m.JournalDayAnswer,
+                  m.JournalDayAnswer.trader_id == trader_id, removed)
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
     # What he said about a whole report (TICKET-825), in his own words.
@@ -185,7 +188,8 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
 
     journal_ids = _ids(sess, m.Journal.id, m.Journal.import_id.in_(import_ids))
     if journal_ids:
-        for model in (m.JournalFieldEntry, m.WtpAnswer, m.WtpAsked, m.JournalRememberAnswer):
+        for model in (m.JournalFieldEntry, m.WtpAnswer, m.WtpAsked, m.JournalRememberAnswer,
+                      m.JournalDayAnswer):
             _delete_where(sess, model, model.journal_id.in_(journal_ids), removed)
         _delete_where(sess, m.Journal, m.Journal.id.in_(journal_ids), removed)
 
@@ -241,6 +245,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer,
+                  m.JournalDayAnswer,
                   m.JournalRememberAnswer):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
