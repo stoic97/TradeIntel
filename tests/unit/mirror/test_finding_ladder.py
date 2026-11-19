@@ -23,8 +23,8 @@ NAMES = ["Seen", "Would you have known?", "Set as your rule", "Run forward", "Ve
 NOT_YET = "Not yet reached"
 TEMPLATE = Path("services/production/api/templates/scope/_ladder.html")
 
-LADDER = re.compile(r'<ol class="ladder" data-ladder="([^"]+)">(.*?)</ol>', re.S)
-RUNG = re.compile(r'<li[^>]*data-rung="([^"]+)" data-reached="(yes|no)"[^>]*>(.*?)</li>', re.S)
+LADDER = re.compile(r'<ol class="ladder" data-ladder="([^"]+)">(.*?)</ol>', re.DOTALL)
+RUNG = re.compile(r'<li[^>]*data-rung="([^"]+)" data-reached="(yes|no)"[^>]*>(.*?)</li>', re.DOTALL)
 
 CHAPTER_FACTS = {c.number: [f.key for f in c.facts] for c in SM.CHAPTERS}
 FACT_KEYS = [key for keys in CHAPTER_FACTS.values() for key in keys]

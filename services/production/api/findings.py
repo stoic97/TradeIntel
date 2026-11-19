@@ -125,8 +125,8 @@ LADDER: tuple[tuple[str, Rung | None, str, str], ...] = (
     ("RUN_FORWARD", Rung.RUN_FORWARD, "Run forward",
      "kept or broken, trade by trade. Cost and trade count first."),
     ("VERDICT", None, "Verdict",
-     'only at a sample size stated at the start, and "not enough trades yet" is a proper '
-     "answer."),
+     ('only at a sample size stated at the start, and "not enough trades yet" is a proper '
+      "answer.")),
 )
 """The ladder from a finding to a rule, in the trader's words (TICKET-925, ruled 13 Nov).
 
