@@ -302,3 +302,31 @@ def test_the_page_on_the_40_trip_fixture(client):
         assert (attrs["data-known"], attrs["data-rung"]) == ("AT_CLICK", "SEEN")
     for _, said in paras:
         assert not re.search(r"finding|saved|avoid|\bcost|\bkept", said.lower()), said
+
+
+# Review, 18 Nov: a rule that is reached but picks nothing is compared with nothing.
+#   2026-02-02  T21 +100, T22 +40 after a win   2026-02-03  T23 +100, T24 +60 after a win
+#   2026-02-04  T25 +100, T26 -10 after a win
+# At a minimum of 2, T26 has T22 and T24 before it at +100: up, so nothing is picked.
+ZERO = [
+    trip(21, "2026-02-02", 100), trip(22, "2026-02-02", 40, minute=10),
+    trip(23, "2026-02-03", 100), trip(24, "2026-02-03", 60, minute=10),
+    trip(25, "2026-02-04", 100), trip(26, "2026-02-04", -10, minute=10),
+]
+
+
+def test_a_rule_that_picked_nothing_says_so_and_draws_no_verdict():
+    chance = _module("services.production.api.chance")
+    LO = _module("services.shared.conditions.leave_out")
+    row = _rows(ZERO, minimum=2)[(OIL, "win")]
+    assert row.reached and row.then_ids == () and row.then_net == Decimal(0)
+    assert chance.inside(row.then_band) is False  # a set of no trades is no comparison
+    assert chance.inside(LO.band_of([1.0, 2.0], 0.0, 0)) is False
+    ctx = SF.record_context(ZERO)
+    ctx["previous_result"] = mx.previous_result_figures(ZERO, minimum=2)
+    books = {b["book"]: b for b in SF._hidden_view(ctx)["books"]}
+    p = {q["state"]: q for q in books[OIL]["previous"]}
+    said = _text(str(p["win"]["then"]))
+    assert said == ("no trade after a win was opened while your earlier ones after a win,"
+                    " 2 or more, were down overall")
+    assert not p["win"]["then_words"] and "0 trades" not in said
