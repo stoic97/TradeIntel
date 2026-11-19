@@ -11,6 +11,8 @@ import re
 import tomllib
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 README = ROOT / "README.md"
 
@@ -129,3 +131,47 @@ def test_the_four_rules_are_kept_word_for_word() -> None:
 
 def test_the_readme_points_at_the_docs_index() -> None:
     assert "docs/README.md" in section(readme(), "Where the docs live")
+
+# Founder ruling on TICKET-932 (19 Nov 2026): these stay, each saying who runs it.
+HAND_RUN = (
+    "benchmark_m1_core.py",
+    "first_real_run.py",
+    "mirror_report.py",
+    "real_shape_check.py",
+    "run_null_rate_b2.py",
+    "run_sbc_m1.py",
+)
+HEADER = ("# Who runs it:", "# When:", "# Writes:")
+
+
+def test_no_script_row_waits_on_a_ruling() -> None:
+    assert "pending founder ruling" not in section(readme(), "Scripts").lower()
+
+
+def test_hand_run_scripts_say_who_runs_them_when_and_what_they_write() -> None:
+    bad = []
+    for name in HAND_RUN:
+        path = ROOT / "scripts" / name
+        if not path.exists():
+            continue
+        head = path.read_text(encoding="utf-8").split("\n")[:3]
+        ok = len(head) == 3 and all(
+            line.startswith(tag) and line[len(tag):].strip() for line, tag in zip(head, HEADER)
+        )
+        if not ok:
+            bad.append(name)
+    assert not bad, f"first three lines must be {HEADER}, each filled in: {bad}"
+
+
+def test_the_retired_mirror_report_row_names_its_removal_ticket() -> None:
+    if not (ROOT / "scripts" / "mirror_report.py").exists():
+        pytest.skip("mirror_report.py is gone (TICKET-989)")
+    row = script_rows()["mirror_report.py"]
+    assert re.search(r"\bRetired\b.*\bTICKET-\d+", row[-1]), row
+
+
+def test_first_sign_in_is_the_traders_own_signup() -> None:
+    body = section(readme(), "Run it locally")
+    assert "/signup" in body, "first sign-in is /signup (founder ruling, TICKET-932)"
+    assert "create-trader" in body, "create-trader stays as the admin route"
+    assert body.index("/signup") < body.index("create-trader")
