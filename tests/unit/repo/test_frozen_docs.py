@@ -116,4 +116,4 @@ def test_every_accepted_adr_is_held_here():
     """A new ADR is frozen the moment it is accepted, so it is added here when it is."""
     for path in sorted(Path("docs/adr").glob("ADR-*.md")):
         if re.search(r"Status[.:*\s]*\**Accepted", head(str(path))):
-            assert str(path) in FROZEN, f"{path} is Accepted: add it to FROZEN"
+            assert path.as_posix() in FROZEN, f"{path.as_posix()} is Accepted: add it to FROZEN"
