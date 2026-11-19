@@ -121,7 +121,7 @@ def accepted_adrs() -> list[Path]:
 
 def not_held(paths: Iterable[PurePath]) -> list[str]:
     """Each of these paths that FROZEN does not hold, named as its key would be written."""
-    return [str(path) for path in paths if str(path) not in FROZEN]
+    return [path.as_posix() for path in paths if path.as_posix() not in FROZEN]
 
 
 def test_every_accepted_adr_is_held_here():
