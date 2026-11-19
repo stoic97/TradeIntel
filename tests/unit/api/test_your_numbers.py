@@ -209,7 +209,7 @@ def test_every_link_on_it_opens(client):
 
 
 def trades_on(html: str) -> int:
-    top = re.search(r'class="[^"]*nb-top[^"]*".*?</p>', html, re.S).group(0)
+    top = re.search(r'class="[^"]*nb-top[^"]*".*?</p>', html, re.DOTALL).group(0)
     return int(re.search(r"([\d,]+)\s*</span>\s*trades", re.sub(r"<a [^>]*>|</a>", "", top)).group(1).replace(",", ""))
 
 
