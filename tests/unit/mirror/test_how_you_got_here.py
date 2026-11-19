@@ -29,7 +29,7 @@ def card_module():
 
 
 def card(html: str) -> str:
-    match = re.search(r'<section[^>]*id="how".*?</section>', html, re.S)
+    match = re.search(r'<section[^>]*id="how".*?</section>', html, re.DOTALL)
     assert match, "no How you got here card on home"
     return match.group(0)
 
@@ -40,8 +40,11 @@ def test_the_card_sits_after_the_verdict_and_before_the_days(client):
     body = client.get("/").text
     verdict = body.index('class="scope-card on-navy"')
     how = body.index('id="how"')
-    days = body.index('<section class="latest">')
-    assert verdict < how < days
+    # "Days worth a look" is drawn only when he has Journals; without them the next thing on
+    # home is the rules link, and the card still comes before it.
+    days = body.find('<section class="latest">')
+    after = days if days != -1 else body.index('href="/rules"')
+    assert verdict < how < after
 
 
 def test_the_card_reads_top_down_in_its_order(client):
@@ -97,7 +100,7 @@ def test_every_candle_opens_its_trades(client):
 
 def test_a_rate_is_ink_and_rupees_carry_their_sign(client):
     html = card(client.get("/").text)
-    made = re.search(r">Made money<.*?</a>", html, re.S).group(0)
+    made = re.search(r">Made money<.*?</a>", html, re.DOTALL).group(0)
     assert "num--loss" not in made and "num--gain" not in made
     assert " of 100" in made
 
@@ -132,7 +135,7 @@ def trip(i: int, day: datetime, net: str, symbol: str = "NIFTY") -> mx.Trip:
 
 
 def long_record(days: int = 100) -> list[mx.Trip]:
-    start = datetime(2026, 1, 5)
+    start = datetime(2026, 1, 5, tzinfo=IST)
     out = []
     for n in range(days):
         net = "300" if n % 3 else "-500"
@@ -173,7 +176,7 @@ def test_axis_ticks_show_their_half_thousand():
 
 
 def test_a_book_under_twenty_trades_gets_no_chip():
-    trips = long_record(30) + [trip(900 + i, datetime(2026, 1, 6 + i), "100", "BANKNIFTY") for i in range(3)]
+    trips = long_record(30) + [trip(900 + i, datetime(2026, 1, 6 + i, tzinfo=IST), "100", "BANKNIFTY") for i in range(3)]
     view = card_module().build(trips, Imp())
     assert [c["name"] for c in view["books"]] == ["All", "NIFTY options"]
 
