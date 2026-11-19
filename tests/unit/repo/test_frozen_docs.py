@@ -30,7 +30,7 @@ class Frozen(NamedTuple):
 
 FROZEN: dict[str, Frozen] = {
     "docs/trade_dna_research_spec_v1_0.md": Frozen(
-        "v1.0.3", "9a1d561e56db5982ab2fb687033f45f7b1a2a10489183cb4bd9b822a4cf5e23c"),
+        "v1.0.4", "ee119af38b59851807f4eb31ef44a088b760bbfb3b21132773990bee82ab07c1"),
     "docs/trade_dna_brainstorm_workbook_v1.1_final.md": Frozen(
         "v1.1.1", "87be5b1133475b76b0854e8f3919710de88a1ea23f6b1c9e4904be3836cff1c7"),
     "docs/trade_dna_product_thesis_v1.5.md": Frozen(
