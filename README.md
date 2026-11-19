@@ -34,7 +34,9 @@ You need git and [uv](https://docs.astral.sh/uv/); uv installs Python 3.11 itsel
 
        make run             # creates the database, then serves http://127.0.0.1:8000 with reload
 
-   To make an account to sign in with: `uv run python -m services.production.api.cli create-trader --help`. Made-up tradebooks to upload are in `data/fixtures/` and `data/fixtures/demo/`.
+   Then open http://127.0.0.1:8000/signup and sign up the way a trader does. Made-up tradebooks to upload are in `data/fixtures/` and `data/fixtures/demo/`.
+
+   Admin route instead: `uv run python -m services.production.api.cli create-trader --help`.
 
 5. Run the tests:
 
@@ -98,23 +100,23 @@ Layout follows `docs/methodology.md` section 5. A folder is created when its fir
 
 ## Scripts
 
-Each runs from the repo root with `uv run python scripts/<name>`, unless its row says otherwise.
+Each runs from the repo root with `uv run python scripts/<name>`, unless its row says otherwise. The scripts run only by hand open with three lines: who runs it, when, and what it writes.
 
 | Script | What it does | When it is run | Still in use |
 |---|---|---|---|
-| `benchmark_m1_core.py` | Measures effective samples per second for M1's conjugate core on each sampler backend (ADR-006) | Research one-off, Oct 2026 | Pending founder ruling; no code refers to it |
+| `benchmark_m1_core.py` | Measures effective samples per second for M1's conjugate core on each sampler backend (ADR-006); writes `docs/phase0/adr-006-benchmark.json` | By hand, when ADR-006's sampler choice is revisited | Yes, research; kept by founder ruling, 19 Nov 2026 |
 | `build_corpus_a.py` | Builds corpus A (planted histories and nulls) into `data/corpus/`; `--quick` for a smoke run | When corpus A is rebuilt (`docs/phase0/corpus-a.md`) | Yes, research |
 | `build_exchange_closures.py` | Writes the NSE and BSE closure days into `services/shared/market/exchange_closures.yaml` from the exchanges' daily bars; run with `uv run --with fyers-apiv3` and a token file | Monthly, with the crude refresh | Yes |
 | `check_charge_rates.py` | Prices made-up orders with `rates.yaml` and with two brokers' published rates; exits 1 if they differ; never edits the table | As a job (`docs/runbooks/charge-rates.md`) | Yes |
 | `extend_crude_series.py` | Brings the MCX crude 1-minute series current; run with `uv run --with fyers-apiv3` and a token file | Monthly (`docs/runbooks/crude-series.md`) | Yes |
-| `first_real_run.py` | Runs the import on one real tradebook and prints counts only; writes nothing | One-off diagnostic, Oct 2026 | Pending founder ruling; no code refers to it |
+| `first_real_run.py` | Runs the import on one real tradebook and prints counts only; writes nothing. The tradebook stays outside the repo and nothing it prints is committed: no real trader's history or figure goes in git (rule 1) | By hand, when an import needs checking on a real file | Yes, by hand; kept by founder ruling, 19 Nov 2026 |
 | `lock_charge_rates.py` | Pins new rows of `rates.yaml` in its lock file; refuses if a pinned row changed | After appending rows to `rates.yaml` | Yes |
 | `make_groww_fixture.py` | Writes the made-up Groww fixture workbook, the same bytes on every OS | When the Groww fixture changes | Yes; the Groww golden test uses it |
-| `mirror_report.py` | The concierge HTML report: a second way of rendering the Mirror, outside the app; `tests/unit/test_sold_trades_accounted.py` imports it | Concierge reports before the app | Pending founder ruling (retired or kept) |
-| `real_shape_check.py` | Checks, in aggregates only, whether a trader's data has the shape M1 assumes | Research one-off, 12 Oct 2026 | Pending founder ruling; no code refers to it |
+| `mirror_report.py` | The concierge HTML report: a second way of rendering the Mirror, outside the app; writes under `out/` (gitignored); `tests/unit/test_sold_trades_accounted.py` imports it | No longer run: the app's Mirror (`services/production/mirror/`) replaces it | Retired - removal in TICKET-989 |
+| `real_shape_check.py` | Checks, in aggregates only, whether a trader's data has the shape M1 assumes; prints only, writes nothing, and what it prints is never committed (rule 1) | By hand, when M1's shape assumption is in question; TICKET-897 Stage A cites it | Yes, research; kept by founder ruling, 19 Nov 2026 |
 | `regenerate_golden.py` | Shows the golden diff and, with `--yes`, rewrites `data/golden/` (`--groww` for Groww's) | Only when a behaviour change is intended | Yes |
-| `run_null_rate_b2.py` | Step E: how often B2 fires on corpus A's nulls, with nothing planted (Research Spec section 6.2) | Research run, Oct 2026 | Pending founder ruling; no code refers to it |
-| `run_sbc_m1.py` | Simulation-based calibration of M1: 1,000 replications (Research Spec section 6.4) | Research run, Oct 2026 | Pending founder ruling; no code refers to it |
+| `run_null_rate_b2.py` | How often B2 fires on corpus A's nulls, with nothing planted (Research Spec section 6.2); writes `docs/phase0/null-rate-b2.json` (`recall-b2.json` with `--planted`), rows to `data/null_rate/` | TICKET-897 Stage A, step 5 | Yes, research |
+| `run_sbc_m1.py` | Simulation-based calibration of M1, 1,000 replications (Research Spec section 6.4); writes `docs/phase0/sbc-m1.json` | TICKET-897 Stage A, step 6 | Yes, research |
 
 ## Rules
 1. **No trader data in this repo. Ever** — and that includes anything *derived* from
