@@ -326,13 +326,18 @@ def _previous_rows(ctx: dict) -> dict[str, list[dict]]:
             k = len(r.then_ids)
             then_href = (S.see_all_href("hidden", book=r.book, after=r.state, then="yes")
                          if k else None)
-            row["then"] = formatting.opens(
-                Figure(formatting.rupees(r.then_net), "rupees", opens=then_href))
-            row["then_words"] = Markup(
-                "net on {} {} opened right after {} that day while your earlier ones after {},"
-                " {} or more, were down overall").format(
-                _count_link(k, then_href), _trades_word(k), after, after,
-                formatting.opens(Figure(formatting.count(r.minimum), "trades")))
+            minimum = formatting.opens(Figure(formatting.count(r.minimum), "trades"))
+            if not k:  # nothing was picked: said plainly, with no figure and no verdict on it
+                row["then"] = Markup(
+                    "no trade after {} was opened while your earlier ones after {}, {} or more,"
+                    " were down overall").format(after, after, minimum)
+            else:
+                row["then"] = formatting.opens(
+                    Figure(formatting.rupees(r.then_net), "rupees", opens=then_href))
+                row["then_words"] = Markup(
+                    "net on {} {} opened right after {} that day while your earlier ones after {},"
+                    " {} or more, were down overall").format(
+                    _count_link(k, then_href), _trades_word(k), after, after, minimum)
         out.setdefault(r.book, []).append(row)
     return out
 
