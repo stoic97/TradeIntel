@@ -19,8 +19,8 @@ from services.production.api import scope_map as SM
 
 TIERS = ("Established", "Likely", "Exploratory")
 RUNGS = ["SEEN", "WOULD_YOU_HAVE_KNOWN", "SET_AS_YOUR_RULE", "RUN_FORWARD", "VERDICT"]
-NAMES = ["Seen", "Would you have known?", "Set as your rule", "Run forward", "Verdict"]
-NOT_YET = "Not yet reached"
+NAMES = ["Seen", "Would you have known?", "Set as a rule", "Run forward", "Verdict"]
+NOT_YET = "Not reached"
 TEMPLATE = Path("services/production/api/templates/scope/_ladder.html")
 
 LADDER = re.compile(r'<ol class="ladder" data-ladder="([^"]+)">(.*?)</ol>', re.DOTALL)

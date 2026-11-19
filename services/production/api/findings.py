@@ -114,18 +114,18 @@ class Step:
     state: str
 
 
-NOT_YET_REACHED = "Not yet reached"
+NOT_YET_REACHED = "Not reached"
 
 LADDER: tuple[tuple[str, Rung | None, str, str], ...] = (
     ("SEEN", Rung.SEEN, "Seen", "it appears in your file."),
     ("WOULD_YOU_HAVE_KNOWN", Rung.WOULD_YOU_HAVE_KNOWN, "Would you have known?",
      "it still holds when picked using only earlier trades."),
-    ("SET_AS_YOUR_RULE", None, "Set as your rule",
-     "you set it as your rule, by tapping, dated, before it was tested on anything new."),
+    ("SET_AS_YOUR_RULE", None, "Set as a rule",
+     "you set it as a rule, by tapping, dated, before it was tested on anything new."),
     ("RUN_FORWARD", Rung.RUN_FORWARD, "Run forward",
-     "kept or broken, trade by trade. Cost and trade count first."),
+     "followed or broken, trade by trade. Charges and trade count first."),
     ("VERDICT", None, "Verdict",
-     ('only at a sample size stated at the start, and "not enough trades yet" is a proper '
+     ('only at a sample size stated at the start, and "not enough trades" is a proper '
       "answer.")),
 )
 """The ladder from a finding to a rule, in the trader's words (TICKET-925, ruled 13 Nov).
