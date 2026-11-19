@@ -90,3 +90,29 @@ it is superseded by a new ADR, or gains a dated entry in an Amendments section a
 at its end, and its original Decision text stays as it was.** `tests/unit/repo/test_frozen_docs.py`
 holds each frozen file's version and digest, so an edit that skips the bump fails CI.
 Applied retroactively in TICKET-931.
+
+### SR-012 — non-production files are the developer's call
+
+*19 Nov 2026.* TICKET-932 (README rewrite, audit epic TICKET-927) held its PR to ask the
+founder whether one script should be retired and what to do with five more. It was right to:
+the ticket told it to, and the epic's assignment rule of 12 Nov reads "Rulings: founder" with
+no stated edge. That rule was written for research rulings — priors, denominators,
+definitions, claims — where one seat has to decide and the record has to show who decided.
+Applied to a README row and a script nobody runs it buys nothing and costs a day at each end.
+**The README, `scripts/`, dev tooling and repo chores are the developer's call: retire or
+delete what no one runs, say so in the PR, and name the follow-up ticket. A founder ruling is
+required only where a number, a definition, a claim, or a trader-visible behaviour changes.**
+A ticket that asks for a ruling names which of those four it touches; a ticket that cannot
+name one does not ask.
+
+### SR-013 — a script is not dead because nothing imports it
+
+*19 Nov 2026.* The same ticket listed five scripts as unreferenced, on the evidence that no
+module imports them and only `.gitignore` names one. Scripts under `scripts/` are run by hand,
+so the import graph cannot see them. TICKET-897 Stage A re-runs `run_null_rate_b2.py` (step 5)
+and `run_sbc_m1.py` (step 6), and cites `real_shape_check.py` in its sources; deleting on that
+evidence would have removed two scheduled runs and the provenance of a third. **A hand-run
+script is evidenced by the document, ticket or runbook that runs it, never by grep. Every file
+in `scripts/` carries a three-line header — who runs it, when, what it writes — added by
+whoever next touches it. A script with no header and no owner is retired in a ticket of its
+own, never in the ticket that happened to find it.**
