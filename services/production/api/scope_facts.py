@@ -19,6 +19,7 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
+from services.production.api import after_clicked as AC
 from services.production.api import dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
@@ -38,6 +39,7 @@ CARD_H = {
     "run": 40,
     "clock": 84,
     "busy": 84,
+    "after": 84,
 }
 INDIA_OFFSET = timedelta(hours=5, minutes=30)
 NOT_TOLD = 4
@@ -100,6 +102,8 @@ def _f(value) -> float:
 def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
+    if kind == "after":  # stored figures only (TICKET-1001); not a kit chart, so not in G.CHARTS
+        return AC.geometry(AC.view(ctx), w, h, mini=mini)
     if kind == "worst":
         return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
     if kind == "share":
@@ -147,6 +151,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 
 
 def _state(key: str, ctx: dict) -> str:
+    if key == "after" and not AC.view(ctx)["enough"]:
+        return "not-enough"  # under 30 measured trades in every underlying, or none measured yet
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
     if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
@@ -172,6 +178,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "after":
+        return _after_figure(AC.view(ctx))
     if key == "hidden":
         return Figure(f"{formatting.count(_counted_days(ctx))} days", "days")
     if key == "worst-days":
@@ -781,7 +789,23 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(_clock_view(ctx))
+    out["after"].update(after_page(ctx))
     return out
+
+
+def _after_figure(v: dict) -> Figure:
+    """Where his median ends 30 minutes after the click, in whole points, and which way."""
+    n = v["his_end"]
+    if n is None:
+        return Figure("—", "points")
+    return Figure(f"{formatting.count(abs(n))} points", "points", of="your way" if n >= 0 else "against you")
+
+
+def after_page(ctx: dict, pick: str | None = None) -> dict:
+    """The after-you-clicked page for one underlying (TICKET-1001): its view, its chart at the
+    page's size, and its table. The route passes the chip the trader picked."""
+    v = AC.view(ctx, pick)
+    return {"view": v, "page_chart": AC.geometry(v), "table": AC.table(v) if v["enough"] else ""}
 
 
 def _zone_words(trip: mx.Trip) -> str:
@@ -893,6 +917,10 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         measured, _, whole = fig["figure"].removesuffix(" trades").partition(" of ")
         return _wedge(Figure(measured, "trades", of=f"of {whole} trades have a risk figure"),
                       phone=f"of {whole}\ntrades", shown=measured)
+    if key == "after":
+        points = fig["figure"].removesuffix(" points")
+        return _wedge(Figure(points, "points", of=f"{fig['lead_figure'].of}, 30 minutes after you clicked"),
+                      phone="after\nyou clicked", shown=points)
     if key == "not-told":
         return _wedge(Figure(NOT_TOLD, "things", of="we have not told you"), phone="not told",
                       phone_shown=f"{NOT_TOLD} items")

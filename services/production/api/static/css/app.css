@@ -403,3 +403,20 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .against { margin-top: var(--space-4); }
 .against__losses { display: block; width: 100%; height: 12px; margin-top: var(--space-2); fill: var(--color-navy); }
 .against__range { display: block; width: 100%; margin-top: var(--space-1); }
+
+/* after you clicked (TICKET-1001): his paths beside random moments' band, stored figures only */
+.after .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
+.after .chip { text-decoration: none; }
+.after .chip--on { background: var(--color-ink); color: var(--color-page); }
+.ac-chart { width: 100%; height: auto; display: block; }
+.chart__ac-grid { fill: none; stroke: var(--color-hairline); stroke-width: .5; }
+.chart__ac-band { fill: var(--color-surface); stroke: none; }
+.chart__ac-faint { fill: none; stroke: var(--color-faint); stroke-width: .5; opacity: .35; }
+.chart__ac-mid { fill: var(--color-action-blue); opacity: .16; stroke: none; }
+.chart__ac-zero { fill: none; stroke: var(--color-muted); stroke-width: .75; }
+.chart__ac-random { fill: none; stroke: var(--color-muted); stroke-width: 1.25; stroke-dasharray: 4 3; }
+.chart__ac-his { fill: none; stroke: var(--color-action-blue); stroke-width: 2; }
+.ac-axis { font-family: var(--font-mono); font-size: 10px; fill: var(--color-muted); }
+.ac-swatch--band { background: var(--color-surface); border: 1px solid var(--color-hairline); }
+.ac-swatch--his { background: var(--color-action-blue); }
+.ac-table { margin-top: var(--space-3); }

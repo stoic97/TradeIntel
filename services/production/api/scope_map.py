@@ -53,6 +53,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("math", "Your wins and losses", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
+            Fact("after", "After you clicked", "after"),
         ),
         feedback=True,
     ),
@@ -274,6 +275,10 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return list(trips)
     if key in ("unread", "not-told"):
         return []
+    if key == "after":  # the trades whose 30 minutes after the click were measured (TICKET-1001)
+        stored = (ctx.get("bars") or {}).get("trades", {})
+        return [t for t in trips if (r := stored.get(t.trip_id)) is not None
+                and r["reason"] is None and r["path"]]
     raise KeyError(key)
 
 
