@@ -1,3 +1,6 @@
+# Who runs it: the research seat, by hand.
+# When: TICKET-897 Stage A, step 6.
+# Writes: docs/phase0/sbc-m1.json (sbc-m1-centred.json with --centred).
 """The SBC run section 6.4 asks for: 1,000 replications of M1.
 
 Draw from M1's prior, simulate from M1's own generative process, fit, rank the truth

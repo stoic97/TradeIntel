@@ -1,3 +1,6 @@
+# Who runs it: the research seat, by hand, on a real history kept outside this repo.
+# When: when M1's shape assumption is in question; TICKET-897 Stage A cites it.
+# Writes: nothing; prints aggregates only. Never commit what it prints.
 """Does this trader's data have the shape M1 assumes? Aggregates only.
 
 Written 12 Oct 2026 after the B2 recall sweep found M1 failing on the planted
