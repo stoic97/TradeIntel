@@ -1,0 +1,46 @@
+{#- After you closed (TICKET-1009): the market's path, in points in his direction, for the 30
+    minutes after each exit, and the losing trades it came back past the entry on. Stored figures
+    only (the bar-figure job); nothing here reads a bar. A counted fact: what happened after he
+    closed, never what he would have made. -#}
+{% extends "scope/fact.html" %}
+{% set v = f.view %}
+{% macro counts() -%}
+  {%- if v.chips %}
+  <p class="chips">{% for c in v.chips %}<a class="chip{% if c.on %} chip--on{% endif %}" href="{{ c.href }}">{{ c.underlying }} · <span class="num">{{ Figure(c.trades, "trades")|count }}</span></a>{% endfor %}</p>
+  {%- endif %}
+  <p class="body-small after-close__count"><span class="num">{{ Figure(v.measured, "trades")|count }}</span> {{ "trade" if v.measured == 1 else "trades" }} measured, <span class="num">{{ Figure(v.not_measured, "trades")|count }}</span> not{% if v.reasons %}: {% for reason, n in v.reasons %}{{ reason }} (<span class="num">{{ Figure(n, "trades")|count }}</span>){{ ", " if not loop.last }}{% endfor %}{% endif %}.</p>
+  {%- if not v.enough %}
+  <p class="body after-close__thin"><span class="num">{{ Figure(v.losers, "trades")|count }}</span> losing {{ "trade" if v.losers == 1 else "trades" }} measured{% if v.underlying %} in {{ v.underlying }}{% endif %}; this needs <span class="num">{{ Figure(v.minimum, "trades")|count }}</span>.</p>
+  {%- endif %}
+{%- endmacro %}
+{% block head %}
+    <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
+    {%- if v.enough %}
+    <p class="mirror">On <span class="num">{{ Figure(v.came_back, "trades")|count }}</span> of <span class="num">{{ Figure(v.losers, "trades")|count }}</span> losing trades, the market came back past your entry within 30 minutes of you closing.</p>
+    {%- endif %}
+{% endblock %}
+{% block gross %}{{ super() }}{% if f.state %}<section class="after-close" id="after-close" aria-label="After you closed">{{ counts() }}</section>{% endif %}{% endblock %}
+{% block body %}
+  <section class="after-close" id="after-close" aria-label="After you closed">
+    {{ counts() }}
+    {%- if v.enough %}
+    <figure class="figure">
+      <figcaption class="figure__caption">Figure {{ Figure(1, "figure") }} · Points the market moved in your direction after you closed, {{ v.underlying }}</figcaption>
+      <svg class="chart acl-chart" viewBox="0 0 {{ f.page_chart.w }} {{ f.page_chart.h }}" width="{{ f.page_chart.w }}" height="{{ f.page_chart.h }}" aria-hidden="true">{% for part in f.page_chart.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}{{ f.page_chart.labels }}</svg>
+      <div class="figure__axis"><span>0</span><span>minutes after you closed</span><span>{{ Figure(30, "minutes")|count }}</span></div>
+      <p class="legend"><span><span class="legend__swatch acl-swatch--losers"></span>Losing trades, the median</span><span><span class="legend__swatch acl-swatch--winners"></span>Trades that made money, the median</span></p>
+    </figure>
+    <p class="body-small">Each line starts at the price you closed at. Every trade counts here, however long you held it: the minutes after you closed are read the same way for a short trade as a long one.</p>
+    <table class="acl-table">
+      <caption>Points the market moved in your direction after you closed, {{ v.underlying }}</caption>
+      <thead><tr><th scope="col">After you closed</th><th scope="col">Losing trades, the median</th><th scope="col">Trades that made money, the median</th></tr></thead>
+      <tbody>
+      {%- for r in v.rows %}
+        <tr><th scope="row"><span class="num">{{ Figure(r.minute, "minutes")|count }}</span> min</th><td>{% if r.losers is none %}—{% else %}<span class="num">{{ Figure(r.losers, "points")|count }}</span>{% endif %}</td><td>{% if r.winners is none %}—{% else %}<span class="num">{{ Figure(r.winners, "points")|count }}</span>{% endif %}</td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+    {%- endif %}
+  </section>
+{% endblock %}
+{% block caption %}Every losing trade the market came back past your entry on, by when you opened it.{% endblock %}

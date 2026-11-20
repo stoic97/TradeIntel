@@ -1,4 +1,4 @@
-# ruff: noqa: DTZ001 - the series are naive IST by convention (TICKET-893); so are these bars
+
 """TICKET-1009: after you closed.
 
 The bar-figure job stores the 30 minutes after each exit, in points in the trade's direction, the
@@ -16,7 +16,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import inspect, select
+from sqlalchemy import inspect
 
 from services.production.api import after_closed as ACL
 from services.production.db import models as m
