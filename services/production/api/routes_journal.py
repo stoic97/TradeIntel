@@ -43,6 +43,7 @@ from services.production.db.session import make_session
 from services.production.journal import (
     day_answers,
     day_questions,
+    day_timing,
     fields,
     leaving,
     month_view,
@@ -253,21 +254,42 @@ def journal_remember(request: Request, journal_id: int, answer: str = Form(None)
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
-def _day_trades(sess, trader: m.Trader, journal: m.Journal) -> list[dict]:
+def _day_trades(sess, trader: m.Trader, journal: m.Journal,
+                record: list[mx.Trip] | None = None) -> list[dict]:
     """The day's trades as the page lists them: in the order opened, with lots on options."""
-    trades = trades_of(trips_of(sess, trader, journal))
-    sized = {t.trip_id: t.lots for t in _record(sess, trader) if t.is_option}
+    rows = trips_of(sess, trader, journal)
+    trades = trades_of(rows)
+    record = _record(sess, trader) if record is None else record
+    sized = {t.trip_id: t.lots for t in record if t.is_option}
     for trade in trades:
         trade["lots"] = sized.get(trade["trip_id"])
+    # each trade's times, side and session, for the timing questions
+    instruments = day_timing.instruments_of(rows)
+    sessions = day_timing.sessions_for(instruments, profiles.load_all(loader.PROFILE_DIR), profiles.lookup)
+    day_timing.enrich(trades, record, instruments, sessions)
     return trades
 
 
-def _questions_of(sess, trader: m.Trader,
-                  journal: m.Journal) -> list[day_questions.DayQuestion]:
-    """TICKET-915: the day's questions. A week or ten-trade Journal is not a day: none."""
+def _his_medians(sess, trader: m.Trader, record: list[mx.Trip]) -> dict:
+    """his own median gap and first-trade minutes, over his whole record."""
+    current = loader.current_import(sess, trader)
+    if current is None or not record:
+        return {}
+    rows = sess.scalars(select(m.Trip).where(m.Trip.import_id == current.id)).all()
+    instruments = day_timing.instruments_of(rows)
+    sessions = day_timing.sessions_for(instruments, profiles.load_all(loader.PROFILE_DIR), profiles.lookup)
+    return day_timing.medians(record, instruments, sessions)
+
+
+def _questions_of(sess, trader: m.Trader, journal: m.Journal,
+                  record: list[mx.Trip] | None = None) -> list[day_questions.DayQuestion]:
+    """TICKET-915: the day's questions. A week or ten-trade Journal is not a day: none. The page
+    and the answer route both ask here, so a key he answers is always one he was asked."""
     if journal.period_start != journal.period_end:
         return []
-    return day_questions.questions_for(_day_trades(sess, trader, journal))
+    record = _record(sess, trader) if record is None else record
+    return day_questions.questions_for(_day_trades(sess, trader, journal, record),
+                                       context=_his_medians(sess, trader, record))
 
 
 @router.get("/journals/answers", response_class=HTMLResponse)
@@ -358,7 +380,7 @@ def journal_page(request: Request, journal_id: int):
             }
             for t in trades
         }
-        questions = day_questions.questions_for(trades) if one_day else []
+        questions = _questions_of(sess, trader, journal, record) if one_day else []
         skipped = request.query_params.get("skip") == "1"
         show_figures = (not questions or skipped
                         or journal.period_start in day_answers.answered_days(sess, trader))

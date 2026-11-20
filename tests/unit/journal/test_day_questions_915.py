@@ -63,6 +63,52 @@ def all_days():
             yield day(*["-100"] * n, lots=list(lots))
 
 
+def timed_days():
+    """TICKET-1012: days with times, sides and sessions, and his medians, so every new sentence
+    (pace, straight back in, size steps, switching, the last hour, the first trade) is read too.
+    Starts 1 to 400 minutes after the open, gaps of 0 to 45 minutes, sides that switch or don't,
+    sizes that step or don't, NSE and MCX sessions, with and without his medians."""
+    from datetime import datetime, time, timedelta, timezone
+    ist = timezone(timedelta(hours=5, minutes=30))
+    sessions = [(time(9, 15), time(15, 30), False), (time(9, 0), time(23, 30), True)]
+    sides = [("calls", "calls"), ("calls", "puts"), ("long", "short")]
+    for opens, closes, mcx in sessions:
+        for start in (1, 7, 29, 75, 330, 400):
+            for gap in (0, 2, 13, 45):
+                for n in (2, 3, 5):
+                    for pair in sides:
+                        for stepped in (False, True):
+                            t0 = datetime(2026, 3, 2, opens.hour, opens.minute, tzinfo=ist) + timedelta(minutes=start)
+                            trades, t = [], t0
+                            for i in range(n):
+                                exit_ = t + timedelta(minutes=4)
+                                trades.append({
+                                    "trip_id": f"t{i}", "net": Decimal("-100" if i % 2 else "100"),
+                                    "lots": (1 + i) if stepped else 1, "entry": t, "exit": exit_,
+                                    "side": pair[i % 2], "opens": opens, "closes": closes,
+                                    "evening": mcx and t.time() >= time(17, 0)})
+                                t = exit_ + timedelta(minutes=gap)
+                            for ctx in (None, {"median_gap": 30.0, "median_first": 500.0},
+                                        {"median_gap": 1.0, "median_first": 3.0}):
+                                yield trades, ctx
+
+
+def test_no_new_sentence_leads_over_a_thousand_timed_days():
+    """TICKET-1012: the same guard, over the new sentences."""
+    cases = list(timed_days())
+    assert len(cases) >= 1000
+    sentences = {q.text for d, ctx in cases for q in dq.questions_for(d, context=ctx)}
+    new = {s for s in sentences if any(s.startswith(p) for p in (
+        "You took ", "Your next trade came", "You switched", "You opened ", "Your first trade came",
+        "Your size went"))}
+    assert len(new) > 20, "the guard read almost none of the new sentences"
+    bad = {s: leads(s) for s in sentences if leads(s)}
+    assert bad == {}
+    for d, ctx in cases:
+        qs = dq.questions_for(d, context=ctx)
+        assert 1 <= len(qs) <= dq.MAX_QUESTIONS and len({q.key for q in qs}) == len(qs)
+
+
 def test_the_guard_catches_a_verdict_a_tally_and_a_result_and_passes_a_fact():
     assert leads("Why did you revenge trade?") is not None
     assert leads("7 of 9 trades lost.") is not None
