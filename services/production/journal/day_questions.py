@@ -76,7 +76,7 @@ def _size_up(trades: list[dict]) -> DayQuestion | None:
     return DayQuestion("size_up", f"Your size went from {_lots(sized[0])} to {_lots(max(sized))}.")
 
 
-def questions_for(trades: list[dict]) -> list[DayQuestion]:
+def questions_for(trades: list[dict], context: dict | None = None) -> list[DayQuestion]:
     """At most three, in this order of preference. A one-trade day gets its own sentence."""
     if not trades:
         return []
