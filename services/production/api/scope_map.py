@@ -61,6 +61,7 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Your behaviour",
         (
             Fact("down", "After two straight losses", "down"),
+            Fact("size", "Your size after a loss", "size"),
             Fact("busiest", "Your busiest day", "busy"),
         ),
         feedback=True,
@@ -264,6 +265,8 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return [t for t in trips if t.trip_id in ids]
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)
+    if key == "size":
+        return mx.subset(trips, list(ctx["size_after"].group_of))
     if key == "run":
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":

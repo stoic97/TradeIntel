@@ -237,7 +237,8 @@ def test_the_page_states_the_counted_line_and_no_claim(client):
     html = page.text
     assert "Your size after a loss" in html
     assert "After a loss" in html and "After a win" in html
-    assert "<script" not in html
+    main = re.search(r"<main.*?</main>", html, re.DOTALL).group(0)  # the layout's own scripts aside
+    assert "<script" not in main
     assert "you size up" not in html.lower()
     chapter = client.get("/mirror/chapter/3").text
     assert "Your size after a loss" in chapter

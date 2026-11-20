@@ -53,5 +53,5 @@ def test_the_served_busiest_page_tells_the_day_and_goes_on(client):
 
 def test_the_served_down_page_goes_to_the_next_fact(client):
     page = client.get("/mirror/fact/down").text
-    assert "Next: Your busiest day" in page
+    assert "Next: Your size after a loss" in page
     assert "Table 1" not in page
