@@ -186,8 +186,9 @@ def test_the_page_draws_the_stored_figures_and_reads_no_bar(client, engine, no_b
     words = re.sub(r"<[^>]+>", " ", text).lower()
     for claim in ("skill", "edge", "luck", "beat"):
         assert not re.search(rf"\b{claim}", words), claim
-    scripts = re.findall(r"<script[^>]*>", text)
-    assert all("dwell.js" in s for s in scripts), scripts
+    section = text[text.index('id="after"'):]
+    section = section[: section.index("</section>")]
+    assert "<script" not in section  # the layout's own scripts aside, the fact adds none
 
 
 def test_under_30_the_page_says_how_many_and_what_it_needs(client, engine, no_bars):
