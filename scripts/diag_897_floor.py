@@ -1,6 +1,10 @@
 """TICKET-897 probe 3: (a) how many trades sit at exactly -1R (the stop), and
 (b) do the same 9 histories fit cleanly with a floor on nu?
 Usage: uv run python scripts/diag_897_floor.py [--floor 2.0]
+
+Run by: the research seat, by hand.
+When: TICKET-897 diagnosis, 13 Nov 2026 - the probe the floor was adopted on.
+Writes: nothing. Prints; capture with tee if the output is to be cited.
 """
 import argparse, sys
 from pathlib import Path

@@ -2,6 +2,10 @@
 'theta ~ 0, nu small (planted trades read as outliers)' vs 'theta ~ -effect, nu large',
 the posterior is bimodal under the Student-t likelihood.
 Usage: uv run python scripts/diag_897_chains.py
+
+Run by: the research seat, by hand.
+When: TICKET-897 diagnosis, 13 Nov 2026 - the probe that located the spike.
+Writes: nothing. Prints every draw; reshape samples to (4, -1) for chain means.
 """
 import sys
 from pathlib import Path

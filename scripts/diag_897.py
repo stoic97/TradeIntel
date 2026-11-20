@@ -1,6 +1,10 @@
 """TICKET-897 probe: for B2 planted histories that died on 'kill: failed_diagnostics',
 which fit (training or isolation) failed, and on what (divergences / r_hat / ess)?
 Usage: uv run python scripts/diag_897.py [--trips 1000] [--reps 3]
+
+Run by: the research seat, by hand.
+When: TICKET-897 diagnosis, 13 Nov 2026 - kept as the probe the cause was found with.
+Writes: nothing. Prints; capture with tee if the output is to be cited.
 """
 import argparse, sys
 from pathlib import Path

@@ -9,6 +9,10 @@ zone's B2 population only (the same trades M1 fits):
   * M1        - theta's posterior median and 80% interval, nu floored at --floor
 
 Writes nothing. Usage: uv run python scripts/oracle_897.py [--floor 2.0] [--reps 3]
+
+Run by: the research seat, by hand.
+When: TICKET-897 Stage A step 1, before the register is regenerated.
+Writes: nothing. Prints; tee into docs/phase0 - gate item 1 needs the run on the record.
 """
 import argparse, sys
 from pathlib import Path
