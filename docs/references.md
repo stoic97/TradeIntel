@@ -33,9 +33,9 @@ this repository.
 | Cited as | What it is | Where | Current version |
 |---|---|---|---|
 | **Research spec**, **R-Spec**, "Spec §x", "Annex B/I/J" | The research specification and its annexes | *repo* `docs/trade_dna_research_spec_v1_0.md` (frozen; SR-011) | see its title and change log |
-| **Thesis**, "T§" | The product thesis | *repo* `docs/trade_dna_product_thesis_v1.5.md` (v1.4 kept beside it) | v1.5, frozen 24 Oct 2026 |
+| **Thesis**, "T§" | The product thesis | *repo* `docs/trade_dna_product_thesis_v1.5.md` (v1.4 is in `docs/archive/`) | v1.5, frozen 24 Oct 2026 |
 | **Workbook**, "B§" | The brainstorm workbook | *repo* `docs/trade_dna_brainstorm_workbook_v1.1_final.md` (frozen; SR-011) | see its title and change log |
-| **Phase 0 plan** | Phase 0's plan of work | *repo* `docs/trade_dna_phase0_plan.md` | as committed |
+| **Phase 0 plan** | Phase 0's plan of work | *repo* `docs/archive/trade_dna_phase0_plan.md` | as committed |
 
 ## Process
 
@@ -43,6 +43,8 @@ this repository.
 |---|---|---|---|
 | **Developer Manual**, **Manual**, "Manual §x", "Manual B-x" | The Trade DNA Developer Manual: the target-state engineering practice | *Project* `Developer manual` | v1.1, October 2026 |
 | **methodology** | What is binding today, by stage; governs where it and the Manual differ on scope or timing | *repo* `docs/methodology.md` | as committed |
+| **tester page**, `onboarding/tester.md` | The tester page in the feedback-loop repository: where a UAT device result is recorded | *feedback-loop repo* `onboarding/tester.md`; not in this repository | as committed there |
+| **deletion log**, the old `docs/runbooks/deletion-log.md` | The append-only log of data deletions | On the server only, `/srv/scope/data/deletion-log.md`; never in git | moved out of git, TICKET-930 |
 | **merge practice** | How a PR gets merged, in full | *Project* `claude/scope_pr_merge_practice_v1.md`; short form in [CONTRIBUTING.md](../CONTRIBUTING.md) | v1.1, 4 Nov 2026 |
 | **SR-nnn** | The standing rules | *repo* `docs/process_standing_rules.md` | as committed |
 | **TD-nnn** | Deferrals | *repo* `docs/deferrals.md` | as committed |
