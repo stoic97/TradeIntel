@@ -394,9 +394,58 @@ def _points(value: Decimal) -> Markup:
                    "points")
 
 
+UNDERLYING_POINTS = "in the underlying's points, not your option's price."
+
+
 def execution(reading: Reading) -> Row:
-    """RED stub (TICKET-1010)."""
-    return Row("execution", "Execution", (), empty="stub")
+    """Kept points and gave-back trades, per underlying, from the stored bar figures."""
+    figures = reading.figures
+    if figures is None:
+        return Row("execution", "Execution", (), empty="No market figures for this file yet.")
+    measured = [(t, figures[t.trip_id]) for t in reading.trips
+                if t.trip_id in figures and figures[t.trip_id].reason is None
+                and figures[t.trip_id].way is not None and figures[t.trip_id].took is not None]
+    short = [t for t, _b in measured if t.holding_seconds < MEASURED_HOLD]
+    held = [(t, b) for t, b in measured if t.holding_seconds >= MEASURED_HOLD]
+    by_underlying: dict[str, list] = defaultdict(list)
+    for t, b in held:
+        by_underlying[b.underlying or ""].append((t, b))
+    lines: list[Line] = []
+    for name in sorted(by_underlying, key=lambda u: (-len(by_underlying[u]), u)):
+        group = by_underlying[name]
+        moved = [(t, b) for t, b in group if b.way > 0]
+        kept_key, back_key = f"kept-{name}", f"gave-back-{name}"
+        ids = _ids(t for t, _b in moved)
+        trades = _s(len(moved), "trade", "trades")
+        if len(moved) < RATE_AT:
+            too_few = f" {trades} held 45 minutes or more that the market moved your way: too few for a rate."
+            lines.append(Line(kept_key, (f"In {name}: ", _count(len(moved), "trades", kept_key), too_few),
+                              {kept_key: ids}, meets=False))
+        else:
+            way = sum((b.way for _t, b in moved), Decimal(0))
+            took = sum((b.took for _t, b in moved), Decimal(0))
+            if took < 0:
+                gave = f"In {name} you gave back more than it moved your way while you held, over "
+                lines.append(Line(kept_key, (gave, _count(len(moved), "trades", kept_key),
+                                             f" {trades}, {UNDERLYING_POINTS}"), {kept_key: ids}, meets=False))
+            else:
+                rate = took * 100 / way
+                kept = f" points the market moved your way while you held, {UNDERLYING_POINTS}"
+                lines.append(Line(kept_key, (f"In {name} you kept ",
+                                             _write(rate, "percent", "out_of_a_hundred", kept_key), kept),
+                                  {kept_key: ids}, Measure(rate, "percent", "out_of_a_hundred")))
+        usual = _median([b.way for _t, b in group])
+        back = [t for t, b in group if b.way > usual and t.net < 0]
+        went = f" {_s(len(back), 'trade', 'trades')} went more than your usual "
+        lines.append(Line(back_key, (_count(len(back), "trades", back_key), went, _points(usual),
+                                     f" points your way and closed at a loss, in {name}."),
+                          {back_key: _ids(back)}, Measure(len(back), "trades", "count")))
+    too_short = f"{len(short)} {_s(len(short), 'trade', 'trades')} under 45 minutes are too short to measure"
+    notes = (f"{too_short} on minute bars.",) if short else ()
+    if not lines:
+        empty = "No trades held 45 minutes or more with market figures."
+        return Row("execution", "Execution", (), empty=empty, notes=notes)
+    return Row("execution", "Execution", tuple(lines), notes=notes)
 
 
 ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution]

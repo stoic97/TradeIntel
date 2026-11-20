@@ -170,3 +170,59 @@ def test_figures_are_written_through_figure(value):
     figures = {t.trip_id: bars("NIFTY", 10 * (i + 1), D("3.4") * (i + 1)) for i, t in enumerate(trips)}
     html = "".join(str(ln.text) for ln in execution(trips, figures).lines)
     assert re.search(rf'<span class="num">[^<]*{value}', html) or re.search(rf"num[^>]*>.*?{value}", html)
+
+
+# ---------- Read from what the worker stored ----------
+
+@pytest.fixture()
+def sess():
+    import os
+
+    from services.production.db.session import make_engine, make_session, run_migrations
+    engine = make_engine(os.environ["SCOPE_DB"])
+    run_migrations(engine)
+    with make_session(engine) as s_:
+        yield s_
+
+
+def _an_import(sess):
+    from datetime import UTC
+
+    from services.production.db import models as m
+    trader = m.Trader(display_name="t", login_id="exec-reader", password_hash="x", created_at=datetime.now(UTC))
+    sess.add(trader)
+    sess.flush()
+    raw = m.RawFile(trader_id=trader.id, sha256="e" * 64, original_name="t.csv", size=1, stored_path="x",
+                    uploaded_at=datetime.now(UTC))
+    sess.add(raw)
+    sess.flush()
+    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A", adapter_id="dhan_tradebook_v1",
+                   adapter_version="1", filemap_version="1", code_version="t",
+                   outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS, rows_in=1, rows_parsed=1, rows_excluded=0,
+                   fees_available=False, version_no=1, trips_reconstructed=1, density_default_unit="day",
+                   created_at=datetime.now(UTC))
+    sess.add(imp)
+    sess.flush()
+    return imp
+
+
+def test_nothing_stored_reads_as_none(sess):
+    from services.production.api import process_bars
+    assert process_bars.stored(sess, _an_import(sess).id) is None
+
+
+def test_the_stored_figures_are_read_as_points(sess):
+    from services.production.api import process_bars
+    from services.production.db import models as m
+    if not hasattr(m, "BarTradeFigure"):
+        pytest.skip("the bar-figures worker's table is not on this branch yet")
+    imp = _an_import(sess)
+    sess.add(m.BarTradeFigure(import_id=imp.id, trip_id="a", underlying="NIFTY", reason=None, way="62",
+                              against="18", took="21", path=None, short=False))
+    sess.add(m.BarTradeFigure(import_id=imp.id, trip_id="b", underlying="NIFTY",
+                              reason="no market data for this underlying", way=None, against=None, took=None,
+                              path=None, short=False))
+    sess.flush()
+    got = process_bars.stored(sess, imp.id)
+    assert got["a"] == P().Bars("NIFTY", D(62), D(21), None)
+    assert got["b"].reason == "no market data for this underlying" and got["b"].way is None
