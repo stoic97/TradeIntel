@@ -23,7 +23,7 @@ def _point(text: str | None) -> Decimal | None:
 
 def ranges(sess: Session, import_id: int) -> dict[tuple[str, str], Decimal] | None:
     """Each (underlying, day) he traded and how far the market moved that day, in points, or None
-    when none are stored for this import (TICKET-1011)."""
+    when none are stored for this import."""
     model = getattr(m, "BarDayRange", None)
     if model is None:
         return None

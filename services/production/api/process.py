@@ -450,7 +450,7 @@ def execution(reading: Reading) -> Row:
 
 
 
-# ---------- Market (TICKET-1011) ----------
+# ---------- Market ----------
 
 THIRDS = ("quiet", "middle", "wide")
 DAYS_AT = 30  # traded days an underlying needs before its days are split into thirds
