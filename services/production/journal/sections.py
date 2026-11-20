@@ -146,7 +146,7 @@ def build(
     return facts
 
 
-# ---------- Said after the trade (TICKET-1008) ----------
+# ---------- Said after the trade ----------
 
 def said_after(trips: list[Trip], answers: dict[str, dict[str, str]]) -> list[dict[str, Any]]:
     """His answers to the three fixed trade questions, counted the way planned_sl is: for each

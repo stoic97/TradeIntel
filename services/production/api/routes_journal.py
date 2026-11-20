@@ -62,7 +62,7 @@ PER_TRIP_PROMPTS = (
 )
 
 CHOICE_PROMPTS = tuple((name, fields.QUESTIONS[name], fields.CHOICES[name]) for name in fields.CHOICES)
-"""TICKET-1008's three questions, each answered by one tap: a chip is a submit button."""
+"""The three fixed trade questions, each answered by one tap: a chip is a submit button."""
 
 ANSWERED_ON_A_CARD = tuple(name for name, _ in PER_TRIP_PROMPTS) + tuple(fields.CHOICES)
 

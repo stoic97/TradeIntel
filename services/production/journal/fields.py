@@ -42,7 +42,7 @@ CHOICES: dict[str, tuple[tuple[str, str], ...]] = {
     "target": (("price", "A price I set"), ("none", "No target"), ("dont_remember", "Don't remember")),
     "planned": (("yes", "Yes"), ("no", "No"), ("dont_remember", "Don't remember")),
 }
-"""TICKET-1008: three per-trade questions with fixed answers, one tap each, and no free text.
+"""three per-trade questions with fixed answers, one tap each, and no free text.
 They are Journal answers like the stop question, under consent v1's "the Journals written from
 those trades", and go with "every Journal" when he deletes."""
 
@@ -181,7 +181,7 @@ def trips_with_a_planned_stop(sess: Session, *, journal: m.Journal) -> set[str]:
 
 def answers_by_trip(sess: Session, trader: m.Trader) -> dict[str, dict[str, str]]:
     """His answer as it stands to each fixed question, for every trade he has answered, across
-    all his Journals (TICKET-1008). A trade's id is a hash of the trade, so an answer follows it
+    all his Journals. A trade's id is a hash of the trade, so an answer follows it
     from one version of a Journal to the next; the latest answer stands."""
     rows = sess.scalars(
         select(m.JournalFieldEntry)
