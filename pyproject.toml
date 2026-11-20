@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tradeintel"
 version = "0.1.0"
-description = "PlusEV TradeDNA research engine"
+description = "PlusEV Scope — trade-level diagnosis app and research engine"
 requires-python = "==3.11.*"
 # Bounded ranges here; uv.lock carries the exact pins (ADR 004).
 dependencies = [
