@@ -35,7 +35,7 @@ FROZEN: dict[str, Frozen] = {
         "v1.1.1", "87be5b1133475b76b0854e8f3919710de88a1ea23f6b1c9e4904be3836cff1c7"),
     "docs/trade_dna_product_thesis_v1.5.md": Frozen(
         "v1.5", "3d09d024d44bc2459fe7901425d4595e0accffd73c0f8ae7d824f635a05cf963"),
-    "docs/trade_dna_product_thesis_v1.4.md": Frozen(
+    "docs/archive/trade_dna_product_thesis_v1.4.md": Frozen(
         "v1.4", "d2e775ec1bc95a3bda4e463d59a2fd6ae6eb19cf1e537e771588f1fc7ccbaa16"),
     "docs/adr/ADR-001-canonical-trade-record.md": Frozen(
         "Accepted", "0bf5938ba648f029b2f5eba933294bd6f105f0f7e2e2b2cfcf8ebdc1b7154dc8"),
