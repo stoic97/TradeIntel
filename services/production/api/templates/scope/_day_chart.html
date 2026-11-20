@@ -1,0 +1,39 @@
+{#- Your day on the market chart (TICKET-1000). Everything is decided in day_chart.build;
+    nothing here computes. The figures under each trade are 999's, stored, never worked out. -#}
+<section class="dc" id="chart" aria-label="The market that day">
+  {%- if chart.chips %}
+  <nav class="chips" aria-label="Which market">
+    {%- for chip in chart.chips %}
+    <a class="chip{% if chip.current %} chip--on{% endif %}" href="{{ chip.href }}"{% if chip.current %} aria-current="true"{% endif %}>{{ chip.underlying }}</a>
+    {%- endfor %}
+  </nav>
+  {%- endif %}
+  <p class="label label--plain">{{ chart.underlying }}, five-minute candles</p>
+  {%- if chart.message %}
+  <p class="body">{{ chart.message }}.</p>
+  {%- else %}
+  {%- if chart.svg %}<div class="dc-frame">{{ chart.svg }}</div>{% endif %}
+  {%- if chart.day %}
+  <p class="body-small">Open <span class="num">{{ Figure(chart.day.open, "points")|count }}</span> · High <span class="num">{{ Figure(chart.day.high, "points")|count }}</span> · Low <span class="num">{{ Figure(chart.day.low, "points")|count }}</span> · Close <span class="num">{{ Figure(chart.day.close, "points")|count }}</span></p>
+  {%- endif %}
+  {%- if chart.unmarked %}
+  <p class="body-small">{{ chart.crude_line }} <span class="num">{{ Figure(chart.unmarked, "trades")|count }}</span> {{ "trade" if chart.unmarked == 1 else "trades" }} on the next month's contract.</p>
+  {%- endif %}
+  {%- endif %}
+  <ol class="dc-rows">
+    {%- for row in chart.rows %}
+    <li class="dc-row" id="trade-{{ row.number }}">
+      <span class="dc-row__n num">{{ Figure(row.number, "trade")|count }}</span>
+      <span class="dc-row__what">{{ row.instrument }} · {{ row.entry }} to {{ row.exit }}{% if row.note %} · {{ row.note }}{% endif %}</span>
+      {%- if row.reason %}
+      <span class="dc-row__figures body-small">{{ row.reason }}</span>
+      {%- elif row.took is not none %}
+      <span class="dc-row__figures body-small">Went your way <span class="num">{{ Figure(row.way, "points")|count }}</span> pts · Against you <span class="num">{{ Figure(row.against, "points")|count }}</span> pts · You took <span class="num">{{ Figure(row.took, "points")|count }}</span> pts</span>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ol>
+  {%- if chart.table %}
+  <details class="dc-text"><summary>The chart as a table</summary>{{ chart.table }}</details>
+  {%- endif %}
+</section>
