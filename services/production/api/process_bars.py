@@ -1,4 +1,4 @@
-"""The bar figures Your process reads, as stored off the web app (TICKET-1010).
+"""The bar figures Your process reads, as stored off the web app.
 
 The bar-figures worker writes one ``bar_trade_figure`` row per trade of an import: how far its
 underlying went his way while he held, what he took, in points, or the reason it has none. A page
