@@ -117,14 +117,10 @@ def test_winners_and_losers_open_their_trades(view):
 
 # ---------- the rows ----------
 
-def test_by_the_day_he_closed_in_week_order(view):
-    # Mon t04 t05 t08 t09 t11 t12 = 200-1500+250-50+400-600 = -1300; Tue t06 +700;
-    # Thu t07 -100; Fri t01 t02 t10 = +1500; Sun t03 +300. Sum 1100.
-    assert [(r["name"], r["trades"], r["net"]) for r in view["weekdays"]] == [
-        ("Monday", 6, D(-1300)), ("Tuesday", 1, D(700)), ("Thursday", 1, D(-100)),
-        ("Friday", 3, D(1500)), ("Sunday", 1, D(300)),
-    ]
-    assert row(view["weekdays"], "Monday")["href"] == "/mirror/fact/risk/trades?closed=monday"
+def test_the_weekday_table_has_made_way_for_when_you_trade(view):
+    # TICKET-994 replaces "By the day you closed the trade" with the weekday x hour grid,
+    # by when he opened the trade (test_when_you_trade.py).
+    assert "weekdays" not in view
 
 
 def test_by_days_left_to_expiry_when_he_closed(view):
@@ -153,15 +149,16 @@ def test_a_bar_is_scaled_to_the_largest_row_and_sits_on_its_side(view):
 
 
 def test_made_money_needs_thirty_trades_in_its_row(view):
-    assert all(r["rate"] is None for r in view["weekdays"])  # no row reaches 30
+    assert all(r["rate"] is None for r in view["books"])  # no row reaches 30
 
 
 def test_made_money_is_the_reports_win_rate_once_a_row_has_thirty():
-    # 12 winners and 18 losers on Mondays: 12 / 30 = 40.0. One fewer trade and it is too few.
+    # 12 winners and 18 losers in one book: 12 / 30 = 40.0. One fewer trade and it is too few.
+    # (Read on the book rows since TICKET-994 took the weekday table off the page.)
     monday = [trip(f"w{i}", f"2026-03-{2 + 7 * (i % 4):02d}T10:{i:02d}", "10") for i in range(12)]
     monday += [trip(f"l{i}", f"2026-03-{2 + 7 * (i % 4):02d}T11:{i:02d}", "-5") for i in range(18)]
-    assert N.build(monday, {}, gross=True)["weekdays"][0]["rate"] == D("40.0")
-    assert N.build(monday[1:], {}, gross=True)["weekdays"][0]["rate"] is None
+    assert N.build(monday, {}, gross=True)["books"][0]["rate"] == D("40.0")
+    assert N.build(monday[1:], {}, gross=True)["books"][0]["rate"] is None
 
 
 # ---------- the page ----------
@@ -184,8 +181,9 @@ def test_signed_out_it_sends_him_to_sign_in():
 def test_the_page_reads_top_down(client):
     html = client.get("/numbers").text
     order = ["Your numbers", "Your average winner", "Your average loser", "Best day", "Worst day",
-             "Months that made money", "Trades a day", "By the day you closed the trade",
+             "Months that made money", "Trades a day", "When you trade",
              "By how close to expiry you closed", "By book"]
+    assert [w for w in order if w not in html] == []
     at = [html.index(words) for words in order]
     assert at == sorted(at)
     assert "before charges" in html  # the demo has no charges file
@@ -203,7 +201,7 @@ def test_every_link_on_it_opens(client):
     body = html[html.index("Your numbers"):]
     hrefs = {h.replace("&amp;", "&") for h in re.findall(r'href="([^"#]+)"', body)
              if h.startswith(("/mirror", "/numbers"))}
-    assert any(h.startswith("/mirror/fact/risk/trades?closed=") for h in hrefs)
+    assert any(h.startswith("/mirror/fact/risk/trades?opened=") for h in hrefs)
     for href in sorted(hrefs):
         assert client.get(href).status_code == 200, href
 
