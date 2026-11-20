@@ -127,7 +127,7 @@ def test_no_kind_is_asked_twice_in_a_day():
 
 
 def test_a_day_without_timing_asks_exactly_what_915_asked():
-    plain = [{"trip_id": "a", "net": Decimal("-10"), "lots": None}, {"trip_id": "b", "net": Decimal("10"), "lots": None}]
+    plain = [{"trip_id": "a", "net": Decimal(-10), "lots": None}, {"trip_id": "b", "net": Decimal(10), "lots": None}]
     assert [q.key for q in dq.questions_for(plain)] == [q.key for q in dq.questions_for(plain, context=None)]
 
 
