@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import days_worth_a_look as worth
-from services.production.api import door, formatting
+from services.production.api import door, formatting, routes_challenge
 from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
@@ -74,4 +74,5 @@ def home(request: Request):
             latest=latest,
             days_heading="Days worth a look" if named else "Latest Journals",
             continue_step=SM.continue_step(read_pages(sess, trader)),
+            challenge=routes_challenge.home_card(sess, trader, trips),
         )

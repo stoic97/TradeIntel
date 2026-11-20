@@ -26,6 +26,7 @@ from services.production.api import (
     limits,
     routes_admin,
     routes_budget,
+    routes_challenge,
     routes_charges,
     routes_consent,
     routes_deletion,
@@ -96,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_budget.router)
     app.include_router(routes_journal.router)
     app.include_router(routes_rules.router)
+    app.include_router(routes_challenge.router)
     app.include_router(routes_eligibility.router)
     app.include_router(routes_factors.router)
     app.include_router(routes_deletion.router)

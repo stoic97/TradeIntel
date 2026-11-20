@@ -155,7 +155,7 @@ def token(client, path="/challenge"):
 
 
 def set_rule(client, factor="most_trades", value="2"):
-    client.post("/rules/set", data={"factor": factor, "value": value, "csrf_token": token(client, "/rules/set")})
+    client.post("/rules/set", data={"factor": factor, "value": value, "csrf_token": token(client, f"/rules/set?factor={factor}")})
 
 
 def rule_ids(engine) -> list[int]:

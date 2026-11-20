@@ -132,6 +132,8 @@ def delete_trader(
             _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
+    # A challenge names his rules, so it goes before them; its share link goes with it.
+    _delete_where(sess, m.Challenge, m.Challenge.trader_id == trader_id, removed)
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ConsentEvent,
                   m.ChargeStatement, m.RawFile):
@@ -203,6 +205,8 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
     for import_id in sorted(import_ids, reverse=True):
         _delete_where(sess, m.Import, m.Import.id == import_id, removed)
     _delete_where(sess, m.RawFile, m.RawFile.id.in_(raw_ids), removed)
+    # A challenge counted on the demo's days counts nothing once they are gone.
+    _delete_where(sess, m.Challenge, m.Challenge.trader_id == trader.id, removed)
 
     sess.flush()
     _remove_files(sess, store, digests, removed)
@@ -241,7 +245,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer,
-                  m.JournalRememberAnswer):
+                  m.JournalRememberAnswer, m.Challenge):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)
