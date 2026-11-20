@@ -244,7 +244,8 @@ def parse(source: Iterable[str] | str | Path, *, trader_id: str, raw_hash: str) 
                 Rejection(offset, f"expected {len(HEADER)} columns, found {len(values)}", raw)
             )
             continue
-        row = dict(zip(HEADER, values))
+        # the column-count guard above means the lengths match here
+        row = dict(zip(HEADER, values, strict=True))
         try:
             fills.append(_parse_row(row, trader_id=trader_id, raw_hash=raw_hash))
         except RowRejected as exc:

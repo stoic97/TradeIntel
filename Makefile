@@ -1,4 +1,4 @@
-.PHONY: help hash-check hash-lock test test-fast test-repro lint clean run
+.PHONY: help hash-check hash-lock test test-fast test-repro lint fmt type-check clean run
 
 PREREG := services/research/prereg/framework_v1.yaml
 # Every Python tool runs through uv, as the docs do: no activated venv needed (TICKET-929).
@@ -26,6 +26,12 @@ test-repro: ## Run every transformation twice; hashes must match
 
 lint: ## Lint Python
 	$(UV) ruff check .
+
+fmt: ## Format Python (writes). CI runs the --check form
+	$(UV) ruff format .
+
+type-check: ## Type-check services/shared (strict) and services/production
+	$(UV) mypy
 
 clean: ## Remove caches (__pycache__, pytest, ruff, mypy, hypothesis)
 	find . -type d \( -name __pycache__ -o -name .pytest_cache -o -name .ruff_cache -o -name .mypy_cache -o -name .hypothesis \) -prune -exec rm -rf {} + 2>/dev/null || true

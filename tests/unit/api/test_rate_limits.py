@@ -576,7 +576,10 @@ def test_a_known_and_an_unknown_id_get_the_same_refusal(app):
     fail_id(app, "nobody", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
     known = try_login(from_network(app, 900), "owner", "wrong")
     unknown = try_login(from_network(app, 901), "nobody", "wrong")
-    strip = lambda text: CSRF.sub("", re.sub(r"\d+ minutes?", "", text))
+
+    def strip(text):
+        return CSRF.sub("", re.sub(r"\d+ minutes?", "", text))
+
     assert (known.status_code, strip(known.text)) == (unknown.status_code, strip(unknown.text))
 
 

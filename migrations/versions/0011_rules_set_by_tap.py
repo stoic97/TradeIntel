@@ -1,4 +1,5 @@
-"""rule_declaration gains the tapped rule; pre_trade_note holds what he tapped before a click (TICKET-922)
+"""rule_declaration gains the tapped rule; pre_trade_note holds what he tapped
+before a click (TICKET-922)
 
 A rule is built from chips, never typed: a factor his file can check and a value. It is
 dated, and a later one never rewrites it. All new columns are nullable, so the free-text

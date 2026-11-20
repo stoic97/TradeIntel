@@ -39,14 +39,16 @@ dev = [
 # (methodology Rule 5), so the server installs with --no-group research. Bounds unchanged
 # from before the move; tightening them is the research seat's charged change (ADR 004).
 research = [
-  "numpyro>=0.22.0",
-  "pymc>=5.28.5",
-  "nutpie>=0.16.8",
-  "arviz>=0.23.4",
+  "numpyro>=0.22.0,<1",
+  "pymc>=5.28.5,<6",
+  "nutpie>=0.16.8,<1",
+  "arviz>=0.23.4,<1",
+  "scipy>=1.17.1,<2",  # imported directly by engine/evidence, evaluation/sbc and null_rate
 ]
 
 [tool.uv]
-default-groups = ["dev", "research"]
+# The JAX/PyMC stack is opt-in: uv sync --group research (TICKET-943).
+default-groups = ["dev"]
 
 [tool.setuptools.packages.find]
 include = ["services*"]
@@ -60,8 +62,39 @@ addopts = "-q"
 line-length = 100
 target-version = "py311"
 
+# TICKET-943 (audit finding M1). There was no select at all, so only ruff's
+# defaults (E4, E7, E9, F) ran and the DTZ/BLE/B008 noqa directives named rules
+# that were switched off. RUF100 keeps them honest from here.
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DTZ", "BLE", "RUF100"]
+# UP042 rewrites `str, Enum` to StrEnum, which changes what str(member) returns.
+# 19 classes, ctr_v1's Side/Direction/Segment/OptionType among them: stored CTR
+# values and trader-visible text could move, so it is its own ticket with tests.
+ignore = ["UP042"]
+
+# E501 stays on for src. Tests and scripts carry fixture literals, broker sample
+# rows and URLs that ruff format must not split, so the formatter owns line width
+# there (Harshad, 20 Nov 2026). The Groww adapter is the one src exception: its
+# docstring quotes the broker CSV header verbatim, 106 chars on its own.
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]
+"scripts/**" = ["E501"]
+"services/production/ctr/adapters/groww_orders.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
-files = ["services/shared"]
+files = ["services/shared", "services/production"]
 strict = true
 plugins = ["pydantic.mypy"]
+
+# services/production joins the check at 104 files of mostly untyped code, so it
+# starts without the strict flags services/shared has carried from day one
+# (TICKET-943 finding M7). Tightening it is its own ticket.
+[[tool.mypy.overrides]]
+module = "services.production.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+disallow_any_generics = false
+warn_return_any = false

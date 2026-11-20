@@ -601,7 +601,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
     )
     o.append(
         '<defs><pattern id="scope-hatch" width="5" height="5" patternUnits="userSpaceOnUse" '
-        'patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/></pattern></defs>'
+        'patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/>'
+        "</pattern></defs>"
     )
     o.append(f'<path class="scope__outer" d="{d["outerRing"]}"/>')
     for s in d["slices"]:
@@ -694,7 +695,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
             )
         )
     o.append(
-        f'<path class="scope__disc" d="{d["disc"]}"/><path class="scope__centre-ring" d="{d["centreRing"]}"/>'
+        f'<path class="scope__disc" d="{d["disc"]}"/>'
+        f'<path class="scope__centre-ring" d="{d["centreRing"]}"/>'
     )
     R = d["radii"]
     phone = d["size"] == "phone"
@@ -741,10 +743,15 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
             _text_block(lines, d["cx"], d["cy"] - tot / 2, lh, fs, "center", "scope__centre-name")
         )
         scope_href = d["centre"].get("scopeHref") or "/scope"
+        centre_text = _text_block(
+            ["Scope"], d["cx"], d["cy"] + tot / 2 - 13, 13, 11, "center", "scope__centre-scope"
+        )
         o.append(
-            f'<a class="scope__centre-link" href="{scope_href}" aria-label="Scope out to all four chapters">'
-            f"{_text_block(['Scope'], d['cx'], d['cy'] + tot / 2 - 13, 13, 11, 'center', 'scope__centre-scope')}"
-            f'<circle cx="{fmt(d["cx"])}" cy="{fmt(d["cy"])}" r="{fmt(R["disc"])}" class="scope__centre-hit"/></a>'
+            f'<a class="scope__centre-link" href="{scope_href}" '
+            f'aria-label="Scope out to all four chapters">'
+            f"{centre_text}"
+            f'<circle cx="{fmt(d["cx"])}" cy="{fmt(d["cy"])}" '
+            f'r="{fmt(R["disc"])}" class="scope__centre-hit"/></a>'
         )
     o.append("</svg>")
     return "".join(o)
@@ -825,7 +832,8 @@ def chart_share(share: float, w: float, h: float, mini: bool = False) -> dict:
     if not mini:
         y, t = h * 0.8, h * 0.13
         m["stroke"] = (
-            f"M0.5 {fmt(y - t)}V{fmt(y + t)}M0.5 {fmt(y)}H{fmt(w - 0.5)}M{fmt(w - 0.5)} {fmt(y - t)}V{fmt(y + t)}"
+            f"M0.5 {fmt(y - t)}V{fmt(y + t)}M0.5 {fmt(y)}H{fmt(w - 0.5)}"
+            f"M{fmt(w - 0.5)} {fmt(y - t)}V{fmt(y + t)}"
         )
     return _chart(w, h, m)
 
@@ -862,7 +870,10 @@ def chart_hold(
     m = {
         "ink": "".join(circle(x(v), ys[0], r) for v in win_mins),
         "faint": "".join(circle(x(v), ys[1], r) for v in loss_mins),
-        "stroke": f"M{fmt(mw)} {fmt(ys[0] - t)}V{fmt(ys[0] + t)}M{fmt(ml)} {fmt(ys[1] - t)}V{fmt(ys[1] + t)}",
+        "stroke": (
+            f"M{fmt(mw)} {fmt(ys[0] - t)}V{fmt(ys[0] + t)}"
+            f"M{fmt(ml)} {fmt(ys[1] - t)}V{fmt(ys[1] + t)}"
+        ),
         "axis": f"M0 {fmt(ys[0])}H{js_str(w)}M0 {fmt(ys[1])}H{js_str(w)}",
     }
     return _chart(w, h, m)

@@ -14,7 +14,7 @@ from services.shared.schemas.ctr_v1 import Direction, Side
 from tests.unit.test_reconstruction import EQ, T0, fill
 
 DAY = 24 * 60
-I, D, M = "INTRADAY", "DELIVERY", "MARGIN"
+I, D, M = "INTRADAY", "DELIVERY", "MARGIN"  # noqa: E741 - product codes, read as a table
 
 
 def eq(side, qty, price, minutes, product):

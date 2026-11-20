@@ -22,6 +22,17 @@ Layout follows `docs/methodology.md` §5. A folder is created when its first fil
 
 `make help` lists the commands. How a change reaches `main` (branches, commits, review, merge) is in [CONTRIBUTING.md](CONTRIBUTING.md); where the documents the code cites live is in [docs/references.md](docs/references.md).
 
+## Install
+`uv sync` installs the runtime and the dev tools. The Bayesian stack (`numpyro`,
+`pymc`, `nutpie`, `arviz`, `scipy`) is used only by `services/research`, so it is
+opt-in (ADR 004, TICKET-943):
+
+    uv sync --group research
+
+It is needed by `tests/unit/engine`, `tests/unit/evaluation`, `tests/unit/models`
+and `tests/unit/test_sold_trades_accounted.py`. The server installs without it
+(`uv sync --no-group research`).
+
 ## Rules
 1. **No trader data in this repo. Ever** — and that includes anything *derived* from
    one trader's history: a count, a rate, a distribution, a holding-time median. Git

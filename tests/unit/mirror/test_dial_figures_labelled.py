@@ -39,7 +39,7 @@ def _slices(svg: str) -> list[dict]:
     ]
     assert names and len(names) == len(blocks), "one name per slice"
     out = []
-    for name, texts in zip(names, blocks):
+    for name, texts in zip(names, blocks, strict=True):
         fig = " ".join(w for c, w in texts if c in ("scope__figure", "scope__figure-tail") and w)
         out.append({"name": name, "texts": texts, "figure": fig})
     return out

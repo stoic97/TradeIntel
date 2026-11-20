@@ -55,7 +55,10 @@ def test_random_moments_match_real_entries_on_count_month_and_direction():
     real = [d for d in dealt if d.real]
     rand = [d for d in dealt if not d.real]
     assert len(real) == len(rand) == B.CARDS // 2
-    month = lambda d: (d.card.moment.year, d.card.moment.month)
+
+    def month(d):
+        return (d.card.moment.year, d.card.moment.month)
+
     assert Counter(map(month, real)) == Counter(map(month, rand))
     assert Counter(d.card.direction for d in real) == Counter(d.card.direction for d in rand)
     assert {d.card.underlying for d in dealt} == {"NIFTY"}

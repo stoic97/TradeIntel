@@ -107,7 +107,8 @@ def main(path: Path) -> None:
     moments("points/lot", points)
     moments("net/unit", net_per_unit)
     if has_r.any():
-        moments("R", np.array([float(t.r_multiple) for t, ok in zip(fut, has_r) if ok]))
+        paired = zip(fut, has_r, strict=False)
+        moments("R", np.array([float(t.r_multiple) for t, ok in paired if ok]))
     else:
         print("  R            none available — risk unit not yet implemented (TD-013)")
 
