@@ -243,8 +243,10 @@ def test_no_earlier_figure_when_either_reading_is_below_the_minimum():
 
 def test_the_rows_are_a_registry_of_builders():
     p = P()
-    assert [b.__name__ for b in p.ROWS] == ["risk", "sizing", "under_drawdown", "day_control", "consistency"]
-    assert [r.name for r in build(RISK)] == ["Risk", "Sizing", "Under drawdown", "Day control", "Consistency"]
+    assert [b.__name__ for b in p.ROWS] == ["risk", "sizing", "under_drawdown", "day_control", "consistency",
+                                           "execution"]  # TICKET-1010 appends Execution
+    assert [r.name for r in build(RISK)] == ["Risk", "Sizing", "Under drawdown", "Day control", "Consistency",
+                                            "Execution"]
 
 
 def test_a_row_added_to_the_registry_reaches_the_page_and_the_trade_list(monkeypatch):

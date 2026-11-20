@@ -26,6 +26,12 @@ Decided here, and each threshold is his own:
   its count and "too few for a rate".
 * **What moved:** each line's figure beside the earlier reading's, only when both meet the line's
   minimum. No arrow, no colour, no "better" or "worse".
+
+**Execution** (TICKET-1010) reads the bar figures stored off the web app (``bar_trade_figure``: how
+far each trade's underlying went his way while he held, and what he took, in points), never bars.
+Only holds of 45 minutes or more: on 1-minute bars the best price reached is biased for short
+holds (TD-004). Per underlying, because points never add across markets. Kept is Σ took ÷ Σ way
+over the trades the market moved his way, written as what happened, never as money left over.
 """
 from __future__ import annotations
 
@@ -45,6 +51,7 @@ from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
 
 RATE_AT = mx.CLOCK_MINIMUM_TRADES
+MEASURED_HOLD = 45 * 60  # seconds; shorter holds are too short to measure on minute bars (TD-004)
 WORST_AT_LEAST = 3
 BEST_DAYS = 3
 
@@ -67,9 +74,20 @@ LABELS: dict[str, str] = {
 
 
 @dataclass(frozen=True)
+class Bars:
+    """One trade's stored bar figures, in underlying points in its direction, or why it has none."""
+
+    underlying: str | None
+    way: Decimal | None
+    took: Decimal | None
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
 class Reading:
     trips: list
     capital: Decimal | None = None
+    figures: dict[str, Bars] | None = None  # by trip id; None when none are stored for this file
 
 
 @dataclass(frozen=True)
@@ -365,7 +383,23 @@ def consistency(reading: Reading) -> Row:
     return Row("consistency", "Consistency", tuple(lines))
 
 
-ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency]
+# ---------- Execution (TICKET-1010) ----------
+
+def _median(values: list[Decimal]) -> Decimal:
+    return Decimal(str(statistics.median(values))) if values else Decimal(0)
+
+
+def _points(value: Decimal) -> Markup:
+    return _amount(value.normalize() if value == value.to_integral_value() else value.quantize(Decimal("0.1")),
+                   "points")
+
+
+def execution(reading: Reading) -> Row:
+    """RED stub (TICKET-1010)."""
+    return Row("execution", "Execution", (), empty="stub")
+
+
+ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution]
 """The page's rows, in order. A later row is one more builder here."""
 
 HOME_ROWS = ("risk", "sizing", "consistency")
@@ -380,6 +414,15 @@ def _was(today: Line, earlier: Line | None) -> Line:
     return dataclasses.replace(today, was=was)
 
 
+def label(key: str) -> str:
+    """What the trade list says a line's trades are."""
+    if key.startswith("kept-"):
+        return f"Moved your way, held 45 minutes or more, {key[5:]}"
+    if key.startswith("gave-back-"):
+        return f"Went more than your usual move your way and closed at a loss, {key[10:]}"
+    return LABELS.get(key, "From Your process")
+
+
 def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
     rows = [builder(reading) for builder in ROWS]
     if earlier is None or not earlier.trips:
@@ -389,9 +432,9 @@ def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
             for row in rows]
 
 
-def members(trips, key: str) -> frozenset[str] | None:
+def members(trips, key: str, figures: dict[str, Bars] | None = None) -> frozenset[str] | None:
     """The trades behind one figure, asked of the same builders the page drew it from."""
-    reading = Reading(list(trips))
+    reading = Reading(list(trips), figures=figures)
     for builder in ROWS:
         for ln in builder(reading).lines:
             if key in ln.sets:
