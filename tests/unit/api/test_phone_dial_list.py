@@ -87,7 +87,7 @@ def test_every_fact_says_whether_it_sits_on_the_phone_dial():
 
 # ---------- nothing else moves ----------
 
-def test_every_dial_on_the_pages_is_drawn_as_on_main(pages):
+def test_every_dial_on_the_pages_is_drawn_as_on_main(pages):  # noqa: F811 - the shared fixture
     for path, html in pages.items():
         assert [sha(s) for s in dials(html)] == ON_MAIN[path], path
 
@@ -98,7 +98,7 @@ def test_every_chapter_dial_is_drawn_as_on_main():
         assert sha(D.scope_dial(SF.chapter_view(n, figs), size)) == digest, (n, size)
 
 
-def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
+def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):  # noqa: F811 - the shared fixture
     for path, html in pages.items():
         assert "scope__list" not in html, path
 
