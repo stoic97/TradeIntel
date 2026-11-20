@@ -87,7 +87,7 @@
 <div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}{% if size != "desktop" and view.phone_list %}{{ dial_list(view.phone_list) }}{% endif %}</div>
 {%- endmacro %}
 
-{#- The facts a chapter's phone dial has no wedge for (TICKET-1002), directly under it, in the
+{#- The facts a chapter's phone dial has no wedge for (Fact.on_phone_dial), directly under it, in the
     desktop wedge's own words: what the figure is, what it is of, and a link to the fact. It sits in
     the phone dial's own box, so it shows and hides with it. Server-drawn; no script. -#}
 {% macro dial_list(rows) -%}

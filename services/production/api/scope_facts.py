@@ -922,7 +922,7 @@ HUB_FACT = {1: "worst-days", 2: "math", 3: "busiest", 4: "risk"}
 
 
 def _list_row(f, fig: dict, item: dict) -> dict:
-    """A fact said under the phone dial (TICKET-1002), in its desktop wedge's own words."""
+    """A fact said under the phone dial (Fact.on_phone_dial), in its desktop wedge's own words."""
     state = fig["state"]
     return {
         "key": f.key,
@@ -938,7 +938,7 @@ def _list_row(f, fig: dict, item: dict) -> dict:
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre.
 
-    On a phone the dial keeps the wedges main has (TICKET-1002): a fact off it
+    On a phone the dial keeps the wedges main had for it: a fact off it
     (``Fact.on_phone_dial``) is said in ``phone_list`` under the dial instead, and the desktop
     dial draws every fact, in chapter order, from ``desktop_items``. A chapter with every fact on
     its dial has neither, and is drawn as it always was."""
@@ -997,7 +997,7 @@ def _wedge(figure: Figure, phone: str | None = None, shown: str | None = None,
     (TICKET-880). So it is a figure with its noun, and what that figure is of. A phone's wedge
     has less room than a desktop's, so it can give the same fact in fewer words."""
     item = {"figure": shown or figure.with_noun, "label": _lines(figure.of or ""), "state": "",
-            "noun": figure.noun}  # the noun its words are in, for a fact said in a list (TICKET-1002)
+            "noun": figure.noun}  # the noun its words are in, for a fact said under the phone dial
     if phone is not None:
         item["phone_label"] = _lines(phone)
     if phone_shown is not None:

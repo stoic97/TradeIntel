@@ -26,7 +26,28 @@ from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from tests.helpers.hub_answers import CTX
 from tests.helpers.scope_chapters import IMP
-from tests.unit.api.test_dial_states_facts import FIT_ON_A_PHONE, dials, pages  # noqa: F401
+from tests.unit.api import figure_pages as P
+
+PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
+FIT_ON_A_PHONE = -13  # the layout's own limit, as test_dial_states_facts holds every dial to it
+
+
+@pytest.fixture()
+def pages():
+    """Every page with a dial, on the demo upload, as a visitor reads it."""
+    from fastapi.testclient import TestClient
+
+    from services.production.api.app import create_app
+    app = create_app()
+    client = TestClient(app)
+    P._sign_up(client, app.state.engine, "visitor")
+    P._consent(client)
+    client.post("/upload/demo", data={"csrf_token": P._token(client, "/upload")}, follow_redirects=False)
+    return {path: client.get(path).text for path in PAGES}
+
+
+def dials(html: str) -> list[str]:
+    return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
 # Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
 ON_MAIN = {
@@ -87,7 +108,7 @@ def test_every_fact_says_whether_it_sits_on_the_phone_dial():
 
 # ---------- nothing else moves ----------
 
-def test_every_dial_on_the_pages_is_drawn_as_on_main(pages):  # noqa: F811 - the shared fixture
+def test_every_dial_on_the_pages_is_drawn_as_on_main(pages):
     for path, html in pages.items():
         assert [sha(s) for s in dials(html)] == ON_MAIN[path], path
 
@@ -98,7 +119,7 @@ def test_every_chapter_dial_is_drawn_as_on_main():
         assert sha(D.scope_dial(SF.chapter_view(n, figs), size)) == digest, (n, size)
 
 
-def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):  # noqa: F811 - the shared fixture
+def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
         assert "scope__list" not in html, path
 

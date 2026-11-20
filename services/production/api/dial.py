@@ -46,7 +46,7 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
     if centre.get("scopeHref"):
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
-    if size == "desktop" and view.get("desktop_items"):  # every fact keeps its wedge (TICKET-1002)
+    if size == "desktop" and view.get("desktop_items"):  # every fact keeps its wedge (Fact.on_phone_dial)
         view = {**view, "items": view["desktop_items"]}
     items, minis = [], {}
     if view["kind"] == "home" and size == "phone" and any("phone_label" in i for i in view["items"]):

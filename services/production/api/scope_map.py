@@ -26,7 +26,7 @@ class Fact:
     title: str  # the Mirror's own heading
     chart: str  # the scope_geometry chart that draws it
     on_phone_dial: bool = True
-    """Whether it has a wedge on its chapter's phone dial (TICKET-1002). The kit sized the wedges for
+    """Whether it has a wedge on its chapter's phone dial. The kit sized the wedges for
     the facts main has; a fact added after them sits in a list under the phone dial instead, and
     keeps its wedge on desktop. A new fact sets this on purpose: test_phone_dial_list names the rest."""
 
