@@ -23,7 +23,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [adr/ADR-007-scope-v1-runtime.md](adr/ADR-007-scope-v1-runtime.md) | ADR 007: Scope v1 runtime - one process, server-rendered, SQLite, one droplet | frozen amended 2026-11-16 | founder, engineering | 2026-11-20 |
 | [adr/ADR-008-market-data-source.md](adr/ADR-008-market-data-source.md) | ADR 008: market data from the Fyers connection | frozen Accepted | founder | 2026-11-20 |
 | [architecture/tech-stack.md](architecture/tech-stack.md) | The stack the ADRs add up to, and what is deferred | live | engineering | 2026-11-20 |
-| [archive/trade_dna_phase0_plan.md](archive/trade_dna_phase0_plan.md) | Phase 0's nine-week plan of 3 October. Superseded by Thesis v1.5, and for the schedule by TICKET-897's plan (Stages A to D). Restated here so they stay visible: its partner screen (at least 200 crude trades over at least 3 months) and two seat rules (whoever runs the isolation read does not rule on it; whoever writes a test does not validate it) | archived | founder | 2026-11-20 |
+| [archive/trade_dna_phase0_plan.md](archive/trade_dna_phase0_plan.md) | Phase 0's nine-week plan of 3 October. Superseded by Thesis v1.5, and for the schedule by TICKET-897's plan (Stages A to D). Its two seat rules moved to SR-014 in process_standing_rules.md. Its partner screen (at least 200 crude trades over at least 3 months) was a recruiting screen and is spent; it is not the research spec's adequacy bar (at least 100 trips, at least 3 months) | archived | founder | 2026-11-20 |
 | [archive/trade_dna_product_thesis_v1.4.md](archive/trade_dna_product_thesis_v1.4.md) | Product thesis v1.4. Superseded by Thesis v1.5 | archived | founder | 2026-11-20 |
 | [deferrals.md](deferrals.md) | Index of TD ids and their Jira tickets | live | founder | 2026-11-20 |
 | [design/README.md](design/README.md) | What is in docs/design, and where the kit is not what to build | live | founder | 2026-11-20 |
@@ -76,7 +76,7 @@ rows came from.
 | File | Produced by | At commit |
 |---|---|---|
 | `phase0/adr-006-benchmark.json` | `scripts/benchmark_m1_core.py` | `35cc417` |
-| `phase0/finding-bar-b2.json` | `services/research/evaluation/finding_bar.py` | not recorded in the file |
+| `phase0/finding-bar-b2.json` | `services/research/evaluation/finding_bar.py`, run as `python -m services.research.evaluation.finding_bar` | not recorded in the file |
 | `phase0/null-rate-b2.json` | `scripts/run_null_rate_b2.py` | `aa10a0b` |
 | `phase0/recall-b2.json` | `scripts/run_null_rate_b2.py` | `b572fcf` |
 | `phase0/sbc-m1.json` | `scripts/run_sbc_m1.py` | `fab8074` |

@@ -184,6 +184,11 @@ def test_each_phase0_result_file_names_the_script_and_commit_that_produced_it():
         row = next((line for line in lines if f"`{name}`" in line), "")
         script = re.search(r"`((?:scripts|services)/[\w/]+\.py)`", row)
         assert script and exists(script.group(1)), f"{path}: the index names no script for it"
+        source = script.group(1)
+        if source.startswith("services/"):
+            module = source.removesuffix(".py").replace("/", ".")
+            assert "__main__" in read(source), f"{source}: no __main__, so it cannot be re-run"
+            assert f"python -m {module}" in row, f"{path}: the index records no command"
         commit = re.search(r'"code_commit": "([0-9a-f]{7})', read(path))
         if commit:
             assert f"`{commit.group(1)}`" in row, f"{path}: no {commit.group(1)} in its row"
@@ -265,6 +270,9 @@ ELSEWHERE = (
     "claude/scope_prd_v1_2_amendments.md",
     "claude/scope_prd_v1_2_decision_list.md",
     "claude/scope_rn0002_round2_register_12nov.md",
+    "onboarding/tester.md",
+    # On the server, never in git: /srv/scope/data/deletion-log.md (docs/references.md)
+    "docs/runbooks/deletion-log.md",
 )
 
 # Everything else that is cited and is not in git, each with its reason.
@@ -287,10 +295,7 @@ OTHER = {
     "claude/scope_engineering_handoff_v1.md": "testing register: the handoff's old path; now docs/product",
     "mirror.html": "testing register: named there, not in this repository",
     "report.txt": "data-deletion.md: an example inspection report, kept by the founder",
-    "docs/runbooks/deletion-log.md":
-        "data-deletion.md: kept on the server at /srv/scope/data/deletion-log.md, never in git",
     "tracker/record_verify.py": "deploy.md: lives in the feedback-loop repository",
-    "onboarding/tester.md": "deploy.md, uat-smoke.md: lives in the feedback-loop repository",
 }
 
 ALLOWED = {**dict.fromkeys(TARGET_STATE, "target state"),
