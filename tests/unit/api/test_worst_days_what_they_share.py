@@ -42,18 +42,32 @@ from tests.helpers.scope_facts import fact_page
 from tests.helpers.upload import CSRF, sign_up
 
 
-def _day(day: str, at: str, nets: list[int], symbol: str = "CRUDEOIL", option=True) -> list[mx.Trip]:
+def _day(
+    day: str, at: str, nets: list[int], symbol: str = "CRUDEOIL", option=True
+) -> list[mx.Trip]:
     start = datetime.fromisoformat(f"{day}T{at}:00+05:30")
     return [
-        mx.Trip(f"{day}-{n}", symbol, day, start + timedelta(minutes=10 * n),
-                start + timedelta(minutes=10 * n + 5), 300, Decimal(net), 1,
-                s.RiskUnitSourceV1.PREMIUM_PAID, is_option=option)
+        mx.Trip(
+            f"{day}-{n}",
+            symbol,
+            day,
+            start + timedelta(minutes=10 * n),
+            start + timedelta(minutes=10 * n + 5),
+            300,
+            Decimal(net),
+            1,
+            s.RiskUnitSourceV1.PREMIUM_PAID,
+            is_option=option,
+        )
         for n, net in enumerate(nets)
     ]
 
 
-QUIET = [t for d in ("10", "11", "12", "13", "14", "17", "18", "19")
-         for t in _day(f"2025-03-{d}", "09:20", [10], "NIFTY")]
+QUIET = [
+    t
+    for d in ("10", "11", "12", "13", "14", "17", "18", "19")
+    for t in _day(f"2025-03-{d}", "09:20", [10], "NIFTY")
+]
 
 FOUR_CRUDE_EVENINGS = [
     *_day("2025-03-03", "18:05", [-100, -100, -100, 10]),
@@ -73,24 +87,42 @@ def _in_common(trips: list[mx.Trip]) -> list[str]:
 
 
 def test_book_and_hour_on_the_same_four_days_read_as_one_sentence():
-    assert _in_common(FOUR_CRUDE_EVENINGS)[0] == "4 of your 5 worst days were crude options, after 5 pm."
+    assert (
+        _in_common(FOUR_CRUDE_EVENINGS)[0]
+        == "4 of your 5 worst days were crude options, after 5 pm."
+    )
 
 
 def test_true_of_all_five_says_all_five():
-    trips = [*_day("2025-03-03", "18:05", [-100, -100]), *_day("2025-03-04", "18:30", [-200, -100]),
-             *_day("2025-03-05", "19:00", [-300, -100]), *_day("2025-03-06", "17:10", [-400, -100]),
-             *_day("2025-03-07", "20:00", [-500, -100]), *QUIET]
+    trips = [
+        *_day("2025-03-03", "18:05", [-100, -100]),
+        *_day("2025-03-04", "18:30", [-200, -100]),
+        *_day("2025-03-05", "19:00", [-300, -100]),
+        *_day("2025-03-06", "17:10", [-400, -100]),
+        *_day("2025-03-07", "20:00", [-500, -100]),
+        *QUIET,
+    ]
     assert _in_common(trips)[0] == "All 5 of your worst days were crude options, after 5 pm."
 
 
 def test_the_book_is_the_one_every_other_page_calls_it():
     """One definition, trade_book. A share is in Stocks and ETFs; mid-sentence it reads lower-case."""
+
     def share(day):
         entry = datetime.fromisoformat(f"2025-03-0{day}T18:00:00+05:30")
-        return mx.Trip(f"s{day}", "INFY", entry.date().isoformat(), entry,
-                       entry + timedelta(minutes=5), 300, Decimal(-100 * day), 1,
-                       s.RiskUnitSourceV1.UNAVAILABLE, is_option=False,
-                       lines=(mx.TradeLine("INFY", "EQ", "Buy", 1, None, None, Decimal(-100 * day)),))
+        return mx.Trip(
+            f"s{day}",
+            "INFY",
+            entry.date().isoformat(),
+            entry,
+            entry + timedelta(minutes=5),
+            300,
+            Decimal(-100 * day),
+            1,
+            s.RiskUnitSourceV1.UNAVAILABLE,
+            is_option=False,
+            lines=(mx.TradeLine("INFY", "EQ", "Buy", 1, None, None, Decimal(-100 * day)),),
+        )
 
     trips = [*[share(d) for d in (3, 4, 5, 6, 7)], *QUIET]
     assert _in_common(trips)[0] == "All 5 of your worst days were stocks and ETFs, after 5 pm."
@@ -108,56 +140,80 @@ def test_the_words_for_a_book_keep_a_name_in_capitals():
 
 def test_book_and_hour_on_different_days_are_two_sentences():
     """Crude on the first four; after 5 pm on all but 3 Mar. Not the same four days."""
-    trips = [*_day("2025-03-03", "09:20", [-100, 1]), *_day("2025-03-04", "18:30", [-200, 1]),
-             *_day("2025-03-05", "19:00", [-300, 1]), *_day("2025-03-06", "17:10", [-400, 1]),
-             *_day("2025-03-07", "18:00", [-500, 1], "NIFTY"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100, 1]),
+        *_day("2025-03-04", "18:30", [-200, 1]),
+        *_day("2025-03-05", "19:00", [-300, 1]),
+        *_day("2025-03-06", "17:10", [-400, 1]),
+        *_day("2025-03-07", "18:00", [-500, 1], "NIFTY"),
+        *QUIET,
+    ]
     lines = _in_common(trips)
     assert "4 of your 5 worst days were crude options." in lines
     assert "4 of your 5 worst days began after 5 pm." in lines
 
 
 def test_the_number_of_trades_is_against_the_normal_day():
-    assert ("All 5 of your worst days had more trades than your normal day of 1."
-            in _in_common(FOUR_CRUDE_EVENINGS))
+    assert "All 5 of your worst days had more trades than your normal day of 1." in _in_common(
+        FOUR_CRUDE_EVENINGS
+    )
 
 
 def test_the_longest_losing_run_is_the_most_all_of_them_reached():
     """The five runs are 3, 2, 2, 2, 2. All five reached 2, so that's what can be said."""
-    assert ("All 5 of your worst days had at least 2 losses in a row."
-            in _in_common(FOUR_CRUDE_EVENINGS))
+    assert "All 5 of your worst days had at least 2 losses in a row." in _in_common(
+        FOUR_CRUDE_EVENINGS
+    )
 
 
 def test_a_run_shared_by_four_uses_the_most_those_four_reached():
-    trips = [*_day("2025-03-03", "09:20", [-100, -100, -100, 1], "A"),
-             *_day("2025-03-04", "11:00", [-200, -100, -100, 1], "B"),
-             *_day("2025-03-05", "13:00", [-300, -100, -100, 1], "C"),
-             *_day("2025-03-06", "18:00", [-400, -100, -100, 1], "D"),
-             *_day("2025-03-07", "19:00", [-900, 1, 1, 1], "E"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100, -100, -100, 1], "A"),
+        *_day("2025-03-04", "11:00", [-200, -100, -100, 1], "B"),
+        *_day("2025-03-05", "13:00", [-300, -100, -100, 1], "C"),
+        *_day("2025-03-06", "18:00", [-400, -100, -100, 1], "D"),
+        *_day("2025-03-07", "19:00", [-900, 1, 1, 1], "E"),
+        *QUIET,
+    ]
     assert "4 of your 5 worst days had at least 3 losses in a row." in _in_common(trips)
 
 
 def test_one_loss_is_not_a_run():
-    trips = [*_day("2025-03-03", "09:20", [-100, 1], "A"), *_day("2025-03-04", "11:00", [-200, 1], "B"),
-             *_day("2025-03-05", "13:00", [-300, 1], "C"), *_day("2025-03-06", "18:00", [-400, 1], "D"),
-             *_day("2025-03-07", "19:00", [-500, 1], "E"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100, 1], "A"),
+        *_day("2025-03-04", "11:00", [-200, 1], "B"),
+        *_day("2025-03-05", "13:00", [-300, 1], "C"),
+        *_day("2025-03-06", "18:00", [-400, 1], "D"),
+        *_day("2025-03-07", "19:00", [-500, 1], "E"),
+        *QUIET,
+    ]
     assert not [line for line in _in_common(trips) if "in a row" in line]
 
 
 def test_a_day_of_two_books_counts_for_the_one_with_more_trades():
     """Crude on 3 Mar has one NIFTY trade beside three crude ones: it's a crude day."""
-    trips = [*_day("2025-03-03", "18:05", [-100, -100, -100]),
-             *_day("2025-03-03", "20:00", [1], "NIFTY"),
-             *_day("2025-03-04", "18:30", [-200, 1]), *_day("2025-03-05", "19:00", [-300, 1]),
-             *_day("2025-03-06", "17:10", [-400, 1]), *_day("2025-03-07", "09:20", [-500, 1], "NIFTY"),
-             *QUIET]
+    trips = [
+        *_day("2025-03-03", "18:05", [-100, -100, -100]),
+        *_day("2025-03-03", "20:00", [1], "NIFTY"),
+        *_day("2025-03-04", "18:30", [-200, 1]),
+        *_day("2025-03-05", "19:00", [-300, 1]),
+        *_day("2025-03-06", "17:10", [-400, 1]),
+        *_day("2025-03-07", "09:20", [-500, 1], "NIFTY"),
+        *QUIET,
+    ]
     assert _in_common(trips)[0] == "4 of your 5 worst days were crude options, after 5 pm."
 
 
 def test_nothing_shared_says_so_in_the_founders_words():
     """Five books, three parts of the day split 2/2/1, one trade each like the normal day."""
-    trips = [*_day("2025-03-03", "09:20", [-100], "A"), *_day("2025-03-04", "09:30", [-200], "B"),
-             *_day("2025-03-05", "13:00", [-300], "C"), *_day("2025-03-06", "14:00", [-400], "D"),
-             *_day("2025-03-07", "18:00", [-500], "E"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100], "A"),
+        *_day("2025-03-04", "09:30", [-200], "B"),
+        *_day("2025-03-05", "13:00", [-300], "C"),
+        *_day("2025-03-06", "14:00", [-400], "D"),
+        *_day("2025-03-07", "18:00", [-500], "E"),
+        *QUIET,
+    ]
     assert _in_common(trips) == []
     assert "They don't share a book, an hour or a size." in readable(fact_page("worst-days", trips))
 
@@ -188,9 +244,14 @@ def test_the_share_facts_one_new_row_is_one_line_here():
 
 
 def test_nothing_shared_leads_with_the_rupees():
-    trips = [*_day("2025-03-03", "09:20", [-100], "A"), *_day("2025-03-04", "09:30", [-200], "B"),
-             *_day("2025-03-05", "13:00", [-300], "C"), *_day("2025-03-06", "14:00", [-400], "D"),
-             *_day("2025-03-07", "18:00", [-500], "E"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100], "A"),
+        *_day("2025-03-04", "09:30", [-200], "B"),
+        *_day("2025-03-05", "13:00", [-300], "C"),
+        *_day("2025-03-06", "14:00", [-400], "D"),
+        *_day("2025-03-07", "18:00", [-500], "E"),
+        *QUIET,
+    ]
     html = fact_page("worst-days", trips)
     assert html.index("num--hero") < html.index("They don't share a book")
 
@@ -221,7 +282,12 @@ def test_there_is_a_block_for_each_of_the_five_worst_days_worst_first():
 
 
 def test_a_block_has_the_running_result_from_first_trade_to_last():
-    assert _block("2025-03-03").running == (Decimal(-100), Decimal(-200), Decimal(-300), Decimal(-290))
+    assert _block("2025-03-03").running == (
+        Decimal(-100),
+        Decimal(-200),
+        Decimal(-300),
+        Decimal(-290),
+    )
 
 
 def test_a_block_counts_what_came_after_the_first_trade():
@@ -237,26 +303,40 @@ def test_a_block_is_collapsed_and_opens_on_its_trades():
     assert first.index("</summary>") < first.index('class="trades"'), "the list opens on tap"
 
 
-@pytest.mark.parametrize("words", [
-    "07 Mar 2025", "NIFTY", "2 trades", "09:20 to 09:35", "−₹600",
-    "First trade −₹300, then 1 more trade; 1 lost.",
-])
+@pytest.mark.parametrize(
+    "words",
+    [
+        "07 Mar 2025",
+        "NIFTY",
+        "2 trades",
+        "09:20 to 09:35",
+        "−₹600",
+        "First trade −₹300, then 1 more trade; 1 lost.",
+    ],
+)
 def test_a_block_says_the_day_at_a_glance(words):
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
-                        flags=re.DOTALL).group(0)
+    summary = re.search(
+        r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS), flags=re.DOTALL
+    ).group(0)
     assert words in readable(summary)
 
 
 def test_a_block_draws_its_running_result():
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
-                        flags=re.DOTALL).group(0)
+    summary = re.search(
+        r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS), flags=re.DOTALL
+    ).group(0)
     assert '<svg class="day-block__line"' in summary and "<polyline" in summary
 
 
 def test_a_one_trade_day_reads_in_the_singular():
-    trips = [*_day("2025-03-03", "09:20", [-100], "A"), *_day("2025-03-04", "09:30", [-200, 1], "B"),
-             *_day("2025-03-05", "13:00", [-300, 1], "C"), *_day("2025-03-06", "14:00", [-400, 1], "D"),
-             *_day("2025-03-07", "18:00", [-500, 1], "E"), *QUIET]
+    trips = [
+        *_day("2025-03-03", "09:20", [-100], "A"),
+        *_day("2025-03-04", "09:30", [-200, 1], "B"),
+        *_day("2025-03-05", "13:00", [-300, 1], "C"),
+        *_day("2025-03-06", "14:00", [-400, 1], "D"),
+        *_day("2025-03-07", "18:00", [-500, 1], "E"),
+        *QUIET,
+    ]
     assert "One trade: −₹100." in readable(fact_page("worst-days", trips))
 
 
@@ -264,8 +344,16 @@ def test_a_trade_held_past_the_day_says_so_in_the_span():
     trips = list(FOUR_CRUDE_EVENINGS)
     held = _day("2025-03-07", "09:20", [-300, -300], "NIFTY")[1]
     trips[trips.index(next(t for t in trips if t.trip_id == held.trip_id))] = mx.Trip(
-        held.trip_id, held.symbol, held.trading_day, held.entry_ts,
-        held.entry_ts + timedelta(days=3), 259200, held.net, 1, held.risk_unit_source)
+        held.trip_id,
+        held.symbol,
+        held.trading_day,
+        held.entry_ts,
+        held.entry_ts + timedelta(days=3),
+        259200,
+        held.net,
+        1,
+        held.risk_unit_source,
+    )
     assert "09:20, last trade closed 10 Mar 2025" in readable(fact_page("worst-days", trips))
 
 
@@ -294,10 +382,15 @@ def test_chapter_one_has_the_plain_counts_then_its_two_facts():
 
 def test_the_dial_says_findings_not_counts():
     ctx = SF.record_context(FOUR_CRUDE_EVENINGS)
-    items = [i for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
-             if i["name"] != S.FACTS["hidden"].title]  # TICKET-910: its wedge is a plain count
+    items = [
+        i
+        for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
+        if i["name"] != S.FACTS["hidden"].title
+    ]  # TICKET-910: its wedge is a plain count
     assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
-        ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
+        ("5 days", "came to −₹2,064"),
+        ("+₹20", "your best trade"),
+    ]
 
 
 def _imp():
@@ -315,8 +408,12 @@ def client(scope_environment):
     run_migrations(engine)
     signed_in = sign_up(TestClient(create_app()), engine, "WORST", "worst")
     token = CSRF.search(signed_in.get("/upload").text).group(1)
-    sent = signed_in.post("/upload", files={"file": ("t.csv", UPLOAD_FILE.encode(), "text/csv")},
-                          data={"csrf_token": token}, follow_redirects=False)
+    sent = signed_in.post(
+        "/upload",
+        files={"file": ("t.csv", UPLOAD_FILE.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
     signed_in.engine_for_test = engine
     return signed_in
@@ -324,9 +421,16 @@ def client(scope_environment):
 
 def _flag(client, day: str, note: str = "It was a spread.", **more):
     html = client.get("/mirror/fact/worst-days").text
-    return client.post("/mirror/feedback/day", data={
-        "trading_day": day, "note": note, "csrf_token": CSRF.search(html).group(1), **more,
-    }, follow_redirects=False)
+    return client.post(
+        "/mirror/feedback/day",
+        data={
+            "trading_day": day,
+            "note": note,
+            "csrf_token": CSRF.search(html).group(1),
+            **more,
+        },
+        follow_redirects=False,
+    )
 
 
 def _a_worst_day(client) -> str:
@@ -374,8 +478,12 @@ def test_a_flag_on_a_day_not_on_the_list_is_refused(client):
 
 
 def test_a_flag_needs_its_csrf_token(client):
-    assert client.post("/mirror/feedback/day", data={"trading_day": "2024-06-14"},
-                       follow_redirects=False).status_code == 403
+    assert (
+        client.post(
+            "/mirror/feedback/day", data={"trading_day": "2024-06-14"}, follow_redirects=False
+        ).status_code
+        == 403
+    )
 
 
 def test_a_day_flag_does_not_use_up_the_reports_own_question(client):

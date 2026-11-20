@@ -28,14 +28,21 @@ from tests.helpers.scope_facts import fact_page
 
 def held(net: int, day: str, at: str) -> mx.Trip:
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
-    return replace(one_day([net], day)[0], trip_id=f"held-{day}-{at}", entry_ts=entry,
-                   exit_ts=entry + timedelta(days=2), holding_seconds=172800,
-                   net=Decimal(net))
+    return replace(
+        one_day([net], day)[0],
+        trip_id=f"held-{day}-{at}",
+        entry_ts=entry,
+        exit_ts=entry + timedelta(days=2),
+        holding_seconds=172800,
+        net=Decimal(net),
+    )
 
 
 SAME_DAY = DOWN + one_day([40, 20], "2026-09-02")
-HELD = [held(5000, "2026-09-01", "09:50"),
-        *[held(100 + i, "2026-09-03", f"10:{i:02d}") for i in range(8)]]
+HELD = [
+    held(5000, "2026-09-01", "09:50"),
+    *[held(100 + i, "2026-09-03", f"10:{i:02d}") for i in range(8)],
+]
 FILE = sorted(SAME_DAY + HELD, key=lambda t: t.entry_ts)
 
 
@@ -50,8 +57,13 @@ def test_held_positions_move_nothing_in_table_one():
 
 def test_held_positions_move_nothing_in_table_two():
     with_held, without = SF.record_context(FILE), SF.record_context(SAME_DAY)
-    for key in ("after_strike", "after_lots", "rest_strike", "rest_lots",
-                "days_with_the_condition"):
+    for key in (
+        "after_strike",
+        "after_lots",
+        "rest_strike",
+        "rest_lots",
+        "days_with_the_condition",
+    ):
         assert with_held[key] == without[key], key
 
 
@@ -64,8 +76,9 @@ def test_chapter_two_and_chapter_three_describe_the_same_trades():
 
 def test_the_sentence_gate_is_asked_about_same_day_trades_only(monkeypatch):
     asked = []
-    monkeypatch.setattr(mx, "post_loss_sentence_may_show",
-                        lambda trips: asked.append(trips) or False)
+    monkeypatch.setattr(
+        mx, "post_loss_sentence_may_show", lambda trips: asked.append(trips) or False
+    )
     SF.facts(SF.record_context(FILE), IMP)
     assert asked, "the gate was not asked"
     assert all(t.closed_same_day for trips in asked for t in trips)

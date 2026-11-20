@@ -34,7 +34,10 @@ def chart_parts(trips=EVENING) -> dict[str, str]:
 def test_the_headline_says_when_in_what_and_what_it_cost_with_the_year():
     html = fact_page("run", trips=EVENING)
     title = re.search(r'<h1 class="title fact__title">(.*?)</h1>', html, re.DOTALL)[1]
-    assert readable(title) == "6 losses in a row, in one hour: 03 Mar 2026, WIDGETOIL options, −₹1,000."
+    assert (
+        readable(title)
+        == "6 losses in a row, in one hour: 03 Mar 2026, WIDGETOIL options, −₹1,000."
+    )
 
 
 def test_a_run_across_days_reads_true():
@@ -198,7 +201,10 @@ def test_each_day_of_a_run_is_named_by_its_date_alone():
         trip("b", "2026-03-05", "09:00:00", "09:10:00", -100),
     ]
     html = fact_page("run", trips=trips)
-    assert re.findall(r'<span class="trades__day">(.*?)</span>', html) == ["04 Mar 2026", "05 Mar 2026"]
+    assert re.findall(r'<span class="trades__day">(.*?)</span>', html) == [
+        "04 Mar 2026",
+        "05 Mar 2026",
+    ]
     assert "Day " not in readable(html)
 
 

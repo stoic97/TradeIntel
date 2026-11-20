@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/mirror/test_run_story.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/mirror/test_run_story.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
@@ -11,21 +10,46 @@ from services.shared.schemas import scope_v1 as s
 
 
 def trip(
-    trip_id, day, opened, closed, net, *, symbol="WIDGETOIL", kind="CE", strike=5000, qty=50,
-    closed_day=None, segment="OPT",
+    trip_id,
+    day,
+    opened,
+    closed,
+    net,
+    *,
+    symbol="WIDGETOIL",
+    kind="CE",
+    strike=5000,
+    qty=50,
+    closed_day=None,
+    segment="OPT",
 ):
     entry = datetime.fromisoformat(f"{day}T{opened}+05:30")
     exit_ = datetime.fromisoformat(f"{closed_day or day}T{closed}+05:30")
     is_option = segment == "OPT"
     line = mx.TradeLine(
-        symbol=symbol, segment=segment, side="Buy", quantity=qty,
-        entry_price=Decimal(10), exit_price=Decimal(9), net=Decimal(net),
+        symbol=symbol,
+        segment=segment,
+        side="Buy",
+        quantity=qty,
+        entry_price=Decimal(10),
+        exit_price=Decimal(9),
+        net=Decimal(net),
         strike=Decimal(strike) if is_option else None,
-        option_type=kind if is_option else None, entry_ts=entry,
+        option_type=kind if is_option else None,
+        entry_ts=entry,
     )
     return mx.Trip(
-        trip_id, symbol, day, entry, exit_, int((exit_ - entry).total_seconds()), Decimal(net), 1,
-        s.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=(line,),
+        trip_id,
+        symbol,
+        day,
+        entry,
+        exit_,
+        int((exit_ - entry).total_seconds()),
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+        is_option=is_option,
+        lines=(line,),
     )
 
 
@@ -35,8 +59,16 @@ def spread(trip_id, day, opened, closed, net):
     second = trip("y", day, opened, closed, 0, kind="PE", strike=4900)
     legs = (mx.Leg("Bought 5000 CE", Decimal(net)), mx.Leg("Bought 4900 PE", Decimal(0)))
     return mx.Trip(
-        trip_id, "WIDGETOIL", day, first.entry_ts, first.exit_ts, first.holding_seconds,
-        Decimal(net), 1, s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, legs=legs,
+        trip_id,
+        "WIDGETOIL",
+        day,
+        first.entry_ts,
+        first.exit_ts,
+        first.holding_seconds,
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,
+        legs=legs,
         lines=(first.lines[0], second.lines[0]),
     )
 

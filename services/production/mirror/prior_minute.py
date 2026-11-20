@@ -151,7 +151,9 @@ def _sign(move: float) -> int:
     return (move > 0) - (move < 0)
 
 
-def _counted(signs: list[int], directions: list[int], rng: np.random.Generator, draws: int) -> Count:
+def _counted(
+    signs: list[int], directions: list[int], rng: np.random.Generator, draws: int
+) -> Count:
     """The agreeing count, and the band from recounting with the directions shuffled."""
     if not signs:
         return Count(0, 0, None)
@@ -163,8 +165,13 @@ def _counted(signs: list[int], directions: list[int], rng: np.random.Generator, 
     return Count(int((s * d > 0).sum()), len(signs), (int(np.floor(low)), int(np.ceil(high))))
 
 
-def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
-          seed: int = SEED, draws: int = DRAWS) -> PriorMinute:
+def count(
+    entries: Sequence[Entry],
+    series: Mapping[str, MinuteBars],
+    *,
+    seed: int = SEED,
+    draws: int = DRAWS,
+) -> PriorMinute:
     """Count each trip before and after its entry minute, beside its shuffle control."""
     unmeasured: list[Unmeasured] = []
     before_signs: list[int] = []
@@ -202,7 +209,12 @@ def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
     rng = np.random.default_rng(seed)  # one generator, drawn in a fixed order
     before = _counted(before_signs, before_dirs, rng, draws)
     after = {h: _counted(after_signs[h], after_dirs[h], rng, draws) for h in HORIZONS}
-    return PriorMinute(total=len(entries), before=before, after=after,
-                       unmeasured=tuple(unmeasured),
-                       unmeasured_after={h: tuple(after_out[h]) for h in HORIZONS},
-                       seed=seed, draws=draws)
+    return PriorMinute(
+        total=len(entries),
+        before=before,
+        after=after,
+        unmeasured=tuple(unmeasured),
+        unmeasured_after={h: tuple(after_out[h]) for h in HORIZONS},
+        seed=seed,
+        draws=draws,
+    )

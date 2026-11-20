@@ -101,6 +101,5 @@ def test_no_unexplained_large_number_is_in_the_code():
         "large numbers in non-fixture code. Each is either a trader's figure, "
         "which must go, or a constant, which needs a line in ALLOWED saying what "
         "it is:\n"
-        + "\n".join(f"  {value}: {', '.join(where)}"
-                    for value, where in sorted(found.items()))
+        + "\n".join(f"  {value}: {', '.join(where)}" for value, where in sorted(found.items()))
     )

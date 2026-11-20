@@ -10,6 +10,7 @@ Every unit that arrived is matched into a trip (consuming one unit on each side)
 still open, or inside a trip we refused. Research Spec s4.2: unresolved positions
 are flagged, never forced.
 """
+
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -30,6 +31,7 @@ def signed_value(f):
 
 
 # ---------------------------------------------------------------- the basics
+
 
 def test_empty_input_gives_an_empty_result():
     r = reconstruct([])
@@ -68,6 +70,7 @@ def test_the_trip_cites_every_fill_that_built_it():
 
 
 # ---------------------------------------------------------------- FIFO
+
 
 def test_several_buys_then_one_sell_uses_a_weighted_average_entry():
     r = reconstruct(
@@ -115,6 +118,7 @@ def test_a_flip_closes_the_long_and_opens_a_short():
 
 # ---------------------------------------------------------------- scope and R
 
+
 def test_a_long_option_trip_carries_the_exact_premium_as_its_risk_unit():
     r = reconstruct([fill(Side.BUY, 30, "153.18", 0), fill(Side.SELL, 30, 160, 5)])
     t = r.round_trips[0]
@@ -133,15 +137,14 @@ def test_a_short_option_trip_is_skipped_with_its_reason():
 
 
 def test_an_equity_trip_has_no_r():
-    r = reconstruct(
-        [fill(Side.BUY, 10, 100, 0, **EQ), fill(Side.SELL, 10, 110, 5, **EQ)]
-    )
+    r = reconstruct([fill(Side.BUY, 10, 100, 0, **EQ), fill(Side.SELL, 10, 110, 5, **EQ)])
     t = r.round_trips[0]
     assert t.risk_unit is None
     assert t.r_multiple is None
 
 
 # ---------------------------------------------------------------- separation
+
 
 def test_different_contracts_do_not_interact():
     r = reconstruct(

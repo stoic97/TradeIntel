@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/api/test_chapter_three_describes.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_chapter_three_describes.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
@@ -21,8 +20,16 @@ def one_day(nets: list[int], day: str = "2026-09-01") -> list[mx.Trip]:
     out = []
     for i, (t, net) in enumerate(zip(trips_from([1] * len(nets)), nets, strict=True)):
         entry = start + timedelta(minutes=20 * i)
-        out.append(replace(t, trip_id=f"{day}-{i}", trading_day=day, entry_ts=entry,
-                           exit_ts=entry + timedelta(minutes=10), net=mx.Decimal(net)))
+        out.append(
+            replace(
+                t,
+                trip_id=f"{day}-{i}",
+                trading_day=day,
+                entry_ts=entry,
+                exit_ts=entry + timedelta(minutes=10),
+                net=mx.Decimal(net),
+            )
+        )
     return out
 
 

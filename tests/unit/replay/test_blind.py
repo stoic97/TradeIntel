@@ -14,7 +14,11 @@ from services.production.mirror.prior_minute import IST, Bar, BarTable
 from services.production.replay import blind as B
 
 TODAY = date(2026, 11, 13)
-DAYS = [date(2025, 3, 3) + timedelta(days=i) for i in range(120) if (date(2025, 3, 3) + timedelta(days=i)).weekday() < 5]
+DAYS = [
+    date(2025, 3, 3) + timedelta(days=i)
+    for i in range(120)
+    if (date(2025, 3, 3) + timedelta(days=i)).weekday() < 5
+]
 
 
 def walk(seed: int = 5, days=DAYS) -> BarTable:
@@ -33,13 +37,16 @@ def entries(table: BarTable, n: int = 12) -> list[B.Entry]:
     starts = sorted(table.bars)
     rng = np.random.default_rng(9)
     picks = sorted(rng.choice(np.arange(200, len(starts) - 200), size=n, replace=False))
-    return [B.Entry(f"t{i}", "NIFTY", starts[int(k)] + timedelta(seconds=20), 1 if i % 3 else -1)
-            for i, k in enumerate(picks)]
+    return [
+        B.Entry(f"t{i}", "NIFTY", starts[int(k)] + timedelta(seconds=20), 1 if i % 3 else -1)
+        for i, k in enumerate(picks)
+    ]
 
 
 def deal(table, es, **kw):
-    return B.deal(es, {"NIFTY": table}, TODAY, key="trader-1",
-                  candidates={"NIFTY": sorted(table.bars)}, **kw)
+    return B.deal(
+        es, {"NIFTY": table}, TODAY, key="trader-1", candidates={"NIFTY": sorted(table.bars)}, **kw
+    )
 
 
 def test_random_moments_match_real_entries_on_count_month_and_direction():
@@ -90,7 +97,9 @@ def test_the_card_holds_the_window_before_the_moment_and_no_answer():
     d = deal(table, entries(table))[0]
     assert len(d.card.shown) == B.WINDOW_MINUTES
     assert d.card.shown[-1] == table.bars[d.card.moment - timedelta(minutes=1)]
-    assert not {"real", "trip_id", "points", "agreed"} & {f.name for f in dataclasses.fields(B.Card)}
+    assert not {"real", "trip_id", "points", "agreed"} & {
+        f.name for f in dataclasses.fields(B.Card)
+    }
 
 
 def test_the_reveal_reads_from_the_last_close_shown_to_the_horizon():
@@ -125,15 +134,31 @@ def test_the_score_counts_calls_and_compares_them_with_a_coin():
 
 
 def _trip(lines):
-    return mx.Trip(trip_id="x", symbol="NIFTY", trading_day="2025-03-03",
-                   entry_ts=datetime(2025, 3, 3, 10, tzinfo=IST), exit_ts=datetime(2025, 3, 3, 11, tzinfo=IST),
-                   holding_seconds=3600, net=Decimal(0), lots=1,
-                   risk_unit_source=mx.s.RiskUnitSourceV1.PREMIUM_PAID, lines=tuple(lines))
+    return mx.Trip(
+        trip_id="x",
+        symbol="NIFTY",
+        trading_day="2025-03-03",
+        entry_ts=datetime(2025, 3, 3, 10, tzinfo=IST),
+        exit_ts=datetime(2025, 3, 3, 11, tzinfo=IST),
+        holding_seconds=3600,
+        net=Decimal(0),
+        lots=1,
+        risk_unit_source=mx.s.RiskUnitSourceV1.PREMIUM_PAID,
+        lines=tuple(lines),
+    )
 
 
 def _line(side, segment="OPT", kind="CE"):
-    return mx.TradeLine(symbol="NIFTY", segment=segment, side=side, quantity=1, entry_price=None,
-                        exit_price=None, net=Decimal(0), option_type=kind if segment == "OPT" else None)
+    return mx.TradeLine(
+        symbol="NIFTY",
+        segment=segment,
+        side=side,
+        quantity=1,
+        entry_price=None,
+        exit_price=None,
+        net=Decimal(0),
+        option_type=kind if segment == "OPT" else None,
+    )
 
 
 def test_direction_comes_from_the_shared_rule():

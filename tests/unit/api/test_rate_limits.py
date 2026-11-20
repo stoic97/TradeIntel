@@ -69,8 +69,15 @@ def full_disk(monkeypatch, percent) -> None:
 # ---------- The numbers ----------
 
 
-@pytest.mark.parametrize("name", ["SIGNUPS_PER_IP_PER_HOUR", "UPLOADS_PER_ACCOUNT_PER_DAY",
-                                  "UPLOADS_REFUSED_AT_DISK_PERCENT", "MAX_REQUEST_BYTES"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "SIGNUPS_PER_IP_PER_HOUR",
+        "UPLOADS_PER_ACCOUNT_PER_DAY",
+        "UPLOADS_REFUSED_AT_DISK_PERCENT",
+        "MAX_REQUEST_BYTES",
+    ],
+)
 def test_each_cap_is_a_constant_with_its_argument(name):
     assert isinstance(getattr(k, name), int)
     assert len(k.ARGUMENTS[name]) > 40
@@ -109,7 +116,9 @@ def test_another_connection_is_not_touched_by_the_cap(app):
     first = TestClient(app, client=("203.0.113.7", 50000))
     for n in range(k.SIGNUPS_PER_IP_PER_HOUR + 1):
         sign_up(first, f"trader{n}")
-    assert sign_up(TestClient(app, client=("203.0.113.8", 50000)), "someone-else").status_code == 303
+    assert (
+        sign_up(TestClient(app, client=("203.0.113.8", 50000)), "someone-else").status_code == 303
+    )
 
 
 def test_a_mistake_does_not_use_up_the_cap(app):
@@ -154,11 +163,14 @@ def test_a_connection_that_went_quiet_is_forgotten():
     assert "a" not in count.held()
 
 
-@pytest.mark.parametrize(("host", "same"), [
-    ("2001:db8:1:2:aaaa::1", "2001:db8:1:2:bbbb::9"),  # one IPv6 customer holds a whole /64
-    ("203.0.113.7", "203.0.113.7"),
-    ("::ffff:203.0.113.7", "203.0.113.7"),
-])
+@pytest.mark.parametrize(
+    ("host", "same"),
+    [
+        ("2001:db8:1:2:aaaa::1", "2001:db8:1:2:bbbb::9"),  # one IPv6 customer holds a whole /64
+        ("203.0.113.7", "203.0.113.7"),
+        ("::ffff:203.0.113.7", "203.0.113.7"),
+    ],
+)
 def test_one_network_is_one_connection(host, same):
     assert limits.network(host) == limits.network(same)
 
@@ -255,7 +267,9 @@ def midnight_ist() -> datetime:
 
 def test_the_day_turns_over_at_midnight_in_india(app, engine):
     client = sign_up_with_consent(TestClient(app), engine, "U", "rikk")
-    stored_files(engine, "rikk", k.UPLOADS_PER_ACCOUNT_PER_DAY, midnight_ist() - timedelta(minutes=1))
+    stored_files(
+        engine, "rikk", k.UPLOADS_PER_ACCOUNT_PER_DAY, midnight_ist() - timedelta(minutes=1)
+    )
     assert upload(client, path=GOOD).status_code == 303
 
 
@@ -277,9 +291,13 @@ def test_a_refusal_still_reaches_the_page_when_htmx_sends_it(app, engine):
     client = sign_up_with_consent(TestClient(app), engine, "U", "rikk")
     stored_files(engine, "rikk", k.UPLOADS_PER_ACCOUNT_PER_DAY, datetime.now(UTC))
     csrf = CSRF.search(client.get("/upload").text).group(1)
-    refused = client.post("/upload", files={"file": ("t.csv", GOOD.read_bytes(), "text/csv")},
-                          data={"csrf_token": csrf}, headers={"HX-Request": "true"},
-                          follow_redirects=False)
+    refused = client.post(
+        "/upload",
+        files={"file": ("t.csv", GOOD.read_bytes(), "text/csv")},
+        data={"csrf_token": csrf},
+        headers={"HX-Request": "true"},
+        follow_redirects=False,
+    )
     assert refused.status_code == 429
     assert "Try again tomorrow." in refused.text
     page = client.get("/upload").text
@@ -292,8 +310,12 @@ def charges_post(client, engine, login_id):
         imp = sess.scalars(select(m.Import.id).where(m.Import.trader_id == owner)).first()
     url = f"/imports/{imp}/charges"
     csrf = CSRF.search(client.get(url).text).group(1)
-    return client.post(url, files={"file": ("c.csv", b"a,b\n1,2\n", "text/csv")},
-                       data={"csrf_token": csrf}, follow_redirects=False)
+    return client.post(
+        url,
+        files={"file": ("c.csv", b"a,b\n1,2\n", "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
 
 
 def test_a_charges_file_counts_as_an_upload_too(app, engine):
@@ -375,8 +397,13 @@ def test_a_body_past_the_cap_is_refused_before_it_is_read():
 
     import asyncio
 
-    scope = {"type": "http", "method": "POST", "path": "/upload", "query_string": b"",
-             "headers": [(b"content-length", str(k.MAX_REQUEST_BYTES + 1).encode())]}
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/upload",
+        "query_string": b"",
+        "headers": [(b"content-length", str(k.MAX_REQUEST_BYTES + 1).encode())],
+    }
     asyncio.run(limits.BodyCap(app, refuse=limits.plain_refusal)(scope, receive, send))
     assert reached == []
     assert sent[0]["status"] == 413
@@ -393,8 +420,11 @@ def test_the_person_sending_it_is_told_why(app, engine):
 
 def test_nobody_needs_to_be_signed_in_to_be_refused(app):
     posted = TestClient(app).post(
-        "/signup", content=b"x" * (k.MAX_REQUEST_BYTES + 1),
-        headers={"content-type": "application/x-www-form-urlencoded"}, follow_redirects=False)
+        "/signup",
+        content=b"x" * (k.MAX_REQUEST_BYTES + 1),
+        headers={"content-type": "application/x-www-form-urlencoded"},
+        follow_redirects=False,
+    )
     assert posted.status_code == 413
 
 
@@ -415,7 +445,13 @@ def test_a_body_with_no_stated_length_is_stopped_at_the_cap():
     async def send(_message):
         raise AssertionError("nothing is sent from here")
 
-    scope = {"type": "http", "method": "POST", "path": "/upload", "query_string": b"", "headers": []}
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/upload",
+        "query_string": b"",
+        "headers": [],
+    }
     with pytest.raises(HTTPException) as refused:
         asyncio.run(limits.BodyCap(app, refuse=limits.plain_refusal)(scope, receive, send))
     assert refused.value.status_code == 413
@@ -430,9 +466,12 @@ def test_the_real_app_answers_a_body_with_no_stated_length_past_the_cap(app, eng
         for _ in range(50):
             yield b"x" * (1024 * 1024)
 
-    posted = client.post("/upload", content=endless(),
-                         headers={"content-type": "multipart/form-data; boundary=x"},
-                         follow_redirects=False)
+    posted = client.post(
+        "/upload",
+        content=endless(),
+        headers={"content-type": "multipart/form-data; boundary=x"},
+        follow_redirects=False,
+    )
     assert posted.status_code == 413
     assert raw_files(engine) == before
 
@@ -487,8 +526,11 @@ def test_an_ordinary_trader_doing_ordinary_things_never_meets_a_cap(app, engine)
 
 def try_login(client, login_id, password):
     csrf = CSRF.search(client.get("/login").text).group(1)
-    return client.post("/login", data={"login_id": login_id, "password": password, "csrf_token": csrf},
-                       follow_redirects=False)
+    return client.post(
+        "/login",
+        data={"login_id": login_id, "password": password, "csrf_token": csrf},
+        follow_redirects=False,
+    )
 
 
 def from_network(app, n) -> TestClient:
@@ -548,7 +590,9 @@ def test_a_correct_password_under_the_cap_works_and_counts_nothing(app):
 
 def test_the_right_password_works_again_after_the_wait(app):
     now = [0.0]
-    app.state.login_ids = limits.HourlyCount(cap=k.LOGIN_FAILURES_PER_ID_PER_HOUR, clock=lambda: now[0])
+    app.state.login_ids = limits.HourlyCount(
+        cap=k.LOGIN_FAILURES_PER_ID_PER_HOUR, clock=lambda: now[0]
+    )
     sign_up(TestClient(app), "owner")
     fail_id(app, "owner", k.LOGIN_FAILURES_PER_ID_PER_HOUR)
     assert try_login(from_network(app, 900), "owner", PASSWORD).status_code == 429

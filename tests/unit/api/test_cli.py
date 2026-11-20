@@ -19,8 +19,7 @@ from services.production.db.session import make_engine, make_session, run_migrat
 
 def _trader(engine, login_id: str) -> m.Trader:
     with make_session(engine) as sess:
-        return sess.scalars(
-            select(m.Trader).where(m.Trader.login_id == login_id)).one()
+        return sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).one()
 
 
 def test_classify_marks_an_existing_account_as_development_data(capsys):
@@ -34,10 +33,17 @@ def test_classify_marks_an_existing_account_as_development_data(capsys):
     engine = make_engine(db)
     run_migrations(engine)
     from datetime import UTC, datetime
+
     with make_session(engine) as sess:
-        sess.add(m.Trader(display_name="R", login_id="rikk",
-                          password_hash="x", created_at=datetime.now(UTC),
-                          development_data=False))
+        sess.add(
+            m.Trader(
+                display_name="R",
+                login_id="rikk",
+                password_hash="x",
+                created_at=datetime.now(UTC),
+                development_data=False,
+            )
+        )
         sess.commit()
 
     cli.main(["--db", db, "classify", "--login-id", "rikk", "--development-data"])
@@ -54,10 +60,17 @@ def test_classify_records_who_changed_it(capsys):
     engine = make_engine(db)
     run_migrations(engine)
     from datetime import UTC, datetime
+
     with make_session(engine) as sess:
-        sess.add(m.Trader(display_name="R", login_id="rikk",
-                          password_hash="x", created_at=datetime.now(UTC),
-                          development_data=False))
+        sess.add(
+            m.Trader(
+                display_name="R",
+                login_id="rikk",
+                password_hash="x",
+                created_at=datetime.now(UTC),
+                development_data=False,
+            )
+        )
         sess.commit()
     cli.main(["--db", db, "classify", "--login-id", "rikk", "--development-data"])
     with make_session(engine) as sess:
@@ -67,5 +80,13 @@ def test_classify_records_who_changed_it(capsys):
 
 def test_classify_refuses_an_account_that_does_not_exist():
     with pytest.raises(SystemExit):
-        cli.main(["--db", os.environ["SCOPE_DB"], "classify",
-                  "--login-id", "nobody", "--development-data"])
+        cli.main(
+            [
+                "--db",
+                os.environ["SCOPE_DB"],
+                "classify",
+                "--login-id",
+                "nobody",
+                "--development-data",
+            ]
+        )

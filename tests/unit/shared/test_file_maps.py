@@ -57,9 +57,12 @@ def test_the_dhan_map_was_checked_against_dhan():
 
 def test_an_unverified_map_is_still_refused_in_production(tmp_path):
     """The gate itself, on a map that has not been checked."""
-    draft = (MAP_DIR / "dhan_filemap.yaml").read_text().replace(
-        "verified: true", "verified: false"
-    ).replace("verified_on: '2026-10-21'", "verified_on: null")
+    draft = (
+        (MAP_DIR / "dhan_filemap.yaml")
+        .read_text()
+        .replace("verified: true", "verified: false")
+        .replace("verified_on: '2026-10-21'", "verified_on: null")
+    )
     assert "verified: false" in draft, "the edit did not apply"
     path = tmp_path / "x_filemap.yaml"
     path.write_text(draft)

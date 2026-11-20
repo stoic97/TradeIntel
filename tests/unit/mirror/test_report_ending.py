@@ -29,9 +29,15 @@ def trip(net, *, name="t", option=True, held_days=0, symbol="WIDGET") -> mx.Trip
     entry = datetime(2025, 3, 3, 10, 0, tzinfo=UTC)
     leave = entry + timedelta(days=held_days, minutes=10)
     return mx.Trip(
-        trip_id=f"{name}{net}", symbol=symbol, trading_day="2025-03-03", entry_ts=entry,
-        exit_ts=leave, holding_seconds=int((leave - entry).total_seconds()),
-        net=Decimal(str(net)), lots=1, risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID,
+        trip_id=f"{name}{net}",
+        symbol=symbol,
+        trading_day="2025-03-03",
+        entry_ts=entry,
+        exit_ts=leave,
+        holding_seconds=int((leave - entry).total_seconds()),
+        net=Decimal(str(net)),
+        lots=1,
+        risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID,
         is_option=option,
     )
 
@@ -55,13 +61,15 @@ def test_the_option_result_adds_up_options_alone():
 
 
 def test_the_trade_set_against_it_is_the_largest_held_gain_outside_options():
-    book = mx.option_result([
-        trip(-150),
-        trip(500, option=False),  # same-day, so it was not held
-        trip(70, option=False, held_days=40, symbol="SMALLER"),
-        trip(90, option=False, held_days=30, symbol="LARGER"),
-        trip(900, held_days=30),  # an option, so already inside the total
-    ])
+    book = mx.option_result(
+        [
+            trip(-150),
+            trip(500, option=False),  # same-day, so it was not held
+            trip(70, option=False, held_days=40, symbol="SMALLER"),
+            trip(90, option=False, held_days=30, symbol="LARGER"),
+            trip(900, held_days=30),  # an option, so already inside the total
+        ]
+    )
     assert book.held_gain.symbol == "LARGER" and book.held_gain_days == 30
 
 
@@ -105,22 +113,41 @@ def test_a_loss_is_said_once_not_as_lost_minus(client):
 
 def test_no_line_that_waits_on_the_research_seat_ships(client):
     found = text_of(section(client.get(PAGE).text, "found"))
-    for line in ("options you bought", "5 and 7 pm", "crude", "Right after two losses",
-                 "already down"):
+    for line in (
+        "options you bought",
+        "5 and 7 pm",
+        "crude",
+        "Right after two losses",
+        "already down",
+    ):
         assert line not in found
 
 
-@pytest.mark.parametrize("row", [
-    ("Name a cause", "Your file has your trades, not what the market was doing",
-     "Shows where and when the results came from"),
-    ("Score you", "Scope doesn't grade traders, against anyone or against yourself",
-     "Counts your trades against a number you choose"),
-    ("Estimate what a habit cost you",
-     "That needs a fair \"what you'd have done instead\", which a file of fills can't give",
-     "Shows what each group of trades actually made or lost"),
-    ("Recommend a change", "Counts, not advice. No buy or sell calls, ever.",
-     "Leaves the decision with you"),
-])
+@pytest.mark.parametrize(
+    "row",
+    [
+        (
+            "Name a cause",
+            "Your file has your trades, not what the market was doing",
+            "Shows where and when the results came from",
+        ),
+        (
+            "Score you",
+            "Scope doesn't grade traders, against anyone or against yourself",
+            "Counts your trades against a number you choose",
+        ),
+        (
+            "Estimate what a habit cost you",
+            "That needs a fair \"what you'd have done instead\", which a file of fills can't give",
+            "Shows what each group of trades actually made or lost",
+        ),
+        (
+            "Recommend a change",
+            "Counts, not advice. No buy or sell calls, ever.",
+            "Leaves the decision with you",
+        ),
+    ],
+)
 def test_the_four_statements_are_a_table(client, row):
     table = section(client.get(PAGE).text, "table")
     said = text_of(table).replace("&#34;", '"').replace("&quot;", '"')
@@ -139,8 +166,10 @@ def test_the_number_you_choose_links_to_the_budget(client):
 
 
 def test_the_honest_line_stays(client):
-    assert ("The checks that could say more need work we have not finished and evidence "
-            "we have not earned.") in text_of(client.get(PAGE).text)
+    assert (
+        "The checks that could say more need work we have not finished and evidence "
+        "we have not earned."
+    ) in text_of(client.get(PAGE).text)
 
 
 def test_the_steps_are_a_day_a_page_and_a_journal(client):
@@ -170,13 +199,22 @@ def test_each_step_says_what_is_there_with_its_number(client):
     day = r"\d{2} \w{3}(?: \d{4})?"
     assert re.search(rf"{day} — ?\s*\d+ losses in a row", said), said
     assert re.search(r"Your five worst days — [−+]?₹[\d,]+", said), said
-    assert re.search(rf"Your journal for {day} — one of your five worst days:\s+\d+ trades?, "
-                     r"[−+]?₹[\d,]+", said), said
+    assert re.search(
+        rf"Your journal for {day} — one of your five worst days:\s+\d+ trades?, "
+        r"[−+]?₹[\d,]+",
+        said,
+    ), said
 
 
-@pytest.mark.parametrize(("minutes", "written"), [
-    (45, "45 minutes"), (1, "1 minute"), (60, "1 hour"), (119, "2 hours"),
-])
+@pytest.mark.parametrize(
+    ("minutes", "written"),
+    [
+        (45, "45 minutes"),
+        (1, "1 minute"),
+        (60, "1 hour"),
+        (119, "2 hours"),
+    ],
+)
 def test_a_run_is_timed_in_plain_words(minutes, written):
     assert SF.span_words(minutes) == written
 
@@ -192,10 +230,19 @@ def _journals(engine, **versions) -> None:
         days = sorted(set(sess.scalars(select(m.Trip.trading_day))))
         for day in days:
             for version in range(1, versions.get("top", 1) + 1):
-                sess.add(m.Journal(
-                    trader_id=imp.trader_id, import_id=imp.id, unit=s.JournalUnit.DAY,
-                    period_start=day, period_end=day, version_no=version,
-                    generated_at=datetime.now(UTC), trip_ids="[]", sections="{}"))
+                sess.add(
+                    m.Journal(
+                        trader_id=imp.trader_id,
+                        import_id=imp.id,
+                        unit=s.JournalUnit.DAY,
+                        period_start=day,
+                        period_end=day,
+                        version_no=version,
+                        generated_at=datetime.now(UTC),
+                        trip_ids="[]",
+                        sections="{}",
+                    )
+                )
         sess.commit()
 
 
@@ -212,7 +259,9 @@ def test_the_flagged_day_opens_on_its_latest_version(client, engine):
     _journals(engine, top=2)
     with make_session(engine) as sess:
         latest = {j.id for j in sess.scalars(select(m.Journal).where(m.Journal.version_no == 2))}
-    opened = re.findall(r'href="/journals/(\d+)\?from=not-told"', section(client.get(PAGE).text, "steps"))
+    opened = re.findall(
+        r'href="/journals/(\d+)\?from=not-told"', section(client.get(PAGE).text, "steps")
+    )
     assert opened and {int(i) for i in opened} <= latest
 
 
@@ -225,26 +274,61 @@ def _a_later_file(engine, keep: int) -> None:
     """A second import: `keep` of the first file's trades."""
     with make_session(engine) as sess:
         first = sess.scalars(select(m.Import)).first()
-        raw = m.RawFile(trader_id=first.trader_id, sha256="e" * 64, original_name="later.csv",
-                        size=1, stored_path="/tmp/later", uploaded_at=datetime.now(UTC))
+        raw = m.RawFile(
+            trader_id=first.trader_id,
+            sha256="e" * 64,
+            original_name="later.csv",
+            size=1,
+            stored_path="/tmp/later",
+            uploaded_at=datetime.now(UTC),
+        )
         sess.add(raw)
         sess.flush()
         later = m.Import(
-            trader_id=first.trader_id, raw_file_id=raw.id, source_account="A",
-            adapter_id=first.adapter_id, adapter_version="1", filemap_version="1",
-            code_version="fixturesha", outcome=first.outcome, rows_in=keep, rows_parsed=keep,
-            rows_excluded=0, fees_available=False, version_no=2, trips_reconstructed=keep,
-            trips_refused=0, density_default_unit="day", created_at=datetime.now(UTC))
+            trader_id=first.trader_id,
+            raw_file_id=raw.id,
+            source_account="A",
+            adapter_id=first.adapter_id,
+            adapter_version="1",
+            filemap_version="1",
+            code_version="fixturesha",
+            outcome=first.outcome,
+            rows_in=keep,
+            rows_parsed=keep,
+            rows_excluded=0,
+            fees_available=False,
+            version_no=2,
+            trips_reconstructed=keep,
+            trips_refused=0,
+            density_default_unit="day",
+            created_at=datetime.now(UTC),
+        )
         sess.add(later)
         sess.flush()
-        for t in sess.scalars(select(m.Trip).where(m.Trip.import_id == first.id)
-                              .order_by(m.Trip.id).limit(keep)).all():
-            sess.add(m.Trip(
-                import_id=later.id, trip_id=t.trip_id, trading_day=t.trading_day,
-                exchange=t.exchange, symbol=t.symbol, segment=t.segment, direction=t.direction,
-                entry_ts=t.entry_ts, exit_ts=t.exit_ts, quantity=t.quantity,
-                entry_price=t.entry_price, exit_price=t.exit_price, gross=t.gross, fees=t.fees,
-                net=t.net, fees_available=False, risk_unit_source=t.risk_unit_source))
+        for t in sess.scalars(
+            select(m.Trip).where(m.Trip.import_id == first.id).order_by(m.Trip.id).limit(keep)
+        ).all():
+            sess.add(
+                m.Trip(
+                    import_id=later.id,
+                    trip_id=t.trip_id,
+                    trading_day=t.trading_day,
+                    exchange=t.exchange,
+                    symbol=t.symbol,
+                    segment=t.segment,
+                    direction=t.direction,
+                    entry_ts=t.entry_ts,
+                    exit_ts=t.exit_ts,
+                    quantity=t.quantity,
+                    entry_price=t.entry_price,
+                    exit_price=t.exit_price,
+                    gross=t.gross,
+                    fees=t.fees,
+                    net=t.net,
+                    fees_available=False,
+                    risk_unit_source=t.risk_unit_source,
+                )
+            )
         sess.commit()
 
 
@@ -276,14 +360,17 @@ def test_nothing_new_on_the_page_makes_a_claim(client):
 
 def ask(client, **data):
     token = TOKEN.search(section(client.get(PAGE).text, "check")).group(1)
-    return client.post("/mirror/feedback", data={"csrf_token": token, **data},
-                       follow_redirects=False)
+    return client.post(
+        "/mirror/feedback", data={"csrf_token": token, **data}, follow_redirects=False
+    )
 
 
 def stored(engine) -> list[tuple]:
     with make_session(engine) as sess:
-        return [(r.answer, r.note, r.trading_day)
-                for r in sess.scalars(select(m.ReportFeedback).order_by(m.ReportFeedback.id))]
+        return [
+            (r.answer, r.note, r.trading_day)
+            for r in sess.scalars(select(m.ReportFeedback).order_by(m.ReportFeedback.id))
+        ]
 
 
 def test_the_page_asks_about_the_whole_report(client):
@@ -294,7 +381,7 @@ def test_the_page_asks_about_the_whole_report(client):
         assert f">{label}</button>" in check
     assert "What did we get wrong?" in said
     assert "We use this only to check and fix your report." in said
-    assert '<textarea' in check and 'name="note"' in check
+    assert "<textarea" in check and 'name="note"' in check
 
 
 def test_an_answer_and_its_note_are_kept_and_the_page_says_so(client, engine):
@@ -318,8 +405,9 @@ def test_a_long_note_is_kept_to_the_limit(client, engine):
 def test_the_first_answer_stands(client, engine):
     token = TOKEN.search(section(client.get(PAGE).text, "check")).group(1)
     for answer in ("wrong", "accurate"):
-        client.post("/mirror/feedback", data={"csrf_token": token, "answer": answer},
-                    follow_redirects=False)
+        client.post(
+            "/mirror/feedback", data={"csrf_token": token, "answer": answer}, follow_redirects=False
+        )
     assert [row[0] for row in stored(engine)] == ["wrong"]
 
 

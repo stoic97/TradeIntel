@@ -18,13 +18,13 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class RuleFactor:
     key: str
-    label: str           # what the chip row is called
-    phrase: str          # the rule in words; {v} is the chip's value as shown
+    label: str  # what the chip row is called
+    phrase: str  # the rule in words; {v} is the chip's value as shown
     values: tuple[int, ...]
     unit: str = ""
 
-    noun: str = ""       # what a chip's number counts, said on the chip
-    one: str = ""        # the noun for 1
+    noun: str = ""  # what a chip's number counts, said on the chip
+    one: str = ""  # the noun for 1
 
     def shown(self, value: int) -> str:
         if self.key == "day_down":
@@ -43,18 +43,37 @@ class RuleFactor:
         return self.phrase.format(v=self.shown(value))
 
 
-FACTORS: dict[str, RuleFactor] = {f.key: f for f in (
-    RuleFactor("day_down", "Today's limit", "Stop for the day once it is down {v}",
-               (1, 2, 3, 5, 10, 20)),
-    RuleFactor("most_trades", "Most trades", "At most {v} trades in a day",
-               (1, 2, 3, 4, 5, 6, 8, 10), noun="trades", one="trade"),
-    RuleFactor("losses_in_a_row", "What would make me stop",
-               "Stop for the day after {v} losses in a row", (1, 2, 3), noun="losses in a row",
-               one="loss"),
-    RuleFactor("last_hour", "Hour", "No new trade from {v}", tuple(range(10, 24))),
-    RuleFactor("most_lots", "Size", "At most {v} lots a trade", (1, 2, 3, 4, 5), noun="lots",
-               one="lot"),
-)}
+FACTORS: dict[str, RuleFactor] = {
+    f.key: f
+    for f in (
+        RuleFactor(
+            "day_down",
+            "Today's limit",
+            "Stop for the day once it is down {v}",
+            (1, 2, 3, 5, 10, 20),
+        ),
+        RuleFactor(
+            "most_trades",
+            "Most trades",
+            "At most {v} trades in a day",
+            (1, 2, 3, 4, 5, 6, 8, 10),
+            noun="trades",
+            one="trade",
+        ),
+        RuleFactor(
+            "losses_in_a_row",
+            "What would make me stop",
+            "Stop for the day after {v} losses in a row",
+            (1, 2, 3),
+            noun="losses in a row",
+            one="loss",
+        ),
+        RuleFactor("last_hour", "Hour", "No new trade from {v}", tuple(range(10, 24))),
+        RuleFactor(
+            "most_lots", "Size", "At most {v} lots a trade", (1, 2, 3, 4, 5), noun="lots", one="lot"
+        ),
+    )
+}
 
 BEFORE_SESSION: tuple[str, ...] = ("day_down", "most_trades", "losses_in_a_row")
 """Screen A, in this order: today's limit, most trades, what would make me stop."""

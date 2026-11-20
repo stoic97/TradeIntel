@@ -42,16 +42,24 @@ def chaser(table: pm.BarTable, n: int = 600, seed: int = 11) -> list[pm.Entry]:
     """A trader with no edge who buys in the direction of the minute that just closed."""
     rng = np.random.default_rng(seed)
     hour = timedelta(minutes=max(pm.HORIZONS))
-    starts = [t for t in sorted(table.bars)
-              if t - timedelta(minutes=1) in table.bars and t + hour in table.bars]
+    starts = [
+        t
+        for t in sorted(table.bars)
+        if t - timedelta(minutes=1) in table.bars and t + hour in table.bars
+    ]
     entries = []
     for k in rng.choice(len(starts), size=n, replace=False):
         minute = starts[int(k)]
         before = table.bars[minute - timedelta(minutes=1)]
         direction = 1 if before.close > before.open else -1
-        entries.append(pm.Entry(trip_id=f"t{k}", underlying="NIFTY",
-                                entry_ts=minute + timedelta(seconds=int(rng.integers(0, 60))),
-                                direction=direction))
+        entries.append(
+            pm.Entry(
+                trip_id=f"t{k}",
+                underlying="NIFTY",
+                entry_ts=minute + timedelta(seconds=int(rng.integers(0, 60))),
+                direction=direction,
+            )
+        )
     return entries
 
 
@@ -115,8 +123,9 @@ def test_after_is_measured_from_the_close_of_the_entry_minute(table):
     bars = dict(table.bars)
     bars[minute] = pm.Bar(open=100.0, close=200.0)
     bars[minute + timedelta(minutes=5)] = pm.Bar(open=150.0, close=150.0)
-    result = pm.count([pm.Entry("x", "NIFTY", minute, 1)],
-                      {"NIFTY": dataclasses.replace(table, bars=bars)})
+    result = pm.count(
+        [pm.Entry("x", "NIFTY", minute, 1)], {"NIFTY": dataclasses.replace(table, bars=bars)}
+    )
     assert (result.after[5].agreed, result.after[5].measured) == (0, 1)  # 200 to 150: against him
 
 
@@ -151,7 +160,11 @@ def test_no_trip_is_dropped_and_each_one_left_out_says_why(table):
         "no underlying": pm.Reason.NO_SERIES,
     }
     assert result.unmeasured_by_reason() == {
-        pm.Reason.NO_SERIES: 2, pm.Reason.NOT_COVERED: 1, pm.Reason.NO_BAR: 1, pm.Reason.NO_DIRECTION: 1}
+        pm.Reason.NO_SERIES: 2,
+        pm.Reason.NOT_COVERED: 1,
+        pm.Reason.NO_BAR: 1,
+        pm.Reason.NO_DIRECTION: 1,
+    }
 
 
 def test_a_horizon_past_the_last_bar_is_counted_out_with_its_reason(table):
@@ -159,7 +172,9 @@ def test_a_horizon_past_the_last_bar_is_counted_out_with_its_reason(table):
     result = pm.count([pm.Entry("late", "NIFTY", close, 1)], {"NIFTY": table})
     assert result.before.measured == 1
     assert result.after[5].measured == 0
-    assert [(u.trip_id, u.reason) for u in result.unmeasured_after[5]] == [("late", pm.Reason.NO_BAR)]
+    assert [(u.trip_id, u.reason) for u in result.unmeasured_after[5]] == [
+        ("late", pm.Reason.NO_BAR)
+    ]
 
 
 def test_the_same_history_gives_the_same_band_and_the_seed_is_recorded(table):
@@ -206,14 +221,21 @@ def test_it_runs_on_the_demo_file_with_no_network(monkeypatch):
 
     def refuse(*_a, **_k):
         raise AssertionError("no network")
+
     monkeypatch.setattr(socket, "create_connection", refuse)
     monkeypatch.setattr(socket.socket, "connect", refuse)
 
     plan = pl.plan_import(
         Path("data/fixtures/demo/scope_demo_tradebook.csv").read_text(encoding="utf-8"),
-        context=pl.ImportContext(trader_id="demo", source_account="DEMO", code_version="test",
-                                 export_date="2026-09-01", export_date_source="trader"),
-        production=True)
+        context=pl.ImportContext(
+            trader_id="demo",
+            source_account="DEMO",
+            code_version="test",
+            export_date="2026-09-01",
+            export_date_source="trader",
+        ),
+        production=True,
+    )
     entries = []
     for p in plan.positions:
         leg = p.legs[0]

@@ -55,20 +55,33 @@ def sample_trader_id(request: Request) -> int:
     """The sample account, read from the demo file if it isn't yet, or if the file changed."""
     sha = _file_sha256()
     with _READING, make_session(request.app.state.engine) as sess:
-        trader = sess.scalars(select(m.Trader).where(
-            m.Trader.login_id == LOGIN_ID, m.Trader.development_data.is_(True))).first()
+        trader = sess.scalars(
+            select(m.Trader).where(
+                m.Trader.login_id == LOGIN_ID, m.Trader.development_data.is_(True)
+            )
+        ).first()
         if trader is None:
-            trader = m.Trader(display_name="Sample trader", login_id=LOGIN_ID,
-                              password_hash=auth.hash_password(secrets.token_urlsafe(48)),
-                              created_at=datetime.now(UTC), development_data=True)
+            trader = m.Trader(
+                display_name="Sample trader",
+                login_id=LOGIN_ID,
+                password_hash=auth.hash_password(secrets.token_urlsafe(48)),
+                created_at=datetime.now(UTC),
+                development_data=True,
+            )
             sess.add(trader)
             sess.commit()
         current = demo.current_import(sess, trader)
         read = current is not None and sess.get(m.RawFile, current.raw_file_id).sha256 == sha
         if not read:
-            routes_upload._ingest(request, sess, trader, content=demo.FILE.read_bytes(),
-                                  file_name=demo.FILE_NAME, export_date=demo.EXPORT_DATE,
-                                  source_account=demo.ACCOUNT)
+            routes_upload._ingest(
+                request,
+                sess,
+                trader,
+                content=demo.FILE.read_bytes(),
+                file_name=demo.FILE_NAME,
+                export_date=demo.EXPORT_DATE,
+                source_account=demo.ACCOUNT,
+            )
         return trader.id
 
 
@@ -79,8 +92,9 @@ def _as_sample(request: Request, draw) -> Response:
     if isinstance(response, RedirectResponse):
         location = response.headers["location"]
         if location.startswith("/mirror"):
-            return RedirectResponse(PREFIX + location.removeprefix("/mirror"),
-                                    status_code=response.status_code)
+            return RedirectResponse(
+                PREFIX + location.removeprefix("/mirror"), status_code=response.status_code
+            )
         return response
     body = response.body.decode("utf-8")
     for attribute in ("href", "action"):

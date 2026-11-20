@@ -74,8 +74,9 @@ def load_record(request: Request):
         except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
-            return page(request, "mirror_no_profile.html", title="Your record",
-                        reason=str(exc)), None
+            return page(
+                request, "mirror_no_profile.html", title="Your record", reason=str(exc)
+            ), None
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
         if is_sample(request):
@@ -85,8 +86,13 @@ def load_record(request: Request):
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:
-            return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
-                        report_filter=request.state.report_filter), None
+            return page(
+                request,
+                "scope/filtered_empty.html",
+                title="Your record",
+                imp=imp,
+                report_filter=request.state.report_filter,
+            ), None
         return None, (shown, imp, SF.record_context(shown))
 
 
@@ -96,9 +102,13 @@ def _new_days(sess, imp) -> set[str] | None:
     earlier = persist.earlier_reading(sess, imp)
     if earlier is None or persist.same_file(sess, imp, earlier):
         return None
-    return set(sess.scalars(select(m.TradingDayVersion.trading_day).where(
-        m.TradingDayVersion.import_id == imp.id,
-        m.TradingDayVersion.rows_before == 0)))
+    return set(
+        sess.scalars(
+            select(m.TradingDayVersion.trading_day).where(
+                m.TradingDayVersion.import_id == imp.id, m.TradingDayVersion.rows_before == 0
+            )
+        )
+    )
 
 
 @router.get("/mirror/filter")
@@ -115,8 +125,12 @@ def choose_filter(request: Request, period: str = RF.ALL, book: str = "", next: 
     return response
 
 
-ENTER = {"in": "vt-in vt-tap-{tap}", "out": "vt-out vt-tap-{tap}", "lens": "vt-lens",
-         "back": "vt-back"}
+ENTER = {
+    "in": "vt-in vt-tap-{tap}",
+    "out": "vt-out vt-tap-{tap}",
+    "lens": "vt-lens",
+    "back": "vt-back",
+}
 """The kit's ?enter= values and the class each puts on <html> (motion.css plays it)."""
 
 
@@ -150,14 +164,25 @@ def scope_home(request: Request):
         number = rb.rupees(declared)
     history = getattr(request.state, "history", None) or trips
     bar = getattr(request.state, "report_filter", None)
-    filter_books = {} if bar is None else {
-        b["label"]: b["href"] for b in bar["books"] if b["label"] != "All books"}
-    return page(request, "scope/home.html", title="Scope", enter_class=enter_class(request),
-                by_year=RF.by_year(history), filter_books=filter_books,
-                imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
-                charges=charges,
-                continue_step=SM.continue_step(_read_pages(request)),
-                **SF.home_context(context, imp, _opened_chapters(request), number=number))
+    filter_books = (
+        {}
+        if bar is None
+        else {b["label"]: b["href"] for b in bar["books"] if b["label"] != "All books"}
+    )
+    return page(
+        request,
+        "scope/home.html",
+        title="Scope",
+        enter_class=enter_class(request),
+        by_year=RF.by_year(history),
+        filter_books=filter_books,
+        imp=imp,
+        trade_count=len(trips),
+        trading_day_count=context["file_trading_days"],
+        charges=charges,
+        continue_step=SM.continue_step(_read_pages(request)),
+        **SF.home_context(context, imp, _opened_chapters(request), number=number),
+    )
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -166,7 +191,9 @@ def scope_chapter(request: Request, n: int):
     try:
         chapter = SM.chapter(n)
     except KeyError:
-        raise HTTPException(status_code=404) from None  # the Not found page, with its way Home (TICKET-860)
+        raise HTTPException(
+            status_code=404
+        ) from None  # the Not found page, with its way Home (TICKET-860)
     early, record = load_record(request)
     if early is not None:
         return early
@@ -174,13 +201,21 @@ def scope_chapter(request: Request, n: int):
     if not is_sample(request):  # a visitor to /sample leaves nothing behind
         _mark_opened(request, chapter)
     figs = SF.facts(context, imp)
-    return page(request, "scope/chapter.html", title=chapter.name,
-                enter_class=enter_class(request), chapter=chapter,
-                view=SF.chapter_view(n, figs), facts=figs, imp=imp,
-                next_step=SM.chapter_step(n),
-                trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
-                **context)
+    return page(
+        request,
+        "scope/chapter.html",
+        title=chapter.name,
+        enter_class=enter_class(request),
+        chapter=chapter,
+        view=SF.chapter_view(n, figs),
+        facts=figs,
+        imp=imp,
+        next_step=SM.chapter_step(n),
+        trading_day_count=len(context["days"].counts),
+        sources=s_enums.RiskUnitSourceV1,
+        **_feedback_context(request, n),
+        **context,
+    )
 
 
 def _opened_chapters(request: Request) -> frozenset[int]:
@@ -189,16 +224,25 @@ def _opened_chapters(request: Request) -> frozenset[int]:
         return frozenset()
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
-        keys = set(sess.scalars(select(m.DwellEvent.key).where(
-            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE)))
+        keys = set(
+            sess.scalars(
+                select(m.DwellEvent.key).where(
+                    m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE
+                )
+            )
+        )
     return frozenset(c.number for c in SM.CHAPTERS if c.name in keys)
 
 
 def read_pages(sess, trader) -> frozenset[str]:
     """The report pages this trader has read: each one's dwell "view" (TICKET-903)."""
-    keys = sess.scalars(select(m.DwellEvent.key).where(
-        m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == "mirror_line",
-        m.DwellEvent.event == "view"))
+    keys = sess.scalars(
+        select(m.DwellEvent.key).where(
+            m.DwellEvent.trader_id == trader.id,
+            m.DwellEvent.surface == "mirror_line",
+            m.DwellEvent.event == "view",
+        )
+    )
     return SM.read_from(keys)
 
 
@@ -214,12 +258,26 @@ def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
     the key is its name, because an event's key never holds a digit (routes_events)."""
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
-        seen = sess.scalar(select(m.DwellEvent.id).where(
-            m.DwellEvent.trader_id == trader.id, m.DwellEvent.surface == CHAPTER_SURFACE,
-            m.DwellEvent.key == chapter.name).limit(1))
+        seen = sess.scalar(
+            select(m.DwellEvent.id)
+            .where(
+                m.DwellEvent.trader_id == trader.id,
+                m.DwellEvent.surface == CHAPTER_SURFACE,
+                m.DwellEvent.key == chapter.name,
+            )
+            .limit(1)
+        )
         if seen is None:
-            sess.add(m.DwellEvent(trader_id=trader.id, surface=CHAPTER_SURFACE, key=chapter.name,
-                                  event="view", at=datetime.now(UTC), duration_ms=None))
+            sess.add(
+                m.DwellEvent(
+                    trader_id=trader.id,
+                    surface=CHAPTER_SURFACE,
+                    key=chapter.name,
+                    event="view",
+                    at=datetime.now(UTC),
+                    duration_ms=None,
+                )
+            )
             sess.commit()
 
 
@@ -230,14 +288,22 @@ def _feedback_context(request: Request, n: int) -> dict:
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         state = FB.state(sess, trader, n)
-    return {"feedback": state, "feedback_answers": FB.ANSWERS,
-            "feedback_reasons": FB.REASONS,
-            "feedback_url": f"/mirror/chapter/{n}/feedback"}
+    return {
+        "feedback": state,
+        "feedback_answers": FB.ANSWERS,
+        "feedback_reasons": FB.REASONS,
+        "feedback_url": f"/mirror/chapter/{n}/feedback",
+    }
 
 
 @router.post("/mirror/chapter/{n}/feedback", response_class=HTMLResponse)
-def chapter_feedback(request: Request, n: int, answer: str = Form(None),
-                     reason: str = Form(None), csrf_token: str = Form(None)):
+def chapter_feedback(
+    request: Request,
+    n: int,
+    answer: str = Form(None),
+    reason: str = Form(None),
+    csrf_token: str = Form(None),
+):
     """B4: one answer per chapter (1-3), then an optional reason after Wrong.
 
     htmx gets the feedback row back to swap in place; a plain form post goes back
@@ -256,8 +322,7 @@ def chapter_feedback(request: Request, n: int, answer: str = Form(None),
             return HTMLResponse("", status_code=404)
         try:
             if answer is not None:
-                FB.record_answer(sess, trader=trader, chapter=n, answer=answer,
-                                 import_id=imp.id)
+                FB.record_answer(sess, trader=trader, chapter=n, answer=answer, import_id=imp.id)
             elif reason is not None:
                 FB.record_reason(sess, trader=trader, chapter=n, reason=reason)
             else:
@@ -297,16 +362,31 @@ def scope_fact(request: Request, key: str):
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
     journals = _journal_links(request, key, figs[key], context)
-    return page(request, f"scope/facts/{key}.html", title=SM.FACTS[key].title,
-                enter_class=enter_class(request), body_class="screen__body--fact",
-                chapter=chapter, index=index, number=index + 1, fact=SM.FACTS[key],
-                back_href=SM.chapter_href(chapter.number, fact=index + 1),
-                spine=SM.spine(key, _read_pages(request)), answers=SF.short_answers(figs),
-                f=figs[key], facts=figs,
-                groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
-                trading_day_count=len(context["days"].counts),
-                sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **journals,
-                **context)
+    return page(
+        request,
+        f"scope/facts/{key}.html",
+        title=SM.FACTS[key].title,
+        enter_class=enter_class(request),
+        body_class="screen__body--fact",
+        chapter=chapter,
+        index=index,
+        number=index + 1,
+        fact=SM.FACTS[key],
+        back_href=SM.chapter_href(chapter.number, fact=index + 1),
+        spine=SM.spine(key, _read_pages(request)),
+        answers=SF.short_answers(figs),
+        f=figs[key],
+        facts=figs,
+        groups=[] if figs[key]["see_all"] else SM.groups(key, context),
+        imp=imp,
+        trading_day_count=len(context["days"].counts),
+        sources=s_enums.RiskUnitSourceV1,
+        **unread,
+        **ending,
+        **flagged,
+        **journals,
+        **context,
+    )
 
 
 def _flagged_days(request: Request, imp) -> set[str]:
@@ -321,12 +401,17 @@ def _journal_ids(sess, trader, days: set[str]) -> dict[str, int]:
     of a day is the one left in the map; a day with no journal is not in it."""
     if not days:
         return {}
-    return dict(sess.execute(
-        select(m.Journal.period_start, m.Journal.id)
-        .where(m.Journal.trader_id == trader.id, m.Journal.unit == s_enums.JournalUnit.DAY,
-               m.Journal.period_start.in_(sorted(days)))
-        .order_by(m.Journal.version_no)
-    ).all())
+    return dict(
+        sess.execute(
+            select(m.Journal.period_start, m.Journal.id)
+            .where(
+                m.Journal.trader_id == trader.id,
+                m.Journal.unit == s_enums.JournalUnit.DAY,
+                m.Journal.period_start.in_(sorted(days)),
+            )
+            .order_by(m.Journal.version_no)
+        ).all()
+    )
 
 
 def _journal_links(request: Request, key: str, fact: dict, context: dict) -> dict:
@@ -362,14 +447,18 @@ def _ending(request: Request, imp, fact: dict) -> dict:
         worst = fact["flagged"]["worst"]
         opens = {} if worst is None else _journal_ids(sess, trader, {worst["iso"]})
         earlier = sess.scalars(
-            select(m.Import).join(m.Trip, m.Trip.import_id == m.Import.id)
+            select(m.Import)
+            .join(m.Trip, m.Trip.import_id == m.Import.id)
             .where(m.Import.trader_id == trader.id, m.Import.id < imp.id)
-            .order_by(m.Import.id.desc()).limit(1)
+            .order_by(m.Import.id.desc())
+            .limit(1)
         ).first()
         return {
             "journal_href": f"/journals/{opens[worst['iso']]}?from=not-told"
-            if worst and worst["iso"] in opens else "/journals",
-            "changed": earlier and {
+            if worst and worst["iso"] in opens
+            else "/journals",
+            "changed": earlier
+            and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
                 # One file read again is not a new file (TICKET-844).
@@ -388,8 +477,9 @@ def _trading_days(sess, import_id: int) -> int:
 
 
 @router.post("/mirror/feedback", response_class=HTMLResponse)
-def report_feedback(request: Request, answer: str = Form(None), note: str = Form(None),
-                    csrf_token: str = Form(None)):
+def report_feedback(
+    request: Request, answer: str = Form(None), note: str = Form(None), csrf_token: str = Form(None)
+):
     """The whole report: one answer and an optional note, on the report's last page."""
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
@@ -401,19 +491,23 @@ def report_feedback(request: Request, answer: str = Form(None), note: str = Form
         if imp is None:
             return HTMLResponse("", status_code=404)
         try:
-            FB.record_report_answer(sess, trader=trader, import_id=imp.id,
-                                    answer=answer or "", note=note)
+            FB.record_report_answer(
+                sess, trader=trader, import_id=imp.id, answer=answer or "", note=note
+            )
         except FB.NotAsked:
             return HTMLResponse("", status_code=400)
         sess.commit()
-    return RedirectResponse(f"{SM.fact_href('not-told', lens=False)}#report-check",
-                            status_code=303)
+    return RedirectResponse(f"{SM.fact_href('not-told', lens=False)}#report-check", status_code=303)
 
 
 @router.post("/mirror/feedback/day", response_class=HTMLResponse)
-def day_feedback(request: Request, trading_day: str = Form(None), note: str = Form(None),
-                 csrf_token: str = Form(None)):
-    """"Is this day wrong?" on one of the five worst days, which it must be."""
+def day_feedback(
+    request: Request,
+    trading_day: str = Form(None),
+    note: str = Form(None),
+    csrf_token: str = Form(None),
+):
+    """ "Is this day wrong?" on one of the five worst days, which it must be."""
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
     early, record = load_record(request)
@@ -423,11 +517,17 @@ def day_feedback(request: Request, trading_day: str = Form(None), note: str = Fo
     if trading_day not in {b.trading_day for b in context["day_blocks"]}:
         return HTMLResponse("", status_code=400)
     with make_session(request.app.state.engine) as sess:
-        FB.flag_day(sess, trader=current_trader(request, sess), import_id=imp.id,
-                    trading_day=trading_day, note=note)
+        FB.flag_day(
+            sess,
+            trader=current_trader(request, sess),
+            import_id=imp.id,
+            trading_day=trading_day,
+            note=note,
+        )
         sess.commit()
-    return RedirectResponse(f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}",
-                            status_code=303)
+    return RedirectResponse(
+        f"{SM.fact_href('worst-days', lens=False)}#day-{trading_day}", status_code=303
+    )
 
 
 DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -448,10 +548,16 @@ def trading_day(request: Request, iso: str):
         raise HTTPException(status_code=404)
     with make_session(request.app.state.engine) as sess:
         opens = _journal_ids(sess, reader(request, sess), {iso})
-    return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
-                when=formatting.day(iso), count=len(that_day),
-                groups=SM.groups("busiest", context, only=that_day),
-                journal_href=f"/journals/{opens[iso]}" if iso in opens else None)
+    return page(
+        request,
+        "scope/day.html",
+        title=formatting.day(iso),
+        imp=imp,
+        when=formatting.day(iso),
+        count=len(that_day),
+        groups=SM.groups("busiest", context, only=that_day),
+        journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
+    )
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)
@@ -469,10 +575,18 @@ def scope_fact_trades(request: Request, key: str):
     with make_session(request.app.state.engine) as sess:
         expiries = loader.expiries_for(sess, imp)
     chapter, index = SM.chapter_of(key)
-    return page(request, "scope/trades.html", title=f"{SM.FACTS[key].title}: see all trades",
-                body_class="screen__body--fact", chapter=chapter, index=index,
-                fact=SM.FACTS[key], fact_href=SM.fact_href(key, lens=False), imp=imp,
-                listing=TL.listing(key, context, request.query_params, expiries))
+    return page(
+        request,
+        "scope/trades.html",
+        title=f"{SM.FACTS[key].title}: see all trades",
+        body_class="screen__body--fact",
+        chapter=chapter,
+        index=index,
+        fact=SM.FACTS[key],
+        fact_href=SM.fact_href(key, lens=False),
+        imp=imp,
+        listing=TL.listing(key, context, request.query_params, expiries),
+    )
 
 
 CONFIRMED_ROW = "You told us this row repeats a trade already in the file."
@@ -490,17 +604,21 @@ def _unread(request: Request, imp) -> dict:
     each with its reason, and every trade refused - as the import review lists them."""
     with make_session(request.app.state.engine) as sess:
         rows = sess.scalars(
-            select(m.ImportRow).where(m.ImportRow.import_id == imp.id,
-                                      m.ImportRow.status.in_(("EXCLUDED", "REJECTED")))
+            select(m.ImportRow)
+            .where(
+                m.ImportRow.import_id == imp.id, m.ImportRow.status.in_(("EXCLUDED", "REJECTED"))
+            )
             .order_by(m.ImportRow.row_no)
         ).all()
         refused = sess.scalars(
-            select(m.SkippedTrip).where(m.SkippedTrip.import_id == imp.id)
+            select(m.SkippedTrip)
+            .where(m.SkippedTrip.import_id == imp.id)
             .order_by(m.SkippedTrip.id)
         ).all()
         return {
-            "excluded": [(r.row_no, r.reason or CONFIRMED_ROW)
-                         for r in rows if r.status == "EXCLUDED"],
+            "excluded": [
+                (r.row_no, r.reason or CONFIRMED_ROW) for r in rows if r.status == "EXCLUDED"
+            ],
             "rejected": [(r.row_no, r.reason) for r in rows if r.status == "REJECTED"],
             "refused": [_plain_refusal(t.reason) for t in refused],
         }

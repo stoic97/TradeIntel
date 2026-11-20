@@ -272,5 +272,7 @@ def test_a_mixed_run_names_every_book_most_trades_first():
         trip("d", DAY, "09:15:00", "09:16:00", -1),
     ]
     assert mx.run_story(trips, ["a", "b", "c", "d"]).books == [
-        "WIDGETOIL options", "WIDGETIDX options", "Futures",
+        "WIDGETOIL options",
+        "WIDGETIDX options",
+        "Futures",
     ]

@@ -4,6 +4,7 @@ Production deploys tags (the release train), so /health and the admin page's "Ru
 deploy" say `v2026.11.14` on a tagged deploy. A sha on production then means a deploy that
 skipped the train. A commit after a tag is a sha, not `v2026.11.14-1-g...`.
 """
+
 import subprocess
 
 import pytest
@@ -11,12 +12,23 @@ import pytest
 from services.production.api import cli, version
 from tests.conftest import REAL_CODE_VERSION
 
-GIT = ["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-c", "commit.gpgsign=false",
-       "-c", "tag.gpgsign=false"]
+GIT = [
+    "git",
+    "-c",
+    "user.email=t@example.invalid",
+    "-c",
+    "user.name=t",
+    "-c",
+    "commit.gpgsign=false",
+    "-c",
+    "tag.gpgsign=false",
+]
 
 
 def _git(repo, *args):
-    return subprocess.run([*GIT, *args], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
+    return subprocess.run(
+        [*GIT, *args], cwd=repo, capture_output=True, text=True, check=True
+    ).stdout.strip()
 
 
 @pytest.fixture

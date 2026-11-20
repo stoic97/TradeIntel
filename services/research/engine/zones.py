@@ -54,7 +54,9 @@ def split(days: np.ndarray) -> Zones:
         return False
 
     # Widen backward: to a day boundary, and until a whole day sits inside.
-    while emb_start > 0 and (day[emb_start - 1] == day[emb_start] or not whole_day_inside(emb_start)):
+    while emb_start > 0 and (
+        day[emb_start - 1] == day[emb_start] or not whole_day_inside(emb_start)
+    ):
         emb_start -= 1
 
     if emb_start < 1:
@@ -63,4 +65,6 @@ def split(days: np.ndarray) -> Zones:
             f"embargo needs at least one whole trading day before it"
         )
     idx = np.arange(n)
-    return Zones(training=idx[:emb_start], embargo=idx[emb_start:iso_start], isolation=idx[iso_start:])
+    return Zones(
+        training=idx[:emb_start], embargo=idx[emb_start:iso_start], isolation=idx[iso_start:]
+    )

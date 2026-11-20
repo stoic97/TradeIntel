@@ -95,17 +95,27 @@ def test_the_day_is_read_in_the_instruments_zone_not_the_servers(client, engine)
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
         stored = sess.scalars(select(m.Trip).where(m.Trip.trip_id == "t01")).one()
-        sess.add(m.Trip(
-            import_id=stored.import_id, trip_id="across-midnight", trading_day="2026-09-01",
-            exchange=stored.exchange, symbol=stored.symbol, segment=stored.segment,
-            direction=stored.direction,
-            entry_ts=datetime.fromisoformat("2026-09-01T23:50:00+05:30"),
-            exit_ts=datetime.fromisoformat("2026-09-02T00:10:00+05:30"),
-            quantity=stored.quantity, entry_price=stored.entry_price,
-            exit_price=stored.exit_price, gross=stored.gross, fees=stored.fees,
-            net=stored.net, fees_available=False,
-            risk_unit_source=stored.risk_unit_source,
-        ))
+        sess.add(
+            m.Trip(
+                import_id=stored.import_id,
+                trip_id="across-midnight",
+                trading_day="2026-09-01",
+                exchange=stored.exchange,
+                symbol=stored.symbol,
+                segment=stored.segment,
+                direction=stored.direction,
+                entry_ts=datetime.fromisoformat("2026-09-01T23:50:00+05:30"),
+                exit_ts=datetime.fromisoformat("2026-09-02T00:10:00+05:30"),
+                quantity=stored.quantity,
+                entry_price=stored.entry_price,
+                exit_price=stored.exit_price,
+                gross=stored.gross,
+                fees=stored.fees,
+                net=stored.net,
+                fees_available=False,
+                risk_unit_source=stored.risk_unit_source,
+            )
+        )
         sess.commit()
         loaded, _ = loader.load_for(sess, trader)
     assert [t.trip_id for t in mx.held_past_day(loaded).trips] == ["across-midnight"]

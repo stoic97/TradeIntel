@@ -45,8 +45,9 @@ def _per_trade_change(net: np.ndarray, trades: np.ndarray, first: np.ndarray) ->
     return (net.sum() - a_net) / (trades.sum() - a_trades) - a_net / a_trades
 
 
-def halves_test(day_net: Sequence[float], day_trades: Sequence[int], draws: int = DRAWS,
-                seed: int = SEED) -> HalvesResult:
+def halves_test(
+    day_net: Sequence[float], day_trades: Sequence[int], draws: int = DRAWS, seed: int = SEED
+) -> HalvesResult:
     """The change between the halves, and how often whole days shuffled between them move it at
     least as far from zero, either way. The days come in date order, one net and one count each."""
     net = np.asarray(day_net, dtype=float)

@@ -83,8 +83,13 @@ def _revision_of(path: Path) -> tuple[bool, str | None]:
         if not tables:
             return False, None
         found = connection.execute(
-            "select count(*) from sqlite_master where name = 'alembic_version'").fetchone()[0]
-        row = connection.execute("select version_num from alembic_version").fetchone() if found else None
+            "select count(*) from sqlite_master where name = 'alembic_version'"
+        ).fetchone()[0]
+        row = (
+            connection.execute("select version_num from alembic_version").fetchone()
+            if found
+            else None
+        )
         return True, row[0] if row else None
     finally:
         connection.close()
@@ -143,8 +148,11 @@ def scope_environment(request, tmp_path, monkeypatch):
     monkeypatch.setenv("SCOPE_FILE_KEY", TEST_FILE_KEY)
     # The disk check reads a real disk, so uploads in tests would refuse on a full laptop.
     # The tests about the check set their own disk.
-    monkeypatch.setattr(limits.shutil, "disk_usage",
-                        lambda _path: shutil._ntuple_diskusage(total=100, used=50, free=50))
+    monkeypatch.setattr(
+        limits.shutil,
+        "disk_usage",
+        lambda _path: shutil._ntuple_diskusage(total=100, used=50, free=50),
+    )
     monkeypatch.setenv("SCOPE_DB", f"sqlite:///{tmp_path / 'scope.db'}")
     monkeypatch.setenv("SCOPE_FILES", str(tmp_path / "files"))
     monkeypatch.delenv("SCOPE_PRODUCTION", raising=False)

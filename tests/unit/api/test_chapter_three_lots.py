@@ -22,9 +22,17 @@ def one_day() -> list[mx.Trip]:
     out = []
     for i, (t, (net, lots, option)) in enumerate(zip(trips_from([1] * 5), rows, strict=True)):
         entry = start + timedelta(minutes=20 * i)
-        out.append(replace(t, trading_day="2026-09-01", entry_ts=entry,
-                           exit_ts=entry + timedelta(minutes=10), net=mx.Decimal(net),
-                           lots=lots, is_option=option))
+        out.append(
+            replace(
+                t,
+                trading_day="2026-09-01",
+                entry_ts=entry,
+                exit_ts=entry + timedelta(minutes=10),
+                net=mx.Decimal(net),
+                lots=lots,
+                is_option=option,
+            )
+        )
     return out
 
 

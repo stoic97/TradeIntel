@@ -89,7 +89,7 @@ def size_line(day: str, trades: list[dict], usual: Decimal | None) -> str | None
         return None
     began = next(t["lots"] for t in trades if t["lots"] is not None)
     rose_at = next(i for i, t in enumerate(trades) if t["lots"] is not None and t["lots"] > began)
-    if not _climbed_while_losing(trades[rose_at:up + 1]):
+    if not _climbed_while_losing(trades[rose_at : up + 1]):
         return None
 
     losses = 0
@@ -99,6 +99,8 @@ def size_line(day: str, trades: list[dict], usual: Decimal | None) -> str | None
         losses += 1
     if not losses:
         return None
-    return (f"On {formatting.day(day)} you went from {_times(began, 'lot', 'lots')} to "
-            f"{trades[up]['lots']} after {_times(losses, 'loss', 'losses')}. "
-            f"Your usual is about {formatting.lots(usual)} lots.")
+    return (
+        f"On {formatting.day(day)} you went from {_times(began, 'lot', 'lots')} to "
+        f"{trades[up]['lots']} after {_times(losses, 'loss', 'losses')}. "
+        f"Your usual is about {formatting.lots(usual)} lots."
+    )

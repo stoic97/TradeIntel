@@ -15,17 +15,32 @@ from services.production.api import scope_map as SM
 from services.production.mirror import metrics as mx
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
-IMP = types.SimpleNamespace(fees_available=False, trips_refused=0, rows_in=40, rows_parsed=40,
-                            id=1, trips_reconstructed=40, rows_excluded=0)
+IMP = types.SimpleNamespace(
+    fees_available=False,
+    trips_refused=0,
+    rows_in=40,
+    rows_parsed=40,
+    id=1,
+    trips_reconstructed=40,
+    rows_excluded=0,
+)
 TIERS = ("Established", "Likely", "Exploratory")
 
 
 # ---- 1. a finding can't be made without both labels
 
-@pytest.mark.parametrize("known, rung", [
-    (None, F.Rung.SEEN), (F.Known.AT_CLICK, None), ("", F.Rung.SEEN), (F.Known.AT_CLICK, ""),
-    ("AT_CLICK", F.Rung.SEEN), (F.Known.AT_CLICK, "SEEN"),
-])
+
+@pytest.mark.parametrize(
+    "known, rung",
+    [
+        (None, F.Rung.SEEN),
+        (F.Known.AT_CLICK, None),
+        ("", F.Rung.SEEN),
+        (F.Known.AT_CLICK, ""),
+        ("AT_CLICK", F.Rung.SEEN),
+        (F.Known.AT_CLICK, "SEEN"),
+    ],
+)
 def test_a_finding_without_both_labels_raises(known, rung):
     with pytest.raises(F.Unlabelled):
         F.Finding("clock", known, rung)
@@ -48,6 +63,7 @@ def test_a_finding_is_a_frozen_value():
 
 
 # ---- 2. no finding reaches a template without both labels
+
 
 def test_every_fact_the_report_decides_has_a_label():
     assert set(SM.FIGURES) <= set(F.LABELS)

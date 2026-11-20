@@ -76,10 +76,9 @@ def test_with_a_budget_it_does_not_say_the_number_is_missing():
 
 
 def test_the_losses_show_beside_the_question():
-    assert (
-        "Half your losing trades lost" in readable(fact_page("risk", nothing()))
-        and "Your biggest:" in readable(fact_page("risk", premium()))
-    )
+    assert "Half your losing trades lost" in readable(
+        fact_page("risk", nothing())
+    ) and "Your biggest:" in readable(fact_page("risk", premium()))
 
 
 def test_too_few_losses_show_no_guide():
@@ -130,7 +129,9 @@ def test_the_budget_page_shows_the_guide(client, engine, monkeypatch):
     """On a real upload. The fixture's file has a few losses, so the minimum comes down."""
     monkeypatch.setattr(mx, "LOSS_SIZES_MINIMUM", 1)
     upload(client, content=_with_a_loss())
-    assert "Half your losing trades lost ₹100 or less." in " ".join(client.get("/budget").text.split())
+    assert "Half your losing trades lost ₹100 or less." in " ".join(
+        client.get("/budget").text.split()
+    )
 
 
 def test_the_budget_page_says_nothing_with_too_few(client, engine):
@@ -147,10 +148,12 @@ def test_an_old_refusal_reads_in_plain_words(client, engine):
     upload(client, content=_with_a_loss())
     with make_session(engine) as sess:
         imp = sess.scalars(select(m.Import)).first()
-        sess.add(m.SkippedTrip(
-            import_id=imp.id,
-            reason="a short option position is outside ctr_v1: the R convention is not decided",
-        ))
+        sess.add(
+            m.SkippedTrip(
+                import_id=imp.id,
+                reason="a short option position is outside ctr_v1: the R convention is not decided",
+            )
+        )
         sess.commit()
     page = client.get("/mirror/fact/unread").text
     assert "A sold option. Scope did not count these when this file was read." in page

@@ -6,6 +6,7 @@ rest of the generator relies on: same seed -> same bytes, a crude trading day,
 sane bars, and volatility clustering only when asked for (the adversarial null
 class needs it; the clean class must not have it).
 """
+
 import numpy as np
 import pytest
 

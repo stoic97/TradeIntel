@@ -152,6 +152,7 @@ def landing_for(sess, trader: m.Trader) -> str:
     walk's last step either way. With uploads but no record, his latest, which says
     why.
     """
+
     def latest(*, with_trips: bool) -> m.Import | None:
         query = select(m.Import).where(m.Import.trader_id == trader.id)
         if with_trips:
@@ -176,8 +177,14 @@ DISPLAY_NAME_MAX = 200
 
 
 def _signup_refused(request: Request, error: str):
-    return page(request, "home.html", status_code=400, title="Create your account",
-                form_open=True, error=error)
+    return page(
+        request,
+        "home.html",
+        status_code=400,
+        title="Create your account",
+        form_open=True,
+        error=error,
+    )
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -206,8 +213,14 @@ def signup(
     if wait:
         limits.count_refusal(request, limits.SIGNUP_CAP)
         return limits.with_retry_after(
-            page(request, "home.html", status_code=429, title="Create your account",
-                 form_open=True, error=limits.signups_refused(wait)),
+            page(
+                request,
+                "home.html",
+                status_code=429,
+                title="Create your account",
+                form_open=True,
+                error=limits.signups_refused(wait),
+            ),
             wait,
         )
 
@@ -230,12 +243,19 @@ def signup(
         taken = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
         # A listed id nobody holds, or one whose owner deleted himself, is still an admin's:
         # registering it would make a stranger an admin.
-        if (taken is not None or login_id in _settings(request).admin_login_ids
-                or login_id == SAMPLE_LOGIN_ID):
+        if (
+            taken is not None
+            or login_id in _settings(request).admin_login_ids
+            or login_id == SAMPLE_LOGIN_ID
+        ):
             return _signup_refused(request, "That login id is taken.")
 
-        trader = m.Trader(display_name=display_name, login_id=login_id,
-                          password_hash=password_hash, created_at=datetime.now(UTC))
+        trader = m.Trader(
+            display_name=display_name,
+            login_id=login_id,
+            password_hash=password_hash,
+            created_at=datetime.now(UTC),
+        )
         sess.add(trader)
         try:
             sess.flush()
@@ -243,8 +263,11 @@ def signup(
             sess.rollback()
             return _signup_refused(request, "That login id is taken.")
         # No target: an admin action outlives a deletion, and a login id is his.
-        sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="sign_up", target=None,
-                               at=datetime.now(UTC)))
+        sess.add(
+            m.AdminAction(
+                actor=f"trader:{trader.id}", action="sign_up", target=None, at=datetime.now(UTC)
+            )
+        )
         sess.commit()
         request.app.state.signups.add(connection)
 
@@ -270,25 +293,31 @@ def login(
 
     # Before the password is checked, so a guess past the cap learns nothing even if it is right.
     state, connection = request.app.state, limits.connection(request)
-    wait = max(state.login_ids.wait_seconds(login_id), state.login_connections.wait_seconds(connection))
+    wait = max(
+        state.login_ids.wait_seconds(login_id), state.login_connections.wait_seconds(connection)
+    )
     if wait:
         return limits.with_retry_after(
-            page(request, "login.html", status_code=429, title="Sign in",
-                 error=limits.logins_refused(wait)),
+            page(
+                request,
+                "login.html",
+                status_code=429,
+                title="Sign in",
+                error=limits.logins_refused(wait),
+            ),
             wait,
         )
 
     with make_session(request.app.state.engine) as sess:
-        trader = sess.scalars(
-            select(m.Trader).where(m.Trader.login_id == login_id)
-        ).first()
+        trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).first()
         ok = trader is not None and auth.verify_password(trader.password_hash, password)
         if not ok or trader is None:
             state.login_ids.add(login_id)
             state.login_connections.add(connection)
             # One answer for an unknown login id and a wrong password alike.
-            return page(request, "login.html", status_code=400, title="Sign in",
-                        error=SIGN_IN_FAILED)
+            return page(
+                request, "login.html", status_code=400, title="Sign in", error=SIGN_IN_FAILED
+            )
 
         session = _session_for(request, trader)
         response = RedirectResponse(landing_for(sess, trader), status_code=303)
@@ -319,8 +348,9 @@ def _upload_changes(sess, trader: m.Trader) -> dict[int, dv.UploadChange]:
     by_import: dict[int, list[m.TradingDayVersion]] = {}
     for version in versions:
         by_import.setdefault(version.import_id, []).append(version)
-    return {import_id: dv.upload_change(by_import[import_id])
-            for import_id in sorted(by_import)[1:]}
+    return {
+        import_id: dv.upload_change(by_import[import_id]) for import_id in sorted(by_import)[1:]
+    }
 
 
 @router.get("/account", response_class=HTMLResponse)
@@ -330,14 +360,17 @@ def account(request: Request):
         if trader is None:
             return RedirectResponse("/login", status_code=303)
         imports = sess.scalars(
-            select(m.Import)
-            .where(m.Import.trader_id == trader.id)
-            .order_by(m.Import.id.desc())
+            select(m.Import).where(m.Import.trader_id == trader.id).order_by(m.Import.id.desc())
         ).all()
         current = loader.current_import(sess, trader)
-        return page(request, "account.html", title="Your account",
-                    display_name=trader.display_name, login_id=trader.login_id,
-                    imports=imports, changes=_upload_changes(sess, trader),
-                    read_again_id=current.id if current and pl.out_of_date(current) else None,
-                    reads_again={imp.id for imp in imports
-                                 if persist.read_with_newer_code(sess, imp)})
+        return page(
+            request,
+            "account.html",
+            title="Your account",
+            display_name=trader.display_name,
+            login_id=trader.login_id,
+            imports=imports,
+            changes=_upload_changes(sess, trader),
+            read_again_id=current.id if current and pl.out_of_date(current) else None,
+            reads_again={imp.id for imp in imports if persist.read_with_newer_code(sess, imp)},
+        )

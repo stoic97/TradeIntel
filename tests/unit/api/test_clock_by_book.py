@@ -128,9 +128,13 @@ def test_30_trades_shows_a_win_rate():
 
 def test_win_rate_leaves_out_a_trade_that_finished_level():
     """Thirty trades, so it shows; twelve wins over twenty-nine, as strike_rate reads them."""
-    assert cell(OIL, 19).win_rate == mx.strike_rate(
-        [t for t in TRIPS if t.symbol == "WIDGETOIL" and t.entry_ts.hour == 19]
-    ).rate_percent == Decimal("41.4")
+    assert (
+        cell(OIL, 19).win_rate
+        == mx.strike_rate(
+            [t for t in TRIPS if t.symbol == "WIDGETOIL" and t.entry_ts.hour == 19]
+        ).rate_percent
+        == Decimal("41.4")
+    )
 
 
 def test_the_minimum_counts_each_book_not_the_hour_across_books():
@@ -225,8 +229,12 @@ def test_a_clock_in_another_zone_says_that_zone():
 
 def test_the_headline_names_the_hour_as_what_happened():
     assert "The largest result in any one hour: −₹5,500 at 20:00, in WIDGETOIL options." in PAGE
-    assert "Its largest result in one hour: −₹5,500 at 20:00, over 40 trades, −₹137 per trade." in PAGE
-    assert "Its largest result in one hour: +₹3,000 at 10:00, over 30 trades, +₹100 per trade." in PAGE
+    assert (
+        "Its largest result in one hour: −₹5,500 at 20:00, over 40 trades, −₹137 per trade." in PAGE
+    )
+    assert (
+        "Its largest result in one hour: +₹3,000 at 10:00, over 30 trades, +₹100 per trade." in PAGE
+    )
 
 
 @pytest.mark.parametrize("words", ["worst hour", "best hour", "your worst", "your best"])
@@ -301,7 +309,15 @@ def test_the_button_takes_the_chapters_name_from_the_map(monkeypatch):
 
 @pytest.mark.parametrize(
     "line",
-    ["New York", "5 to 7", "half hour", "half-hour", "After 3 losses", "losses in a row", "Wednesday"],
+    [
+        "New York",
+        "5 to 7",
+        "half hour",
+        "half-hour",
+        "After 3 losses",
+        "losses in a row",
+        "Wednesday",
+    ],
 )
 def test_what_the_research_seat_holds_is_not_on_the_page(line):
     assert line not in PAGE

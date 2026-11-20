@@ -19,6 +19,7 @@ Robustness, BH, economic significance and sign agreement are later cycles. They 
 carried as unevaluated gates, and no tier above Exploratory is awarded while any gate
 is unevaluated - the alternative is to invent values, which is worse than waiting.
 """
+
 import sys
 
 import numpy as np
@@ -39,6 +40,7 @@ def _cell(test_id, k, n):
 
 
 # --- zones ---------------------------------------------------------------------
+
 
 def test_isolation_is_a_quarter_clamped_to_30_and_200():
     """Section 4.6: isolation = clamp(round(0.25 N), 30, 200)."""
@@ -83,19 +85,22 @@ def test_a_history_too_short_to_leave_a_training_zone_is_refused():
 
 # --- the condition -------------------------------------------------------------
 
+
 def _obs(rows):
     """rows: (day, entry_at, exit_at, r)."""
     return [b2.Obs(day=d, entry_at=e, exit_at=x, r=r) for d, e, x, r in rows]
 
 
 def test_the_condition_is_two_prior_same_day_losses_and_population_needs_two_priors():
-    obs = _obs([
-        (0, 1, 2, -1.0),  # first of the day: no priors -> outside the population
-        (0, 3, 4, -1.0),  # one prior -> outside the population
-        (0, 5, 6, +0.5),  # priors (-1, -1) -> condition
-        (0, 7, 8, -0.5),  # priors (-1, +0.5) -> in population, not condition
-        (0, 9, 10, +1.0),  # priors (+0.5, -0.5) -> in population, not condition
-    ])
+    obs = _obs(
+        [
+            (0, 1, 2, -1.0),  # first of the day: no priors -> outside the population
+            (0, 3, 4, -1.0),  # one prior -> outside the population
+            (0, 5, 6, +0.5),  # priors (-1, -1) -> condition
+            (0, 7, 8, -0.5),  # priors (-1, +0.5) -> in population, not condition
+            (0, 9, 10, +1.0),  # priors (+0.5, -0.5) -> in population, not condition
+        ]
+    )
     in_pop, cond = b2.population_and_condition(obs)
     assert in_pop.tolist() == [False, False, True, True, True]
     assert cond.tolist() == [False, False, True, False, False]
@@ -104,23 +109,27 @@ def test_the_condition_is_two_prior_same_day_losses_and_population_needs_two_pri
 def test_a_trip_still_open_at_entry_is_not_a_resolved_prior():
     """Resolved means exited before this entry. An overlapping trip does not count,
     however it later ends."""
-    obs = _obs([
-        (0, 1, 20, -1.0),  # exits after the third trip enters
-        (0, 2, 3, -1.0),
-        (0, 4, 5, -1.0),
-        (0, 6, 7, +0.5),  # resolved priors by now: trips 2 and 3 -> condition
-    ])
+    obs = _obs(
+        [
+            (0, 1, 20, -1.0),  # exits after the third trip enters
+            (0, 2, 3, -1.0),
+            (0, 4, 5, -1.0),
+            (0, 6, 7, +0.5),  # resolved priors by now: trips 2 and 3 -> condition
+        ]
+    )
     in_pop, cond = b2.population_and_condition(obs)
     assert in_pop.tolist() == [False, False, False, True]
     assert cond.tolist() == [False, False, False, True]
 
 
 def test_losses_do_not_carry_across_the_day_boundary():
-    obs = _obs([
-        (0, 1, 2, -1.0),
-        (0, 3, 4, -1.0),
-        (1, 1, 2, +0.5),  # new day: no same-day priors
-    ])
+    obs = _obs(
+        [
+            (0, 1, 2, -1.0),
+            (0, 3, 4, -1.0),
+            (1, 1, 2, +0.5),  # new day: no same-day priors
+        ]
+    )
     in_pop, cond = b2.population_and_condition(obs)
     assert in_pop.tolist() == [False, False, False]
     assert not cond.any()
@@ -139,6 +148,7 @@ def test_the_engines_condition_agrees_with_the_generators_independent_one():
 
 
 # --- evidence arithmetic, pinned to the spec's own tables -----------------------
+
 
 @pytest.mark.parametrize(
     "theta_hold,expected",
@@ -166,6 +176,7 @@ def test_mde_at_a_sample_inverts_the_table():
 
 
 # --- promotion -----------------------------------------------------------------
+
 
 def _samples(mean, sd, n=4000, seed=0):
     return np.random.default_rng(seed).normal(mean, sd, n)
@@ -216,7 +227,11 @@ def test_a_confident_training_fit_that_the_hold_out_contradicts_is_killed():
 def test_no_tier_above_exploratory_while_a_gate_is_unevaluated():
     core = ev.statistical_core(_samples(-0.5, 0.1), _samples(-0.4, 0.2), "<", 0.25)
     finding = ev.assess(
-        core, n_condition=80, n_comparison=320, n_condition_isolation=30, sigma_r=1.4,
+        core,
+        n_condition=80,
+        n_comparison=320,
+        n_condition_isolation=30,
+        sigma_r=1.4,
         n_min=(30, 60),
     )
     assert finding.tier == "Exploratory"
@@ -228,7 +243,11 @@ def test_no_tier_above_exploratory_while_a_gate_is_unevaluated():
 def test_below_the_minimum_sample_is_not_enough_evidence_with_the_reason_stored():
     core = ev.statistical_core(_samples(-0.5, 0.1), _samples(-0.4, 0.2), "<", 0.25)
     finding = ev.assess(
-        core, n_condition=12, n_comparison=320, n_condition_isolation=4, sigma_r=1.4,
+        core,
+        n_condition=12,
+        n_comparison=320,
+        n_condition_isolation=4,
+        sigma_r=1.4,
         n_min=(30, 60),
     )
     assert finding.tier == "Not enough evidence yet"
@@ -237,12 +256,15 @@ def test_below_the_minimum_sample_is_not_enough_evidence_with_the_reason_stored(
 
 # --- end to end ----------------------------------------------------------------
 
+
 # TD-023 (TICKET-929): under the same lock this fails on macOS (p_hold 0.53525, every run on
 # the MacBook Air 5-14 Nov) and passes on Linux (GitHub Actions, 14 Nov). Excused on macOS
 # only, and only for the assertion it is known to fail: on Linux it stays a full check, any
 # other failure is red everywhere, and strict means a pass on macOS is red until ruled.
 @pytest.mark.xfail(
-    sys.platform == "darwin", raises=AssertionError, strict=False,
+    sys.platform == "darwin",
+    raises=AssertionError,
+    strict=False,
     reason="TD-023: p_hold is machine-dependent under the same lock - 0.53525 on one MacBook Air, passing on another, 0.40125 on Linux CI. Not strict: no machine can be asserted to fail. Research seat to rule",
 )
 def test_b2_fires_on_a_planted_trader_and_is_silent_on_a_clean_one():

@@ -97,48 +97,61 @@ from tests.helpers.read_again import (
 )
 from tests.helpers.upload import CSRF, DUPES, sign_up
 
-HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+HEADER = (
+    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+)
 CALL = "NIFTY 25 JAN 20000 CALL"
 PUT = "NIFTY 25 JAN 20000 PUT"
 LAST_DAY_COMPLETE = "2024-01-10"
 FIRST_ROW_OF = {"A": 1, "B": 9, "C": 13}
 THE_COPY_OF = {"A": 2, "B": 10, "C": 14}
-SET_ASIDE_ONE = ("You told us 1 row repeats a trade already in the file. It is set aside, and "
-                 "your figures were rebuilt without it.")
-SET_ASIDE_THREE = ("You told us 3 rows repeat a trade already in the file. They are set aside, "
-                   "and your figures were rebuilt without them.")
+SET_ASIDE_ONE = (
+    "You told us 1 row repeats a trade already in the file. It is set aside, and "
+    "your figures were rebuilt without it."
+)
+SET_ASIDE_THREE = (
+    "You told us 3 rows repeat a trade already in the file. They are set aside, "
+    "and your figures were rebuilt without them."
+)
 FROM_A_CONFIRMATION = "Rows you confirmed as duplicates were set aside, which changed this period."
 
 
 def _row(day: str, time: str, name: str, side: str, value: int) -> str:
-    return (f"2024-01-{day},{time},{name},{side},MARGIN,NSE,Derivative,50,{value / 50:.2f},"
-            f"{value:.2f},Traded")
+    return (
+        f"2024-01-{day},{time},{name},{side},MARGIN,NSE,Derivative,50,{value / 50:.2f},"
+        f"{value:.2f},Traded"
+    )
 
 
-TEXT = "\n".join([
-    HEADER,
-    _row("02", "09:30:00", CALL, "BUY", 5000),
-    _row("02", "09:30:00", CALL, "BUY", 5000),
-    _row("02", "09:40:00", CALL, "BUY", 6000),
-    _row("02", "09:50:00", CALL, "SELL", 6500),
-    _row("02", "10:00:00", CALL, "SELL", 7000),
-    _row("02", "11:00:00", PUT, "BUY", 4000),
-    _row("02", "11:10:00", PUT, "SELL", 4100),
-    _row("03", "09:30:00", CALL, "BUY", 5500),
-    _row("03", "09:40:00", CALL, "SELL", 5800),
-    _row("03", "09:40:00", CALL, "SELL", 5800),
-    _row("03", "11:00:00", PUT, "BUY", 4000),
-    _row("03", "11:10:00", PUT, "SELL", 4050),
-    _row("04", "09:30:00", CALL, "BUY", 6200),
-    _row("04", "09:30:00", CALL, "BUY", 6200),
-    _row("04", "09:40:00", CALL, "SELL", 6400),
-    _row("04", "11:00:00", PUT, "BUY", 4000),
-    _row("04", "11:10:00", PUT, "SELL", 3900),
-    _row("05", "11:00:00", PUT, "BUY", 4000),
-    _row("05", "11:10:00", PUT, "SELL", 4200),
-    _row("05", "12:00:00", PUT, "BUY", 4000),
-    _row("05", "12:10:00", PUT, "SELL", 4300),
-]) + "\n"
+TEXT = (
+    "\n".join(
+        [
+            HEADER,
+            _row("02", "09:30:00", CALL, "BUY", 5000),
+            _row("02", "09:30:00", CALL, "BUY", 5000),
+            _row("02", "09:40:00", CALL, "BUY", 6000),
+            _row("02", "09:50:00", CALL, "SELL", 6500),
+            _row("02", "10:00:00", CALL, "SELL", 7000),
+            _row("02", "11:00:00", PUT, "BUY", 4000),
+            _row("02", "11:10:00", PUT, "SELL", 4100),
+            _row("03", "09:30:00", CALL, "BUY", 5500),
+            _row("03", "09:40:00", CALL, "SELL", 5800),
+            _row("03", "09:40:00", CALL, "SELL", 5800),
+            _row("03", "11:00:00", PUT, "BUY", 4000),
+            _row("03", "11:10:00", PUT, "SELL", 4050),
+            _row("04", "09:30:00", CALL, "BUY", 6200),
+            _row("04", "09:30:00", CALL, "BUY", 6200),
+            _row("04", "09:40:00", CALL, "SELL", 6400),
+            _row("04", "11:00:00", PUT, "BUY", 4000),
+            _row("04", "11:10:00", PUT, "SELL", 3900),
+            _row("05", "11:00:00", PUT, "BUY", 4000),
+            _row("05", "11:10:00", PUT, "SELL", 4200),
+            _row("05", "12:00:00", PUT, "BUY", 4000),
+            _row("05", "12:10:00", PUT, "SELL", 4300),
+        ]
+    )
+    + "\n"
+)
 FILE = TEXT.encode()
 
 TRIP_ID = re.compile(r"\b[0-9a-f]{16,64}\b")
@@ -150,8 +163,10 @@ def plan(text: str = TEXT, **kwargs) -> pl.ImportPlan:
     return pl.plan_import(text, context=CONTEXT, **kwargs)
 
 
-GROUP = {name: next(r.dup_group for r in plan().rows if r.row_no == row)
-         for name, row in FIRST_ROW_OF.items()}
+GROUP = {
+    name: next(r.dup_group for r in plan().rows if r.row_no == row)
+    for name, row in FIRST_ROW_OF.items()
+}
 
 
 def groups(names: str) -> set[str]:
@@ -170,16 +185,19 @@ def bytes_of(trips) -> str:
 # ---- the plan: rows leave before pairing
 
 
-@pytest.mark.parametrize(("names", "trades", "total", "still_open"), [
-    ("", 10, "4350", 1),
-    ("A", 10, "3150", 0),
-    ("B", 9, "4750", 1),
-    ("C", 10, "4350", 0),
-    ("AB", 9, "3550", 1),
-    ("AC", 9, "2950", 1),
-    ("BC", 9, "4750", 1),
-    ("ABC", 9, "3550", 0),
-])
+@pytest.mark.parametrize(
+    ("names", "trades", "total", "still_open"),
+    [
+        ("", 10, "4350", 1),
+        ("A", 10, "3150", 0),
+        ("B", 9, "4750", 1),
+        ("C", 10, "4350", 0),
+        ("AB", 9, "3550", 1),
+        ("AC", 9, "2950", 1),
+        ("BC", 9, "4750", 1),
+        ("ABC", 9, "3550", 0),
+    ],
+)
 def test_every_combination_reads_as_worked_by_hand(names, trades, total, still_open):
     read = plan(confirmed_groups=groups(names))
     assert len(read.trips) == trades
@@ -189,8 +207,10 @@ def test_every_combination_reads_as_worked_by_hand(names, trades, total, still_o
 
 def test_removing_a_copy_changes_how_the_fills_pair():
     """The later SELL closes the 6000 once the copy of 5000 has gone: +1000, not +2000."""
-    pairs = {(t.entry_price * t.quantity, t.exit_price * t.quantity)
-             for t in plan(confirmed_groups=groups("ABC")).trips}
+    pairs = {
+        (t.entry_price * t.quantity, t.exit_price * t.quantity)
+        for t in plan(confirmed_groups=groups("ABC")).trips
+    }
     assert (Decimal(5000), Decimal(7000)) not in pairs
     assert (Decimal(6000), Decimal(5800)) not in pairs
     assert (Decimal(6000), Decimal(7000)) in pairs
@@ -199,8 +219,9 @@ def test_removing_a_copy_changes_how_the_fills_pair():
 def test_a_row_removed_can_turn_a_position_round():
     """With only A confirmed, one SELL too many on day 3 opens a short that day 4 closes."""
     short = [t for t in plan(confirmed_groups=groups("A")).trips if t.direction.value == "SHORT"]
-    assert [(t.entry_price * t.quantity, t.exit_price * t.quantity, t.gross_pnl)
-            for t in short] == [(Decimal(5800), Decimal(6200), Decimal(-400))]
+    assert [
+        (t.entry_price * t.quantity, t.exit_price * t.quantity, t.gross_pnl) for t in short
+    ] == [(Decimal(5800), Decimal(6200), Decimal(-400))]
 
 
 def test_positions_are_built_from_the_trips_that_remain():
@@ -213,8 +234,9 @@ def test_positions_are_built_from_the_trips_that_remain():
 def test_refused_trades_follow_the_rows_that_remain(monkeypatch):
     """Under reconstruction that refuses a sold option, A's short is refused and A and B's isn't."""
     real = rc.reconstruct
-    monkeypatch.setattr(rc, "reconstruct",
-                        lambda fills, **kw: real(fills, **{**kw, "short_options": False}))
+    monkeypatch.setattr(
+        rc, "reconstruct", lambda fills, **kw: real(fills, **{**kw, "short_options": False})
+    )
     assert plan().skipped == ()
     assert len(plan(confirmed_groups=groups("A")).skipped) == 1
     assert plan(confirmed_groups=groups("AB")).skipped == ()
@@ -233,13 +255,20 @@ def test_the_file_with_all_three_confirmed_counts_its_rows_truly():
 def test_days_count_the_rows_that_remain():
     read = plan(confirmed_groups=groups("ABC"))
     assert [(d.trading_day[-2:], d.rows_after) for d in read.day_diffs] == [
-        ("02", 6), ("03", 4), ("04", 4), ("05", 4)]
+        ("02", 6),
+        ("03", 4),
+        ("04", 4),
+        ("05", 4),
+    ]
 
 
 def test_a_day_that_lost_a_copy_shrank_against_the_reading_before():
     existing = {d.trading_day: d.rows_after for d in plan().day_diffs}
-    read = pl.plan_import(TEXT, context=dataclasses.replace(CONTEXT, existing_days=existing),
-                          confirmed_groups=groups("A"))
+    read = pl.plan_import(
+        TEXT,
+        context=dataclasses.replace(CONTEXT, existing_days=existing),
+        confirmed_groups=groups("A"),
+    )
     by_day = {d.trading_day[-2:]: d for d in read.day_diffs}
     assert by_day["02"].diff is s.DayDiff.SHRUNK and by_day["02"].rows_after == 6
     assert by_day["03"].diff is s.DayDiff.IDENTICAL
@@ -281,8 +310,11 @@ def test_nothing_can_change_a_plans_rows_without_its_trips():
 
 
 def test_the_digest_follows_what_was_confirmed():
-    digests = {names: plan(confirmed_groups=groups(names)).digest()
-               for r in range(4) for names in map("".join, itertools.combinations("ABC", r))}
+    digests = {
+        names: plan(confirmed_groups=groups(names)).digest()
+        for r in range(4)
+        for names in map("".join, itertools.combinations("ABC", r))
+    }
     assert len(set(digests.values())) == len(digests), "every combination reads differently"
     for order in itertools.permutations("ABC"):
         assert plan(confirmed_groups=[GROUP[name] for name in order]).digest() == digests["ABC"]
@@ -298,14 +330,21 @@ def test_a_confirmation_moves_the_digest_even_when_no_trip_moved():
 # ---- an unconfirmed suspected duplicate stays exactly as it is
 
 
-@pytest.mark.parametrize(("source", "trips_sha256", "digest"), [
-    ("this file",
-     "35bc41bad8dee244ea14fecd7a4722cc1714f0dbd718c521c3864327eb7bc43d",
-     "6afb45c7724c64b88a523d4dd8c370d44e684c55fb006e94d9e2c4dd81f0111c"),
-    ("duplicated_block.csv",
-     "c08db29ea6cbfdcc8576a916091f0d7bb12224deca1bdba54cb1069c3ce36f64",
-     "be192e0c097f7d8af8664661c35a79dbfe5a69e8aecba5190b4f4e515a42c0bd"),
-])
+@pytest.mark.parametrize(
+    ("source", "trips_sha256", "digest"),
+    [
+        (
+            "this file",
+            "35bc41bad8dee244ea14fecd7a4722cc1714f0dbd718c521c3864327eb7bc43d",
+            "6afb45c7724c64b88a523d4dd8c370d44e684c55fb006e94d9e2c4dd81f0111c",
+        ),
+        (
+            "duplicated_block.csv",
+            "c08db29ea6cbfdcc8576a916091f0d7bb12224deca1bdba54cb1069c3ce36f64",
+            "be192e0c097f7d8af8664661c35a79dbfe5a69e8aecba5190b4f4e515a42c0bd",
+        ),
+    ],
+)
 def test_a_file_with_none_confirmed_reads_byte_for_byte_as_before(source, trips_sha256, digest):
     """The two hashes were taken from the code before this change."""
     text = TEXT if source == "this file" else (DUPES / source).read_text()
@@ -348,26 +387,58 @@ def _stored(engine, import_id: int) -> dict:
         imp = sess.get(m.Import, import_id)
         trader = sess.get(m.Trader, imp.trader_id)
         newest: dict[str, m.Journal] = {}
-        for journal in sess.scalars(select(m.Journal).where(m.Journal.trader_id == trader.id)
-                                    .order_by(m.Journal.id)):
+        for journal in sess.scalars(
+            select(m.Journal).where(m.Journal.trader_id == trader.id).order_by(m.Journal.id)
+        ):
             newest[journal.period_start] = journal
         return {
-            "counts": (imp.outcome, imp.rows_in, imp.rows_parsed, imp.rows_excluded,
-                       imp.trips_reconstructed, imp.trips_refused),
-            "rows": [(r.row_no, r.status, r.flag, r.dup_group) for r in sess.scalars(
-                select(m.ImportRow).where(m.ImportRow.import_id == imp.id)
-                .order_by(m.ImportRow.row_no))],
-            "trips": [(t.trip_id, t.occurrence, t.position_id, t.trading_day, t.direction,
-                       t.quantity, t.entry_price, t.exit_price, t.gross, t.net)
-                      for t in sess.scalars(select(m.Trip).where(m.Trip.import_id == imp.id)
-                                            .order_by(m.Trip.id))],
-            "open": len(sess.scalars(select(m.OpenPosition)
-                                     .where(m.OpenPosition.import_id == imp.id)).all()),
-            "refused": [t.reason for t in sess.scalars(
-                select(m.SkippedTrip).where(m.SkippedTrip.import_id == imp.id))],
+            "counts": (
+                imp.outcome,
+                imp.rows_in,
+                imp.rows_parsed,
+                imp.rows_excluded,
+                imp.trips_reconstructed,
+                imp.trips_refused,
+            ),
+            "rows": [
+                (r.row_no, r.status, r.flag, r.dup_group)
+                for r in sess.scalars(
+                    select(m.ImportRow)
+                    .where(m.ImportRow.import_id == imp.id)
+                    .order_by(m.ImportRow.row_no)
+                )
+            ],
+            "trips": [
+                (
+                    t.trip_id,
+                    t.occurrence,
+                    t.position_id,
+                    t.trading_day,
+                    t.direction,
+                    t.quantity,
+                    t.entry_price,
+                    t.exit_price,
+                    t.gross,
+                    t.net,
+                )
+                for t in sess.scalars(
+                    select(m.Trip).where(m.Trip.import_id == imp.id).order_by(m.Trip.id)
+                )
+            ],
+            "open": len(
+                sess.scalars(select(m.OpenPosition).where(m.OpenPosition.import_id == imp.id)).all()
+            ),
+            "refused": [
+                t.reason
+                for t in sess.scalars(
+                    select(m.SkippedTrip).where(m.SkippedTrip.import_id == imp.id)
+                )
+            ],
             "days": persist.existing_days(sess, trader=trader, source_account=imp.source_account),
-            "journals": {day: json.dumps(sec.own_facts(json.loads(j.sections)), sort_keys=True)
-                         for day, j in newest.items()},
+            "journals": {
+                day: json.dumps(sec.own_facts(json.loads(j.sections)), sort_keys=True)
+                for day, j in newest.items()
+            },
         }
 
 
@@ -381,8 +452,11 @@ def _journal_versions(engine) -> dict[str, int]:
 
 def _journal_id(engine, day: str, version: int) -> int:
     with make_session(engine) as sess:
-        return sess.scalars(select(m.Journal.id).where(
-            m.Journal.period_start == f"2024-01-{day}", m.Journal.version_no == version)).one()
+        return sess.scalars(
+            select(m.Journal.id).where(
+                m.Journal.period_start == f"2024-01-{day}", m.Journal.version_no == version
+            )
+        ).one()
 
 
 @pytest.fixture()
@@ -398,12 +472,13 @@ def test_group_by_group_in_any_order_is_all_at_once(client, engine, order, all_a
 
     stored = _stored(engine, imports(engine)[-1].id)
     assert [(t[3], t[4], t[8]) for t in stored["trips"]] == [
-        (t.entry_ts.date().isoformat(), t.direction.value, t.gross_pnl)
-        for t in all_at_once.trips]
+        (t.entry_ts.date().isoformat(), t.direction.value, t.gross_pnl) for t in all_at_once.trips
+    ]
     assert stored["open"] == all_at_once.open_positions == 0
     assert stored["counts"] == (all_at_once.outcome, 21, 18, 3, 9, 0)
     assert [(n, status, flag, group) for n, status, flag, group in stored["rows"]] == [
-        (r.row_no, r.status, r.flag, r.dup_group) for r in all_at_once.rows]
+        (r.row_no, r.status, r.flag, r.dup_group) for r in all_at_once.rows
+    ]
     assert stored["days"] == {d.trading_day: d.rows_after for d in all_at_once.day_diffs}
 
 
@@ -472,11 +547,17 @@ def test_answers_stay_with_their_day(client, engine):
     assert _journal_id(engine, "05", 1) == stays, "no new version"
     newer = _journal_id(engine, "02", 2)
     with make_session(engine) as sess:
-        said = {journal: journal_fields.current(sess, journal=sess.get(m.Journal, journal),
-                                                field="note", trip_id=None).value
-                for journal in (stays, changes, newer)}
-    assert said == {stays: "A note on the quiet day", changes: "A note on the changed day",
-                    newer: "A note on the changed day"}
+        said = {
+            journal: journal_fields.current(
+                sess, journal=sess.get(m.Journal, journal), field="note", trip_id=None
+            ).value
+            for journal in (stays, changes, newer)
+        }
+    assert said == {
+        stays: "A note on the quiet day",
+        changes: "A note on the changed day",
+        newer: "A note on the changed day",
+    }
     assert "A note on the quiet day" not in client.get(f"/journals/{newer}").text
 
 
@@ -505,8 +586,10 @@ def test_the_review_says_what_happened_with_three_rows_and_counts_them(client, e
         response = confirm_named(client, engine, name)
     page = words(client.get(response.headers["location"]).text)
     assert SET_ASIDE_THREE in page
-    assert ("Rows in the file 21 rows Rows we could read 18 rows Rows set aside 3 rows "
-            "Trades rebuilt 9 trades") in page
+    assert (
+        "Rows in the file 21 rows Rows we could read 18 rows Rows set aside 3 rows "
+        "Trades rebuilt 9 trades"
+    ) in page
 
 
 def test_a_review_with_nothing_confirmed_says_nothing_of_it(client, engine):
@@ -546,8 +629,11 @@ def test_admin_does_not_call_a_set_aside_row_refused(client, engine):
     with make_session(engine) as sess:
         sess.execute(update(m.Trader).values(development_data=False))
         sess.commit()
-        row = next(r for r in admin_view.build(sess, running_version="x", production=False)["rows"]
-                   if r["login_id"] == "rikk")
+        row = next(
+            r
+            for r in admin_view.build(sess, running_version="x", production=False)["rows"]
+            if r["login_id"] == "rikk"
+        )
     assert row["rows_read"] == "20 of 21"
     assert row["rows_refused"] == 0
 
@@ -557,8 +643,11 @@ def test_admin_shows_no_negative_count_for_a_row_the_old_code_counted_twice(clie
     with make_session(engine) as sess:
         sess.execute(update(m.Trader).values(development_data=False))
         sess.commit()
-        row = next(r for r in admin_view.build(sess, running_version="x", production=False)["rows"]
-                   if r["login_id"] == "rikk")
+        row = next(
+            r
+            for r in admin_view.build(sess, running_version="x", production=False)["rows"]
+            if r["login_id"] == "rikk"
+        )
     assert row["rows_refused"] == 0
 
 
@@ -574,11 +663,14 @@ def test_a_confirmation_uses_up_no_upload(client, engine):
         assert limits._files_today(sess, trader) == 1
         assert len(sess.scalars(select(m.RawFile)).all()) == 1
         assert {i.raw_file_id for i in sess.scalars(select(m.Import))} == {
-            sess.scalars(select(m.RawFile.id)).one()}
+            sess.scalars(select(m.RawFile.id)).one()
+        }
 
 
 def test_a_confirmation_works_at_the_days_limit_and_leaves_the_next_file_alone(
-    client, engine, monkeypatch,
+    client,
+    engine,
+    monkeypatch,
 ):
     upload_it(client, engine)
     monkeypatch.setattr(k, "UPLOADS_PER_ACCOUNT_PER_DAY", 2)
@@ -609,9 +701,11 @@ def test_another_traders_import_is_a_404(client, engine):
     other = sign_up(TestClient(create_app()), engine, "U-2", "someone-else")
     before = counts(engine)
     page = other.get("/upload").text
-    response = other.post(f"/imports/{first}/confirm-duplicates",
-                          data={"dup_group": GROUP["A"], "csrf_token": CSRF.search(page).group(1)},
-                          follow_redirects=False)
+    response = other.post(
+        f"/imports/{first}/confirm-duplicates",
+        data={"dup_group": GROUP["A"], "csrf_token": CSRF.search(page).group(1)},
+        follow_redirects=False,
+    )
     assert response.status_code == 404
     assert counts(engine) == before
 
@@ -629,8 +723,10 @@ def test_a_page_left_open_keeps_what_was_confirmed_since(client, engine):
 
 def gross_stored(engine, import_id: int) -> Decimal:
     with make_session(engine) as sess:
-        return sum((t.gross for t in sess.scalars(
-            select(m.Trip).where(m.Trip.import_id == import_id))), Decimal(0))
+        return sum(
+            (t.gross for t in sess.scalars(select(m.Trip).where(m.Trip.import_id == import_id))),
+            Decimal(0),
+        )
 
 
 def test_a_double_click_reads_once(client, engine):
@@ -664,8 +760,10 @@ def confirmed_as_it_used_to_be(client, engine, version: str | None) -> int:
     copies = set(THE_COPY_OF.values())
     rows = tuple(
         dataclasses.replace(r, status="EXCLUDED", flag=s.RowFlag.TRADER_CONFIRMED_DUPLICATE)
-        if r.row_no in copies else
-        dataclasses.replace(r, flag=None) if r.dup_group else r
+        if r.row_no in copies
+        else dataclasses.replace(r, flag=None)
+        if r.dup_group
+        else r
         for r in whole.rows
     )
     stale = dataclasses.replace(whole, rows=rows, rows_excluded=3, reconstruction_version=version)
@@ -695,8 +793,12 @@ def test_the_reread_applies_what_he_confirmed(client, engine, version):
     newest = imports(engine)[-1]
     assert newest.id != stale
     assert gross_stored(engine, newest.id) == Decimal(3550)
-    assert (newest.rows_in, newest.rows_parsed, newest.rows_excluded,
-            newest.trips_reconstructed) == (21, 18, 3, 9)
+    assert (
+        newest.rows_in,
+        newest.rows_parsed,
+        newest.rows_excluded,
+        newest.trips_reconstructed,
+    ) == (21, 18, 3, 9)
     with make_session(engine) as sess:
         assert not pl.out_of_date(sess.get(m.Import, newest.id))
     page = words(client.get(f"/imports/{newest.id}").text)

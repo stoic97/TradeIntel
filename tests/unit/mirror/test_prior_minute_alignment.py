@@ -90,12 +90,14 @@ def session_bars(name: str, days: list[date]) -> pm.BarTable:
 # that closed just before the entry minute is 10:14, which fell: 0 agree. One minute late reads
 # 10:15, the minute he bought into; one bar early reads 10:13. Both rose, so either mistake
 # reads 1. Only the right minute reads 0.
-NEIGHBOURS = table({
-    ist(DAY, "10:13"): UP,
-    ist(DAY, "10:14"): DOWN,
-    ist(DAY, "10:15"): UP,
-    ist(DAY, "10:16"): UP,
-})
+NEIGHBOURS = table(
+    {
+        ist(DAY, "10:13"): UP,
+        ist(DAY, "10:14"): DOWN,
+        ist(DAY, "10:15"): UP,
+        ist(DAY, "10:16"): UP,
+    }
+)
 
 
 @pytest.mark.parametrize(
@@ -182,8 +184,11 @@ def test_a_flat_minute_is_data_and_agrees_with_neither_side():
     assert before(ist(DAY, "10:15", 30), flat, direction=1) == (0, 1, [])
     assert before(ist(DAY, "10:15", 30), flat, direction=-1) == (0, 1, [])
 
+
 # ---- Gate 5: the real demo file, no network --------------------------------------------------
-DEMO = Path(__file__).resolve().parents[3] / "data" / "fixtures" / "demo" / "scope_demo_tradebook.csv"
+DEMO = (
+    Path(__file__).resolve().parents[3] / "data" / "fixtures" / "demo" / "scope_demo_tradebook.csv"
+)
 
 
 def _demo_entry_times() -> list[datetime]:
@@ -191,8 +196,13 @@ def _demo_entry_times() -> list[datetime]:
 
     plan = pl.plan_import(
         DEMO.read_text(encoding="utf-8"),
-        context=pl.ImportContext(trader_id="demo", source_account="DEMO", code_version="test",
-                                 export_date="2026-09-01", export_date_source="trader"),
+        context=pl.ImportContext(
+            trader_id="demo",
+            source_account="DEMO",
+            code_version="test",
+            export_date="2026-09-01",
+            export_date_source="trader",
+        ),
         production=True,
     )
     return [p.entry_ts for p in plan.positions]
@@ -221,6 +231,7 @@ def test_every_demo_entry_lines_up_on_the_minute_before_and_on_no_other():
         assert before(ts, late) == (0, 0, [pm.Reason.NO_BAR]), ts
         early = table({_at(m0 - 120): UP, _at(m0): UP})  # one bar early
         assert before(ts, early) == (0, 0, [pm.Reason.NO_BAR]), ts
+
 
 # ---- Gate 1, the part that needs no loader: a stamping check that names the series -----------
 def stamping_fault(
@@ -273,6 +284,7 @@ def test_a_series_not_stamped_at_the_start_of_the_minute_is_refused_by_name(name
 def test_bars_with_no_zone_never_match_a_trade_so_the_book_is_unmeasured_not_shifted():
     naive = table({k.replace(tzinfo=None): v for k, v in NEIGHBOURS.bars.items()})
     assert before(ist(DAY, "10:15", 30), naive) == (0, 0, [pm.Reason.NO_BAR])
+
 
 # ---- Gate 3 again: the day a trade is covered on is its IST day, not its UTC day -------------
 def test_the_day_a_trade_is_covered_on_is_its_ist_day():

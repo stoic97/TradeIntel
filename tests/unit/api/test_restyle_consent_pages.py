@@ -23,30 +23,62 @@ NS = types.SimpleNamespace
 
 
 def verdict(id_, state, reason, need=None, unit=None):
-    return NS(test=NS(id=id_), state=NS(value=state), reason=reason, need=need,
-              unit=NS(value=unit) if unit else None)
+    return NS(
+        test=NS(id=id_),
+        state=NS(value=state),
+        reason=reason,
+        need=need,
+        unit=NS(value=unit) if unit else None,
+    )
 
 
 SHORT = [verdict("T02", "insufficient_sample", "needs 200, has 40")]
 WAITING = [verdict("T03", "required_data_missing", "price series")]
-ALL_KINDS = NS(total=19, enough=[verdict("T01", "enough", "62 trips", 50, "round_trips")],
-               short=SHORT, waiting=WAITING,
-               undetermined=[verdict("T04", "undetermined", "by session")],
-               blocked=SHORT + WAITING, waiting_counts={"market_context": 1})
-NONE_ENOUGH = NS(total=19, enough=[], short=SHORT, waiting=WAITING, undetermined=[],
-                 blocked=SHORT + WAITING, waiting_counts={"market_context": 1})
+ALL_KINDS = NS(
+    total=19,
+    enough=[verdict("T01", "enough", "62 trips", 50, "round_trips")],
+    short=SHORT,
+    waiting=WAITING,
+    undetermined=[verdict("T04", "undetermined", "by session")],
+    blocked=SHORT + WAITING,
+    waiting_counts={"market_context": 1},
+)
+NONE_ENOUGH = NS(
+    total=19,
+    enough=[],
+    short=SHORT,
+    waiting=WAITING,
+    undetermined=[],
+    blocked=SHORT + WAITING,
+    waiting_counts={"market_context": 1},
+)
 TEXT = cs.CURRENT
-LEDGER = [NS(at=datetime(2026, 9, 8, tzinfo=UTC), purpose=s.ConsentPurpose.DIAGNOSIS,
-             granted=True, terms_version="0-draft")]
+LEDGER = [
+    NS(
+        at=datetime(2026, 9, 8, tzinfo=UTC),
+        purpose=s.ConsentPurpose.DIAGNOSIS,
+        granted=True,
+        terms_version="0-draft",
+    )
+]
 
 CONTEXT = {
     "consent.html": {"text": TEXT, "error": "Tick the first box to continue."},
-    "consent_ledger.html": {"text": TEXT, "state": {TEXT.purposes[0].enum: True},
-                            "events": LEDGER},
-    "eligibility.html": {"result": ALL_KINDS, "trips": 1240, "days": 8,
-                         "framework": NS(version="0.3"), "draft": True},
-    "eligibility.html#none": {"result": NONE_ENOUGH, "trips": 40, "days": 8,
-                              "framework": NS(version="0.3"), "draft": False},
+    "consent_ledger.html": {"text": TEXT, "state": {TEXT.purposes[0].enum: True}, "events": LEDGER},
+    "eligibility.html": {
+        "result": ALL_KINDS,
+        "trips": 1240,
+        "days": 8,
+        "framework": NS(version="0.3"),
+        "draft": True,
+    },
+    "eligibility.html#none": {
+        "result": NONE_ENOUGH,
+        "trips": 40,
+        "days": 8,
+        "framework": NS(version="0.3"),
+        "draft": False,
+    },
     "eligibility_unreadable.html": {},
 }
 
@@ -94,8 +126,13 @@ def test_it_says_what_it_said_before(case):
 
 def test_consent_reads_its_promises_from_the_versioned_text():
     page = render("consent.html")
-    for promise in (TEXT.what_we_store, TEXT.how_long, TEXT.who_can_access,
-                    TEXT.what_deletion_covers, TEXT.what_deletion_cannot_undo):
+    for promise in (
+        TEXT.what_we_store,
+        TEXT.how_long,
+        TEXT.who_can_access,
+        TEXT.what_deletion_covers,
+        TEXT.what_deletion_cannot_undo,
+    ):
         assert f'<p class="body">{promise}</p>' in page.replace("&#39;", "'")
 
 

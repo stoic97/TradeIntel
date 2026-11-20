@@ -120,25 +120,27 @@ def build(table=TRIPS) -> list[dict]:
     for trip_id, day, entry, minutes, net, lots, source in table:
         entry_ts = datetime.fromisoformat(f"{day}T{entry}:00").replace(tzinfo=IST)
         exit_ts = entry_ts + timedelta(minutes=minutes)
-        out.append({
-            "trip_id": trip_id,
-            "trading_day": day,
-            "entry_ts": entry_ts.isoformat(),
-            "exit_ts": exit_ts.isoformat(),
-            "holding_seconds": minutes * 60,
-            "net": str(net),
-            "gross": str(net),
-            "fees": "0",
-            "fees_available": False,
-            "lots": lots,
-            # What the broker's file would carry. Dhan reports units, not lots
-            # (TD-029), so a one-lot trade in this instrument appears as 100.
-            # `lots` above stays the derived answer the Mirror must reach.
-            "quantity": lots * LOT,
-            "risk_unit_source": source,
-            "exchange": "MCX",
-            "symbol": "WIDGETOIL",
-        })
+        out.append(
+            {
+                "trip_id": trip_id,
+                "trading_day": day,
+                "entry_ts": entry_ts.isoformat(),
+                "exit_ts": exit_ts.isoformat(),
+                "holding_seconds": minutes * 60,
+                "net": str(net),
+                "gross": str(net),
+                "fees": "0",
+                "fees_available": False,
+                "lots": lots,
+                # What the broker's file would carry. Dhan reports units, not lots
+                # (TD-029), so a one-lot trade in this instrument appears as 100.
+                # `lots` above stays the derived answer the Mirror must reach.
+                "quantity": lots * LOT,
+                "risk_unit_source": source,
+                "exchange": "MCX",
+                "symbol": "WIDGETOIL",
+            }
+        )
     return out
 
 

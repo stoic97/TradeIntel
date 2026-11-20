@@ -25,14 +25,20 @@ from tests.helpers.scope_chapters import TRIPS
 from tests.helpers.upload import CSRF, sign_up
 
 BARE_DATE = re.compile(rf"\b\d{{1,2}} (?:{MONTHS})\b(?! \d{{4}})", re.IGNORECASE)
+
+
 @pytest.fixture()
 def client(scope_environment):
     engine = make_engine(os.environ["SCOPE_DB"])
     run_migrations(engine)
     signed_in = sign_up(TestClient(create_app()), engine, "YEARS", "years")
     token = CSRF.search(signed_in.get("/upload").text).group(1)
-    sent = signed_in.post("/upload", files={"file": ("t.csv", FILE.encode(), "text/csv")},
-                          data={"csrf_token": token}, follow_redirects=False)
+    sent = signed_in.post(
+        "/upload",
+        files={"file": ("t.csv", FILE.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
     signed_in.engine_for_test = engine
     return signed_in
@@ -74,8 +80,10 @@ def test_no_chapter_has_a_date_without_a_year(client, n):
     assert _bare(client, f"/mirror/chapter/{n}") == []
 
 
-@pytest.mark.parametrize("path", ["/", "/mirror", "/mirror/reveal", "/journals",
-                                  "/journals/catch-up", "/account", "/budget"])
+@pytest.mark.parametrize(
+    "path",
+    ["/", "/mirror", "/mirror/reveal", "/journals", "/journals/catch-up", "/account", "/budget"],
+)
 def test_the_other_pages_have_no_date_without_a_year(client, path):
     assert _bare(client, path) == []
 

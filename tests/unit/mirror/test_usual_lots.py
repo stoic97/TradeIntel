@@ -36,8 +36,16 @@ def history() -> list[mx.Trip]:
         zip(plain, (1, 1, 2, 2), (3, 1, 2, 100), (True, True, True, False), strict=True)
     ):
         entry = start.replace(day=day, minute=15 + i)
-        out.append(replace(t, trading_day=entry.date().isoformat(), entry_ts=entry,
-                           exit_ts=entry.replace(hour=10), lots=lots, is_option=option))
+        out.append(
+            replace(
+                t,
+                trading_day=entry.date().isoformat(),
+                entry_ts=entry,
+                exit_ts=entry.replace(hour=10),
+                lots=lots,
+                is_option=option,
+            )
+        )
     return out
 
 
@@ -53,10 +61,17 @@ def test_a_history_of_only_shares_has_no_average():
 
 
 def test_a_trip_row_says_whether_it_is_an_option():
-    base = {"trip_id": "x", "symbol": "S", "trading_day": "2026-09-01",
-            "entry_ts": "2026-09-01T09:30:00+05:30", "exit_ts": "2026-09-01T10:00:00+05:30",
-            "holding_seconds": 1800, "net": "1", "lots": 1,
-            "risk_unit_source": "premium_paid"}
+    base = {
+        "trip_id": "x",
+        "symbol": "S",
+        "trading_day": "2026-09-01",
+        "entry_ts": "2026-09-01T09:30:00+05:30",
+        "exit_ts": "2026-09-01T10:00:00+05:30",
+        "holding_seconds": 1800,
+        "net": "1",
+        "lots": 1,
+        "risk_unit_source": "premium_paid",
+    }
     assert mx.load_trips([base])[0].is_option is True
     assert mx.load_trips([{**base, "segment": "OPT"}])[0].is_option is True
     assert mx.load_trips([{**base, "segment": "EQ"}])[0].is_option is False
@@ -66,15 +81,27 @@ def test_the_loader_marks_a_share_trade(client, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
         stored = sess.scalars(select(m.Trip).where(m.Trip.trip_id == "t01")).one()
-        sess.add(m.Trip(
-            import_id=stored.import_id, trip_id="a-share", trading_day="2026-09-01",
-            exchange="NSE", symbol="SOME ETF", segment="EQ", direction="LONG",
-            entry_ts=datetime.fromisoformat("2026-09-01T12:00:00+05:30"),
-            exit_ts=datetime.fromisoformat("2026-09-01T12:10:00+05:30"),
-            quantity=500, entry_price=Decimal(10), exit_price=Decimal(10),
-            gross=Decimal(0), fees=Decimal(0), net=Decimal(0), fees_available=False,
-            risk_unit_source=stored.risk_unit_source,
-        ))
+        sess.add(
+            m.Trip(
+                import_id=stored.import_id,
+                trip_id="a-share",
+                trading_day="2026-09-01",
+                exchange="NSE",
+                symbol="SOME ETF",
+                segment="EQ",
+                direction="LONG",
+                entry_ts=datetime.fromisoformat("2026-09-01T12:00:00+05:30"),
+                exit_ts=datetime.fromisoformat("2026-09-01T12:10:00+05:30"),
+                quantity=500,
+                entry_price=Decimal(10),
+                exit_price=Decimal(10),
+                gross=Decimal(0),
+                fees=Decimal(0),
+                net=Decimal(0),
+                fees_available=False,
+                risk_unit_source=stored.risk_unit_source,
+            )
+        )
         sess.commit()
         trips, _ = loader.load_for(sess, trader)
     by_id = {t.trip_id: t for t in trips}
@@ -111,8 +138,14 @@ def test_a_day_of_only_shares_says_nothing_about_size():
 
 
 def test_an_old_journal_with_a_zero_size_says_nothing_about_size_either():
-    facts = {"against_your_normal": {"trades_today": 1, "your_normal_day": "1",
-                                     "lots_today": "0", "lots_usually": "2"}}
+    facts = {
+        "against_your_normal": {
+            "trades_today": 1,
+            "your_normal_day": "1",
+            "lots_today": "0",
+            "lots_usually": "2",
+        }
+    }
     assert "lot" not in prose._against_normal(facts)
 
 

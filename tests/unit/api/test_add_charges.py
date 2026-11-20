@@ -31,8 +31,14 @@ from tests.helpers.upload import CSRF, sign_up, upload
 PART = b"Date,Total Charges\n2020-03-02,50.50\n"
 GROSS_LINE = "every rupee figure below is gross"
 NEW_COPY = ("Before charges", "broker's file", "Add charges", "Net:", "Net of those")
-REPORT = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/4", "/mirror/fact/strike",
-          "/mirror/fact/money", "/mirror/fact/risk")
+REPORT = (
+    "/mirror",
+    "/mirror/chapter/1",
+    "/mirror/chapter/4",
+    "/mirror/fact/strike",
+    "/mirror/fact/money",
+    "/mirror/fact/risk",
+)
 
 
 def words(html: str) -> str:
@@ -60,8 +66,12 @@ def step(engine) -> str:
 def post_file(client, engine, content: bytes, name="charges.csv"):
     url = step(engine)
     csrf = CSRF.search(client.get("/upload").text).group(1)  # the closed step has no form
-    return client.post(url, files={"file": (name, content, "text/csv")},
-                       data={"csrf_token": csrf}, follow_redirects=False)
+    return client.post(
+        url,
+        files={"file": (name, content, "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
 
 
 def production(client):
@@ -102,8 +112,12 @@ def test_the_step_is_his_own(client, engine):
     other = sign_up(TestClient(create_app()), engine, "C-2", "someone-else")
     assert other.get(url).status_code == 404
     csrf = CSRF.search(other.get("/upload").text).group(1)
-    posted = other.post(url, files={"file": ("c.csv", FULL, "text/csv")},
-                        data={"csrf_token": csrf}, follow_redirects=False)
+    posted = other.post(
+        url,
+        files={"file": ("c.csv", FULL, "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert posted.status_code == 404
     with make_session(engine) as sess:
         assert sess.scalars(select(m.ChargeStatement)).first() is None
@@ -115,8 +129,9 @@ def test_the_step_needs_a_sign_in(engine, client):
 
 
 def test_a_file_needs_the_form_token(client, engine):
-    posted = client.post(step(engine), files={"file": ("c.csv", FULL, "text/csv")},
-                         follow_redirects=False)
+    posted = client.post(
+        step(engine), files={"file": ("c.csv", FULL, "text/csv")}, follow_redirects=False
+    )
     assert posted.status_code == 403
 
 
@@ -204,11 +219,22 @@ def test_the_trips_and_the_import_are_not_rewritten(client, engine):
     assert all(fees == 0 and not available for _g, fees, _n, available in after)
 
 
-@pytest.mark.parametrize("url", ["/mirror/chapter/1", "/mirror/chapter/4", "/mirror/fact/strike",
-                                 "/mirror/fact/money", "/mirror/fact/run", "/mirror/fact/unread",
-                                 "/mirror/fact/worst-days", "/mirror/fact/risk"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "/mirror/chapter/1",
+        "/mirror/chapter/4",
+        "/mirror/fact/strike",
+        "/mirror/fact/money",
+        "/mirror/fact/run",
+        "/mirror/fact/unread",
+        "/mirror/fact/worst-days",
+        "/mirror/fact/risk",
+    ],
+)
 def test_every_other_page_is_unchanged_and_still_truly_gross(client, engine, url):
     """One line, not fed through: strike rate and break-even read the tradebook's result."""
+
     def page():
         return re.sub(r'value="[^"]{20,}"', "", client.get(url).text)
 
@@ -235,17 +261,20 @@ def test_the_file_is_kept_encrypted_as_his(client, engine):
         assert b"Total Charges" not in Path(raw.stored_path).read_bytes()
 
 
-@pytest.mark.parametrize("content", [
-    b"Something,Else\n1,2\n",
-    b"Date,Total Charges\n",
-    b"Date,Total Charges\nnot-a-date,5\n",
-    b"Date,Total Charges\n2020-03-02,lots\n",
-    b"Date,Total Charges\n2020-03-02,-5\n",
-    b"Date,Total Charges\n2020-03-02,NaN\n",
-    b"Date,Total Charges\n2020-03-02,5\n2020-03-02,6\n",
-    b"Date,Total Charges\n2020-03-02\n",
-    b"%PDF-1.7 \xff\xfe binary",
-])
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"Something,Else\n1,2\n",
+        b"Date,Total Charges\n",
+        b"Date,Total Charges\nnot-a-date,5\n",
+        b"Date,Total Charges\n2020-03-02,lots\n",
+        b"Date,Total Charges\n2020-03-02,-5\n",
+        b"Date,Total Charges\n2020-03-02,NaN\n",
+        b"Date,Total Charges\n2020-03-02,5\n2020-03-02,6\n",
+        b"Date,Total Charges\n2020-03-02\n",
+        b"%PDF-1.7 \xff\xfe binary",
+    ],
+)
 def test_a_file_we_cannot_read_is_refused_and_not_kept(client, engine, content):
     assert post_file(client, engine, content).status_code == 400
     with make_session(engine) as sess:

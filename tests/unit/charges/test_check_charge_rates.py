@@ -14,7 +14,9 @@ from pathlib import Path
 
 from services.production.charges import rates as R
 
-_spec = importlib.util.spec_from_file_location("check_charge_rates", Path("scripts/check_charge_rates.py"))
+_spec = importlib.util.spec_from_file_location(
+    "check_charge_rates", Path("scripts/check_charge_rates.py")
+)
 K = importlib.util.module_from_spec(_spec)
 sys.modules["check_charge_rates"] = K
 _spec.loader.exec_module(K)
@@ -52,24 +54,71 @@ def zerodha(fo_options="0.03553"):
     """Zerodha's layout: one equity and F&O table (delivery, intraday, futures, options), an old
     F&O table left inside an HTML comment, then commodity."""
     cells = [
-        "Equity", "Equity delivery", "Equity intraday", "F&O - Futures", "F&O - Options", "Brokerage",
-        "Zero Brokerage", "0.03%", "0.03%", "Flat Rs. 20",
-        "STT/CTT", "0.1% on buy & sell", "0.025% on the sell side", "0.05% on the sell side",
-        "0.15% of the intrinsic value on options that are bought and exercised", "0.15% on sell side (on premium)",
-        "Transaction charges", "NSE: 0.00307%", "BSE: 0.00375%", "NSE: 0.00307%", "BSE: 0.00375%",
-        "NSE: 0.00183%", "BSE: 0", f"NSE: {fo_options}% (on premium)", "BSE: 0.0325% (on premium)",
-        "GST", "18% on (brokerage + SEBI charges + transaction charges)",
-        "SEBI charges", "₹10 / crore", "₹10 / crore", "₹10 / crore", "₹10 / crore",
-        "Stamp charges", "0.015% or ₹1500 / crore on buy side", "0.003% or ₹300 / crore on buy side",
-        "0.002% or ₹200 / crore on buy side", "0.003% or ₹300 / crore on buy side",
+        "Equity",
+        "Equity delivery",
+        "Equity intraday",
+        "F&O - Futures",
+        "F&O - Options",
+        "Brokerage",
+        "Zero Brokerage",
+        "0.03%",
+        "0.03%",
+        "Flat Rs. 20",
+        "STT/CTT",
+        "0.1% on buy & sell",
+        "0.025% on the sell side",
+        "0.05% on the sell side",
+        "0.15% of the intrinsic value on options that are bought and exercised",
+        "0.15% on sell side (on premium)",
+        "Transaction charges",
+        "NSE: 0.00307%",
+        "BSE: 0.00375%",
+        "NSE: 0.00307%",
+        "BSE: 0.00375%",
+        "NSE: 0.00183%",
+        "BSE: 0",
+        f"NSE: {fo_options}% (on premium)",
+        "BSE: 0.0325% (on premium)",
+        "GST",
+        "18% on (brokerage + SEBI charges + transaction charges)",
+        "SEBI charges",
+        "₹10 / crore",
+        "₹10 / crore",
+        "₹10 / crore",
+        "₹10 / crore",
+        "Stamp charges",
+        "0.015% or ₹1500 / crore on buy side",
+        "0.003% or ₹300 / crore on buy side",
+        "0.002% or ₹200 / crore on buy side",
+        "0.003% or ₹300 / crore on buy side",
     ]
-    old = "<!-- <td>F&O - Futures</td><td>F&O - Options</td><td>Brokerage</td><td>NSE: 9.9%</td> -->"
+    old = (
+        "<!-- <td>F&O - Futures</td><td>F&O - Options</td><td>Brokerage</td><td>NSE: 9.9%</td> -->"
+    )
     commodity = [
-        "Commodity", "Commodity futures", "Commodity options", "Brokerage", "0.03%", "₹ 20",
-        "STT/CTT", "0.01% on sell side (Non-Agri)", "0.05% on sell side",
-        "Transaction charges", "MCX: 0.0021%", "NSE: 0.0001%", "MCX: 0.0418%", "NSE: 0.001%",
-        "GST", "18% on x", "SEBI charges", "Non-agri:", "₹10 / crore", "₹10 / crore",
-        "Stamp charges", "0.002% or ₹200 / crore on buy side", "0.003% or ₹300 / crore on buy side",
+        "Commodity",
+        "Commodity futures",
+        "Commodity options",
+        "Brokerage",
+        "0.03%",
+        "₹ 20",
+        "STT/CTT",
+        "0.01% on sell side (Non-Agri)",
+        "0.05% on sell side",
+        "Transaction charges",
+        "MCX: 0.0021%",
+        "NSE: 0.0001%",
+        "MCX: 0.0418%",
+        "NSE: 0.001%",
+        "GST",
+        "18% on x",
+        "SEBI charges",
+        "Non-agri:",
+        "₹10 / crore",
+        "₹10 / crore",
+        "Stamp charges",
+        "0.002% or ₹200 / crore on buy side",
+        "0.003% or ₹300 / crore on buy side",
         "US Equity",
     ]
     cell = lambda cs: "".join(f"<td>{c}</td>" for c in cs)

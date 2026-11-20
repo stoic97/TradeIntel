@@ -23,13 +23,19 @@ from services.production.ctr.intake import pipeline as pl
 
 DEMO = Path("data/fixtures/demo/demo_tradebook.csv").read_text(encoding="utf-8")
 DHAN = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
-GROWW = ("Stock name,Symbol,ISIN,Type,Quantity,Value,Exchange,Exchange Order Id,"
-         "Execution date and time,Order status")
+GROWW = (
+    "Stock name,Symbol,ISIN,Type,Quantity,Value,Exchange,Exchange Order Id,"
+    "Execution date and time,Order status"
+)
 
 
 def plan(text: str, charges: pl.ChargesInput | None = None) -> pl.ImportPlan:
-    return pl.plan_import(text, context=pl.ImportContext(
-        trader_id="t", source_account="A", code_version="test", charges=charges))
+    return pl.plan_import(
+        text,
+        context=pl.ImportContext(
+            trader_id="t", source_account="A", code_version="test", charges=charges
+        ),
+    )
 
 
 def dhan(*rows: str) -> str:
@@ -42,15 +48,19 @@ def groww(*rows: str) -> str:
 
 def nifty_order(side: str, qty: int, value: str, order_no: int, at: str) -> str:
     """One Groww order row for a made-up NIFTY 18 Nov 2025 26000 call, on 13 Nov 2025."""
-    return (f"NIFTY 18 Nov 26000 Call,NIFTY25N1826000CE,,{side},{qty},{value},NSE,"
-            f"110000000000000{order_no},13-11-2025 {at},Executed")
+    return (
+        f"NIFTY 18 Nov 26000 Call,NIFTY25N1826000CE,,{side},{qty},{value},NSE,"
+        f"110000000000000{order_no},13-11-2025 {at},Executed"
+    )
 
 
 def widgetoil(day: str) -> tuple[str, str]:
     """100 WIDGETOIL options bought at 52.00, sold at 57.00: premium 5,200 in, 5,700 out."""
     contract = "WIDGETOIL 17 OCT 6950 CALL"
-    return (f"{day},10:00:00,{contract},BUY,INTRADAY,MCX,Commodity,100,52.00,5200.00,Traded",
-            f"{day},10:30:00,{contract},SELL,INTRADAY,MCX,Commodity,100,57.00,5700.00,Traded")
+    return (
+        f"{day},10:00:00,{contract},BUY,INTRADAY,MCX,Commodity,100,52.00,5200.00,Traded",
+        f"{day},10:30:00,{contract},SELL,INTRADAY,MCX,Commodity,100,57.00,5700.00,Traded",
+    )
 
 
 # MCX_OPT, any day from 1 Oct 2024 (rows 36/40 exchange 0.000418, 53 CTT sell 0.0005,
@@ -70,7 +80,7 @@ def test_without_charges_asked_for_the_trips_carry_only_what_the_file_says():
 
 def test_each_trade_is_charged_at_its_own_dates_rates_and_net_is_gross_less_charges():
     got = plan(DEMO, pl.ChargesInput())
-    first = got.trips[0]            # demo's first trade: 100 at 52.00 out at 57.00, 1 Sep 2026
+    first = got.trips[0]  # demo's first trade: 100 at 52.00 out at 57.00, 1 Sep 2026
     assert (first.entry_price, first.exit_price, first.quantity) == (D("52.00"), D("57.00"), 100)
     assert first.fees == WIDGETOIL_CHARGES
     assert first.net_pnl == D(500) - WIDGETOIL_CHARGES
@@ -81,7 +91,7 @@ def test_each_trade_is_charged_at_its_own_dates_rates_and_net_is_gross_less_char
 def test_a_trade_before_the_table_starts_is_not_priced_and_is_counted():
     got = plan(dhan(*widgetoil("2024-09-30"), *widgetoil("2024-10-01")), pl.ChargesInput())
     before, after = got.trips
-    assert before.fees == 0                       # never at today's rate, and no brokerage
+    assert before.fees == 0  # never at today's rate, and no brokerage
     assert after.fees == WIDGETOIL_CHARGES
     assert got.trip_fees_source == ("not_priced", "calculated")
     assert got.trips_not_priced == 1
@@ -95,9 +105,11 @@ def test_his_own_brokerage_replaces_the_published_plan():
 
 def test_groww_counts_its_real_orders_and_an_order_split_across_trades_is_billed_once():
     # One buy order of 130 closed by two sell orders of 65: two trades sharing the buy order.
-    text = groww(nifty_order("BUY", 130, "13000.00", 1, "10:00 AM"),
-                 nifty_order("SELL", 65, "7150.00", 2, "10:30 AM"),
-                 nifty_order("SELL", 65, "7280.00", 3, "11:00 AM"))
+    text = groww(
+        nifty_order("BUY", 130, "13000.00", 1, "10:00 AM"),
+        nifty_order("SELL", 65, "7150.00", 2, "10:30 AM"),
+        nifty_order("SELL", 65, "7280.00", 3, "11:00 AM"),
+    )
     got = plan(text, pl.ChargesInput())
     # NSE_OPT 13 Nov 2025 (rows 13-16, 45, 57, 68/69, 84/85). Brokerage per trade: half the
     # shared buy order (10) + its own sell order (20) = 30, GST on it 5.4 (Dhan's rule would be 40).
@@ -122,7 +134,7 @@ def test_his_day_total_replaces_ours_shared_by_our_figures_flagged_and_the_day_k
     ours = plan(DEMO, pl.ChargesInput())
     got = plan(DEMO, pl.ChargesInput(statement_days={"2026-09-01": D(100)}))
     on_day = [i for i, s in enumerate(got.trip_fees_source) if s == "statement"]
-    assert on_day                                          # every trade that day is flagged
+    assert on_day  # every trade that day is flagged
     assert sum(got.trips[i].fees for i in on_day) == D(100)
     ours_that_day = sum(ours.trips[i].fees for i in on_day)
     assert got.day_scales == (("2026-09-01", str(ours_that_day), "100"),)
@@ -130,8 +142,9 @@ def test_his_day_total_replaces_ours_shared_by_our_figures_flagged_and_the_day_k
 
 
 def test_a_day_before_the_table_his_own_file_covers_is_priced_from_his_file():
-    got = plan(dhan(*widgetoil("2024-09-30")),
-               pl.ChargesInput(statement_days={"2024-09-30": D(50)}))
+    got = plan(
+        dhan(*widgetoil("2024-09-30")), pl.ChargesInput(statement_days={"2024-09-30": D(50)})
+    )
     assert got.trips[0].fees == D(50)
     assert got.trip_fees_source == ("statement",)
     assert got.day_scales == (("2024-09-30", None, "50"),)

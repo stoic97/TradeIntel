@@ -38,8 +38,7 @@ CLEAN = Path("data/fixtures/duplicates/clean.csv")
 
 def _profile(multiplier: str) -> profiles.InstrumentProfile:
     """The fixture instrument, at a chosen lot size."""
-    profile = profiles.load_one(
-        Path("services/production/ctr/profiles/MCX_WIDGETOIL.yaml"))
+    profile = profiles.load_one(Path("services/production/ctr/profiles/MCX_WIDGETOIL.yaml"))
     assert profile.contract_multiplier == Decimal(multiplier), (
         "this test reads the real profile so a change to it is visible here"
     )
@@ -53,8 +52,9 @@ def test_gross_is_the_brokers_value_and_carries_no_multiplier():
     """
     plan = pl.plan_import(
         CLEAN.read_text(),
-        context=pl.ImportContext(trader_id="1", source_account="A",
-                                 code_version="test", existing_days={}),
+        context=pl.ImportContext(
+            trader_id="1", source_account="A", code_version="test", existing_days={}
+        ),
     )
     gross = [t.gross_pnl for t in plan.trips]
     assert gross == [Decimal("15.00"), Decimal("30.00")], (
@@ -89,9 +89,9 @@ def test_the_file_map_must_declare_a_unit_it_recognises(tmp_path):
     bad = tmp_path / "bad_filemap.yaml"
     bad.write_text(
         'broker: X\nadapter_id: x_v1\nversion: "0"\nverified: false\n'
-        'quantity_unit: whatever\nexports:\n'
-        '  - broker_name: Tradebook\n    where_it_lives: Reports\n'
-        '    is_the_one_we_need: true\n'
+        "quantity_unit: whatever\nexports:\n"
+        "  - broker_name: Tradebook\n    where_it_lives: Reports\n"
+        "    is_the_one_we_need: true\n"
     )
     with pytest.raises(filemap.InvalidFileMap):
         filemap.load(bad)

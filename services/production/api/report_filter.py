@@ -41,7 +41,7 @@ SINCE_WORDS = "Since your last upload"
 
 @dataclass(frozen=True)
 class ReportFilter:
-    period: str = ALL     # ALL, a year such as "2026", or SINCE
+    period: str = ALL  # ALL, a year such as "2026", or SINCE
     book: str | None = None  # a book as the report names it, e.g. "Crude options"
 
     @property
@@ -92,9 +92,13 @@ def words(f: ReportFilter) -> str | None:
     """What a filtered page says it is filtered to, so no figure reads as the whole record."""
     if not f.active:
         return None
-    period = {ALL: None, SINCE: "your trades since your last upload"}.get(f.period, f"{f.period} only")
+    period = {ALL: None, SINCE: "your trades since your last upload"}.get(
+        f.period, f"{f.period} only"
+    )
     if f.book and period:
-        return f"Showing {period}, in {f.book}."  # the book as the report names it: NIFTY, not nifty
+        return (
+            f"Showing {period}, in {f.book}."  # the book as the report names it: NIFTY, not nifty
+        )
     if f.book:
         return f"Showing {f.book} only."
     return f"Showing {period}."
@@ -102,19 +106,27 @@ def words(f: ReportFilter) -> str | None:
 
 def bar(f: ReportFilter, trips: list[mx.Trip], new_days: set[str] | None, here: str) -> dict:
     """What the filter bar draws: each period and book with the address that chooses it."""
+
     def href(period: str, book: str | None) -> str:
         from urllib.parse import urlencode
+
         return "/mirror/filter?" + urlencode({"period": period, "book": book or "", "next": here})
 
     periods = [(ALL, "All"), *((y, y) for y in years(trips))]
     if new_days is not None:
         periods.append((SINCE, SINCE_WORDS))
     return {
-        "periods": [{"label": label, "href": href(p, f.book), "current": p == f.period}
-                    for p, label in periods],
-        "books": [{"label": "All books", "href": href(f.period, None), "current": f.book is None},
-                  *({"label": b, "href": href(f.period, b), "current": b == f.book}
-                    for b in books(trips))],
+        "periods": [
+            {"label": label, "href": href(p, f.book), "current": p == f.period}
+            for p, label in periods
+        ],
+        "books": [
+            {"label": "All books", "href": href(f.period, None), "current": f.book is None},
+            *(
+                {"label": b, "href": href(f.period, b), "current": b == f.book}
+                for b in books(trips)
+            ),
+        ],
         "words": words(f),
         "clear": href(ALL, None) if f.active else None,
     }
@@ -125,11 +137,16 @@ def by_year(trips: list[mx.Trip]) -> dict[str, list[dict]]:
     of its trades), year by year, to answer "is it still happening?". Whole history, whatever
     the filter, because it is the view across time. A year with no trades in a book says so."""
     from decimal import Decimal
+
     out: dict[str, list[dict]] = {}
     for book in books(trips):
         mine = [t for t in trips if mx.trade_book(t) == book]
-        out[book] = [{"year": y,
-                      "trades": sum(1 for t in mine if t.trading_day.startswith(y)),
-                      "net": sum((t.net for t in mine if t.trading_day.startswith(y)), Decimal(0))}
-                     for y in years(trips)]
+        out[book] = [
+            {
+                "year": y,
+                "trades": sum(1 for t in mine if t.trading_day.startswith(y)),
+                "net": sum((t.net for t in mine if t.trading_day.startswith(y)), Decimal(0)),
+            }
+            for y in years(trips)
+        ]
     return out

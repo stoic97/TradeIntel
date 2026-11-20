@@ -66,8 +66,16 @@ async def record(request: Request) -> Response:
             if not isinstance(duration, int) or duration < 0 or duration > MAX_DURATION_MS:
                 duration = None
 
-            sess.add(m.DwellEvent(trader_id=trader.id, surface=surface, key=key,
-                                  event=event, at=now, duration_ms=duration))
+            sess.add(
+                m.DwellEvent(
+                    trader_id=trader.id,
+                    surface=surface,
+                    key=key,
+                    event=event,
+                    at=now,
+                    duration_ms=duration,
+                )
+            )
             stored += 1
         if stored:
             sess.commit()

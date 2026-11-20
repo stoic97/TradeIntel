@@ -54,9 +54,9 @@ def _null_p(null: np.ndarray) -> np.ndarray:
     return at_or_below / len(null)
 
 
-def step_down_min_p(observed: Mapping[str, float | None],
-                    null: Mapping[str, np.ndarray],
-                    checks: tuple[str, ...]) -> dict[str, float]:
+def step_down_min_p(
+    observed: Mapping[str, float | None], null: Mapping[str, np.ndarray], checks: tuple[str, ...]
+) -> dict[str, float]:
     """Adjusted p for every check in ``checks``. A check with no observed statistic (None,
     or missing) can't run for this trader: it stays in the family at p = 1.
 

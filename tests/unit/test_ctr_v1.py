@@ -11,6 +11,7 @@ refused, and `test_float_price_is_refused` locks that. Sub-paise precision is
 allowed, because an apportioned fill produces it — see
 `test_sub_paise_net_pnl_is_allowed`.
 """
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -81,6 +82,7 @@ def make_trip(**overrides):
 
 # ---------------------------------------------------------------- identity
 
+
 def test_schema_version_is_v1():
     assert SCHEMA_VERSION == "ctr_v1"
 
@@ -97,6 +99,7 @@ def test_trip_id_is_deterministic():
 
 
 # ---------------------------------------------------------------- fills: what is refused
+
 
 def test_fill_rejects_naive_timestamp():
     with pytest.raises(ValidationError, match="timezone"):
@@ -116,8 +119,14 @@ def test_option_fill_requires_type_and_strike():
 
 
 def test_equity_fill_needs_no_contract_fields():
-    f = make_fill(segment=Segment.EQ, exchange="NSE", symbol="RELIANCE",
-                  expiry=None, option_type=None, strike=None)
+    f = make_fill(
+        segment=Segment.EQ,
+        exchange="NSE",
+        symbol="RELIANCE",
+        expiry=None,
+        option_type=None,
+        strike=None,
+    )
     assert f.expiry is None
 
 
@@ -129,6 +138,7 @@ def test_fill_rejects_non_positive_quantity_and_price():
 
 
 # ---------------------------------------------------------------- round trips: R and scope
+
 
 def test_net_pnl_is_gross_minus_fees():
     assert make_trip().net_pnl == Decimal(-485)
@@ -147,19 +157,30 @@ def test_short_option_is_unsupported_in_v1():
 
 
 def test_futures_without_risk_unit_has_no_r_and_says_so():
-    t = make_trip(segment=Segment.FUT, option_type=None, strike=None,
-                  entry_price=Decimal(5500), exit_price=Decimal(5480),
-                 gross_pnl=Decimal(-2000))
+    t = make_trip(
+        segment=Segment.FUT,
+        option_type=None,
+        strike=None,
+        entry_price=Decimal(5500),
+        exit_price=Decimal(5480),
+        gross_pnl=Decimal(-2000),
+    )
     assert t.risk_unit is None
     assert t.risk_unit_source == RiskUnitSource.UNKNOWN
     assert t.r_multiple is None
 
 
 def test_futures_with_recorded_stop_risk_unit():
-    t = make_trip(segment=Segment.FUT, option_type=None, strike=None,
-                  entry_price=Decimal(5500), exit_price=Decimal(5480),
-                 gross_pnl=Decimal(-2000), risk_unit=Decimal(3000),
-                 risk_unit_source=RiskUnitSource.RECORDED_STOP)
+    t = make_trip(
+        segment=Segment.FUT,
+        option_type=None,
+        strike=None,
+        entry_price=Decimal(5500),
+        exit_price=Decimal(5480),
+        gross_pnl=Decimal(-2000),
+        risk_unit=Decimal(3000),
+        risk_unit_source=RiskUnitSource.RECORDED_STOP,
+    )
     assert t.r_multiple == Decimal(-2035) / Decimal(3000)
 
 
@@ -169,6 +190,7 @@ def test_exit_before_entry_is_rejected():
 
 
 # ---------------------------------------------------------------- strictness
+
 
 def test_float_price_is_refused():
     """Strict mode (ADR 004): no float may become a price. §6.5."""

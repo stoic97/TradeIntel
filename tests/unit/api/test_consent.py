@@ -51,8 +51,9 @@ def test_the_screen_offers_each_v1_purpose_separately(signed_in):
 
 def test_granting_writes_one_row_per_purpose_with_its_wording(signed_in):
     client, engine = signed_in
-    client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                  "csrf_token": token(client)})
+    client.post(
+        "/consent", data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": token(client)}
+    )
     with make_session(engine) as sess:
         events = sess.scalars(select(m.ConsentEvent)).all()
     purposes = {e.purpose for e in events}
@@ -73,16 +74,16 @@ def test_refusing_engine_testing_still_allows_the_product(signed_in):
 
 def test_refusing_diagnosis_leaves_the_product_closed(signed_in):
     client, _ = signed_in
-    response = client.post("/consent", data={"engine_testing": "yes",
-                                             "csrf_token": token(client)})
+    response = client.post("/consent", data={"engine_testing": "yes", "csrf_token": token(client)})
     assert response.status_code == 400
     assert client.get("/upload", follow_redirects=False).status_code in (302, 303)
 
 
 def test_the_trader_can_read_his_own_ledger(signed_in):
     client, _ = signed_in
-    client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                  "csrf_token": token(client)})
+    client.post(
+        "/consent", data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": token(client)}
+    )
     body = client.get("/settings/consent").text
     assert "diagnosis" in body.lower()
     assert "engine testing" in body.lower() or "engine_testing" in body.lower()
@@ -90,16 +91,18 @@ def test_the_trader_can_read_his_own_ledger(signed_in):
 
 def test_withdrawing_writes_a_new_row_and_never_edits(signed_in):
     client, engine = signed_in
-    client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                  "csrf_token": token(client)})
+    client.post(
+        "/consent", data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": token(client)}
+    )
     csrf = token(client, "/settings/consent")
-    client.post("/settings/consent/withdraw",
-                data={"purpose": "engine_testing", "csrf_token": csrf})
+    client.post(
+        "/settings/consent/withdraw", data={"purpose": "engine_testing", "csrf_token": csrf}
+    )
     with make_session(engine) as sess:
         events = sess.scalars(
-            select(m.ConsentEvent).where(
-                m.ConsentEvent.purpose == s.ConsentPurpose.ENGINE_TESTING
-            ).order_by(m.ConsentEvent.id)
+            select(m.ConsentEvent)
+            .where(m.ConsentEvent.purpose == s.ConsentPurpose.ENGINE_TESTING)
+            .order_by(m.ConsentEvent.id)
         ).all()
     assert len(events) == 2, "the grant stays; the withdrawal is a new row"
     assert events[0].granted is True and events[1].granted is False
@@ -109,8 +112,7 @@ def test_withdrawing_diagnosis_closes_the_upload_path(signed_in):
     client, _ = signed_in
     client.post("/consent", data={"diagnosis": "yes", "csrf_token": token(client)})
     csrf = token(client, "/settings/consent")
-    client.post("/settings/consent/withdraw",
-                data={"purpose": "diagnosis", "csrf_token": csrf})
+    client.post("/settings/consent/withdraw", data={"purpose": "diagnosis", "csrf_token": csrf})
     assert client.get("/upload", follow_redirects=False).status_code in (302, 303)
 
 
@@ -166,13 +168,21 @@ def test_a_real_account_cannot_see_the_draft_text(app_env, monkeypatch):
     engine = app_env
     client = TestClient(create_app(), raise_server_exceptions=False)
     csrf = CSRF.search(client.get("/signup").text).group(1)
-    client.post("/signup", data={"login_id": "real", "display_name": "Real",
-                                        "password": "a-long-enough-password",
-                                        "csrf_token": csrf})
+    client.post(
+        "/signup",
+        data={
+            "login_id": "real",
+            "display_name": "Real",
+            "password": "a-long-enough-password",
+            "csrf_token": csrf,
+        },
+    )
     csrf = CSRF.search(client.get("/login").text).group(1)
-    client.post("/login", data={"login_id": "real",
-                                "password": "a-long-enough-password",
-                                "csrf_token": csrf}, follow_redirects=False)
+    client.post(
+        "/login",
+        data={"login_id": "real", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
 
     response = client.get("/consent")
     assert response.status_code == 503, "refused, and refused legibly"

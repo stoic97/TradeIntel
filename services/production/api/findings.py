@@ -59,25 +59,29 @@ class Finding:
         if not isinstance(self.known, Known) or not isinstance(self.rung, Rung):
             raise Unlabelled(
                 f"a finding needs both labels: {self.key!r} has known={self.known!r}, "
-                f"rung={self.rung!r}")
+                f"rung={self.rung!r}"
+            )
 
 
 K, R = Known, Rung
 
-LABELS: dict[str, Finding] = {f.key: f for f in (
-    Finding("hidden", K.ONLY_AFTER, R.SEEN),       # plain counts over the record
-    Finding("worst-days", K.ONLY_AFTER, R.SEEN),   # which days were worst: known after them
-    Finding("share", K.ONLY_AFTER, R.SEEN),
-    Finding("money", K.ONLY_AFTER, R.SEEN),        # best and worst trades, by result
-    Finding("math", K.ONLY_AFTER, R.SEEN),         # win rate and break-even over the record
-    Finding("run", K.ONLY_AFTER, R.SEEN),          # a losing run, known once it has run
-    Finding("clock", K.AT_CLICK, R.SEEN),          # the hour he opens in
-    Finding("down", K.AT_CLICK, R.SEEN),           # the last two trades' results
-    Finding("busiest", K.ONLY_AFTER, R.SEEN),      # the busiest day, known once it is over
-    Finding("unread", K.ONLY_AFTER, R.SEEN),       # what the file held, known on reading it
-    Finding("risk", K.AT_CLICK, R.SEEN),           # a trade's size against his number
-    Finding("not-told", K.ONLY_AFTER, R.SEEN),
-)}
+LABELS: dict[str, Finding] = {
+    f.key: f
+    for f in (
+        Finding("hidden", K.ONLY_AFTER, R.SEEN),  # plain counts over the record
+        Finding("worst-days", K.ONLY_AFTER, R.SEEN),  # which days were worst: known after them
+        Finding("share", K.ONLY_AFTER, R.SEEN),
+        Finding("money", K.ONLY_AFTER, R.SEEN),  # best and worst trades, by result
+        Finding("math", K.ONLY_AFTER, R.SEEN),  # win rate and break-even over the record
+        Finding("run", K.ONLY_AFTER, R.SEEN),  # a losing run, known once it has run
+        Finding("clock", K.AT_CLICK, R.SEEN),  # the hour he opens in
+        Finding("down", K.AT_CLICK, R.SEEN),  # the last two trades' results
+        Finding("busiest", K.ONLY_AFTER, R.SEEN),  # the busiest day, known once it is over
+        Finding("unread", K.ONLY_AFTER, R.SEEN),  # what the file held, known on reading it
+        Finding("risk", K.AT_CLICK, R.SEEN),  # a trade's size against his number
+        Finding("not-told", K.ONLY_AFTER, R.SEEN),
+    )
+}
 """One row per fact the report decides. A new fact without a row stops in scope_facts."""
 
 

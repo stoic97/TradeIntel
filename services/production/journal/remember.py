@@ -35,13 +35,16 @@ class NotADay(Exception):
 
 def answer_of(sess: Session, trader: m.Trader, day: str) -> m.JournalRememberAnswer | None:
     return sess.scalars(
-        select(m.JournalRememberAnswer).where(m.JournalRememberAnswer.trader_id == trader.id,
-                                              m.JournalRememberAnswer.trading_day == day)
+        select(m.JournalRememberAnswer).where(
+            m.JournalRememberAnswer.trader_id == trader.id,
+            m.JournalRememberAnswer.trading_day == day,
+        )
     ).first()
 
 
-def record(sess: Session, *, trader: m.Trader, journal: m.Journal, answer: str,
-           on: date) -> m.JournalRememberAnswer:
+def record(
+    sess: Session, *, trader: m.Trader, journal: m.Journal, answer: str, on: date
+) -> m.JournalRememberAnswer:
     """Keep his first answer for the day; a second is ignored and the first returned."""
     if answer not in (YES, NO):
         raise NotAnAnswer(answer)
@@ -50,11 +53,16 @@ def record(sess: Session, *, trader: m.Trader, journal: m.Journal, answer: str,
     first = answer_of(sess, trader, journal.period_start)
     if first is not None:
         return first
-    sess.add(m.JournalRememberAnswer(
-        trader_id=trader.id, journal_id=journal.id, trading_day=journal.period_start,
-        answer=answer, day_age_days=recency.day_age(journal.period_start, on),
-        answered_at=datetime.now(UTC),
-    ))
+    sess.add(
+        m.JournalRememberAnswer(
+            trader_id=trader.id,
+            journal_id=journal.id,
+            trading_day=journal.period_start,
+            answer=answer,
+            day_age_days=recency.day_age(journal.period_start, on),
+            answered_at=datetime.now(UTC),
+        )
+    )
     try:
         sess.flush()
     except IntegrityError:  # two tabs raced: the first stands
@@ -64,20 +72,29 @@ def record(sess: Session, *, trader: m.Trader, journal: m.Journal, answer: str,
 
 def remembered_days(sess: Session, trader: m.Trader) -> set[str]:
     """The trading days he has answered Yes or No for."""
-    return set(sess.scalars(
-        select(m.JournalRememberAnswer.trading_day)
-        .where(m.JournalRememberAnswer.trader_id == trader.id)
-    ))
+    return set(
+        sess.scalars(
+            select(m.JournalRememberAnswer.trading_day).where(
+                m.JournalRememberAnswer.trader_id == trader.id
+            )
+        )
+    )
 
 
 def written_days(sess: Session, trader: m.Trader) -> set[str]:
     """The day Journals he has written something on, in any version of the day."""
-    return set(sess.scalars(
-        select(m.Journal.period_start)
-        .join(m.JournalFieldEntry, m.JournalFieldEntry.journal_id == m.Journal.id)
-        .where(m.Journal.trader_id == trader.id, m.Journal.period_start == m.Journal.period_end,
-               m.JournalFieldEntry.value.is_not(None), m.JournalFieldEntry.value != "")
-    ))
+    return set(
+        sess.scalars(
+            select(m.Journal.period_start)
+            .join(m.JournalFieldEntry, m.JournalFieldEntry.journal_id == m.Journal.id)
+            .where(
+                m.Journal.trader_id == trader.id,
+                m.Journal.period_start == m.Journal.period_end,
+                m.JournalFieldEntry.value.is_not(None),
+                m.JournalFieldEntry.value != "",
+            )
+        )
+    )
 
 
 def answered_days(sess: Session, trader: m.Trader) -> set[str]:

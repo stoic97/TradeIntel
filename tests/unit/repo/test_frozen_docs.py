@@ -30,33 +30,47 @@ class Frozen(NamedTuple):
 
 FROZEN: dict[str, Frozen] = {
     "docs/trade_dna_research_spec_v1_0.md": Frozen(
-        "v1.0.4", "ee119af38b59851807f4eb31ef44a088b760bbfb3b21132773990bee82ab07c1"),
+        "v1.0.4", "ee119af38b59851807f4eb31ef44a088b760bbfb3b21132773990bee82ab07c1"
+    ),
     "docs/trade_dna_brainstorm_workbook_v1.1_final.md": Frozen(
-        "v1.1.1", "87be5b1133475b76b0854e8f3919710de88a1ea23f6b1c9e4904be3836cff1c7"),
+        "v1.1.1", "87be5b1133475b76b0854e8f3919710de88a1ea23f6b1c9e4904be3836cff1c7"
+    ),
     "docs/trade_dna_product_thesis_v1.5.md": Frozen(
-        "v1.5", "3d09d024d44bc2459fe7901425d4595e0accffd73c0f8ae7d824f635a05cf963"),
+        "v1.5", "3d09d024d44bc2459fe7901425d4595e0accffd73c0f8ae7d824f635a05cf963"
+    ),
     "docs/trade_dna_product_thesis_v1.4.md": Frozen(
-        "v1.4", "d2e775ec1bc95a3bda4e463d59a2fd6ae6eb19cf1e537e771588f1fc7ccbaa16"),
+        "v1.4", "d2e775ec1bc95a3bda4e463d59a2fd6ae6eb19cf1e537e771588f1fc7ccbaa16"
+    ),
     "docs/adr/ADR-001-canonical-trade-record.md": Frozen(
-        "Accepted", "0bf5938ba648f029b2f5eba933294bd6f105f0f7e2e2b2cfcf8ebdc1b7154dc8"),
+        "Accepted", "0bf5938ba648f029b2f5eba933294bd6f105f0f7e2e2b2cfcf8ebdc1b7154dc8"
+    ),
     "docs/adr/ADR-002-the-wall.md": Frozen(
-        "Accepted", "c25d865e88294cb80bb1c8c161af8fab1a4c2615043f886dd5d21f3ce53319d9"),
+        "Accepted", "c25d865e88294cb80bb1c8c161af8fab1a4c2615043f886dd5d21f3ce53319d9"
+    ),
     "docs/adr/ADR-003-precommitment-hash.md": Frozen(
-        "Accepted", "1c47cca5ffb3aaaf39bb82ddbd7a17aae73720a23e81a7c1342540fcd163bb38"),
+        "Accepted", "1c47cca5ffb3aaaf39bb82ddbd7a17aae73720a23e81a7c1342540fcd163bb38"
+    ),
     "docs/adr/ADR-004-stage0-tech-stack.md": Frozen(
-        "Accepted", "9bfa7ec4207114ca95ac85c3455ce8e69c5145d41fbe33f4a63ea13ad82a7ef8"),
+        "Accepted", "9bfa7ec4207114ca95ac85c3455ce8e69c5145d41fbe33f4a63ea13ad82a7ef8"
+    ),
     "docs/adr/ADR-005-storage-and-reproducible-runs.md": Frozen(
-        "Accepted", "23f58f0424b35c41c789ce4f88bd0b8ae594d8682fef0fc0677385cf93022865"),
+        "Accepted", "23f58f0424b35c41c789ce4f88bd0b8ae594d8682fef0fc0677385cf93022865"
+    ),
     "docs/adr/ADR-006-sampler.md": Frozen(
-        "Accepted", "9125225d6d1f4eb018668c560be2eda0ab071b14cb3f5fe9c8a7832575c0631c"),
+        "Accepted", "9125225d6d1f4eb018668c560be2eda0ab071b14cb3f5fe9c8a7832575c0631c"
+    ),
     "docs/adr/ADR-007-scope-v1-runtime.md": Frozen(
-        "amended 2026-11-16", "5d16fff26e63e99e5dce17242bfcd7ecffc8db0698192ba29b5b3ad4327c4867"),
+        "amended 2026-11-16", "5d16fff26e63e99e5dce17242bfcd7ecffc8db0698192ba29b5b3ad4327c4867"
+    ),
     "docs/adr/ADR-008-market-data-source.md": Frozen(
-        "Accepted", "9e6e74f544e82e465b8757ac7e34694a47e532d519dd050b945a76e760569a92"),
+        "Accepted", "9e6e74f544e82e465b8757ac7e34694a47e532d519dd050b945a76e760569a92"
+    ),
 }
 
-HOW = ("is frozen (SR-011). Bump its version and add a dated change-log row (an ADR: an "
-       "Amendments entry), then update its entry in tests/unit/repo/test_frozen_docs.py")
+HOW = (
+    "is frozen (SR-011). Bump its version and add a dated change-log row (an ADR: an "
+    "Amendments entry), then update its entry in tests/unit/repo/test_frozen_docs.py"
+)
 
 
 def text(path: str) -> str:
@@ -89,7 +103,9 @@ def test_a_change_log_starts_with_the_version_the_document_is_at():
         if "**Change log**" not in body:
             continue
         rows = re.findall(r"^\| (v[\d.]+)[^|]*\|", body.split("**Change log**", 1)[1], re.MULTILINE)
-        assert rows and rows[0] == frozen.version, f"{path}: newest row {rows[:1]}, held at {frozen.version}"
+        assert rows and rows[0] == frozen.version, (
+            f"{path}: newest row {rows[:1]}, held at {frozen.version}"
+        )
 
 
 def test_an_amended_adr_carries_the_dated_amendment_its_status_names():
@@ -98,7 +114,9 @@ def test_an_amended_adr_carries_the_dated_amendment_its_status_names():
         if dated:
             amendments = text(path).split("## Amendments", 1)
             assert len(amendments) == 2, f"{path}: amended, but has no Amendments section"
-            assert f"### {dated.group(1)}" in amendments[1], f"{path}: no entry dated {dated.group(1)}"
+            assert f"### {dated.group(1)}" in amendments[1], (
+                f"{path}: no entry dated {dated.group(1)}"
+            )
 
 
 def test_the_amended_research_spec_and_workbook_record_every_post_freeze_change():

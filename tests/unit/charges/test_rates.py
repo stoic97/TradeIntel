@@ -17,10 +17,21 @@ from services.production.charges import rates as R
 HEAD = 'starts: "2020-07-01"\nrows:\n'
 
 
-def row(id_, seg="NSE_OPT", comp="STT", side="sell", base="premium", rate='"0.0005"',
-        frm="2020-07-01", added="2026-11-13", source="Finance Act, made up for the test"):
-    return (f"  - {{id: {id_}, segment: {seg}, component: {comp}, side: {side}, base: {base}, "
-            f"rate: {rate}, effective_from: \"{frm}\", added: \"{added}\", source: \"{source}\"}}\n")
+def row(
+    id_,
+    seg="NSE_OPT",
+    comp="STT",
+    side="sell",
+    base="premium",
+    rate='"0.0005"',
+    frm="2020-07-01",
+    added="2026-11-13",
+    source="Finance Act, made up for the test",
+):
+    return (
+        f"  - {{id: {id_}, segment: {seg}, component: {comp}, side: {side}, base: {base}, "
+        f'rate: {rate}, effective_from: "{frm}", added: "{added}", source: "{source}"}}\n'
+    )
 
 
 def table(tmp_path, *rows):
@@ -39,10 +50,18 @@ def test_a_yaml_float_is_refused_at_load(tmp_path):
         table(tmp_path, row(1, rate="0.0005"))
 
 
-@pytest.mark.parametrize("bad", [
-    {"seg": "NSE_CASH"}, {"comp": "BROKERAGE"}, {"side": "both"}, {"base": "notional"},
-    {"source": ""}, {"rate": '"-0.1"'}, {"rate": '"abc"'},
-])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"seg": "NSE_CASH"},
+        {"comp": "BROKERAGE"},
+        {"side": "both"},
+        {"base": "notional"},
+        {"source": ""},
+        {"rate": '"-0.1"'},
+        {"rate": '"abc"'},
+    ],
+)
 def test_a_row_outside_the_vocabulary_or_without_a_source_is_refused(tmp_path, bad):
     with pytest.raises(R.InvalidTable):
         table(tmp_path, row(1, **bad))
@@ -75,20 +94,35 @@ def test_a_segment_with_no_row_refuses(tmp_path):
 
 def test_a_correction_is_a_new_row_and_an_old_read_still_reproduces(tmp_path):
     # Row 1 was wrong from the start; row 3 corrects it for the same dates, added later.
-    t = table(tmp_path, row(1, rate='"0.0004"', added="2026-01-10"),
-              row(2, rate='"0.001"', frm="2024-10-01", added="2026-01-10"),
-              row(3, rate='"0.0005"', added="2026-03-01"))
-    pick = lambda d, as_of=None: R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d,
-                                        as_of=as_of, table=t).rate
+    t = table(
+        tmp_path,
+        row(1, rate='"0.0004"', added="2026-01-10"),
+        row(2, rate='"0.001"', frm="2024-10-01", added="2026-01-10"),
+        row(3, rate='"0.0005"', added="2026-03-01"),
+    )
+    pick = lambda d, as_of=None: (
+        R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d, as_of=as_of, table=t).rate
+    )
     assert pick(date(2023, 5, 2)) == Decimal("0.0005")
-    assert pick(date(2023, 5, 2), as_of=date(2026, 2, 1)) == Decimal("0.0004"), "March's report reproduces"
-    assert pick(date(2025, 5, 2)) == Decimal("0.001"), "a correction to old dates leaves later rows alone"
+    assert pick(date(2023, 5, 2), as_of=date(2026, 2, 1)) == Decimal("0.0004"), (
+        "March's report reproduces"
+    )
+    assert pick(date(2025, 5, 2)) == Decimal("0.001"), (
+        "a correction to old dates leaves later rows alone"
+    )
 
 
 def test_a_row_added_after_as_of_is_not_seen(tmp_path):
     t = table(tmp_path, row(1, added="2026-11-13"))
     with pytest.raises(R.NotCovered):
-        R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", date(2025, 1, 1), as_of=date(2026, 1, 1), table=t)
+        R.rate(
+            R.Segment.NSE_OPT,
+            R.Component.STT,
+            "sell",
+            date(2025, 1, 1),
+            as_of=date(2026, 1, 1),
+            table=t,
+        )
 
 
 def test_the_digest_pins_a_row_and_changes_when_any_field_does():

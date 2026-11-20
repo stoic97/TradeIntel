@@ -1,17 +1,38 @@
-"""Moved out of tests/unit/api/test_no_claims.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_no_claims.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
 NEVER_USED = [
-    "tilt", "revenge", "emotional", "psychology", "disease", "cure",
-    "edge", "alpha", "expectancy", "discipline", "mistake", "should have",
-    "signal", "tip",
+    "tilt",
+    "revenge",
+    "emotional",
+    "psychology",
+    "disease",
+    "cure",
+    "edge",
+    "alpha",
+    "expectancy",
+    "discipline",
+    "mistake",
+    "should have",
+    "signal",
+    "tip",
     # Added from the Scope engineering handoff, section 6 (27 Oct). "your plan / your
     # system / your rule" are TR-006: the engine never attributes a behaviour to his
     # intention.
-    "guaranteed", "profitable", "winning", "guru", "mentor", "fund", "platform",
-    "dna", "ai-powered", "no issues detected", "your plan", "your system", "your rule",
+    "guaranteed",
+    "profitable",
+    "winning",
+    "guru",
+    "mentor",
+    "fund",
+    "platform",
+    "dna",
+    "ai-powered",
+    "no issues detected",
+    "your plan",
+    "your system",
+    "your rule",
 ]
 
 

@@ -38,7 +38,12 @@ HOME_ENTRY = re.compile(r'<a class="(?:bottom-nav__item|home-bar__home)" href="/
 
 SIGNED_OUT = {"/login", "/signup", "/health"}
 """Pages for someone not signed in. The door ("/") is walked signed out below."""
-NOT_A_TRADER_PAGE = {"/admin", "/admin/", "/admin/traders/{trader_id}", "/admin/traders/{trader_id}/"}
+NOT_A_TRADER_PAGE = {
+    "/admin",
+    "/admin/",
+    "/admin/traders/{trader_id}",
+    "/admin/traders/{trader_id}/",
+}
 """The operator's page: a trader gets the 404 (test_admin_page), and nothing links there."""
 
 
@@ -58,8 +63,10 @@ def client(engine):
     """A signed-in trader with a whole record: the synthetic demo file (README rule 1)."""
     c = sign_up(TestClient(create_app()), engine, "H-1", "homeward")
     token = CSRF.search(c.get("/upload").text).group(1)
-    assert c.post("/upload/demo", data={"csrf_token": token},
-                  follow_redirects=False).status_code == 303
+    assert (
+        c.post("/upload/demo", data={"csrf_token": token}, follow_redirects=False).status_code
+        == 303
+    )
     return c
 
 
@@ -67,9 +74,11 @@ def params(engine) -> dict[str, list[str]]:
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "homeward")).one()
         imp = demo.demo_import(sess, trader)
-        journal = sess.scalars(select(m.Journal.id).where(m.Journal.import_id == imp.id)
-                               .order_by(m.Journal.id)).first()
+        journal = sess.scalars(
+            select(m.Journal.id).where(m.Journal.import_id == imp.id).order_by(m.Journal.id)
+        ).first()
         from services.production.mirror import loader
+
         day = loader.load_for(sess, trader)[0][0].trading_day
     return {
         "import_id": [str(imp.id)],
@@ -106,8 +115,16 @@ def assert_a_way_home(html: str, where: str) -> None:
 
 def test_the_walk_reaches_the_report_and_the_pages_around_it(engine, client):
     urls = signed_in_urls(engine)
-    for expected in ("/", "/mirror", "/mirror/chapter/1", "/mirror/fact/worst-days",
-                     "/journals", "/account", "/upload", "/consent"):
+    for expected in (
+        "/",
+        "/mirror",
+        "/mirror/chapter/1",
+        "/mirror/fact/worst-days",
+        "/journals",
+        "/account",
+        "/upload",
+        "/consent",
+    ):
         assert expected in urls, expected
     assert any(u.startswith("/journals/") and u[10:].isdigit() for u in urls)
     assert any(u.endswith("/trades") for u in urls)
@@ -138,10 +155,15 @@ def test_a_trader_before_consent_has_a_way_home_too(engine):
 
 
 def test_the_bottom_nav_leads_with_home_and_keeps_its_three_tabs(client):
-    tabs = re.findall(r'<a class="bottom-nav__item" href="([^"]+)"[^>]*>([^<]+)</a>',
-                      client.get("/journals").text)
-    assert tabs == [("/", "Home"), ("/mirror", "Scope"), ("/journals", "Journal"),
-                    ("/account", "Account")]
+    tabs = re.findall(
+        r'<a class="bottom-nav__item" href="([^"]+)"[^>]*>([^<]+)</a>', client.get("/journals").text
+    )
+    assert tabs == [
+        ("/", "Home"),
+        ("/mirror", "Scope"),
+        ("/journals", "Journal"),
+        ("/account", "Account"),
+    ]
 
 
 def test_signed_out_the_door_is_unchanged(engine):
@@ -166,8 +188,12 @@ def test_an_address_with_nothing_at_it_still_has_a_way_home(client):
     """A dead address is the last place to leave a trader without one: the app's Not found
     page, and the Scope's own not-found answers (an unknown chapter, an unknown fact, a fact
     with no list of trades), all say Not found and carry the way back."""
-    for url in ("/no-such-page", "/mirror/chapter/9", "/mirror/fact/nope",
-                "/mirror/fact/unread/trades"):
+    for url in (
+        "/no-such-page",
+        "/mirror/chapter/9",
+        "/mirror/fact/nope",
+        "/mirror/fact/unread/trades",
+    ):
         r = client.get(url)
         assert r.status_code == 404, url
         assert "Not found" in r.text, url

@@ -81,12 +81,16 @@ def test_a_profile_missing_a_field_is_an_error(tmp_path):
         reg.load_all(tmp_path)
 
 
-def test_an_unknown_expiry_rule_is_an_error(tmp_path, ):
+def test_an_unknown_expiry_rule_is_an_error(
+    tmp_path,
+):
     good = (PROFILE_DIR / "MCX_CRUDEOIL.yaml").read_text()
     broken = good.replace("symbol: CRUDEOIL", "symbol: X").replace(
         "expiry_rule: from_instrument_name", "expiry_rule: whatever_i_feel_like"
     )
-    assert "whatever_i_feel_like" in broken, "the corruption did not apply; this test would be vacuous"
+    assert "whatever_i_feel_like" in broken, (
+        "the corruption did not apply; this test would be vacuous"
+    )
     (tmp_path / "MCX_X.yaml").write_text(broken)
     with pytest.raises(reg.InvalidProfile):
         reg.load_all(tmp_path)
@@ -95,7 +99,7 @@ def test_an_unknown_expiry_rule_is_an_error(tmp_path, ):
 def test_money_fields_are_never_floats(tmp_path):
     """ctr_v1 keeps all money in Decimal; a float here would leak into a rupee figure."""
     good = (PROFILE_DIR / "MCX_CRUDEOIL.yaml").read_text()
-    broken = good.replace('symbol: CRUDEOIL', 'symbol: Y').replace(
+    broken = good.replace("symbol: CRUDEOIL", "symbol: Y").replace(
         'tick_size: "1"', "tick_size: 1.1"
     )
     assert "tick_size: 1.1" in broken, "the corruption did not apply; this test would be vacuous"
@@ -162,6 +166,7 @@ def test_a_cash_equity_segment_profile_cannot_declare_an_expiry(tmp_path):
 
 
 # ---- lot sizes with dates ----
+
 
 def test_lot_history_resolves_by_the_day_and_overlaps_at_a_changeover():
     from datetime import date

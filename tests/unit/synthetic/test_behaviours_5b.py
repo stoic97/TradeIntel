@@ -5,6 +5,7 @@ every planted quantity has an exact value: a moved stop loses exactly 1 + extra 
 a giveback exit keeps exactly 1 - giveback of the best excursion, an add at 0.5R
 against loses exactly 1.5R at the stop, and so on.
 """
+
 from itertools import pairwise
 
 import numpy as np

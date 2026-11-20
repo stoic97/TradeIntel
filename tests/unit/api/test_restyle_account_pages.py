@@ -20,15 +20,25 @@ from tests.unit.api.templating import TEMPLATES, template_env
 
 
 def upload(id_, outcome, rows, trades):
-    return types.SimpleNamespace(id=id_, outcome=outcome, rows_in=rows,
-                                 trips_reconstructed=trades,
-                                 created_at=datetime(2026, 9, 8, tzinfo=UTC))
+    return types.SimpleNamespace(
+        id=id_,
+        outcome=outcome,
+        rows_in=rows,
+        trips_reconstructed=trades,
+        created_at=datetime(2026, 9, 8, tzinfo=UTC),
+    )
 
 
 CONTEXT = {
-    "account.html": {"display_name": "Ravi", "login_id": "ravi", "imports": [
-        upload(3, s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS, 1240, 40),
-        upload(4, s.ImportOutcome.REJECTED, 3, 0)], "changes": {}},
+    "account.html": {
+        "display_name": "Ravi",
+        "login_id": "ravi",
+        "imports": [
+            upload(3, s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS, 1240, 40),
+            upload(4, s.ImportOutcome.REJECTED, 3, 0),
+        ],
+        "changes": {},
+    },
     "delete_confirm.html": {"error": "Tick the box to confirm."},
     "delete_done.html": {},
     "404.html": {},
@@ -46,9 +56,7 @@ SAID = {
     "delete_done.html": (
         "Your data Deleted Your file, the trades rebuilt from it, your Journals and your account are gone from our database and from the server's disk. Backups roll off within 30 days. We kept two rows, and this is all they say: that this account agreed to what we do with a tradebook, and that it asked to be deleted and was. No name, no trades, no figure worked out from them. This page is the confirmation — we have no way to email you, and we did not keep an address to email."
     ),
-    "404.html": (
-        "Not found There is nothing at this address."
-    ),
+    "404.html": ("Not found There is nothing at this address."),
     "not_open.html": (
         "Scope Scope is not open yet The page that tells you what happens to your tradebook has not been checked yet. Someone other than the people who wrote it has to read it, and the deletion process has to be run end to end and confirmed, before anyone is asked to agree to it. Until both are done, this account cannot upload a file. Nothing is stored for you beyond the account itself, and nothing has been read. If you were expecting to start today, tell us and we will say where this stands."
     ),
@@ -111,9 +119,15 @@ def test_sign_out_is_on_the_account_page():
 def test_delete_keeps_its_field_and_greys_the_button_until_ticked():
     page = render("delete_confirm.html")
     assert '<form method="post" action="/account/delete" class="delete-form">' in page
-    assert 'class="choice__input delete-form__confirm" type="checkbox" name="understood" value="yes"' in page
+    assert (
+        'class="choice__input delete-form__confirm" type="checkbox" name="understood" value="yes"'
+        in page
+    )
     assert '<button class="btn btn--primary btn--block delete-form__submit" type="submit">' in page
-    assert '<p class="field__error field__error--block" role="alert">Tick the box to confirm.</p>' in page
+    assert (
+        '<p class="field__error field__error--block" role="alert">Tick the box to confirm.</p>'
+        in page
+    )
 
 
 def test_sign_up_keeps_its_field_names_and_what_the_browser_needs():

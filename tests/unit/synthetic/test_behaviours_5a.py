@@ -4,6 +4,7 @@ Each condition is recomputed here independently, from the trip list and the bars
 and must match the ``flags`` the generator wrote on every trip. Each DRIFT
 behaviour must lower R where it acted and leave the rest a zero-edge trader.
 """
+
 import numpy as np
 import pytest
 
@@ -33,9 +34,7 @@ def _vol_tercile(i):
     if d == 0:
         return 1
     past = [
-        _bar_atr(j)
-        for j in np.flatnonzero((BARS.day >= max(0, d - 5)) & (BARS.day < d))
-        if j >= 30
+        _bar_atr(j) for j in np.flatnonzero((BARS.day >= max(0, d - 5)) & (BARS.day < d)) if j >= 30
     ]
     lo, hi = np.percentile(past, [100 / 3, 200 / 3])
     return int(_bar_atr(i) > lo) + int(_bar_atr(i) > hi)
@@ -45,9 +44,9 @@ CASES = {
     "B5": (bh.b5_sequence_decay(1.0), lambda tr, k: len(_same_day_before(tr, k)) >= 2),
     "B12": (
         bh.b12_bad_start_day(1.0),
-        lambda tr, k: len(s := _same_day_before(tr, k)) >= 2
-        and s[0].r_multiple < 0
-        and s[1].r_multiple < 0,
+        lambda tr, k: (
+            len(s := _same_day_before(tr, k)) >= 2 and s[0].r_multiple < 0 and s[1].r_multiple < 0
+        ),
     ),
     "S1": (
         bh.s1_session_expectancy(1.0),
@@ -59,8 +58,9 @@ CASES = {
     ),
     "S10": (
         bh.s10_event_trading(1.0),
-        lambda tr, k: tr[k].day % 5 == 2
-        and 19 * 60 + 15 <= BARS.minute[tr[k].entry_idx] <= 20 * 60 + 30,
+        lambda tr, k: (
+            tr[k].day % 5 == 2 and 19 * 60 + 15 <= BARS.minute[tr[k].entry_idx] <= 20 * 60 + 30
+        ),
     ),
     "S11": (bh.s11_edge_decay(1.0), lambda tr, k: k >= N - 100),
     "R8": (bh.r8_high_vol_drift(1.0), lambda tr, k: _vol_tercile(tr[k].entry_idx) == 2),

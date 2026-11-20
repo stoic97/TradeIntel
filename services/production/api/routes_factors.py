@@ -42,17 +42,31 @@ def _his_file(request: Request) -> dict[str, str] | None:
     short = frozenset(v.test.id for v in eligibility.short)
     figs = SF.facts(SF.record_context(trips), imp)
     states = {key: fig.get("state") for key, fig in figs.items()}
-    seen = frozenset(f.name for f in TL.FILTERS
-                     if any(f.read(t, expiries) is not None for t in trips))
-    return {f.name: FM.in_file(f, enough=enough, short=short, fact_states=states,
-                               filters_seen=seen, has_charges=bool(imp.fees_available)).value
-            for f in FM.FACTORS}
+    seen = frozenset(
+        f.name for f in TL.FILTERS if any(f.read(t, expiries) is not None for t in trips)
+    )
+    return {
+        f.name: FM.in_file(
+            f,
+            enough=enough,
+            short=short,
+            fact_states=states,
+            filters_seen=seen,
+            has_charges=bool(imp.fees_available),
+        ).value
+        for f in FM.FACTORS
+    }
 
 
 @router.get("/factors", response_class=HTMLResponse)
 def factors(request: Request):
     his = _his_file(request)
-    families = [(family, [f for f in FM.FACTORS if f.family == family])
-                for family in FM.FAMILIES]
-    return page(request, "factors.html", title="What Scope looks at", families=families,
-                statuses=FM.STATUS_MEANS, his=his)
+    families = [(family, [f for f in FM.FACTORS if f.family == family]) for family in FM.FAMILIES]
+    return page(
+        request,
+        "factors.html",
+        title="What Scope looks at",
+        families=families,
+        statuses=FM.STATUS_MEANS,
+        his=his,
+    )

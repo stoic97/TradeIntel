@@ -113,6 +113,7 @@ def reveal(request: Request):
         body_class="reveal",
         guessed=guessed_label,
         view=SF.reveal_view(context),
-        worst_href=SM.fact_href("worst-days"),  # the days it names: a link opens what it names (TICKET-910)
+        # the days it names: a link opens what it names (TICKET-910)
+        worst_href=SM.fact_href("worst-days"),
         **context,
     )

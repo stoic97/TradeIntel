@@ -48,9 +48,7 @@ class Session:
 
 def hash_password(password: str) -> str:
     if len(password) < MIN_PASSWORD_LENGTH:
-        raise PasswordTooShort(
-            f"A password needs at least {MIN_PASSWORD_LENGTH} characters."
-        )
+        raise PasswordTooShort(f"A password needs at least {MIN_PASSWORD_LENGTH} characters.")
     return _hasher.hash(password)
 
 
@@ -72,8 +70,11 @@ def account_mark(password_hash: str, secret_key: str) -> str:
 
 
 def new_session(trader_id: int, password_hash: str, secret_key: str) -> Session:
-    return Session(trader_id=trader_id, csrf_secret=secrets.token_urlsafe(16),
-                   account=account_mark(password_hash, secret_key))
+    return Session(
+        trader_id=trader_id,
+        csrf_secret=secrets.token_urlsafe(16),
+        account=account_mark(password_hash, secret_key),
+    )
 
 
 def session_is_for(session: Session, password_hash: str, secret_key: str) -> bool:
@@ -82,8 +83,9 @@ def session_is_for(session: Session, password_hash: str, secret_key: str) -> boo
 
 def seal_session(session: Session, secret_key: str) -> str:
     serializer = URLSafeSerializer(secret_key, salt=SESSION_SALT)
-    return serializer.dumps({"t": session.trader_id, "c": session.csrf_secret,
-                             "a": session.account})
+    return serializer.dumps(
+        {"t": session.trader_id, "c": session.csrf_secret, "a": session.account}
+    )
 
 
 def open_session(raw: str | None, secret_key: str) -> Session | None:
@@ -95,8 +97,9 @@ def open_session(raw: str | None, secret_key: str) -> Session | None:
     except BadSignature:
         return None
     # A cookie from before the mark has none, matches no account, and signs in again.
-    return Session(trader_id=int(data["t"]), csrf_secret=str(data["c"]),
-                   account=str(data.get("a", "")))
+    return Session(
+        trader_id=int(data["t"]), csrf_secret=str(data["c"]), account=str(data.get("a", ""))
+    )
 
 
 def csrf_token(session: Session | None, secret_key: str) -> str:

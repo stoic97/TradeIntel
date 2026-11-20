@@ -57,8 +57,7 @@ def test_every_check_in_the_library_gets_an_answer(eligibility):
     """Silence about a check is the one thing section 5.6 cannot do."""
     framework = reader.load()
     assert eligibility.total == len(framework.tests)
-    assert {v.test.id for v in eligibility.verdicts} == {
-        t.id for t in framework.tests}
+    assert {v.test.id for v in eligibility.verdicts} == {t.id for t in framework.tests}
 
 
 def test_every_state_is_one_v1_may_emit(eligibility):
@@ -152,11 +151,17 @@ def test_above_the_floor_the_page_says_the_engine_decides():
     """
     one_day = contract_trips()[:1][0]
     many = [
-        Trip(trip_id=f"t{n:04d}", trading_day=f"2026-09-{(n % 28) + 1:02d}",
-             entry_ts=one_day.entry_ts, exit_ts=one_day.exit_ts,
-             holding_seconds=one_day.holding_seconds,
-             net=Decimal(100) if n % 2 else Decimal(-100),
-             lots=1, risk_unit_source=one_day.risk_unit_source, symbol=one_day.symbol)
+        Trip(
+            trip_id=f"t{n:04d}",
+            trading_day=f"2026-09-{(n % 28) + 1:02d}",
+            entry_ts=one_day.entry_ts,
+            exit_ts=one_day.exit_ts,
+            holding_seconds=one_day.holding_seconds,
+            net=Decimal(100) if n % 2 else Decimal(-100),
+            lots=1,
+            risk_unit_source=one_day.risk_unit_source,
+            symbol=one_day.symbol,
+        )
         for n in range(400)
     ]
     r2 = next(v for v in el.assess(many).verdicts if v.test.id == "R2")
@@ -204,5 +209,4 @@ def test_a_check_we_cannot_count_is_not_counted_as_enough(eligibility):
     assert eligibility.enough == (), (
         "40 trades is not enough for any check whose quantity we can count"
     )
-    assert set(eligibility.runnable) == set(eligibility.enough) | set(
-        eligibility.undetermined)
+    assert set(eligibility.runnable) == set(eligibility.enough) | set(eligibility.undetermined)

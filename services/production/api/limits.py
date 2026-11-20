@@ -70,8 +70,10 @@ DISK_NEARLY_FULL = (
 def signups_refused(wait_seconds: int) -> str:
     minutes = math.ceil(wait_seconds / 60)
     unit = "minute" if minutes == 1 else "minutes"
-    return ("Too many accounts have been made from this connection in the last hour. "
-            f"Try again in {minutes} {unit}.")
+    return (
+        "Too many accounts have been made from this connection in the last hour. "
+        f"Try again in {minutes} {unit}."
+    )
 
 
 def logins_refused(wait_seconds: int) -> str:
@@ -82,8 +84,10 @@ def logins_refused(wait_seconds: int) -> str:
 
 
 def uploads_refused() -> str:
-    return (f"You have sent {k.UPLOADS_PER_ACCOUNT_PER_DAY} files today, the most one account "
-            "can send in a day. Nothing was added. Try again tomorrow.")
+    return (
+        f"You have sent {k.UPLOADS_PER_ACCOUNT_PER_DAY} files today, the most one account "
+        "can send in a day. Nothing was added. Try again tomorrow."
+    )
 
 
 class HourlyCount:
@@ -222,8 +226,11 @@ def _disk_nearly_full(path: Path) -> bool:
         logger.warning("could not read the disk under %s; uploads stay open", path)
         return False
     if past_the_line(used):
-        logger.warning("uploads refused: disk is %.1f%% full (line is %d%%)",
-                       used, k.UPLOADS_REFUSED_AT_DISK_PERCENT)
+        logger.warning(
+            "uploads refused: disk is %.1f%% full (line is %d%%)",
+            used,
+            k.UPLOADS_REFUSED_AT_DISK_PERCENT,
+        )
         return True
     return False
 
@@ -235,7 +242,8 @@ def _start_of_today() -> datetime:
 def _files_today(sess, trader: m.Trader) -> int:
     since = _start_of_today().astimezone(UTC)
     return sess.scalar(
-        select(func.count()).select_from(m.RawFile)
+        select(func.count())
+        .select_from(m.RawFile)
         .where(m.RawFile.trader_id == trader.id, m.RawFile.uploaded_at >= since)
     )
 

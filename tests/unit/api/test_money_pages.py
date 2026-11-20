@@ -15,7 +15,12 @@ from fastapi.testclient import TestClient
 from services.production.api.app import create_app
 from tests.unit.api import figure_pages as P
 
-PAGES = ("/mirror/fact/money", "/mirror/fact/worst-days", "/mirror/fact/busiest", "/mirror/fact/clock")
+PAGES = (
+    "/mirror/fact/money",
+    "/mirror/fact/worst-days",
+    "/mirror/fact/busiest",
+    "/mirror/fact/clock",
+)
 NEVER = ("cost you", "would have", "should have", "because you", "you should", "if you had")
 
 
@@ -44,8 +49,10 @@ def test_the_best_and_worst_five_say_five_of_what(client):
 
 
 def test_a_worst_day_says_more_of_what(client):
-    assert re.search(r"First trade [−+]₹[\d,]+, then \d+ more trades?; \d+ lost\.",
-                     words(client.get("/mirror/fact/worst-days").text))
+    assert re.search(
+        r"First trade [−+]₹[\d,]+, then \d+ more trades?; \d+ lost\.",
+        words(client.get("/mirror/fact/worst-days").text),
+    )
 
 
 def test_the_clock_says_what_its_figure_is(client):
@@ -78,4 +85,7 @@ def test_nothing_starts_estimating_or_advising(client, path):
 
 def test_the_clocks_card_says_result_too(client):
     """A card renders on its chapter's page, which no fact page's check reads."""
-    assert "net (gross)" not in words(client.get("/mirror/chapter/2").text).split("The clock")[1].lower()
+    assert (
+        "net (gross)"
+        not in words(client.get("/mirror/chapter/2").text).split("The clock")[1].lower()
+    )

@@ -5,6 +5,7 @@ this reads `v2026.11.14`, and a sha there means a deploy that skipped the train.
 after a tag reads as its sha, not as `v2026.11.14-1-g...`: staging runs `main`, and "one
 commit past the last train" is not a version anyone deployed.
 """
+
 from __future__ import annotations
 
 import subprocess

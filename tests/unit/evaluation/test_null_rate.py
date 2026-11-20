@@ -146,8 +146,7 @@ def test_cluster_level_bound_is_much_wider_when_clusters_are_few():
 
 
 def test_bootstrap_degeneracy_is_flagged_at_zero_fires():
-    r = nr.assess(outcomes({c: 0 for c in range(10)}, per_cluster=10),
-                  clustering_unit="c", seed=1)
+    r = nr.assess(outcomes({c: 0 for c in range(10)}, per_cluster=10), clustering_unit="c", seed=1)
     assert r.bootstrap_degenerate is True
     assert r.bootstrap_lo == r.bootstrap_hi == 0.0
 

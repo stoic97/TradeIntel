@@ -19,11 +19,28 @@ from services.production.api import scope_map as SM
 from services.production.api.app import create_app
 from tests.unit.api import figure_pages as P
 
-PAGES = ("/mirror/fact/down", "/mirror/fact/run", "/mirror/fact/math", "/mirror/fact/risk",
-         "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4", "/mirror")
+PAGES = (
+    "/mirror/fact/down",
+    "/mirror/fact/run",
+    "/mirror/fact/math",
+    "/mirror/fact/risk",
+    "/mirror/chapter/2",
+    "/mirror/chapter/3",
+    "/mirror/chapter/4",
+    "/mirror",
+)
 RETIRED = ("strike rate", "qualified", "qualifying", "net (gross)", "the math")
-CLAIMS = ("because you", "you should", "should have", "would have", "if you had", "cost you",
-          "your score", "try to", "avoid")
+CLAIMS = (
+    "because you",
+    "you should",
+    "should have",
+    "would have",
+    "if you had",
+    "cost you",
+    "your score",
+    "try to",
+    "avoid",
+)
 
 
 def words(html: str) -> str:
@@ -91,8 +108,10 @@ def test_a_good_sentence_is_left_alone():
     assert "sold-option" in source and "no risk cap, and no budget is set" in source
 
 
-@pytest.mark.parametrize(("rate", "said"), [("45.8", "46 of 100"), ("45.5", "46 of 100"),
-                                             ("45.4", "45 of 100"), ("100", "100 of 100")])
+@pytest.mark.parametrize(
+    ("rate", "said"),
+    [("45.8", "46 of 100"), ("45.5", "46 of 100"), ("45.4", "45 of 100"), ("100", "100 of 100")],
+)
 def test_a_rate_rounds_as_a_person_says_it(rate, said):
     assert formatting.out_of_a_hundred(rate) == said
 
@@ -119,8 +138,11 @@ def test_the_trades_listed_are_captioned_as_the_trades_listed(client):
 
 
 def test_the_count_under_the_caption_is_said_once(client):
-    """"65 trades. 65 of 227 trades." read as a stutter: the second says only where they come from."""
+    """ "65 trades. 65 of 227 trades." read as a stutter: the second says only where they come from."""
     text = words(client.get("/mirror/fact/down").text)
-    assert re.search(r"right after two straight losses\. [\d,]+ trades\. From the [\d,]+ trades counted above\. "
-                     r"Listed in the order you opened them\.", text)
+    assert re.search(
+        r"right after two straight losses\. [\d,]+ trades\. From the [\d,]+ trades counted above\. "
+        r"Listed in the order you opened them\.",
+        text,
+    )
     assert not re.search(r"[\d,]+ of [\d,]+ trades\. Listed", text)

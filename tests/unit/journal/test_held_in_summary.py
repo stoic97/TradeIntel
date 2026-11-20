@@ -35,9 +35,15 @@ from tests.helpers.upload import CSRF, sign_up
 def _trip(name: str, opened: str, closed: str, net: int = -100) -> Trip:
     entry, exit_ = datetime.fromisoformat(opened), datetime.fromisoformat(closed)
     return Trip(
-        trip_id=name, symbol="OPT", trading_day=entry.date().isoformat(), entry_ts=entry,
-        exit_ts=exit_, holding_seconds=int((exit_ - entry).total_seconds()),
-        net=Decimal(net), lots=1, risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID,
+        trip_id=name,
+        symbol="OPT",
+        trading_day=entry.date().isoformat(),
+        entry_ts=entry,
+        exit_ts=exit_,
+        holding_seconds=int((exit_ - entry).total_seconds()),
+        net=Decimal(net),
+        lots=1,
+        risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID,
     )
 
 
@@ -84,8 +90,7 @@ def test_a_mixed_day_keeps_its_hours_and_adds_the_held_one():
     summary = _summary(MORNING, AFTERNOON, _trip("h", "2024-03-04T14:30:00", "2024-03-11T10:00:00"))
     assert summary.startswith("Three trades, between 09:00 and 14:00.")
     assert (
-        "One was held past the day: opened on 04 Mar 2024, closed on 11 Mar 2024, "
-        "7 days later."
+        "One was held past the day: opened on 04 Mar 2024, closed on 11 Mar 2024, 7 days later."
     ) in summary
 
 
@@ -120,7 +125,9 @@ def test_a_stored_journal_from_before_this_still_renders():
     assert prose.render(facts).startswith("One trade, all before noon.")
 
 
-HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+HEADER = (
+    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+)
 
 
 def _row(day: str, time: str, name: str, side: str, order: str, value: int) -> str:
@@ -128,17 +135,22 @@ def _row(day: str, time: str, name: str, side: str, order: str, value: int) -> s
     return f"{day},{time},{name},{side},{order},NSE,Derivative,50,{price:.2f},{value:.2f},Traded"
 
 
-FILE = "\n".join([
-    HEADER,
-    _row("2024-01-02", "09:30:00", "NIFTY 25 JAN 20000 CALL", "BUY", "INTRADAY", 5000),
-    _row("2024-01-02", "09:40:00", "NIFTY 25 JAN 20000 CALL", "SELL", "INTRADAY", 4900),
-    _row("2024-01-02", "10:00:00", "NIFTY 29 FEB 20000 CALL", "BUY", "MARGIN", 5000),
-    _row("2024-02-05", "11:00:00", "NIFTY 29 FEB 20000 CALL", "SELL", "MARGIN", 4800),
-    _row("2024-02-06", "09:30:00", "NIFTY 29 FEB 20100 CALL", "BUY", "INTRADAY", 5000),
-    _row("2024-02-06", "09:40:00", "NIFTY 29 FEB 20100 CALL", "SELL", "INTRADAY", 5100),
-    _row("2024-02-06", "10:00:00", "NIFTY 29 FEB 20100 CALL", "BUY", "INTRADAY", 5000),
-    _row("2024-02-06", "10:10:00", "NIFTY 29 FEB 20100 CALL", "SELL", "INTRADAY", 5200),
-]) + "\n"
+FILE = (
+    "\n".join(
+        [
+            HEADER,
+            _row("2024-01-02", "09:30:00", "NIFTY 25 JAN 20000 CALL", "BUY", "INTRADAY", 5000),
+            _row("2024-01-02", "09:40:00", "NIFTY 25 JAN 20000 CALL", "SELL", "INTRADAY", 4900),
+            _row("2024-01-02", "10:00:00", "NIFTY 29 FEB 20000 CALL", "BUY", "MARGIN", 5000),
+            _row("2024-02-05", "11:00:00", "NIFTY 29 FEB 20000 CALL", "SELL", "MARGIN", 4800),
+            _row("2024-02-06", "09:30:00", "NIFTY 29 FEB 20100 CALL", "BUY", "INTRADAY", 5000),
+            _row("2024-02-06", "09:40:00", "NIFTY 29 FEB 20100 CALL", "SELL", "INTRADAY", 5100),
+            _row("2024-02-06", "10:00:00", "NIFTY 29 FEB 20100 CALL", "BUY", "INTRADAY", 5000),
+            _row("2024-02-06", "10:10:00", "NIFTY 29 FEB 20100 CALL", "SELL", "INTRADAY", 5200),
+        ]
+    )
+    + "\n"
+)
 
 
 def test_the_journal_page_shows_it_after_a_real_upload(scope_environment):
@@ -146,8 +158,12 @@ def test_the_journal_page_shows_it_after_a_real_upload(scope_environment):
     run_migrations(engine)
     client = sign_up(TestClient(create_app()), engine, "HELD", "held")
     token = CSRF.search(client.get("/upload").text).group(1)
-    sent = client.post("/upload", files={"file": ("t.csv", FILE.encode(), "text/csv")},
-                       data={"csrf_token": token}, follow_redirects=False)
+    sent = client.post(
+        "/upload",
+        files={"file": ("t.csv", FILE.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
     with make_session(engine) as sess:
         journal_id = sess.scalars(
@@ -155,8 +171,7 @@ def test_the_journal_page_shows_it_after_a_real_upload(scope_environment):
         ).one()
     page = client.get(f"/journals/{journal_id}").text
     assert (
-        "One was held past the day: opened on 02 Jan 2024, closed on 05 Feb 2024, "
-        "34 days later."
+        "One was held past the day: opened on 02 Jan 2024, closed on 05 Feb 2024, 34 days later."
     ) in page
     assert "before noon" not in page
 

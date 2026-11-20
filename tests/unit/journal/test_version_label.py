@@ -67,8 +67,12 @@ def test_one_new_trade_writes_only_its_own_day(session, trader):  # noqa: F811
 def test_that_new_trade_does_move_the_history_wide_figures(session, trader):  # noqa: F811
     """Otherwise the test above proves nothing."""
     trips = load_trips()
-    period = gen.pd.periods_for(trips, unit=gen.pd.resolve_unit(trips, preference=None, preference_n=None).unit,
-                                export_date="2026-09-30", n=None)[0]
+    period = gen.pd.periods_for(
+        trips,
+        unit=gen.pd.resolve_unit(trips, preference=None, preference_n=None).unit,
+        export_date="2026-09-30",
+        n=None,
+    )[0]
     before = sec.build(period, history=trips, fees_available=False)
     after = sec.build(period, history=one_more_trade(trips), fees_available=False)
     assert before != after
@@ -123,10 +127,15 @@ def test_only_that_day_is_marked_changed(session, trader):  # noqa: F811
 def _rewrite(session, trader, journal, trip_ids=None):  # noqa: F811
     """A version as the old rule stored it: already in his database, and it stays."""
     rewritten = m.Journal(
-        trader_id=trader.id, import_id=journal.import_id, unit=journal.unit,
-        period_start=journal.period_start, period_end=journal.period_end,
-        version_no=journal.version_no + 1, supersedes=journal.id,
-        generated_at=journal.generated_at, sections=journal.sections,
+        trader_id=trader.id,
+        import_id=journal.import_id,
+        unit=journal.unit,
+        period_start=journal.period_start,
+        period_end=journal.period_end,
+        version_no=journal.version_no + 1,
+        supersedes=journal.id,
+        generated_at=journal.generated_at,
+        sections=journal.sections,
         trip_ids=journal.trip_ids if trip_ids is None else json.dumps(trip_ids),
     )
     session.add(rewritten)
@@ -150,8 +159,9 @@ def test_a_real_change_stays_marked_through_a_later_rewrite(session, trader):  #
 def test_one_traders_changes_are_not_anothers(session, trader):  # noqa: F811
     first_upload(session, trader)
     second_upload(session, trader, [t for t in load_trips() if t.trip_id != "t03"])
-    other = m.Trader(display_name="Other", login_id="other", password_hash="x",
-                     created_at=trader.created_at)
+    other = m.Trader(
+        display_name="Other", login_id="other", password_hash="x", created_at=trader.created_at
+    )
     session.add(other)
     session.flush()
     assert gen.changed_by_upload(session, trader=other) == set()

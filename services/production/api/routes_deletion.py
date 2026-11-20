@@ -46,8 +46,7 @@ def delete_submit(
     csrf_token: str = Form(None),
 ):
     if not require_csrf(request, csrf_token):
-        return HTMLResponse("Form expired. Reload the page and try again.",
-                            status_code=403)
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
@@ -55,9 +54,13 @@ def delete_submit(
             return RedirectResponse("/login", status_code=303)
 
         if understood is None:
-            return page(request, "delete_confirm.html", status_code=400,
-                        title="Delete everything",
-                        error="Tick the box if you want this done.")
+            return page(
+                request,
+                "delete_confirm.html",
+                status_code=400,
+                title="Delete everything",
+                error="Tick the box if you want this done.",
+            )
 
         record = deletion.delete_trader(sess, _store(request), trader=trader)
         removed = record.what_removed
@@ -67,8 +70,14 @@ def delete_submit(
     # hide_nav: the header would otherwise offer "Your account" and "Sign out"
     # for an account that no longer exists, because the cookie is still on the
     # request that renders this page.
-    response = page(request, "delete_done.html", title="Deleted",
-                    removed=removed, retained=retained, hide_nav=True)
+    response = page(
+        request,
+        "delete_done.html",
+        title="Deleted",
+        removed=removed,
+        retained=retained,
+        hide_nav=True,
+    )
     # His session is for an account that no longer exists. Clearing the cookie is
     # tidiness, not security: current_trader checks a session against its account.
     response.delete_cookie(auth.SESSION_COOKIE)

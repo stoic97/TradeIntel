@@ -160,8 +160,8 @@ def expiries_for(sess: Session, imp: m.Import) -> dict[tuple, date | None]:
     if adapter is None:
         return {}
     raw = sess.scalars(
-        select(m.ImportRow.raw_text).where(m.ImportRow.import_id == imp.id,
-                                           m.ImportRow.status == "PARSED")
+        select(m.ImportRow.raw_text)
+        .where(m.ImportRow.import_id == imp.id, m.ImportRow.status == "PARSED")
         .order_by(m.ImportRow.row_no)
     ).all()
     header = ",".join(adapter.header)
@@ -222,8 +222,9 @@ def _premium(legs: list[m.Trip]) -> Decimal | None:
     return row.entry_price * row.quantity
 
 
-def load_for(sess: Session, trader: m.Trader,
-             imp: m.Import | None = None) -> tuple[list[Trip], m.Import | None]:
+def load_for(
+    sess: Session, trader: m.Trader, imp: m.Import | None = None
+) -> tuple[list[Trip], m.Import | None]:
     """His trips and the import that produced them, for the lineage stamp.
 
     The current import unless one is named: an earlier reading is read the same way, so
@@ -304,23 +305,25 @@ def load_for(sess: Session, trader: m.Trader,
         trading_day = first.entry_ts.astimezone(zone).date().isoformat()
         entry_ts = min(leg.entry_ts for leg in legs)
         exit_ts = max(leg.exit_ts for leg in legs)
-        trips.append(Trip(
-            trip_id=first.position_id or first.trip_id,
-            symbol=first.symbol,
-            trading_day=trading_day,
-            entry_ts=entry_ts.astimezone(zone),
-            exit_ts=exit_ts.astimezone(zone),
-            holding_seconds=int((exit_ts - entry_ts).total_seconds()),
-            net=sum((leg.net for leg in legs), Decimal(0)),
-            lots=max(lots_of(leg, date.fromisoformat(trading_day)) for leg in legs),
-            risk_unit_source=_measured_against(first, trading_day, declarations),
-            is_option=first.segment == "OPT",
-            legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
-            lines=tuple(_line(leg) for leg in legs),
-            uncapped=any(leg.uncapped for leg in legs),
-            premium=_premium(legs),
-            point_value=profile_for(first).currency_per_point,
-        ))
+        trips.append(
+            Trip(
+                trip_id=first.position_id or first.trip_id,
+                symbol=first.symbol,
+                trading_day=trading_day,
+                entry_ts=entry_ts.astimezone(zone),
+                exit_ts=exit_ts.astimezone(zone),
+                holding_seconds=int((exit_ts - entry_ts).total_seconds()),
+                net=sum((leg.net for leg in legs), Decimal(0)),
+                lots=max(lots_of(leg, date.fromisoformat(trading_day)) for leg in legs),
+                risk_unit_source=_measured_against(first, trading_day, declarations),
+                is_option=first.segment == "OPT",
+                legs=tuple(Leg(_leg_label(leg), leg.net) for leg in legs) if len(legs) > 1 else (),
+                lines=tuple(_line(leg) for leg in legs),
+                uncapped=any(leg.uncapped for leg in legs),
+                premium=_premium(legs),
+                point_value=profile_for(first).currency_per_point,
+            )
+        )
     # Read off each trip's own day, so it holds for whatever trips were built above.
     return [
         replace(t, number_in_force=_number_in_force(t.trading_day, declarations)) for t in trips

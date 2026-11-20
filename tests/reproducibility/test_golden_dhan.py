@@ -22,6 +22,7 @@ Known artifact in the committed golden: the aggregated fill's ``risk_unit`` read
 because the value is divided to a price and multiplied back. To be fixed by carrying
 the value itself; the golden diff will show those two numbers correcting.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -124,9 +125,7 @@ def test_trader_data_paths_are_gitignored():
     import subprocess
 
     for path in ("data/raw/export.csv", "data/partners/t01.xlsx", "private/notes.csv"):
-        done = subprocess.run(
-            ["git", "check-ignore", "-q", path], capture_output=True, check=False
-        )
+        done = subprocess.run(["git", "check-ignore", "-q", path], capture_output=True, check=False)
         assert done.returncode == 0, f"{path} is NOT ignored -- trader data could be committed"
 
 

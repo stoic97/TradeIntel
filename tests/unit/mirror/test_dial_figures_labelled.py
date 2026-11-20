@@ -34,7 +34,9 @@ def _words(body: str) -> str:
 def _slices(svg: str) -> list[dict]:
     """Each slice: its name (drawn after the link) and the text inside its link."""
     names = [_words(b) for c, b in TEXT.findall(svg) if c.split()[0] == "scope__name"]
-    blocks = [[(c.split()[0], _words(b)) for c, b in TEXT.findall(inner)] for inner in SLICE.findall(svg)]
+    blocks = [
+        [(c.split()[0], _words(b)) for c, b in TEXT.findall(inner)] for inner in SLICE.findall(svg)
+    ]
     assert names and len(names) == len(blocks), "one name per slice"
     out = []
     for name, texts in zip(names, blocks):

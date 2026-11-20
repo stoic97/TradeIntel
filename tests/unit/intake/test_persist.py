@@ -30,8 +30,9 @@ def fresh_session(tmp_path):
 
 
 def seed_trader(sess) -> m.Trader:
-    trader = m.Trader(display_name="Fixture", login_id="fx", password_hash="x",
-                      created_at=datetime.now(UTC))
+    trader = m.Trader(
+        display_name="Fixture", login_id="fx", password_hash="x", created_at=datetime.now(UTC)
+    )
     sess.add(trader)
     sess.flush()
     return trader
@@ -41,8 +42,11 @@ def plan_for(name: str, existing: dict[str, int] | None = None) -> pl.ImportPlan
     return pl.plan_import(
         (DUPES / name).read_text(),
         context=pl.ImportContext(
-            trader_id="fx", source_account="A", code_version="testsha",
-            existing_days=existing or {}, export_date="2026-10-18",
+            trader_id="fx",
+            source_account="A",
+            code_version="testsha",
+            existing_days=existing or {},
+            export_date="2026-10-18",
             export_date_source="trader",
         ),
     )
@@ -51,9 +55,15 @@ def plan_for(name: str, existing: dict[str, int] | None = None) -> pl.ImportPlan
 def test_a_plan_becomes_an_import_with_its_versions(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
-        imp = persist.write_plan(sess, trader=trader, plan=plan_for("clean.csv"),
-                                 raw_sha256="a" * 64, original_name="clean.csv",
-                                 stored_path="/tmp/clean.csv", size=100)
+        imp = persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan_for("clean.csv"),
+            raw_sha256="a" * 64,
+            original_name="clean.csv",
+            stored_path="/tmp/clean.csv",
+            size=100,
+        )
         sess.commit()
         loaded = sess.scalars(select(m.Import)).one()
         assert loaded.id == imp.id
@@ -68,8 +78,15 @@ def test_every_row_of_the_file_is_written(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
         plan = plan_for("repeated_legitimate_fills.csv")
-        persist.write_plan(sess, trader=trader, plan=plan, raw_sha256="b" * 64,
-                           original_name="r.csv", stored_path="/tmp/r.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan,
+            raw_sha256="b" * 64,
+            original_name="r.csv",
+            stored_path="/tmp/r.csv",
+            size=1,
+        )
         sess.commit()
         rows = sess.scalars(select(m.ImportRow)).all()
         assert len(rows) == plan.rows_in == 6
@@ -82,8 +99,15 @@ def test_trips_are_written_with_their_money_intact(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
         plan = plan_for("clean.csv")
-        persist.write_plan(sess, trader=trader, plan=plan, raw_sha256="c" * 64,
-                           original_name="c.csv", stored_path="/tmp/c.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan,
+            raw_sha256="c" * 64,
+            original_name="c.csv",
+            stored_path="/tmp/c.csv",
+            size=1,
+        )
         sess.commit()
         trips = sess.scalars(select(m.Trip)).all()
         assert len(trips) == len(plan.trips)
@@ -97,13 +121,27 @@ def test_a_second_upload_supersedes_the_day_it_covers(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
         first = plan_for("clean.csv")
-        persist.write_plan(sess, trader=trader, plan=first, raw_sha256="d" * 64,
-                           original_name="1.csv", stored_path="/tmp/1.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=first,
+            raw_sha256="d" * 64,
+            original_name="1.csv",
+            stored_path="/tmp/1.csv",
+            size=1,
+        )
         sess.commit()
         existing = persist.existing_days(sess, trader=trader, source_account="A")
         second = plan_for("clean.csv", existing=existing)
-        persist.write_plan(sess, trader=trader, plan=second, raw_sha256="e" * 64,
-                           original_name="2.csv", stored_path="/tmp/2.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=second,
+            raw_sha256="e" * 64,
+            original_name="2.csv",
+            stored_path="/tmp/2.csv",
+            size=1,
+        )
         sess.commit()
 
         versions = sess.scalars(select(m.TradingDayVersion)).all()
@@ -117,13 +155,25 @@ def test_a_second_upload_supersedes_the_day_it_covers(tmp_path):
 def test_the_second_import_records_what_it_supersedes(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
-        persist.write_plan(sess, trader=trader, plan=plan_for("clean.csv"),
-                           raw_sha256="f" * 64, original_name="1.csv",
-                           stored_path="/tmp/1.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan_for("clean.csv"),
+            raw_sha256="f" * 64,
+            original_name="1.csv",
+            stored_path="/tmp/1.csv",
+            size=1,
+        )
         sess.commit()
-        persist.write_plan(sess, trader=trader, plan=plan_for("clean.csv"),
-                           raw_sha256="0" * 64, original_name="2.csv",
-                           stored_path="/tmp/2.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan_for("clean.csv"),
+            raw_sha256="0" * 64,
+            original_name="2.csv",
+            stored_path="/tmp/2.csv",
+            size=1,
+        )
         sess.commit()
         imports = sess.scalars(select(m.Import).order_by(m.Import.id)).all()
         assert imports[1].version_no == 2
@@ -136,11 +186,17 @@ def test_a_rejected_file_still_leaves_a_record(tmp_path):
         trader = seed_trader(sess)
         plan = pl.plan_import(
             "Symbol,Realised P&L\nWIDGETOIL,1500.00\n",
-            context=pl.ImportContext(trader_id="fx", source_account="A",
-                                     code_version="testsha"),
+            context=pl.ImportContext(trader_id="fx", source_account="A", code_version="testsha"),
         )
-        persist.write_plan(sess, trader=trader, plan=plan, raw_sha256="1" * 64,
-                           original_name="pnl.csv", stored_path="/tmp/pnl.csv", size=1)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan,
+            raw_sha256="1" * 64,
+            original_name="pnl.csv",
+            stored_path="/tmp/pnl.csv",
+            size=1,
+        )
         sess.commit()
         imp = sess.scalars(select(m.Import)).one()
         assert imp.outcome is s.ImportOutcome.REJECTED
@@ -151,9 +207,15 @@ def test_a_rejected_file_still_leaves_a_record(tmp_path):
 def test_the_raw_file_row_is_written_once_per_upload(tmp_path):
     with fresh_session(tmp_path) as sess:
         trader = seed_trader(sess)
-        persist.write_plan(sess, trader=trader, plan=plan_for("clean.csv"),
-                           raw_sha256="2" * 64, original_name="c.csv",
-                           stored_path="/tmp/c.csv", size=42)
+        persist.write_plan(
+            sess,
+            trader=trader,
+            plan=plan_for("clean.csv"),
+            raw_sha256="2" * 64,
+            original_name="c.csv",
+            stored_path="/tmp/c.csv",
+            size=42,
+        )
         sess.commit()
         raw = sess.scalars(select(m.RawFile)).one()
         assert raw.sha256 == "2" * 64

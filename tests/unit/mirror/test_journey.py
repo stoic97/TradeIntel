@@ -32,16 +32,33 @@ def refuse_a_later_file(engine) -> int:
     """A second upload, refused: a P&L statement, say. No trips."""
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
-        raw = m.RawFile(trader_id=trader.id, sha256="e" * 64, original_name="pnl.csv",
-                        size=1, stored_path="/tmp/e", uploaded_at=datetime.now(UTC))
+        raw = m.RawFile(
+            trader_id=trader.id,
+            sha256="e" * 64,
+            original_name="pnl.csv",
+            size=1,
+            stored_path="/tmp/e",
+            uploaded_at=datetime.now(UTC),
+        )
         sess.add(raw)
         sess.flush()
-        imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                       adapter_id="dhan_tradebook_v1", adapter_version="1",
-                       filemap_version="1", code_version="fixturesha",
-                       outcome=s.ImportOutcome.REJECTED, rejection_text="no prices",
-                       rows_in=1, rows_parsed=0, rows_excluded=0, fees_available=False,
-                       version_no=2, created_at=datetime.now(UTC))
+        imp = m.Import(
+            trader_id=trader.id,
+            raw_file_id=raw.id,
+            source_account="A",
+            adapter_id="dhan_tradebook_v1",
+            adapter_version="1",
+            filemap_version="1",
+            code_version="fixturesha",
+            outcome=s.ImportOutcome.REJECTED,
+            rejection_text="no prices",
+            rows_in=1,
+            rows_parsed=0,
+            rows_excluded=0,
+            fees_available=False,
+            version_no=2,
+            created_at=datetime.now(UTC),
+        )
         sess.add(imp)
         sess.commit()
         return imp.id
@@ -57,8 +74,7 @@ def record_a_number(client):
     token = TOKEN.search(client.get("/budget").text).group(1)
     return client.post(
         "/budget",
-        data={"value": "3000", "unit": "INR", "effective_from": "2026-09-01",
-              "csrf_token": token},
+        data={"value": "3000", "unit": "INR", "effective_from": "2026-09-01", "csrf_token": token},
         follow_redirects=False,
     )
 
@@ -80,7 +96,9 @@ def test_the_one_number_is_the_kits_form_in_the_apps_words(client):
     ) in page
     assert 'type="radio" name="unit" value="PCT"><span class="body">per cent of my trading' in page
     assert '<button class="btn btn--primary btn--block" type="submit">Record it</button>' in page
-    assert 'href="/eligibility"' not in page  # TICKET-903: Limits no longer sends on to the checks page
+    assert (
+        'href="/eligibility"' not in page
+    )  # TICKET-903: Limits no longer sends on to the checks page
 
     assert "<select" not in page  # the kit's radios, not the old drop-down
 

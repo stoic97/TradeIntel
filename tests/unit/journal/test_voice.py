@@ -25,9 +25,24 @@ from services.production.journal import sections as sec
 from services.production.mirror.metrics import Trip
 from services.shared.schemas import scope_v1 as s
 
-NEVER_USED = ["tilt", "revenge", "emotional", "psychology", "disease", "cure",
-              "signal", "tip", "edge", "alpha", "expectancy", "discipline",
-              "mistake", "should have", "well done", "unfortunately"]
+NEVER_USED = [
+    "tilt",
+    "revenge",
+    "emotional",
+    "psychology",
+    "disease",
+    "cure",
+    "signal",
+    "tip",
+    "edge",
+    "alpha",
+    "expectancy",
+    "discipline",
+    "mistake",
+    "should have",
+    "well done",
+    "unfortunately",
+]
 
 CLAIMS = [
     (r"\byou\b[^.]{0,80}\bbecause\b", "asserts a cause"),
@@ -45,28 +60,42 @@ UNQUALIFIED_R = re.compile(r"\b\d+(\.\d+)?\s*R\b")
 
 def load() -> list[Trip]:
     return [
-        Trip(trip_id=r["trip_id"], trading_day=r["trading_day"],
-             entry_ts=datetime.fromisoformat(r["entry_ts"]),
-             exit_ts=datetime.fromisoformat(r["exit_ts"]),
-             holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
-             lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
-             symbol=r["symbol"])
+        Trip(
+            trip_id=r["trip_id"],
+            trading_day=r["trading_day"],
+            entry_ts=datetime.fromisoformat(r["entry_ts"]),
+            exit_ts=datetime.fromisoformat(r["exit_ts"]),
+            holding_seconds=r["holding_seconds"],
+            net=Decimal(r["net"]),
+            lots=r["lots"],
+            risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+            symbol=r["symbol"],
+        )
         for r in json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text())
     ]
 
 
 def rendered(which: str) -> str:
     trips = load()
-    period = next(p for p in pd.periods_for(trips, unit=s.JournalUnit.DAY,
-                                            export_date="2026-09-30")
-                  if p.period_start == which)
+    period = next(
+        p
+        for p in pd.periods_for(trips, unit=s.JournalUnit.DAY, export_date="2026-09-30")
+        if p.period_start == which
+    )
     facts = sec.build(period, history=trips, fees_available=False)
     return prose.render(facts)
 
 
-ALL_DAYS = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04",
-            "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10"]
+ALL_DAYS = [
+    "2026-09-01",
+    "2026-09-02",
+    "2026-09-03",
+    "2026-09-04",
+    "2026-09-07",
+    "2026-09-08",
+    "2026-09-09",
+    "2026-09-10",
+]
 
 
 def test_it_reads_as_prose_not_a_table():
@@ -96,8 +125,14 @@ def test_the_behaviour_is_stated_with_his_own_baseline():
     assert "you have uploaded" in text.lower(), "the baseline is his own history"
     # "average" alone is not a population word: "your average size" is his own.
     # The ban is on comparing him to anyone else.
-    for population in ("other traders", "traders like you", "the average trader",
-                       "most people", "the typical", "compared to others"):
+    for population in (
+        "other traders",
+        "traders like you",
+        "the average trader",
+        "most people",
+        "the typical",
+        "compared to others",
+    ):
         assert population not in text.lower(), f"invokes {population!r}"
 
 
@@ -106,7 +141,7 @@ def test_a_day_without_the_behaviour_does_not_mention_it():
     assert "closed at a loss" not in text.lower()
 
 
-def test_the_blank_stop_is_said_once_without_comment(  ):
+def test_the_blank_stop_is_said_once_without_comment():
     text = rendered("2026-09-02")
     assert text.lower().count("planned stop") == 1
     for word in ("should", "remember", "important"):

@@ -98,21 +98,37 @@ def _unavailable(test: LibraryTest) -> tuple[Waiting, str] | None:
     can be traced to a ticket rather than to someone's memory.
     """
     if test.needs == "tick":
-        return (Waiting.FINER_PRICES,
-                ("it needs tick-by-tick prices, and the price history we hold is "
-                 "one-minute bars (TD-004)"))
+        return (
+            Waiting.FINER_PRICES,
+            (
+                "it needs tick-by-tick prices, and the price history we hold is "
+                "one-minute bars (TD-004)"
+            ),
+        )
     if test.requires_class == "conditional_on_stop_orders":
-        return (Waiting.STOP,
-                ("it needs the stop that was working when the trade was opened, and "
-                 "no broker export we read carries one (TD-003)"))
+        return (
+            Waiting.STOP,
+            (
+                "it needs the stop that was working when the trade was opened, and "
+                "no broker export we read carries one (TD-003)"
+            ),
+        )
     if test.n_min.unit is Unit.PER_REGIME or "regime" in test.extras:
-        return (Waiting.MARKET_CONTEXT,
-                ("it needs the market-regime labels, which have not reached this "
-                 "side as data (TD-011)"))
+        return (
+            Waiting.MARKET_CONTEXT,
+            (
+                "it needs the market-regime labels, which have not reached this "
+                "side as data (TD-011)"
+            ),
+        )
     if "events" in test.extras:
-        return (Waiting.RELEASE_CALENDAR,
-                ("it needs a calendar of the releases it looks at, which has not "
-                 "reached this side as data (TD-014)"))
+        return (
+            Waiting.RELEASE_CALENDAR,
+            (
+                "it needs a calendar of the releases it looks at, which has not "
+                "reached this side as data (TD-014)"
+            ),
+        )
     return None
 
 
@@ -121,12 +137,12 @@ def _counted(test: LibraryTest, trips: list[Trip]) -> tuple[int | None, Basis]:
     unit = test.n_min.unit
 
     if unit is Unit.TRIPS:
-        return len(trips), (Basis.OWN_COUNT if test.n_min.comparison is None
-                            else Basis.POPULATION_FLOOR)
+        return len(trips), (
+            Basis.OWN_COUNT if test.n_min.comparison is None else Basis.POPULATION_FLOOR
+        )
     if unit is Unit.DAYS:
         days = len({t.trading_day for t in trips})
-        return days, (Basis.OWN_COUNT if test.n_min.comparison is None
-                      else Basis.POPULATION_FLOOR)
+        return days, (Basis.OWN_COUNT if test.n_min.comparison is None else Basis.POPULATION_FLOOR)
     if unit is Unit.WINNERS:
         return sum(1 for t in trips if t.is_win), Basis.OWN_COUNT
     if unit is Unit.LOSERS:
@@ -138,10 +154,12 @@ def _b2_counts(trips: list[Trip]) -> tuple[int, int]:
     """B2's population and condition on this history, from the shared function."""
     days = {day: n for n, day in enumerate(sorted({t.trading_day for t in trips}))}
     obs = [
-        Obs(day=days[t.trading_day],
+        Obs(
+            day=days[t.trading_day],
             entry_at=t.entry_ts.timestamp(),
             exit_at=t.exit_ts.timestamp(),
-            r=float(t.net))
+            r=float(t.net),
+        )
         for t in trips
     ]
     in_pop, condition = population_and_condition(obs)
@@ -161,24 +179,40 @@ def assess_one(test: LibraryTest, trips: list[Trip]) -> Verdict:
     unavailable = _unavailable(test)
     if unavailable is not None:
         waiting_on, reason = unavailable
-        return Verdict(test, s.ResultState.REQUIRED_DATA_MISSING, Basis.NOT_COUNTED,
-                       None, _need(test), test.n_min.unit, reason, waiting_on)
+        return Verdict(
+            test,
+            s.ResultState.REQUIRED_DATA_MISSING,
+            Basis.NOT_COUNTED,
+            None,
+            _need(test),
+            test.n_min.unit,
+            reason,
+            waiting_on,
+        )
 
     need = _need(test)
     if need is None:
-        return Verdict(test, s.ResultState.NOT_YET_TESTED, Basis.NOT_COUNTED,
-                       None, None, test.n_min.unit,
-                       "this one has no minimum we can read")
+        return Verdict(
+            test,
+            s.ResultState.NOT_YET_TESTED,
+            Basis.NOT_COUNTED,
+            None,
+            None,
+            test.n_min.unit,
+            "this one has no minimum we can read",
+        )
 
     if test.id == "B2":
         population, condition = _b2_counts(trips)
         comparison = population - condition
-        enough = (condition >= test.n_min.condition
-                  and comparison >= (test.n_min.comparison or 0))
-        state = (s.ResultState.NOT_YET_TESTED if enough
-                 else s.ResultState.INSUFFICIENT_SAMPLE)
+        enough = condition >= test.n_min.condition and comparison >= (test.n_min.comparison or 0)
+        state = s.ResultState.NOT_YET_TESTED if enough else s.ResultState.INSUFFICIENT_SAMPLE
         return Verdict(
-            test, state, Basis.OWN_COUNT, condition, test.n_min.condition,
+            test,
+            state,
+            Basis.OWN_COUNT,
+            condition,
+            test.n_min.condition,
             Unit.TRIPS,
             f"{condition} trades meet the condition and {comparison} do not; "
             f"it needs {test.n_min.condition} and {test.n_min.comparison}",
@@ -191,27 +225,45 @@ def assess_one(test: LibraryTest, trips: list[Trip]) -> Verdict:
         # this was how an empty history came back with two checks that nothing
         # ruled out.
         if len(trips) < need:
-            return Verdict(test, s.ResultState.INSUFFICIENT_SAMPLE, basis,
-                           len(trips), need, Unit.TRIPS,
-                           f"{len(trips)} trades, and its minimum of "
-                           f"{test.n_min.raw} needs at least {need} of them")
-        return Verdict(test, s.ResultState.NOT_YET_TESTED, basis, None, need,
-                       test.n_min.unit,
-                       f"its minimum is written {test.n_min.raw}, and this page "
-                       "does not build those groups")
+            return Verdict(
+                test,
+                s.ResultState.INSUFFICIENT_SAMPLE,
+                basis,
+                len(trips),
+                need,
+                Unit.TRIPS,
+                f"{len(trips)} trades, and its minimum of "
+                f"{test.n_min.raw} needs at least {need} of them",
+            )
+        return Verdict(
+            test,
+            s.ResultState.NOT_YET_TESTED,
+            basis,
+            None,
+            need,
+            test.n_min.unit,
+            f"its minimum is written {test.n_min.raw}, and this page does not build those groups",
+        )
 
     if have is not None and have < need:
-        return Verdict(test, s.ResultState.INSUFFICIENT_SAMPLE, basis, have, need,
-                       test.n_min.unit,
-                       f"{have} of the {need} {test.n_min.unit.value} it needs")
+        return Verdict(
+            test,
+            s.ResultState.INSUFFICIENT_SAMPLE,
+            basis,
+            have,
+            need,
+            test.n_min.unit,
+            f"{have} of the {need} {test.n_min.unit.value} it needs",
+        )
 
-    reason = (f"{have} {test.n_min.unit.value}, and it needs {need}"
-              if basis is Basis.OWN_COUNT else
-              f"{have} {test.n_min.unit.value} is above the {need} it cannot run "
-              "below; whether enough of them meet its condition is the engine's "
-              "count, not this page's")
-    return Verdict(test, s.ResultState.NOT_YET_TESTED, basis, have, need,
-                   test.n_min.unit, reason)
+    reason = (
+        f"{have} {test.n_min.unit.value}, and it needs {need}"
+        if basis is Basis.OWN_COUNT
+        else f"{have} {test.n_min.unit.value} is above the {need} it cannot run "
+        "below; whether enough of them meet its condition is the engine's "
+        "count, not this page's"
+    )
+    return Verdict(test, s.ResultState.NOT_YET_TESTED, basis, have, need, test.n_min.unit, reason)
 
 
 @dataclass(frozen=True)
@@ -228,32 +280,31 @@ class Eligibility:
         with", and the two it named were the only two the page cannot count. A
         headline assembled out of what we do not know is worse than no headline.
         """
-        return tuple(v for v in self.verdicts
-                     if v.not_ruled_out and v.basis is not Basis.NOT_COUNTED)
+        return tuple(
+            v for v in self.verdicts if v.not_ruled_out and v.basis is not Basis.NOT_COUNTED
+        )
 
     @property
     def undetermined(self) -> tuple[Verdict, ...]:
         """Checks this page cannot judge, which is not the same as can or cannot."""
-        return tuple(v for v in self.verdicts
-                     if v.not_ruled_out and v.basis is Basis.NOT_COUNTED)
+        return tuple(v for v in self.verdicts if v.not_ruled_out and v.basis is Basis.NOT_COUNTED)
 
     @property
     def short(self) -> tuple[Verdict, ...]:
         """Counted, and the history is not big enough yet. His to change."""
-        return tuple(v for v in self.verdicts
-                     if v.state is s.ResultState.INSUFFICIENT_SAMPLE)
+        return tuple(v for v in self.verdicts if v.state is s.ResultState.INSUFFICIENT_SAMPLE)
 
     @property
     def waiting(self) -> tuple[Verdict, ...]:
         """Waiting on something that is not his trades. Ours to change."""
-        return tuple(v for v in self.verdicts
-                     if v.state is s.ResultState.REQUIRED_DATA_MISSING)
+        return tuple(v for v in self.verdicts if v.state is s.ResultState.REQUIRED_DATA_MISSING)
 
     @property
     def waiting_counts(self) -> dict[str, int]:
         """How many checks wait on each thing, in the page's order. None is left out."""
-        counts = {kind.value: sum(1 for v in self.waiting if v.waiting_on is kind)
-                  for kind in Waiting}
+        counts = {
+            kind.value: sum(1 for v in self.waiting if v.waiting_on is kind) for kind in Waiting
+        }
         return {kind: n for kind, n in counts.items() if n}
 
     @property

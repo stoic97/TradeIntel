@@ -37,6 +37,8 @@ from services.production.db.session import make_engine, make_session, run_migrat
 from services.production.journal import generate as gen
 
 DEFAULT_DB = os.environ.get("SCOPE_DB", "sqlite:///scope.db")
+
+
 def store_root() -> Path:
     """Where raw files live, read when it is wanted rather than at import.
 
@@ -60,9 +62,7 @@ def code_version() -> str:
 
 
 def _log(sess, actor: str, action: str, target: str | None) -> None:
-    sess.add(
-        m.AdminAction(actor=actor, action=action, target=target, at=datetime.now(UTC))
-    )
+    sess.add(m.AdminAction(actor=actor, action=action, target=target, at=datetime.now(UTC)))
 
 
 def _trader(sess, login_id: str) -> m.Trader:
@@ -125,8 +125,7 @@ def cmd_classify(args: argparse.Namespace) -> None:
         return
     if args.development_data:
         print(f"{args.login_id}: development data")
-        print("  send the addendum: his history was used to build the product "
-              "(PRD decision 21)")
+        print("  send the addendum: his history was used to build the product (PRD decision 21)")
     else:
         print(f"{args.login_id}: a real account")
         print("  he can no longer be shown unreviewed consent text")
@@ -163,7 +162,6 @@ def cmd_delete_trader(args: argparse.Namespace) -> None:
     print("  backups   roll off within 30 days; check them per the runbook")
 
 
-
 def cmd_import(args: argparse.Namespace) -> None:
     path = Path(args.file)
     content = path.read_bytes()
@@ -183,9 +181,7 @@ def cmd_import(args: argparse.Namespace) -> None:
         kept = store.put(content)
         digest = kept.sha256
 
-        existing = persist.existing_days(
-            sess, trader=trader, source_account=args.source_account
-        )
+        existing = persist.existing_days(sess, trader=trader, source_account=args.source_account)
         plan = pl.plan_import(
             text,
             context=pl.ImportContext(
@@ -199,8 +195,13 @@ def cmd_import(args: argparse.Namespace) -> None:
             production=args.production,
         )
         imp = persist.write_plan(
-            sess, trader=trader, plan=plan, raw_sha256=digest,
-            original_name=path.name, stored_path=str(kept.path), size=kept.size,
+            sess,
+            trader=trader,
+            plan=plan,
+            raw_sha256=digest,
+            original_name=path.name,
+            stored_path=str(kept.path),
+            size=kept.size,
             source_account=args.source_account,
         )
         sess.commit()
@@ -227,8 +228,10 @@ def cmd_wrong_reports(args: argparse.Namespace) -> None:
         for row, login_id in found:
             about = row.trading_day or "whole report"
             note = " ".join((row.note or "(no note)").split())
-            print(f"{row.answered_at:%Y-%m-%d}  {login_id}  import {row.import_id}  "
-                  f"{about}  {row.answer}  {note}")
+            print(
+                f"{row.answered_at:%Y-%m-%d}  {login_id}  import {row.import_id}  "
+                f"{about}  {row.answer}  {note}"
+            )
         _log(sess, os.environ.get("USER", "admin"), "wrong_reports", None)
         sess.commit()
 
@@ -248,23 +251,23 @@ def _print_review(sess, imp: m.Import) -> None:
     if imp.rejection_text:
         print(f"  rejection      {imp.rejection_text}")
         return
-    print(f"  rows           {imp.rows_in} in, {imp.rows_parsed} parsed, "
-          f"{imp.rows_excluded} excluded")
-    print(f"  trips          {imp.trips_reconstructed} reconstructed, "
-          f"{imp.trips_refused} refused")
+    print(
+        f"  rows           {imp.rows_in} in, {imp.rows_parsed} parsed, {imp.rows_excluded} excluded"
+    )
+    print(f"  trips          {imp.trips_reconstructed} reconstructed, {imp.trips_refused} refused")
     print(f"  fees           {'present' if imp.fees_available else 'absent (figures are gross)'}")
     print(f"  journal unit   {imp.density_default_unit} (density default)")
     partial = imp.partial_fields or "[]"
     if "instrument profile" in partial:
         print("  profiles       MISSING for some instruments - see partial_fields")
-    print(f"  versions       code {imp.code_version}, adapter {imp.adapter_id} "
-          f"{imp.adapter_version}, profiles {imp.profile_versions}")
+    print(
+        f"  versions       code {imp.code_version}, adapter {imp.adapter_id} "
+        f"{imp.adapter_version}, profiles {imp.profile_versions}"
+    )
     print(f"  digest         {imp.snapshot_digest}")
 
     flagged = sess.scalars(
-        select(m.ImportRow).where(
-            m.ImportRow.import_id == imp.id, m.ImportRow.flag.is_not(None)
-        )
+        select(m.ImportRow).where(m.ImportRow.import_id == imp.id, m.ImportRow.flag.is_not(None))
     ).all()
     if flagged:
         groups = {r.dup_group for r in flagged}
@@ -276,8 +279,10 @@ def _print_review(sess, imp: m.Import) -> None:
     ).all()
     for day in days:
         shrank = "  <- SHRANK" if day.day_shrank else ""
-        print(f"  {day.trading_day}     {day.rows_before} -> {day.rows_after} "
-              f"({day.diff.value}){shrank}")
+        print(
+            f"  {day.trading_day}     {day.rows_before} -> {day.rows_after} "
+            f"({day.diff.value}){shrank}"
+        )
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -298,21 +303,20 @@ def main(argv: list[str] | None = None) -> None:
     imp.add_argument("--file", required=True)
     imp.add_argument("--source-account", default="A")
     imp.add_argument("--export-date")
-    imp.add_argument("--production", action="store_true",
-                     help="refuse an unverified broker file map (TD-024)")
+    imp.add_argument(
+        "--production", action="store_true", help="refuse an unverified broker file map (TD-024)"
+    )
     imp.set_defaults(func=cmd_import)
 
     delete = sub.add_parser("delete-trader")
     delete.add_argument("--login-id", required=True)
-    delete.add_argument("--yes", action="store_true",
-                        help="required: this cannot be undone")
+    delete.add_argument("--yes", action="store_true", help="required: this cannot be undone")
     delete.set_defaults(func=cmd_delete_trader)
 
     classify = sub.add_parser("classify")
     classify.add_argument("--login-id", required=True)
     how = classify.add_mutually_exclusive_group(required=True)
-    how.add_argument("--development-data", dest="development_data",
-                     action="store_true")
+    how.add_argument("--development-data", dest="development_data", action="store_true")
     how.add_argument("--real", dest="development_data", action="store_false")
     classify.set_defaults(func=cmd_classify)
 

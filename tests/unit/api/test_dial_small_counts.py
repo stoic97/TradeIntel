@@ -23,8 +23,18 @@ from tests.helpers.scope_chapters import IMP, chapter_page, readable
 def trip(i: int, day: str, net: int, minute: int) -> mx.Trip:
     entry = datetime.fromisoformat(f"2026-{day}T09:15:00+05:30") + timedelta(minutes=minute)
     leave = entry + timedelta(minutes=5)
-    return mx.Trip(f"T{i}", "WIDGET", entry.date().isoformat(), entry, leave, 300, Decimal(net), 1,
-                   s.RiskUnitSourceV1.PREMIUM_PAID, is_option=True)
+    return mx.Trip(
+        f"T{i}",
+        "WIDGET",
+        entry.date().isoformat(),
+        entry,
+        leave,
+        300,
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+        is_option=True,
+    )
 
 
 def small_file() -> list[mx.Trip]:
@@ -40,10 +50,16 @@ def small_file() -> list[mx.Trip]:
 
 def slices(view: dict) -> dict[str, list[str]]:
     out = {}
-    for block in re.findall(r'<a class="scope__slice.*?</a>', str(D.scope_dial(view)), flags=re.DOTALL):
+    for block in re.findall(
+        r'<a class="scope__slice.*?</a>', str(D.scope_dial(view)), flags=re.DOTALL
+    ):
         name = unescape(re.search(r'aria-label="([^"]*?)\.?"', block).group(1))
-        texts = re.findall(r'<text class="scope__[a-z-]+[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL)
-        out[name] = [unescape(re.sub(r"<[^>]+>", " ", t)).replace(chr(0xA0), " ").strip() for t in texts]
+        texts = re.findall(
+            r'<text class="scope__[a-z-]+[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL
+        )
+        out[name] = [
+            unescape(re.sub(r"<[^>]+>", " ", t)).replace(chr(0xA0), " ").strip() for t in texts
+        ]
     return out
 
 
@@ -67,4 +83,6 @@ def test_the_trades_after_two_losses_keep_theirs():
 def test_the_figure_itself_doesnt_change():
     """The cards read the fact's own figure: only the dial words it."""
     assert FIGS["run"]["figure"] == "3 trades"
-    assert chr(0xA0) not in readable(chapter_page(2, small_file())).split("Longest losing run")[1][:40]
+    assert (
+        chr(0xA0) not in readable(chapter_page(2, small_file())).split("Longest losing run")[1][:40]
+    )

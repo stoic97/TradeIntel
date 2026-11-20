@@ -18,6 +18,7 @@ The model, for one trader:
 x_i marks the condition (post-loss, high-vol, whichever test asks). delta is the
 effect the two-part promotion criterion reads.
 """
+
 import numpy as np
 import pytest
 
@@ -80,6 +81,7 @@ def _stub(**kw):
 
 # --- the closed form, checked without any sampler ------------------------------
 
+
 def test_with_no_data_the_analytic_posterior_is_the_prior():
     post = ce.analytic_posterior(SPEC, np.array([]), np.array([]))
     assert post.mean["mu"] == pytest.approx(SPEC.prior_mu_mean)
@@ -102,6 +104,7 @@ def test_the_analytic_posterior_matches_a_hand_computed_case():
 
 # --- one spec, two backends ----------------------------------------------------
 
+
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
 def test_every_backend_fits_the_spec_it_was_given_and_nothing_else(backend, fits):
     got = fits[backend]
@@ -122,9 +125,7 @@ def test_every_backend_matches_the_closed_form_posterior(backend, fits):
         assert got.posterior_mean[p] == pytest.approx(
             want.mean[p], abs=TOLERANCE_SIGMAS * mcse_mean
         )
-        assert got.posterior_sd[p] == pytest.approx(
-            want.sd[p], abs=TOLERANCE_SIGMAS * mcse_sd
-        )
+        assert got.posterior_sd[p] == pytest.approx(want.sd[p], abs=TOLERANCE_SIGMAS * mcse_sd)
 
 
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
@@ -158,6 +159,7 @@ def test_the_two_backends_agree_with_each_other(fits):
 
 # --- diagnostics are checked, never swallowed ----------------------------------
 
+
 def test_a_fit_that_diverged_is_refused():
     with pytest.raises(ce.BadDiagnostics, match="diverg"):
         ce.check_diagnostics(_stub(divergences=1))
@@ -174,8 +176,19 @@ def test_a_clean_fit_passes_the_diagnostics_check():
 
 # --- the measurement the ADR is decided on -------------------------------------
 
+
 def test_the_benchmark_record_names_its_environment_and_its_rate():
     record = bm.benchmark_record([_stub(backend="a", seconds=2.0, draws=4000)])
     assert record["rows"][0]["draws_per_second"] == pytest.approx(2000.0)
-    for key in ("python", "numpy", "jax", "numpyro", "pymc", "nutpie", "arviz", "platform", "cpu_count"):
+    for key in (
+        "python",
+        "numpy",
+        "jax",
+        "numpyro",
+        "pymc",
+        "nutpie",
+        "arviz",
+        "platform",
+        "cpu_count",
+    ):
         assert record["environment"][key], key

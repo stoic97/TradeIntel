@@ -50,10 +50,15 @@ def _signed_in(request: Request, sess):
 
 
 def _rules(sess, trader) -> list[A.Rule]:
-    rows = sess.scalars(select(m.RuleDeclaration).where(
-        m.RuleDeclaration.trader_id == trader.id, m.RuleDeclaration.factor.is_not(None))).all()
-    return [A.Rule(r.id, r.factor, r.value, r.declared_at, r.applies_from, r.applies_to, r.text)
-            for r in rows]
+    rows = sess.scalars(
+        select(m.RuleDeclaration).where(
+            m.RuleDeclaration.trader_id == trader.id, m.RuleDeclaration.factor.is_not(None)
+        )
+    ).all()
+    return [
+        A.Rule(r.id, r.factor, r.value, r.declared_at, r.applies_from, r.applies_to, r.text)
+        for r in rows
+    ]
 
 
 def _fees(sess, imp) -> dict[str, Decimal] | None:
@@ -69,11 +74,18 @@ def _fees(sess, imp) -> dict[str, Decimal] | None:
 def _declare(sess, trader, factor: str, value: int, screen: str) -> None:
     today = trader_today().isoformat()
     f = chips.FACTORS[factor]
-    sess.add(m.RuleDeclaration(trader_id=trader.id, text=f.words(value),
-                               declared_at=datetime.now(UTC), factor=factor, value=value,
-                               applies_from=today,
-                               applies_to=today if screen == "before_session" else None,
-                               screen=screen))
+    sess.add(
+        m.RuleDeclaration(
+            trader_id=trader.id,
+            text=f.words(value),
+            declared_at=datetime.now(UTC),
+            factor=factor,
+            value=value,
+            applies_from=today,
+            applies_to=today if screen == "before_session" else None,
+            screen=screen,
+        )
+    )
     sess.commit()
 
 
@@ -94,13 +106,21 @@ def rules(request: Request):
         declared = _rules(sess, trader)
         trips, imp = loader.load_for(sess, trader)
         fees = _fees(sess, imp)
-        notes = sess.scalars(select(m.PreTradeNote).where(
-            m.PreTradeNote.trader_id == trader.id)).all()
+        notes = sess.scalars(
+            select(m.PreTradeNote).where(m.PreTradeNote.trader_id == trader.id)
+        ).all()
     counts = A.count(declared, trips, fees)
     matched = A.match_notes(list(notes), trips, book_of=mx.trade_book)
-    return page(request, "rules.html", title="Rules you set", counts=counts,
-                verdict_at=A.VERDICT_AT, notes=len(notes), notes_matched=len(matched),
-                fees_known=fees is not None)
+    return page(
+        request,
+        "rules.html",
+        title="Rules you set",
+        counts=counts,
+        verdict_at=A.VERDICT_AT,
+        notes=len(notes),
+        notes_matched=len(matched),
+        fees_known=fees is not None,
+    )
 
 
 @router.get("/rules/today", response_class=HTMLResponse)
@@ -114,13 +134,19 @@ def before_session(request: Request):
         for r in sorted(_rules(sess, trader), key=lambda r: (r.declared_at, r.id)):
             if r.applies_from == today and r.applies_to == today:
                 set_today[r.factor] = r
-    return page(request, "rules_today.html", title="Before the session",
-                factors=[chips.FACTORS[k] for k in chips.BEFORE_SESSION], set_today=set_today)
+    return page(
+        request,
+        "rules_today.html",
+        title="Before the session",
+        factors=[chips.FACTORS[k] for k in chips.BEFORE_SESSION],
+        set_today=set_today,
+    )
 
 
 @router.post("/rules/today")
-def before_session_set(request: Request, factor: str = Form(""), value: str = Form(""),
-                       csrf_token: str = Form(None)):
+def before_session_set(
+    request: Request, factor: str = Form(""), value: str = Form(""), csrf_token: str = Form(None)
+):
     if not require_csrf(request, csrf_token):
         return HTMLResponse(EXPIRED, status_code=403)
     chip = _chip(factor, value) if factor in chips.BEFORE_SESSION else None
@@ -141,13 +167,19 @@ def standing(request: Request, factor: str | None = None):
         if away:
             return away
     chosen = chips.FACTORS.get(factor) if factor else None
-    return page(request, "rules_set.html", title="Set a rule",
-                factors=list(chips.FACTORS.values()), chosen=chosen)
+    return page(
+        request,
+        "rules_set.html",
+        title="Set a rule",
+        factors=list(chips.FACTORS.values()),
+        chosen=chosen,
+    )
 
 
 @router.post("/rules/set")
-def standing_set(request: Request, factor: str = Form(""), value: str = Form(""),
-                 csrf_token: str = Form(None)):
+def standing_set(
+    request: Request, factor: str = Form(""), value: str = Form(""), csrf_token: str = Form(None)
+):
     if not require_csrf(request, csrf_token):
         return HTMLResponse(EXPIRED, status_code=403)
     chip = _chip(factor, value)
@@ -173,13 +205,21 @@ def before_click(request: Request, book: str | None = None):
             return away
         trips, _imp = loader.load_for(sess, trader)
     books = _books(trips)
-    return page(request, "rules_click.html", title="Before a trade", books=books,
-                book=book if book in books else None, reasons=chips.REASONS, noted=None)
+    return page(
+        request,
+        "rules_click.html",
+        title="Before a trade",
+        books=books,
+        book=book if book in books else None,
+        reasons=chips.REASONS,
+        noted=None,
+    )
 
 
 @router.post("/rules/click", response_class=HTMLResponse)
-def before_click_note(request: Request, book: str = Form(""), reason: str = Form(""),
-                      csrf_token: str = Form(None)):
+def before_click_note(
+    request: Request, book: str = Form(""), reason: str = Form(""), csrf_token: str = Form(None)
+):
     if not require_csrf(request, csrf_token):
         return HTMLResponse(EXPIRED, status_code=403)
     with make_session(request.app.state.engine) as sess:
@@ -190,8 +230,11 @@ def before_click_note(request: Request, book: str = Form(""), reason: str = Form
         books = _books(trips)
         if book not in books or reason not in chips.REASONS:
             return HTMLResponse("That is not one of the choices.", status_code=400)
-        sess.add(m.PreTradeNote(trader_id=trader.id, book=book, reason=reason,
-                                entered_at=datetime.now(UTC)))
+        sess.add(
+            m.PreTradeNote(
+                trader_id=trader.id, book=book, reason=reason, entered_at=datetime.now(UTC)
+            )
+        )
         sess.commit()
         fees = _fees(sess, imp)
     in_book = [t for t in trips if book == chips.OTHER_BOOK or mx.trade_book(t) == book]
@@ -201,5 +244,12 @@ def before_click_note(request: Request, book: str = Form(""), reason: str = Form
         "won": sum(t.is_win for t in in_book),
         "cost": (sum(paid, Decimal(0)) / len(paid)) if paid else None,
     }
-    return page(request, "rules_click.html", title="Before a trade", books=books, book=book,
-                reasons=chips.REASONS, noted={"book": book, "reason": reason, **record})
+    return page(
+        request,
+        "rules_click.html",
+        title="Before a trade",
+        books=books,
+        book=book,
+        reasons=chips.REASONS,
+        noted={"book": book, "reason": reason, **record},
+    )

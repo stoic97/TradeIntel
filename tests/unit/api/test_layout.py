@@ -17,8 +17,13 @@ from tests.helpers.layout import PLAIN, render
 
 STATIC = Path("services/production/api/static")
 
-STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
-               "/static/css/components.css", "/static/css/motion.css", "/static/css/app.css"]
+STYLESHEETS = [
+    "/static/css/fonts.css",
+    "/static/css/tokens.css",
+    "/static/css/components.css",
+    "/static/css/motion.css",
+    "/static/css/app.css",
+]
 
 
 def test_the_stylesheets_are_the_kits_with_fonts_first_then_ours_last():
@@ -61,9 +66,11 @@ def test_the_chart_hatch_pattern_is_on_every_page():
 
 
 def test_the_stage_comes_before_the_record():
-    html = render('{% extends "layout.html" %}'
-                  '{% block stage %}<header class="stage on-navy">S</header>{% endblock %}'
-                  '{% block content %}<p>Body</p>{% endblock %}')
+    html = render(
+        '{% extends "layout.html" %}'
+        '{% block stage %}<header class="stage on-navy">S</header>{% endblock %}'
+        "{% block content %}<p>Body</p>{% endblock %}"
+    )
     stage, body = html.index('<header class="stage on-navy">'), html.index("<p>Body</p>")
     main = html.index('<main class="screen__body')
     assert stage < main < body
@@ -75,21 +82,27 @@ def test_a_page_without_a_stage_has_none():
 
 
 def test_an_in_app_page_names_its_tab_and_gets_the_bottom_nav():
-    html = render('{% extends "layout.html" %}{% set nav = "journal" %}'
-                  '{% block content %}<p>Body</p>{% endblock %}')
-    items = re.findall(r'<a class="bottom-nav__item" href="([^"]+)"( aria-current="page")?>([^<]+)</a>',
-                       html)
-    assert items == [("/", "", "Home"),  # TICKET-860: a way back to Home on every in-app page
-                     ("/mirror", "", "Scope"),
-                     ("/journals", ' aria-current="page"', "Journal"),
-                     ("/account", "", "Account")]
+    html = render(
+        '{% extends "layout.html" %}{% set nav = "journal" %}'
+        "{% block content %}<p>Body</p>{% endblock %}"
+    )
+    items = re.findall(
+        r'<a class="bottom-nav__item" href="([^"]+)"( aria-current="page")?>([^<]+)</a>', html
+    )
+    assert items == [
+        ("/", "", "Home"),  # TICKET-860: a way back to Home on every in-app page
+        ("/mirror", "", "Scope"),
+        ("/journals", ' aria-current="page"', "Journal"),
+        ("/account", "", "Account"),
+    ]
     assert 'class="screen__body screen__body--with-nav"' in html
 
 
 def test_the_bottom_nav_has_no_sign_out():
     """D6: sign out moves to the Account page."""
-    html = render('{% extends "layout.html" %}{% set nav = "scope" %}'
-                  '{% block content %}{% endblock %}')
+    html = render(
+        '{% extends "layout.html" %}{% set nav = "scope" %}{% block content %}{% endblock %}'
+    )
     assert "/logout" not in html and "Sign out" not in html
 
 
@@ -110,9 +123,11 @@ def test_every_page_stands_on_the_layout_and_the_old_base_is_gone():
     templates = Path("services/production/api/templates")
     assert not (templates / "base.html").exists()
     assert not (STATIC / "scope.css").exists()
-    pages = [p for p in templates.rglob("*.html")  # pieces are _named, or a story card
-             if not p.name.startswith("_") and p.name != "layout.html"
-             and "cards" not in p.parts]
+    pages = [
+        p
+        for p in templates.rglob("*.html")  # pieces are _named, or a story card
+        if not p.name.startswith("_") and p.name != "layout.html" and "cards" not in p.parts
+    ]
     stray = [str(p) for p in pages if '{% extends "' not in p.read_text()]
     assert not stray, stray
     for p in pages:

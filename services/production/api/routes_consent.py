@@ -51,7 +51,8 @@ def consent_state(sess, trader: m.Trader) -> dict[s.ConsentPurpose, bool]:
 
 def _grants_on_an_older_text(sess, trader: m.Trader) -> set[s.ConsentPurpose]:
     return {
-        purpose for purpose, event in _latest_events(sess, trader).items()
+        purpose
+        for purpose, event in _latest_events(sess, trader).items()
         if event.granted and event.terms_version != cs.CURRENT.version
     }
 
@@ -61,8 +62,12 @@ def trader_today() -> date:
     return datetime.now(ZoneInfo("Asia/Kolkata")).date()
 
 
-def upload_page(request: Request, status_code: int = 200, error: str | None = None,
-                read_again_id: int | None = None):
+def upload_page(
+    request: Request,
+    status_code: int = 200,
+    error: str | None = None,
+    read_again_id: int | None = None,
+):
     """The upload form, with its download date starting at today (definitions 1).
 
     Beside it, the demo file (TICKET-842) - unless he already has a record of his own,
@@ -74,9 +79,16 @@ def upload_page(request: Request, status_code: int = 200, error: str | None = No
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         demo_offered = trader is not None and not demo.has_real_record(sess, trader)
-    return page(request, "upload.html", status_code=status_code,
-                title="Upload your tradebook", error=error, read_again_id=read_again_id,
-                today=trader_today().isoformat(), demo_offered=demo_offered)
+    return page(
+        request,
+        "upload.html",
+        status_code=status_code,
+        title="Upload your tradebook",
+        error=error,
+        read_again_id=read_again_id,
+        today=trader_today().isoformat(),
+        demo_offered=demo_offered,
+    )
 
 
 def has_diagnosis_consent(sess, trader: m.Trader) -> bool:
@@ -99,12 +111,9 @@ def _reviewed_text_or_closed(request: Request, trader: m.Trader):
     in words for whoever reads the screen.
     """
     try:
-        return cs.require_reviewed(
-            cs.CURRENT, development_data=trader.development_data
-        ), None
+        return cs.require_reviewed(cs.CURRENT, development_data=trader.development_data), None
     except cs.UnreviewedConsentText:
-        return None, page(request, "not_open.html", status_code=503,
-                          title="Not open yet")
+        return None, page(request, "not_open.html", status_code=503, title="Not open yet")
 
 
 @router.get("/consent", response_class=HTMLResponse)
@@ -116,9 +125,14 @@ def consent_form(request: Request):
         text, closed = _reviewed_text_or_closed(request, trader)
         if closed is not None:
             return closed
-        return page(request, "consent.html", title="Before you upload",
-                    text=text, state=consent_state(sess, trader),
-                    asked_again=bool(_grants_on_an_older_text(sess, trader)))
+        return page(
+            request,
+            "consent.html",
+            title="Before you upload",
+            text=text,
+            state=consent_state(sess, trader),
+            asked_again=bool(_grants_on_an_older_text(sess, trader)),
+        )
 
 
 @router.post("/consent")
@@ -141,11 +155,17 @@ def consent_submit(
 
         if diagnosis is None:
             return page(
-                request, "consent.html", status_code=400, title="Before you upload",
-                text=text, state=consent_state(sess, trader),
+                request,
+                "consent.html",
+                status_code=400,
+                title="Before you upload",
+                text=text,
+                state=consent_state(sess, trader),
                 asked_again=bool(_grants_on_an_older_text(sess, trader)),
-                error=("Without the first one there is nothing for Scope to do. "
-                       "You can close this page and nothing is kept."),
+                error=(
+                    "Without the first one there is nothing for Scope to do. "
+                    "You can close this page and nothing is kept."
+                ),
             )
 
         chosen = {"diagnosis": True, "engine_testing": engine_testing is not None}
@@ -156,27 +176,31 @@ def consent_submit(
                 # Left empty, an old grant has to end here, or it stays the latest
                 # word on this purpose in his ledger.
                 if purpose.enum in older:
-                    sess.add(m.ConsentEvent(
-                        trader_id=trader.id,
-                        purpose=purpose.enum,
-                        scope="v1",
-                        terms_version=text.version,
-                        granted=False,
-                        at=now,
-                        method="web",
-                        wording_shown=f"[not renewed] {purpose.title}",
-                    ))
+                    sess.add(
+                        m.ConsentEvent(
+                            trader_id=trader.id,
+                            purpose=purpose.enum,
+                            scope="v1",
+                            terms_version=text.version,
+                            granted=False,
+                            at=now,
+                            method="web",
+                            wording_shown=f"[not renewed] {purpose.title}",
+                        )
+                    )
                 continue
-            sess.add(m.ConsentEvent(
-                trader_id=trader.id,
-                purpose=purpose.enum,
-                scope="v1",
-                terms_version=text.version,
-                granted=True,
-                at=now,
-                method="web",
-                wording_shown=cs.wording_for(purpose, text),
-            ))
+            sess.add(
+                m.ConsentEvent(
+                    trader_id=trader.id,
+                    purpose=purpose.enum,
+                    scope="v1",
+                    terms_version=text.version,
+                    granted=True,
+                    at=now,
+                    method="web",
+                    wording_shown=cs.wording_for(purpose, text),
+                )
+            )
         sess.commit()
     return RedirectResponse("/" if older else "/upload", status_code=303)
 
@@ -192,14 +216,18 @@ def consent_ledger(request: Request):
             .where(m.ConsentEvent.trader_id == trader.id)
             .order_by(m.ConsentEvent.id.desc())
         ).all()
-        return page(request, "consent_ledger.html", title="What you agreed to",
-                    events=events, text=cs.CURRENT,
-                    state=consent_state(sess, trader))
+        return page(
+            request,
+            "consent_ledger.html",
+            title="What you agreed to",
+            events=events,
+            text=cs.CURRENT,
+            state=consent_state(sess, trader),
+        )
 
 
 @router.post("/settings/consent/withdraw")
-def consent_withdraw(request: Request, purpose: str = Form(...),
-                     csrf_token: str = Form(None)):
+def consent_withdraw(request: Request, purpose: str = Form(...), csrf_token: str = Form(None)):
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
@@ -208,16 +236,18 @@ def consent_withdraw(request: Request, purpose: str = Form(...),
         if trader is None:
             return RedirectResponse("/login", status_code=303)
         chosen = cs.CURRENT.purpose(purpose)
-        sess.add(m.ConsentEvent(
-            trader_id=trader.id,
-            purpose=chosen.enum,
-            scope="v1",
-            terms_version=cs.CURRENT.version,
-            granted=False,
-            at=datetime.now(UTC),
-            method="web",
-            wording_shown=f"[withdrawn] {chosen.title}",
-        ))
+        sess.add(
+            m.ConsentEvent(
+                trader_id=trader.id,
+                purpose=chosen.enum,
+                scope="v1",
+                terms_version=cs.CURRENT.version,
+                granted=False,
+                at=datetime.now(UTC),
+                method="web",
+                wording_shown=f"[withdrawn] {chosen.title}",
+            )
+        )
         sess.commit()
     return RedirectResponse("/settings/consent", status_code=303)
 

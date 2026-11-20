@@ -6,6 +6,7 @@ price or a P&L figure. Reads the file read-only and writes nothing.
 
 Usage:  uv run python scripts/first_real_run.py <path-to-dhan-export.csv>
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -44,25 +45,28 @@ def main(path: Path) -> None:
     print(f"fills by exchange  {dict(by_exchange)}")
     print(f"distinct contracts {len({f.contract_key for f in result.fills})}")
     if result.fills:
-        print(f"date range         {min(f.ts for f in result.fills).date()}"
-              f" .. {max(f.ts for f in result.fills).date()}")
+        print(
+            f"date range         {min(f.ts for f in result.fills).date()}"
+            f" .. {max(f.ts for f in result.fills).date()}"
+        )
 
     recon = reconstruct(result.fills, fees_available=result.fees_available)
 
     print("\n=== RECONSTRUCT ===")
     print(f"units in           {recon.quantity_in}")
     print(f"round trips        {len(recon.round_trips)}")
-    print(f"open at end        {len(recon.open_positions)} positions,"
-          f" {sum(o.quantity for o in recon.open_positions)} units")
-    print(f"trips refused      {len(recon.skipped)},"
-          f" {sum(s.quantity for s in recon.skipped)} units")
+    print(
+        f"open at end        {len(recon.open_positions)} positions,"
+        f" {sum(o.quantity for o in recon.open_positions)} units"
+    )
+    print(
+        f"trips refused      {len(recon.skipped)}, {sum(s.quantity for s in recon.skipped)} units"
+    )
     print("conservation       HOLDS (asserted by ReconstructionResult)")
 
     if recon.skipped:
         print("\nrefusals by reason:")
-        for reason, n in Counter(
-            s.reason.split(":")[0] for s in recon.skipped
-        ).most_common():
+        for reason, n in Counter(s.reason.split(":")[0] for s in recon.skipped).most_common():
             print(f"  {n:5d}  {reason}")
 
     trips = recon.round_trips
@@ -82,26 +86,34 @@ def main(path: Path) -> None:
 
     # Holding time, which decides whether the tick-resolution tests can run at all.
     holds = sorted(t.holding_seconds for t in trips)
+
     def pct(p: float) -> str:
         v = holds[min(int(len(holds) * p), len(holds) - 1)]
         return f"{v // 60}m" if v < 3600 else f"{v / 3600:.1f}h"
-    print(f"\nholding time         p10 {pct(0.10)}  median {pct(0.50)}"
-          f"  p90 {pct(0.90)}  max {pct(0.999)}")
+
+    print(
+        f"\nholding time         p10 {pct(0.10)}  median {pct(0.50)}"
+        f"  p90 {pct(0.90)}  max {pct(0.999)}"
+    )
     print("  (E2 and E4' need tick data when holds are under ~45 min -- ADR 005)")
 
     # Trading frequency: s12.5 asks whether the improvement loop can serve this trader.
     days = {t.exit_ts.date() for t in trips}
     weeks = max(1, (max(days) - min(days)).days / 7)
     print(f"\ntrading days         {len(days)}")
-    print(f"trips per week       {len(trips) / weeks:.1f}"
-          f"   (s12.5 wants >= 5 for a readable adherence count)")
+    print(
+        f"trips per week       {len(trips) / weeks:.1f}"
+        f"   (s12.5 wants >= 5 for a readable adherence count)"
+    )
 
     # Zone split (s4.6): what the hold-out would look like for this history.
     n = len(trips)
     isolation = max(30, min(200, round(0.25 * n)))
     embargo = max(1, round(0.05 * n))
-    print(f"\nzones at N={n}        training {n - isolation - embargo}"
-          f" / embargo {embargo} / isolation {isolation}")
+    print(
+        f"\nzones at N={n}        training {n - isolation - embargo}"
+        f" / embargo {embargo} / isolation {isolation}"
+    )
 
 
 if __name__ == "__main__":

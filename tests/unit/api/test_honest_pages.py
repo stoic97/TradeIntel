@@ -45,8 +45,10 @@ def test_what_we_read_counts_its_rows_and_trades(client, path):
 
 
 def test_the_busiest_day_on_the_last_page_says_what_it_was_at(client):
-    assert re.search(r"Your busiest was \d\d \w+ \d{4}, at \d+ trades", words(
-        client.get("/mirror/fact/not-told").text))
+    assert re.search(
+        r"Your busiest was \d\d \w+ \d{4}, at \d+ trades",
+        words(client.get("/mirror/fact/not-told").text),
+    )
 
 
 def test_a_flagged_run_is_not_your_date(client):
@@ -60,7 +62,9 @@ def test_the_journal_list_says_what_it_has_so_far(client):
 
 
 def test_a_losing_run_flag_says_losses(client):
-    assert re.search(r"longest losing run: \d+ losses in a row", words(client.get("/journals").text))
+    assert re.search(
+        r"longest losing run: \d+ losses in a row", words(client.get("/journals").text)
+    )
 
 
 @pytest.mark.parametrize(("n", "said"), [(1, "1 loss"), (2, "2 losses")])
@@ -70,5 +74,10 @@ def test_a_run_counts_in_the_singular_too(n, said):
 
 def test_the_table_of_what_the_report_doesnt_do_keeps_its_four_rows(client):
     text = words(client.get("/mirror/fact/not-told").text)
-    for row in ("Name a cause", "Score you", "Estimate what a habit cost you", "Recommend a change"):
+    for row in (
+        "Name a cause",
+        "Score you",
+        "Estimate what a habit cost you",
+        "Recommend a change",
+    ):
         assert row in text, row

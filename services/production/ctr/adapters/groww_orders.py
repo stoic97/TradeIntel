@@ -72,19 +72,29 @@ IST = ZoneInfo("Asia/Kolkata")
 ACCEPTED_STATUS = "Executed"
 TIME_FORMAT = "%d-%m-%Y %I:%M %p"
 
-_MONTHS = {m: i + 1 for i, m in enumerate(
-    ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"))}
+_MONTHS = {
+    m: i + 1
+    for i, m in enumerate(
+        ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+    )
+}
 _MON = "|".join(_MONTHS)
 # The exchanges' weekly month code: 1-9 for January to September, then O, N, D.
 _WEEKLY_MONTH = {**{str(i): i for i in range(1, 10)}, "O": 10, "N": 11, "D": 12}
 
 _STRIKE = r"(?P<strike>\d+(?:\.\d+)?)"
 _FORMS = (
-    re.compile(rf"^(?P<u>[A-Z][A-Z0-9&-]*?)(?P<yy>\d{{2}})(?P<m>[1-9OND])(?P<dd>\d{{2}}){_STRIKE}(?P<kind>CE|PE)$"),
-    re.compile(rf"^(?P<u>[A-Z][A-Z0-9&-]*?)(?P<yy>\d{{2}})(?P<mon>{_MON}){_STRIKE}(?P<kind>CE|PE)$"),
+    re.compile(
+        rf"^(?P<u>[A-Z][A-Z0-9&-]*?)(?P<yy>\d{{2}})(?P<m>[1-9OND])(?P<dd>\d{{2}}){_STRIKE}(?P<kind>CE|PE)$"
+    ),
+    re.compile(
+        rf"^(?P<u>[A-Z][A-Z0-9&-]*?)(?P<yy>\d{{2}})(?P<mon>{_MON}){_STRIKE}(?P<kind>CE|PE)$"
+    ),
     re.compile(rf"^(?P<u>[A-Z][A-Z0-9&-]*?)(?P<yy>\d{{2}})(?P<mon>{_MON})(?P<kind>FUT)$"),
-    re.compile(rf"^(?P<ex>[A-Z]+)-(?P<u>[A-Z0-9&-]+?)-(?P<dd>\d{{1,2}})(?P<mon>[A-Za-z]{{3}})(?P<yy>\d{{2}})"
-               rf"-(?:{_STRIKE}-(?P<kind>CE|PE)|(?P<fut>FUT))$"),
+    re.compile(
+        rf"^(?P<ex>[A-Z]+)-(?P<u>[A-Z0-9&-]+?)-(?P<dd>\d{{1,2}})(?P<mon>[A-Za-z]{{3}})(?P<yy>\d{{2}})"
+        rf"-(?:{_STRIKE}-(?P<kind>CE|PE)|(?P<fut>FUT))$"
+    ),
 )
 _NAME_DATE = re.compile(rf"\b(?P<dd>\d{{1,2}})\s*(?P<mon>{_MON})[A-Z]*\b", re.IGNORECASE)
 
@@ -93,8 +103,12 @@ MONTHLY_EXPIRY_WEEKDAY: dict[str, tuple[tuple[date, int], ...]] = {
     # from Thursday to Tuesday from September 2025; BSE's SENSEX went Friday (relaunch,
     # May 2023) -> Tuesday (January 2025) -> Thursday (September 2025).
     "NSE": ((date(2000, 1, 1), 3), (date(2025, 9, 1), 1)),
-    "BSE": ((date(2000, 1, 1), 3), (date(2023, 5, 1), 4), (date(2025, 1, 1), 1),
-            (date(2025, 9, 1), 3)),
+    "BSE": (
+        (date(2000, 1, 1), 3),
+        (date(2023, 5, 1), 4),
+        (date(2025, 1, 1), 1),
+        (date(2025, 9, 1), 3),
+    ),
 }
 """Used only when a monthly symbol leaves the day out and Stock name doesn't give it. When
 the exchange was shut on that weekday, the expiry is the trading day before it, read from
@@ -131,7 +145,8 @@ def _monthly_expiry(exchange: str, year: int, month: int, stock_name: str) -> da
     if rules is None:
         raise RowRejected(
             f"a monthly contract on {exchange} names no expiry day, and there is no rule "
-            "for that exchange's expiry day -- the contract cannot be identified")
+            "for that exchange's expiry day -- the contract cannot be identified"
+        )
     month_start = date(year, month, 1)
     weekday = [w for since, w in rules if since <= month_start][-1]
     shut = closures.load().get(exchange)
@@ -139,8 +154,9 @@ def _monthly_expiry(exchange: str, year: int, month: int, stock_name: str) -> da
     return shut.trading_day_on_or_before(expiry) if shut else expiry
 
 
-def _contract(symbol: str, stock_name: str, exchange: str
-              ) -> tuple[Segment, str, date, Decimal | None, OptionType | None] | None:
+def _contract(
+    symbol: str, stock_name: str, exchange: str
+) -> tuple[Segment, str, date, Decimal | None, OptionType | None] | None:
     """A derivative's identity from its symbol, or None when the symbol is not one."""
     for form in _FORMS:
         match = form.match(symbol.upper())
@@ -154,11 +170,19 @@ def _contract(symbol: str, stock_name: str, exchange: str
             month = _MONTHS.get(parts["mon"].upper())
             if month is None:
                 raise RowRejected(f"unknown month in {symbol!r}")
-            expiry = (date(year, month, int(parts["dd"])) if parts.get("dd")
-                      else _monthly_expiry(exchange, year, month, stock_name))
+            expiry = (
+                date(year, month, int(parts["dd"]))
+                if parts.get("dd")
+                else _monthly_expiry(exchange, year, month, stock_name)
+            )
         if parts.get("kind") in _OPTION_TYPES:
-            return (Segment.OPT, parts["u"], expiry, Decimal(parts["strike"]),
-                    _OPTION_TYPES[parts["kind"]])
+            return (
+                Segment.OPT,
+                parts["u"],
+                expiry,
+                Decimal(parts["strike"]),
+                _OPTION_TYPES[parts["kind"]],
+            )
         return Segment.FUT, parts["u"], expiry, None, None
     return None
 
@@ -199,7 +223,8 @@ def _parse_row(row: dict[str, str], trader_id: str, raw_hash: str) -> Fill:
     else:
         raise RowRejected(
             f"symbol {symbol_text!r} is not a contract name and the row has no ISIN -- "
-            "the instrument cannot be identified")
+            "the instrument cannot be identified"
+        )
 
     quantity_raw = _decimal(row["Quantity"], "Quantity")
     if quantity_raw != quantity_raw.to_integral_value():
@@ -250,7 +275,8 @@ def parse(source: Iterable[str] | str | Path, *, trader_id: str, raw_hash: str) 
     header = tuple(h.strip().lstrip("﻿") for h in next(reader))
     if header != HEADER:
         raise ValueError(
-            f"header does not match {FORMAT_ID}\n  expected: {HEADER}\n  found:    {header}")
+            f"header does not match {FORMAT_ID}\n  expected: {HEADER}\n  found:    {header}"
+        )
 
     fills: list[Fill] = []
     rejected: list[Rejection] = []
@@ -262,7 +288,8 @@ def parse(source: Iterable[str] | str | Path, *, trader_id: str, raw_hash: str) 
         raw = ",".join(values)
         if len(values) != len(HEADER):
             rejected.append(
-                Rejection(offset, f"expected {len(HEADER)} columns, found {len(values)}", raw))
+                Rejection(offset, f"expected {len(HEADER)} columns, found {len(values)}", raw)
+            )
             continue
         try:
             fills.append(_parse_row(dict(zip(HEADER, values)), trader_id, raw_hash))
@@ -273,5 +300,6 @@ def parse(source: Iterable[str] | str | Path, *, trader_id: str, raw_hash: str) 
             rejected.append(Rejection(offset, f"{type(exc).__name__}: {exc}", raw))
 
     fills.sort(key=lambda f: (f.ts, f.contract_key, f.side.value))
-    return ParseResult(format_id=FORMAT_ID, rows_in=rows_in, fills=fills, rejected=rejected,
-                       fees_available=False)  # the order history carries no charges
+    return ParseResult(
+        format_id=FORMAT_ID, rows_in=rows_in, fills=fills, rejected=rejected, fees_available=False
+    )  # the order history carries no charges

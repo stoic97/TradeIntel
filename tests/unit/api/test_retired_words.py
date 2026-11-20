@@ -30,8 +30,14 @@ SURFACES = {GL.DIAL: DIAL, GL.HOME_CARD: HOME_CARD}
 """A surface in `where`, as the part of a page it is. An entry with no `where` is every page."""
 
 
-SURFACE_PAGES = {GL.MONEY_PAGES: ("/mirror/fact/money", "/mirror/fact/worst-days",
-                                  "/mirror/fact/busiest", "/mirror/fact/clock")}
+SURFACE_PAGES = {
+    GL.MONEY_PAGES: (
+        "/mirror/fact/money",
+        "/mirror/fact/worst-days",
+        "/mirror/fact/busiest",
+        "/mirror/fact/clock",
+    )
+}
 """A surface in `where` that is whole pages: a word is held to those and left alone elsewhere."""
 
 
@@ -62,8 +68,9 @@ def retired_words_on(page: str, html: str, entries) -> list[str]:
             continue
         if entry.status == GL.RETIRED and is_said(entry.word, surface_of(html, entry.where)):
             place = f"the {entry.where}" if entry.where else "this page"
-            found.append(f'{page}: "{entry.word}" is retired from {place}. '
-                         f'Say "{entry.replaced_by}".')
+            found.append(
+                f'{page}: "{entry.word}" is retired from {place}. Say "{entry.replaced_by}".'
+            )
     return found
 
 
@@ -85,8 +92,10 @@ def test_no_retired_word_is_on_any_page():
 # ---------- What the test does ----------
 
 
-DIAL_PAGE = ('<div class="scope"><svg><a class="scope__slice"><text>45.8%</text>'
-             '<text>strike</text></a></svg></div>')
+DIAL_PAGE = (
+    '<div class="scope"><svg><a class="scope__slice"><text>45.8%</text>'
+    "<text>strike</text></a></svg></div>"
+)
 
 
 def test_a_failure_names_the_page_the_word_and_what_to_say():
@@ -126,9 +135,11 @@ def test_a_word_in_use_is_no_failure():
 @pytest.mark.parametrize("word", ["trip", "reconstruct", "Import"])
 def test_code_is_not_copy(word):
     """Identifiers and attributes hold these words all over, and no trader reads them."""
-    page = ('<a href="/imports/1" class="trip trip--import" data-x="reconstruct" '
-            'id="trips_reconstructed">Open</a><script>var trip = "reconstruct"; import("x");</script>'
-            "<style>.import { color: red }</style>")
+    page = (
+        '<a href="/imports/1" class="trip trip--import" data-x="reconstruct" '
+        'id="trips_reconstructed">Open</a><script>var trip = "reconstruct"; import("x");</script>'
+        "<style>.import { color: red }</style>"
+    )
     assert retired_words_on("a page", page, [GL.Entry(word, GL.RETIRED, "x")]) == []
 
 
@@ -170,7 +181,9 @@ def test_nothing_is_retired_beyond_the_surfaces_that_have_landed():
     """Retired only as its surface lands, or the test rewords pages nobody has ruled on."""
     for entry in GL.GLOSSARY:
         if entry.status == GL.RETIRED:
-            assert entry.where is None or entry.where in SURFACES or entry.where in SURFACE_PAGES, entry.word
+            assert entry.where is None or entry.where in SURFACES or entry.where in SURFACE_PAGES, (
+                entry.word
+            )
 
 
 def test_every_retired_word_says_what_replaced_it():

@@ -92,9 +92,7 @@ class EnumText(TypeDecorator[Any]):
         if value is None:
             return None
         if not isinstance(value, self.enum_cls):
-            raise TypeError(
-                f"expected {self.enum_cls.__name__}, got {type(value).__name__}"
-            )
+            raise TypeError(f"expected {self.enum_cls.__name__}, got {type(value).__name__}")
         return str(value.value)
 
     def process_result_value(self, value: str | None, dialect: Dialect) -> Any:

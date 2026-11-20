@@ -42,7 +42,12 @@ __all__ = ["TEST_ID", "B2Result", "Obs", "from_synthetic", "population_and_condi
 
 def from_synthetic(trips: Iterable[object]) -> list[Obs]:
     return [
-        Obs(day=int(t.day), entry_at=float(t.entry_idx), exit_at=float(t.exit_idx), r=float(t.r_multiple))
+        Obs(
+            day=int(t.day),
+            entry_at=float(t.entry_idx),
+            exit_at=float(t.exit_idx),
+            r=float(t.r_multiple),
+        )
         for t in trips
     ]
 
@@ -59,7 +64,9 @@ class B2Result:
     zones: zn.Zones
 
 
-def _m1_data(obs: Sequence[Obs], idx: np.ndarray, in_pop: np.ndarray, cond: np.ndarray) -> m1.M1Data:
+def _m1_data(
+    obs: Sequence[Obs], idx: np.ndarray, in_pop: np.ndarray, cond: np.ndarray
+) -> m1.M1Data:
     sel = idx[in_pop[idx]]
     return m1.M1Data(
         r=np.array([obs[i].r for i in sel]),
@@ -102,4 +109,6 @@ def run(
         n_min=N_MIN,
         diagnostics_failed=theta_bad,
     )
-    return B2Result(core, finding, n_condition, n_comparison, n_condition_isolation, train, hold, zones)
+    return B2Result(
+        core, finding, n_condition, n_comparison, n_condition_isolation, train, hold, zones
+    )

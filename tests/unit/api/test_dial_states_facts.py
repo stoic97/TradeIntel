@@ -21,7 +21,13 @@ from services.production.api.app import create_app
 from services.production.api.figures import Figure
 from tests.unit.api import figure_pages as P
 
-PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
+PAGES = (
+    "/mirror",
+    "/mirror/chapter/1",
+    "/mirror/chapter/2",
+    "/mirror/chapter/3",
+    "/mirror/chapter/4",
+)
 SIZES = {"scope ": "phone", "scope scope--desktop": "desktop"}
 FIT_ON_A_PHONE = -13  # the tightest here, seen in a browser: nothing hidden
 
@@ -32,8 +38,9 @@ def pages():
     client = TestClient(app)
     P._sign_up(client, app.state.engine, "visitor")
     P._consent(client)
-    client.post("/upload/demo", data={"csrf_token": P._token(client, "/upload")},
-                follow_redirects=False)
+    client.post(
+        "/upload/demo", data={"csrf_token": P._token(client, "/upload")}, follow_redirects=False
+    )
     return {path: client.get(path).text for path in PAGES}
 
 
@@ -45,7 +52,9 @@ def wedge_texts(svg: str) -> list[str]:
     """What each wedge says, with no rim label: the figure and the lines under it."""
     out = []
     for block in re.findall(r'<a class="scope__slice.*?</a>', svg, flags=re.DOTALL):
-        said = re.findall(r'<text class="scope__figure[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL)
+        said = re.findall(
+            r'<text class="scope__figure[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL
+        )
         said = [re.sub(r"<[^>]+>", " ", s) for s in said]
         out.append(" ".join(unescape(" ".join(said)).replace("\xa0", " ").split()))
     return out
@@ -53,8 +62,13 @@ def wedge_texts(svg: str) -> list[str]:
 
 def every_wedge(pages) -> list[tuple[str, str]]:
     """A slice with nothing counted from the file says "not in your file" instead: left out."""
-    return [(path, said) for path, html in pages.items() for svg in dials(html)
-            for said in wedge_texts(svg) if said != "—"]
+    return [
+        (path, said)
+        for path, html in pages.items()
+        for svg in dials(html)
+        for said in wedge_texts(svg)
+        if said != "—"
+    ]
 
 
 def test_the_walk_reads_both_sizes_of_every_dial(pages):
@@ -116,10 +130,16 @@ def test_a_uncapped_wedge_reads_as_agreed():
     assert f"{item['figure']} {item['label']}".replace("\n", " ") == "3 trades we could not size"
 
 
-@pytest.mark.parametrize(("rate", "said"), [
-    ("45.8", "46 of 100"), ("45.5", "46 of 100"), ("45.4", "45 of 100"), ("100", "100 of 100"),
-    ("0", "0 of 100"),
-])
+@pytest.mark.parametrize(
+    ("rate", "said"),
+    [
+        ("45.8", "46 of 100"),
+        ("45.5", "46 of 100"),
+        ("45.4", "45 of 100"),
+        ("100", "100 of 100"),
+        ("0", "0 of 100"),
+    ],
+)
 def test_a_rate_is_a_count_out_of_a_hundred(rate, said):
     assert formatting.out_of_a_hundred(rate) == said
 
@@ -127,20 +147,31 @@ def test_a_rate_is_a_count_out_of_a_hundred(rate, said):
 def test_a_wide_count_stands_alone_over_the_short_words_on_a_phone():
     wide = SF._trades_wedge(167, "past your number", "past number")
     assert (wide["figure"], wide["phone_figure"], wide["phone_label"]) == (
-        "167 trades", "167", "past number")
+        "167 trades",
+        "167",
+        "past number",
+    )
     assert "phone_figure" not in SF._trades_wedge(99, "on your busiest day", "busiest day")
 
 
-@pytest.mark.parametrize(("n", "of", "phone"), [
-    (99, "past your number", "past number"), (167, "past your number", "past number"),
-    (1600, "we could not size", "not sized"), (1234, "on your busiest day", "busiest day"),
-])
+@pytest.mark.parametrize(
+    ("n", "of", "phone"),
+    [
+        (99, "past your number", "past number"),
+        (167, "past your number", "past number"),
+        (1600, "we could not size", "not sized"),
+        (1234, "on your busiest day", "busiest day"),
+    ],
+)
 def test_a_count_of_any_size_stays_clear_on_a_phone(n, of, phone):
     item = SF._trades_wedge(n, of, phone)
     z = G.SIZES["phone"]
     rr, sec = G.radii(z["R"]), G.sectors(4, True)
-    block = G.slice_block({"figure": item.get("phone_figure", item["figure"]),
-                           "label": item["phone_label"]}, min(D.HUB_FIG_SIZES_PHONE), False)
+    block = G.slice_block(
+        {"figure": item.get("phone_figure", item["figure"]), "label": item["phone_label"]},
+        min(D.HUB_FIG_SIZES_PHONE),
+        False,
+    )
     best, rc = -1e9, rr["ring"]
     while rc <= rr["inner"]:
         best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))
@@ -163,9 +194,21 @@ def test_the_label_breaks_on_whole_words():
 
 
 def test_the_phone_gets_its_short_form_and_the_desktop_the_agreed_one():
-    view = {"kind": "home", "centre": {"figure": "−₹1", "captionLines": ["your result,", "before charges"]},
-            "items": [{"name": str(i), "figure": "8 trades", "label": "on your\nbusiest day",
-                       "phone_label": "busiest day", "state": "", "href": "#"} for i in range(4)]}
+    view = {
+        "kind": "home",
+        "centre": {"figure": "−₹1", "captionLines": ["your result,", "before charges"]},
+        "items": [
+            {
+                "name": str(i),
+                "figure": "8 trades",
+                "label": "on your\nbusiest day",
+                "phone_label": "busiest day",
+                "state": "",
+                "href": "#",
+            }
+            for i in range(4)
+        ],
+    }
     phone, desktop = str(D.scope_dial(view, "phone")), str(D.scope_dial(view, "desktop"))
     assert "on your" not in phone and "busiest day" in phone
     assert "on your" in desktop
@@ -173,8 +216,11 @@ def test_the_phone_gets_its_short_form_and_the_desktop_the_agreed_one():
 
 def test_a_dial_with_no_short_form_keeps_the_kits_sizes():
     """Only a hub answer takes the smaller figure, so the kit's own dials draw as the kit draws."""
-    view = {"kind": "home", "centre": {"figure": "−₹1", "captionLines": ["a", "b"]},
-            "items": [{"name": str(i), "figure": "9", "state": "", "href": "#"} for i in range(4)]}
+    view = {
+        "kind": "home",
+        "centre": {"figure": "−₹1", "captionLines": ["a", "b"]},
+        "items": [{"name": str(i), "figure": "9", "state": "", "href": "#"} for i in range(4)],
+    }
     assert "scope__figure--s22" in str(D.scope_dial(view, "phone"))
 
 
@@ -189,9 +235,18 @@ def test_every_chapter_dial_stays_clear_inside_its_wedge(pages, size):
     rr = G.radii(z["R"])
     for n in (1, 2, 3, 4):
         view = SF.chapter_view(n, figs)
-        items = view["items"] if size == "desktop" else [
-            {**i, "figure": i.get("phone_figure", i["figure"]),
-             "label": i.get("phone_label", i.get("label", ""))} for i in view["items"]]
+        items = (
+            view["items"]
+            if size == "desktop"
+            else [
+                {
+                    **i,
+                    "figure": i.get("phone_figure", i["figure"]),
+                    "label": i.get("phone_label", i.get("label", "")),
+                }
+                for i in view["items"]
+            ]
+        )
         sec = G.sectors(len(items), False)
         lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
         for i, block in enumerate(lay["blocks"]):
@@ -217,5 +272,9 @@ def test_the_kit_stylesheet_is_untouched():
 
     from tests.helpers.figures import KIT_SHA
 
-    css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
+    css = (
+        Path("services/production/api/static/css/components.css")
+        .read_bytes()
+        .replace(b"\r\n", b"\n")
+    )
     assert hashlib.sha256(css).hexdigest() == KIT_SHA

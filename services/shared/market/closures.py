@@ -36,6 +36,10 @@ class Closures:
 @cache
 def load(path: Path = CLOSURES) -> dict[str, Closures]:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    through = raw["through"] if isinstance(raw["through"], date) else date.fromisoformat(raw["through"])
-    return {exchange: Closures(frozenset(entry["closed"]), through)
-            for exchange, entry in raw["exchanges"].items()}
+    through = (
+        raw["through"] if isinstance(raw["through"], date) else date.fromisoformat(raw["through"])
+    )
+    return {
+        exchange: Closures(frozenset(entry["closed"]), through)
+        for exchange, entry in raw["exchanges"].items()
+    }

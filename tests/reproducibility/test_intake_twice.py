@@ -28,8 +28,11 @@ FIXTURES = sorted(Path("data/fixtures/duplicates").glob("*.csv"))
 
 def context() -> pl.ImportContext:
     return pl.ImportContext(
-        trader_id="fx", source_account="A", code_version="fixedsha",
-        export_date="2026-10-18", export_date_source="trader",
+        trader_id="fx",
+        source_account="A",
+        code_version="fixedsha",
+        export_date="2026-10-18",
+        export_date_source="trader",
     )
 
 
@@ -44,8 +47,7 @@ def test_every_fixture_plans_to_the_same_digest_twice():
 def test_each_fixture_has_its_own_digest():
     """A digest that collided would make the first test vacuous."""
     digests = {
-        path.name: pl.plan_import(path.read_text(), context=context()).digest()
-        for path in FIXTURES
+        path.name: pl.plan_import(path.read_text(), context=context()).digest() for path in FIXTURES
     }
     assert len(set(digests.values())) == len(digests), digests
 
@@ -54,13 +56,19 @@ def _write_once(tmp_path, name: str, text: str) -> list[tuple]:
     engine = make_engine(f"sqlite:///{tmp_path / name}.db")
     run_migrations(engine)
     with make_session(engine) as sess:
-        trader = m.Trader(display_name="Fixture", login_id="fx", password_hash="x",
-                          created_at=datetime.now(UTC))
+        trader = m.Trader(
+            display_name="Fixture", login_id="fx", password_hash="x", created_at=datetime.now(UTC)
+        )
         sess.add(trader)
         sess.flush()
         persist.write_plan(
-            sess, trader=trader, plan=pl.plan_import(text, context=context()),
-            raw_sha256="a" * 64, original_name="f.csv", stored_path="/tmp/f.csv", size=1,
+            sess,
+            trader=trader,
+            plan=pl.plan_import(text, context=context()),
+            raw_sha256="a" * 64,
+            original_name="f.csv",
+            stored_path="/tmp/f.csv",
+            size=1,
         )
         sess.commit()
 
@@ -70,8 +78,16 @@ def _write_once(tmp_path, name: str, text: str) -> list[tuple]:
             for r in sess.scalars(select(m.ImportRow).order_by(m.ImportRow.row_no))
         ]
         trips = [
-            (t.trip_id, t.trading_day, t.gross, t.fees, t.net, t.quantity,
-             t.risk_unit_source, t.risk_unit_value)
+            (
+                t.trip_id,
+                t.trading_day,
+                t.gross,
+                t.fees,
+                t.net,
+                t.quantity,
+                t.risk_unit_source,
+                t.risk_unit_value,
+            )
             for t in sess.scalars(select(m.Trip).order_by(m.Trip.trip_id))
         ]
         days = [
@@ -81,10 +97,20 @@ def _write_once(tmp_path, name: str, text: str) -> list[tuple]:
             )
         ]
         return [
-            (imp.outcome, imp.rows_in, imp.rows_parsed, imp.rows_excluded,
-             imp.fees_available, imp.snapshot_digest, imp.profile_versions,
-             imp.density_default_unit, imp.rejection_text),
-            rows, trips, days,
+            (
+                imp.outcome,
+                imp.rows_in,
+                imp.rows_parsed,
+                imp.rows_excluded,
+                imp.fees_available,
+                imp.snapshot_digest,
+                imp.profile_versions,
+                imp.density_default_unit,
+                imp.rejection_text,
+            ),
+            rows,
+            trips,
+            days,
         ]
 
 

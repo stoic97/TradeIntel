@@ -9,6 +9,7 @@ the generator decides (a trade, a label, a cell), and that is never silent.
 Updating the pinned value is a deliberate act, like regenerating a golden: say
 why in the commit, and never to make a failing run pass.
 """
+
 from services.research.evaluation.synthetic import corpus as cp
 from services.research.evaluation.synthetic import export as ex
 

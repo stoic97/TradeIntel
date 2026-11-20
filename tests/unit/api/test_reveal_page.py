@@ -61,7 +61,9 @@ def test_the_reveal_is_the_kits_navy_page():
         '<a class="btn btn--on-navy btn--block" href="/mirror/fact/worst-days?enter=lens">'
         "Show me those days</a>"
     ) in page
-    assert 'href="/budget"' not in page  # TICKET-903: Limits left the walk; the reveal goes on to the report
+    assert (
+        'href="/budget"' not in page
+    )  # TICKET-903: Limits left the walk; the reveal goes on to the report
     assert '<nav class="bottom-nav"' not in page
 
 

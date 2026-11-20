@@ -77,9 +77,7 @@ EIA_DST_MINUTE = 20 * 60  # 10:30 New York on daylight time
 EIA_WINDOW = (-45, 30)  # entry from 45 min before (a median hold) to 30 min after
 
 
-def b5_sequence_decay(
-    strength: float, after_trade: int = 2, prevalence: float = 1.0
-) -> Behaviour:
+def b5_sequence_decay(strength: float, after_trade: int = 2, prevalence: float = 1.0) -> Behaviour:
     """Overtrading: from the (after_trade + 1)-th trade of the day, entries chase."""
 
     def cond(s: EntryState) -> bool:

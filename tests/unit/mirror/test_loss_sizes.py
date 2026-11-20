@@ -34,9 +34,7 @@ def test_too_few_losses_say_nothing():
 
 def test_or_less_rounds_up_so_it_stays_true():
     """10 of these 20 lost 100.50 or less. "100 or less" would not be true of them."""
-    trips = [
-        replace(t, net=Decimal("-100.50") if i < 10 else t.net) for i, t in enumerate(TWENTY)
-    ]
+    trips = [replace(t, net=Decimal("-100.50") if i < 10 else t.net) for i, t in enumerate(TWENTY)]
     assert mx.loss_sizes(trips).half == 101
 
 
@@ -65,7 +63,9 @@ def test_each_book_is_read_on_its_own():
 
 
 def test_the_crude_contracts_are_one_book():
-    trips = _book("CRUDEOIL", [30, -40]) + _book("CRUDEOILM", [50, -30]) + _book("CRUDEOIL", [40, -50])
+    trips = (
+        _book("CRUDEOIL", [30, -40]) + _book("CRUDEOILM", [50, -30]) + _book("CRUDEOIL", [40, -50])
+    )
     assert [(r.book, r.percent) for r in mx.premium_by_book(trips)] == [("crude", 4)]
 
 

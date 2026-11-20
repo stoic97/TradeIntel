@@ -50,6 +50,7 @@ TABLE: dict[tuple[OptionType | None, Direction], Underlying] = {
     (None, SOLD): Underlying.SHORT,
 }
 
+
 def _multi_leg(legs: tuple[ctr_v1.RoundTrip, ...]) -> Underlying:
     """Section 4.7.8, from the legs alone.
 

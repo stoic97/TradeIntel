@@ -25,6 +25,7 @@ def text(page: str) -> str:
 
 # ---- derived from the spec and the code, both ways
 
+
 def test_every_check_in_the_framework_is_on_the_map():
     on_map = {c for f in FM.FACTORS for c in f.checks}
     assert {t.id for t in reader.load().tests} <= on_map
@@ -56,6 +57,7 @@ def test_each_factor_is_named_once():
 
 
 # ---- the page
+
 
 def test_anyone_can_open_it(engine):
     page = TestClient(create_app()).get("/factors")
@@ -99,8 +101,13 @@ def test_a_signed_in_trader_sees_what_his_file_held_and_nothing_is_dropped(clien
         assert f.name in said, f.name
     assert "Only you can give it" in said
     assert "Needs bars" in said
-    rows = dict(re.findall(r'<tr data-factor="([^"]+)">.*?<td class="factor-map__file">([^<]+)</td>',
-                           page, re.DOTALL))
+    rows = dict(
+        re.findall(
+            r'<tr data-factor="([^"]+)">.*?<td class="factor-map__file">([^<]+)</td>',
+            page,
+            re.DOTALL,
+        )
+    )
     assert len(rows) == len(FM.FACTORS)
     assert rows["Hour you opened"] == "Yes"
     assert rows["Worst days"] == rows["Losing runs"] == rows["Best and worst trades"] == "Yes"
@@ -110,8 +117,12 @@ def test_a_signed_in_trader_sees_what_his_file_held_and_nothing_is_dropped(clien
 
 def test_no_page_prints_the_specs_tiers(client):
     send(client)
-    paths = ["/factors", "/mirror", *(f"/mirror/chapter/{c.number}" for c in SM.CHAPTERS),
-             *(f"/mirror/fact/{k}" for k in SM.FACTS)]
+    paths = [
+        "/factors",
+        "/mirror",
+        *(f"/mirror/chapter/{c.number}" for c in SM.CHAPTERS),
+        *(f"/mirror/fact/{k}" for k in SM.FACTS),
+    ]
     for path in paths:
         said = text(client.get(path).text)
         for tier in TIERS:

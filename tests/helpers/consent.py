@@ -31,21 +31,29 @@ def consent_signed_in(app_env):
     engine = app_env
     client = TestClient(create_app())
     csrf = CSRF.search(client.get("/signup").text).group(1)
-    client.post("/signup", data={"login_id": "rikk", "display_name": "Rikk",
-                                     "password": "a-long-enough-password",
-                                     "csrf_token": csrf})
+    client.post(
+        "/signup",
+        data={
+            "login_id": "rikk",
+            "display_name": "Rikk",
+            "password": "a-long-enough-password",
+            "csrf_token": csrf,
+        },
+    )
     # Marked BEFORE signing in: sign-in now lands a trader where he has something to
     # do, which for a new account is the upload page and from there the consent
     # screen. A real account is refused the draft text there, which is the gate
     # working -- test_a_real_account_cannot_see_the_draft_text pins that directly.
     with make_session(engine) as sess:
         from sqlalchemy import update
+
         sess.execute(update(m.Trader).values(development_data=True))
         sess.commit()
     csrf = CSRF.search(client.get("/login").text).group(1)
-    client.post("/login", data={"login_id": "rikk",
-                                "password": "a-long-enough-password",
-                                "csrf_token": csrf})
+    client.post(
+        "/login",
+        data={"login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
+    )
     return client, engine
 
 

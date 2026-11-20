@@ -22,8 +22,10 @@ def test_too_few_trades_says_how_many_more_after_the_opening_sentence():
     need_c, need_o = T.MIN_CONDITION - check.n_condition, T.MIN_COMPARISON - check.n_comparison
     for page in (readable(fact_page("down")), readable(chapter_page(3))):
         assert CLOSED in page
-        assert (f"There aren't enough trades yet to test it: it needs {need_c} more right after two "
-                f"straight losses and {need_o} more of your other trades.") in page
+        assert (
+            f"There aren't enough trades yet to test it: it needs {need_c} more right after two "
+            f"straight losses and {need_o} more of your other trades."
+        ) in page
         assert page.index(CLOSED) < page.index("There aren't enough trades yet")
 
 
@@ -32,8 +34,9 @@ def test_worth_watching_is_said_and_never_called_a_finding(monkeypatch):
     monkeypatch.setattr(mx, "post_loss_sentence_may_show", lambda trips: False)
     for page in (readable(fact_page("down")), readable(chapter_page(3))):
         assert CLOSED in page and WATCHING in page
-        assert "finding" not in page.lower().split(CLOSED.lower())[1].split("upload more")[0].replace(
-            "the bar a finding has to clear", "")
+        assert "finding" not in page.lower().split(CLOSED.lower())[1].split("upload more")[
+            0
+        ].replace("the bar a finding has to clear", "")
 
 
 def test_a_finding_needs_no_second_line(monkeypatch):
@@ -52,7 +55,10 @@ def test_the_facts_carry_the_level_from_the_one_test():
 
 def test_scope_home_says_how_many_checks_the_bar_corrects_for(client):
     from tests.helpers.read_again import send, words
+
     send(client)
     said = words(client.get("/mirror").text)
-    assert ("Every finding here clears a bar corrected for every check we run on your trades: "
-            "today 1 of the 18 on our fixed list.") in said
+    assert (
+        "Every finding here clears a bar corrected for every check we run on your trades: "
+        "today 1 of the 18 on our fixed list."
+    ) in said

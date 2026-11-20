@@ -59,12 +59,15 @@ def _today() -> date:
 
 
 def _history(sess, trader: m.Trader) -> list[m.RiskBudgetDeclaration]:
-    return list(sess.scalars(
-        select(m.RiskBudgetDeclaration)
-        .where(m.RiskBudgetDeclaration.trader_id == trader.id)
-        .order_by(m.RiskBudgetDeclaration.effective_from.desc(),
-                  m.RiskBudgetDeclaration.id.desc())
-    ).all())
+    return list(
+        sess.scalars(
+            select(m.RiskBudgetDeclaration)
+            .where(m.RiskBudgetDeclaration.trader_id == trader.id)
+            .order_by(
+                m.RiskBudgetDeclaration.effective_from.desc(), m.RiskBudgetDeclaration.id.desc()
+            )
+        ).all()
+    )
 
 
 def _past_number(sess, trader: m.Trader) -> dict:
@@ -187,14 +190,18 @@ def budget_form(request: Request, against: str | None = None):
             return RedirectResponse("/login", status_code=303)
         if not has_diagnosis_consent(sess, trader):
             return RedirectResponse("/consent", status_code=303)
-        return page(request, "budget.html", title="What you risk",
-                    **_past_number(sess, trader),
-                    declarations=_history(sess, trader),
-                    today=_today().isoformat(),
-                    default_from=_default_from(sess, trader),
-                    capital=_latest_capital(_history(sess, trader)),
-                    sizes=_loss_sizes(sess, trader),
-                    **_history_reads(sess, trader, against))
+        return page(
+            request,
+            "budget.html",
+            title="What you risk",
+            **_past_number(sess, trader),
+            declarations=_history(sess, trader),
+            today=_today().isoformat(),
+            default_from=_default_from(sess, trader),
+            capital=_latest_capital(_history(sess, trader)),
+            sizes=_loss_sizes(sess, trader),
+            **_history_reads(sess, trader, against),
+        )
 
 
 @router.post("/budget")
@@ -217,15 +224,20 @@ def budget_submit(
             return RedirectResponse("/consent", status_code=303)
 
         def refuse(message: str) -> HTMLResponse:
-            return page(request, "budget.html", status_code=400,
-                        title="What you risk", error=message,
-                        **_past_number(sess, trader),
-                        declarations=_history(sess, trader),
-                        today=_today().isoformat(),
-                        default_from=_default_from(sess, trader),
-                        capital=_latest_capital(_history(sess, trader)),
-                    sizes=_loss_sizes(sess, trader),
-                    **_history_reads(sess, trader, None))
+            return page(
+                request,
+                "budget.html",
+                status_code=400,
+                title="What you risk",
+                error=message,
+                **_past_number(sess, trader),
+                declarations=_history(sess, trader),
+                today=_today().isoformat(),
+                default_from=_default_from(sess, trader),
+                capital=_latest_capital(_history(sess, trader)),
+                sizes=_loss_sizes(sess, trader),
+                **_history_reads(sess, trader, None),
+            )
 
         try:
             amount = Decimal(value)
@@ -252,19 +264,20 @@ def budget_submit(
             return refuse("That is not a date.")
         if effective > _today():
             return refuse(
-                "That date is in the future. This is about the trades you have "
-                "already taken."
+                "That date is in the future. This is about the trades you have already taken."
             )
 
-        sess.add(m.RiskBudgetDeclaration(
-            trader_id=trader.id,
-            value=amount,
-            unit=unit,
-            capital_amount=capital,
-            effective_from=effective.isoformat(),
-            declared_at=datetime.now(UTC),
-            retrospective=effective < _today(),
-        ))
+        sess.add(
+            m.RiskBudgetDeclaration(
+                trader_id=trader.id,
+                value=amount,
+                unit=unit,
+                capital_amount=capital,
+                effective_from=effective.isoformat(),
+                declared_at=datetime.now(UTC),
+                retrospective=effective < _today(),
+            )
+        )
         sess.commit()
     # The one number comes straight after the reveal (TR-008). Recorded, it lands back
     # here to show what it counts (TICKET-831), and the page links on to the Scope.

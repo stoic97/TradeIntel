@@ -40,6 +40,7 @@ def client(engine):
 def engine():
     return upload_engine()
 
+
 TRADED = date(2026, 10, 15)
 NOV_2026 = date(2026, 11, 19)
 DEC_2026 = date(2026, 12, 17)
@@ -101,10 +102,15 @@ def test_with_no_date_the_current_size_is_still_the_only_one():
 
 def test_a_gap_between_stated_boundaries_keeps_the_largest_that_divides(tmp_path):
     """Nothing says which size December takes here, so it reads as it did without them."""
-    gapped = profiles.load_one(_profile(tmp_path, (
-        '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiries_until: "2026-11-30"}',
-        '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01"}',
-    )))
+    gapped = profiles.load_one(
+        _profile(
+            tmp_path,
+            (
+                '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiries_until: "2026-11-30"}',
+                '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01"}',
+            ),
+        )
+    )
     assert lots(gapped, 100, NOV_2026) == 5
     assert lots(gapped, 100, DEC_2026) == 4
     assert lots(gapped, 100, JAN_2027) == 4
@@ -140,29 +146,38 @@ def _profile(tmp_path: Path, rows: tuple[str, ...]) -> Path:
 
 
 def test_a_stated_boundary_must_be_a_date(tmp_path):
-    path = _profile(tmp_path, (
-        '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiries_until: "soon"}',
-        '  - {units: "25", from: "2026-10-01"}',
-    ))
+    path = _profile(
+        tmp_path,
+        (
+            '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiries_until: "soon"}',
+            '  - {units: "25", from: "2026-10-01"}',
+        ),
+    )
     with pytest.raises(profiles.InvalidProfile):
         profiles.load_one(path)
 
 
 def test_a_stated_range_cannot_end_before_it_starts(tmp_path):
-    path = _profile(tmp_path, (
-        '  - {units: "20", from: "2024-11-20", until: "2026-12-31"}',
-        '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01", expiries_until: "2026-01-01"}',
-    ))
+    path = _profile(
+        tmp_path,
+        (
+            '  - {units: "20", from: "2024-11-20", until: "2026-12-31"}',
+            '  - {units: "25", from: "2026-10-01", expiries_from: "2027-01-01", expiries_until: "2026-01-01"}',
+        ),
+    )
     with pytest.raises(profiles.InvalidProfile):
         profiles.load_one(path)
 
 
 def test_a_misspelt_boundary_is_refused_rather_than_ignored(tmp_path):
     """Ignored, it would read as no boundary, and every figure would still look right."""
-    path = _profile(tmp_path, (
-        '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiry_until: "2026-12-31"}',
-        '  - {units: "25", from: "2026-10-01"}',
-    ))
+    path = _profile(
+        tmp_path,
+        (
+            '  - {units: "20", from: "2024-11-20", until: "2026-12-31", expiry_until: "2026-12-31"}',
+            '  - {units: "25", from: "2026-10-01"}',
+        ),
+    )
     with pytest.raises(profiles.InvalidProfile):
         profiles.load_one(path)
 
@@ -196,34 +211,38 @@ def _lots_by_hour(client, engine, content: bytes) -> dict[int, int]:
 
 
 def test_the_record_reads_each_contract_at_its_own_expirys_size(client, engine):
-    content = _tradebook([
-        *_round_trip("10:00:00", "10:30:00", "19 NOV"),
-        *_round_trip("11:00:00", "11:30:00", "21 JAN"),
-    ])
+    content = _tradebook(
+        [
+            *_round_trip("10:00:00", "10:30:00", "19 NOV"),
+            *_round_trip("11:00:00", "11:30:00", "21 JAN"),
+        ]
+    )
     assert _lots_by_hour(client, engine, content) == {10: 5, 11: 4}
 
 
 def test_a_share_on_the_same_day_keeps_its_answer(client, engine):
-    content = _tradebook([
-        *_round_trip("10:00:00", "10:30:00", "19 NOV"),
-        ("11:00:00", "Widget ETF", "BUY", "NSE,Equity", "100"),
-        ("11:30:00", "Widget ETF", "SELL", "NSE,Equity", "100"),
-    ])
+    content = _tradebook(
+        [
+            *_round_trip("10:00:00", "10:30:00", "19 NOV"),
+            ("11:00:00", "Widget ETF", "BUY", "NSE,Equity", "100"),
+            ("11:30:00", "Widget ETF", "SELL", "NSE,Equity", "100"),
+        ]
+    )
     assert _lots_by_hour(client, engine, content) == {10: 5, 11: 100}
 
 
 def test_one_contract_at_one_instant_under_two_expiries_keeps_todays_answer(client, engine):
     """The stored row cannot be told apart from its twin, so its expiry is not read."""
-    content = _tradebook([
-        *_round_trip("10:00:00", "10:30:00", "19 NOV"),
-        *_round_trip("10:00:00", "10:45:00", "21 JAN"),
-    ])
+    content = _tradebook(
+        [
+            *_round_trip("10:00:00", "10:30:00", "19 NOV"),
+            *_round_trip("10:00:00", "10:45:00", "21 JAN"),
+        ]
+    )
     assert set(_lots_by_hour(client, engine, content).values()) == {4}
 
 
-def test_a_quantity_only_one_size_divides_does_not_read_the_raw_file(
-    client, engine, monkeypatch
-):
+def test_a_quantity_only_one_size_divides_does_not_read_the_raw_file(client, engine, monkeypatch):
     """Every page loads the record, and parsing the whole file each time would be waste."""
     content = _tradebook(_round_trip("10:00:00", "10:30:00", "19 NOV", quantity="40"))
     assert upload(client, content=content).status_code == 303

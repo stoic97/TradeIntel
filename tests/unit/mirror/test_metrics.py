@@ -153,8 +153,12 @@ def test_journal_unit_default(trips, expected):
 def test_every_metric_returns_a_result_state(trips):
     """Appendix A figures are counted facts; nothing here is a finding."""
     for result in (
-        mx.five_worst_days(trips), mx.share_of_losses(trips), mx.day_counts(trips),
-        mx.two_straight_losses(trips), mx.strike_rate(trips), mx.holding_time(trips),
+        mx.five_worst_days(trips),
+        mx.share_of_losses(trips),
+        mx.day_counts(trips),
+        mx.two_straight_losses(trips),
+        mx.strike_rate(trips),
+        mx.holding_time(trips),
     ):
         assert result.state in s.V1_EMITTABLE_STATES
         assert result.state is not s.ResultState.VALIDATED_FINDING
@@ -173,6 +177,7 @@ def test_every_trip_carries_its_instrument(trips):
 # B2 (handoff section 9): the series the charts are drawn from. Expected values are
 # read off the trip table in tests/fixtures/mirror_contract/generate.py, the fixture's
 # hand-written specification, not from the functions' output.
+
 
 def test_the_daily_series_is_every_trading_day_in_date_order(trips):
     """Eight days; the table's own day comments give each net and count."""
@@ -205,15 +210,43 @@ def test_the_holding_series_is_each_trade_in_entry_order_by_outcome(trips):
     two scratches, t11 and t13, which are in neither (as in holding_time)."""
     held = mx.holding_series(trips)
     assert held.winners_seconds == [minutes * 60 for minutes in (30, 30, 30, 30, 20, 20)]
-    assert held.losers_seconds == [minutes * 60 for minutes in (
-        30, 20, 15, 10, 10, 10, 60,      # day 1 and day 2
-        10, 10,                          # day 3
-        10, 10, 10, 10,                  # day 4
-        5, 5, 5, 5, 5, 5, 5, 5,          # day 5
-        10, 10, 10,                      # day 6
-        10, 10, 10, 10,                  # day 7
-        10, 10, 10, 10,                  # day 8
-    )]
+    assert held.losers_seconds == [
+        minutes * 60
+        for minutes in (
+            30,
+            20,
+            15,
+            10,
+            10,
+            10,
+            60,  # day 1 and day 2
+            10,
+            10,  # day 3
+            10,
+            10,
+            10,
+            10,  # day 4
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,  # day 5
+            10,
+            10,
+            10,  # day 6
+            10,
+            10,
+            10,
+            10,  # day 7
+            10,
+            10,
+            10,
+            10,  # day 8
+        )
+    ]
 
 
 def test_the_holding_medians_come_from_the_holding_series(trips, expected):

@@ -31,26 +31,20 @@ def test_a_first_upload_creates_a_version_of_every_day_it_contains():
 
 
 def test_an_unchanged_day_is_identical_not_appended():
-    diffs = dv.diff_against_existing(
-        incoming=[day("2026-10-14", 3)], existing={"2026-10-14": 3}
-    )
+    diffs = dv.diff_against_existing(incoming=[day("2026-10-14", 3)], existing={"2026-10-14": 3})
     assert diffs[0].diff is s.DayDiff.IDENTICAL
     assert diffs[0].rows_before == 3 and diffs[0].rows_after == 3
 
 
 def test_a_day_that_grew_is_the_late_trade_path():
-    diffs = dv.diff_against_existing(
-        incoming=[day("2026-10-14", 5)], existing={"2026-10-14": 3}
-    )
+    diffs = dv.diff_against_existing(incoming=[day("2026-10-14", 5)], existing={"2026-10-14": 3})
     assert diffs[0].diff is s.DayDiff.GROWN
     assert diffs[0].rows_after == 5
     assert not diffs[0].day_shrank
 
 
 def test_a_day_that_shrank_is_flagged_and_shown():
-    diffs = dv.diff_against_existing(
-        incoming=[day("2026-10-14", 2)], existing={"2026-10-14": 6}
-    )
+    diffs = dv.diff_against_existing(incoming=[day("2026-10-14", 2)], existing={"2026-10-14": 6})
     assert diffs[0].diff is s.DayDiff.SHRUNK
     assert diffs[0].day_shrank is True
 

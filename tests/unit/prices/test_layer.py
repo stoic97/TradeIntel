@@ -24,25 +24,49 @@ from services.shared.market import series as SS
 T = datetime(2026, 3, 2, 9, 15)  # a Monday, NSE's open
 
 
-def write_series(folder: Path, name: str, rows: list[str], *, as_of: date | None = None,
-                 clock: str = SS.CLOCK, sha: str | None = None) -> Path:
+def write_series(
+    folder: Path,
+    name: str,
+    rows: list[str],
+    *,
+    as_of: date | None = None,
+    clock: str = SS.CLOCK,
+    sha: str | None = None,
+) -> Path:
     path = folder / name
     body = "timestamp,open,high,low,close,volume\n" + "".join(r + "\n" for r in rows)
     path.write_bytes(body.encode())
     stamps = [datetime.strptime(r.split(",")[0], "%Y-%m-%d %H:%M:%S") for r in rows] or [T]  # noqa: DTZ007
-    SS.write_manifest(SS.SeriesManifest(
-        underlying=name.split("_")[0].upper(), serves=(name.split("_")[0].upper(),), file=name,
-        sha256=sha or hashlib.sha256(body.encode()).hexdigest(), rows=len(rows),
-        first_bar=stamps[0], last_bar=stamps[-1], as_of=as_of or stamps[-1].date(),
-        source="made up for a test", roll="", clock=clock, interval="1 minute", built=date(2026, 11, 13),
-        extended_from=stamps[0].date(), sessions=()), path.with_suffix(".json"))
+    SS.write_manifest(
+        SS.SeriesManifest(
+            underlying=name.split("_")[0].upper(),
+            serves=(name.split("_")[0].upper(),),
+            file=name,
+            sha256=sha or hashlib.sha256(body.encode()).hexdigest(),
+            rows=len(rows),
+            first_bar=stamps[0],
+            last_bar=stamps[-1],
+            as_of=as_of or stamps[-1].date(),
+            source="made up for a test",
+            roll="",
+            clock=clock,
+            interval="1 minute",
+            built=date(2026, 11, 13),
+            extended_from=stamps[0].date(),
+            sessions=(),
+        ),
+        path.with_suffix(".json"),
+    )
     return path
 
 
 def nse_day(day: date, start=(9, 15), minutes=30, price=22000) -> list[str]:
     t0 = datetime.combine(day, datetime.min.time()).replace(hour=start[0], minute=start[1])
-    return [f"{(t0 + timedelta(minutes=i)):%Y-%m-%d %H:%M:%S},{price + i},{price + i + 2},{price + i - 1},"
-            f"{price + i + 1}.5,10" for i in range(minutes)]
+    return [
+        f"{(t0 + timedelta(minutes=i)):%Y-%m-%d %H:%M:%S},{price + i},{price + i + 2},{price + i - 1},"
+        f"{price + i + 1}.5,10"
+        for i in range(minutes)
+    ]
 
 
 @pytest.fixture()
@@ -53,7 +77,7 @@ def prices(tmp_path):
 
 def test_every_instrument_in_the_profiles_has_its_underlying_except_cme():
     p = L.Prices(data_dir=Path("does-not-exist"))
-    for (exchange, symbol) in p.profiles:
+    for exchange, symbol in p.profiles:
         if symbol == "*" or exchange == "CME":
             continue
         assert p.underlying_of(exchange, symbol), f"{exchange}:{symbol} has no underlying"
@@ -84,24 +108,58 @@ def test_every_lookup_has_one_of_the_four_answers(prices):
 
 
 def test_a_series_dated_before_its_last_bar_does_not_cover_the_days_after(tmp_path):
-    write_series(tmp_path, "nifty_1m.csv", nse_day(date(2026, 3, 2)) + nse_day(date(2026, 3, 3)),
-                 as_of=date(2026, 3, 2))
-    assert L.Prices(data_dir=tmp_path).lookup("NIFTY", datetime(2026, 3, 3, 9, 20)).kind is L.Kind.NOT_COVERED
+    write_series(
+        tmp_path,
+        "nifty_1m.csv",
+        nse_day(date(2026, 3, 2)) + nse_day(date(2026, 3, 3)),
+        as_of=date(2026, 3, 2),
+    )
+    assert (
+        L.Prices(data_dir=tmp_path).lookup("NIFTY", datetime(2026, 3, 3, 9, 20)).kind
+        is L.Kind.NOT_COVERED
+    )
 
 
 def test_an_aware_entry_time_in_ist_finds_its_bar(prices):
     from zoneinfo import ZoneInfo
+
     aware = (T + timedelta(minutes=2)).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
     assert prices.lookup("NIFTY", aware).kind is L.Kind.BAR
 
 
-@pytest.mark.parametrize(("why", "make"), [
-    ("whole minute", lambda tmp: write_series(tmp, "nifty_1m.csv", [r.replace(":00,", ":30,", 1) for r in nse_day(date(2026, 3, 2))])),
-    ("end of the minute", lambda tmp: write_series(tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2), start=(9, 16)))),
-    ("digest", lambda tmp: write_series(tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2)), sha="0" * 64)),
-    ("come after", lambda tmp: write_series(tmp, "nifty_1m.csv", list(reversed(nse_day(date(2026, 3, 2)))))),
-    ("start-of-minute", lambda tmp: write_series(tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2)), clock="IST, end of minute")),
-])
+@pytest.mark.parametrize(
+    ("why", "make"),
+    [
+        (
+            "whole minute",
+            lambda tmp: write_series(
+                tmp,
+                "nifty_1m.csv",
+                [r.replace(":00,", ":30,", 1) for r in nse_day(date(2026, 3, 2))],
+            ),
+        ),
+        (
+            "end of the minute",
+            lambda tmp: write_series(tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2), start=(9, 16))),
+        ),
+        (
+            "digest",
+            lambda tmp: write_series(tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2)), sha="0" * 64),
+        ),
+        (
+            "come after",
+            lambda tmp: write_series(
+                tmp, "nifty_1m.csv", list(reversed(nse_day(date(2026, 3, 2))))
+            ),
+        ),
+        (
+            "start-of-minute",
+            lambda tmp: write_series(
+                tmp, "nifty_1m.csv", nse_day(date(2026, 3, 2)), clock="IST, end of minute"
+            ),
+        ),
+    ],
+)
 def test_a_series_whose_stamping_cant_be_established_answers_no_series(tmp_path, why, make):
     make(tmp_path)
     p = L.Prices(data_dir=tmp_path)
@@ -118,7 +176,9 @@ def test_a_file_that_is_not_a_series_never_raises(tmp_path):
 
 def test_adding_an_underlying_is_an_entry_and_a_file_not_code(tmp_path):
     mapping = tmp_path / "underlyings.yaml"
-    mapping.write_text('version: "7"\nunderlyings:\n  NIFTY: {profiles: ["NSE:NIFTY"], series: idx_1m.csv}\n')
+    mapping.write_text(
+        'version: "7"\nunderlyings:\n  NIFTY: {profiles: ["NSE:NIFTY"], series: idx_1m.csv}\n'
+    )
     write_series(tmp_path, "idx_1m.csv", nse_day(date(2026, 3, 2)))
     p = L.Prices(data_dir=tmp_path, mapping_path=mapping)
     assert p.lookup(p.underlying_of("NSE", "NIFTY"), T).kind is L.Kind.BAR
@@ -133,12 +193,15 @@ def test_provenance_names_the_mapping_version_and_each_series(prices):
     json.dumps(got)
 
 
-@pytest.mark.parametrize("bad", [
-    'underlyings:\n  X: {profiles: ["NSE:NIFTY"], series: x.csv}\n',
-    'version: "1"\nunderlyings:\n  X: {profiles: ["NSE:NIFTY"]}\n',
-    'version: "1"\nunderlyings:\n  X: {profiles: ["NSE:NIFTY"], series: x.csv}\n  Y: {profiles: ["NSE:NIFTY"], series: y.csv}\n',
-    'version: "1"\nunderlyings:\n  X: {profiles: ["MCX:WIDGETOIL"], synthetic: {seed: 1, from: "2026-09-01", to: "2026-09-02", start: 5000}}\n',
-])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        'underlyings:\n  X: {profiles: ["NSE:NIFTY"], series: x.csv}\n',
+        'version: "1"\nunderlyings:\n  X: {profiles: ["NSE:NIFTY"]}\n',
+        'version: "1"\nunderlyings:\n  X: {profiles: ["NSE:NIFTY"], series: x.csv}\n  Y: {profiles: ["NSE:NIFTY"], series: y.csv}\n',
+        'version: "1"\nunderlyings:\n  X: {profiles: ["MCX:WIDGETOIL"], synthetic: {seed: 1, from: "2026-09-01", to: "2026-09-02", start: 5000}}\n',
+    ],
+)
 def test_a_mapping_that_breaks_its_rules_is_refused_at_load(tmp_path, bad):
     path = tmp_path / "m.yaml"
     path.write_text(bad)
@@ -149,8 +212,15 @@ def test_a_mapping_that_breaks_its_rules_is_refused_at_load(tmp_path, bad):
 def test_the_mirror_fixture_is_counted_against_bars_with_no_network():
     trips = json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text())
     p = L.Prices(data_dir=Path("does-not-exist"))
-    entries = [PM.Entry(t["trip_id"], p.underlying_of(t["exchange"], t["symbol"]),
-                        datetime.fromisoformat(t["entry_ts"]), 1) for t in trips]
+    entries = [
+        PM.Entry(
+            t["trip_id"],
+            p.underlying_of(t["exchange"], t["symbol"]),
+            datetime.fromisoformat(t["entry_ts"]),
+            1,
+        )
+        for t in trips
+    ]
     got = PM.count(entries, p.for_count(["WIDGETOIL"]), draws=200)
     assert got.total == len(trips)
     assert got.before.measured == len(trips), got.unmeasured

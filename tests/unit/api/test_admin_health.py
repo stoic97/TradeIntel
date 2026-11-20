@@ -95,8 +95,9 @@ def test_with_a_healthy_disk_an_upload_would_work(app):
 
 
 @pytest.mark.parametrize("percent", [LINE - 1, LINE, LINE + 1])
-def test_the_answer_is_what_the_upload_path_itself_does_at_that_reading(app, engine, client,
-                                                                       monkeypatch, percent):
+def test_the_answer_is_what_the_upload_path_itself_does_at_that_reading(
+    app, engine, client, monkeypatch, percent
+):
     set_disk(monkeypatch, percent)
     response = upload(client, CLEAN)
     took_it = response.status_code != 503
@@ -153,7 +154,9 @@ def test_the_disk_is_read_against_the_refusal_line(app, monkeypatch):
     assert panel(app)["disk"] == f"61.0% used; uploads are refused at {LINE}%"
 
 
-def test_reading_the_disk_for_the_page_refuses_nothing_and_logs_no_refusal(app, monkeypatch, caplog):
+def test_reading_the_disk_for_the_page_refuses_nothing_and_logs_no_refusal(
+    app, monkeypatch, caplog
+):
     set_disk(monkeypatch, LINE + 5)
     with caplog.at_level(logging.WARNING):
         panel(app)
@@ -161,10 +164,16 @@ def test_reading_the_disk_for_the_page_refuses_nothing_and_logs_no_refusal(app, 
     assert not any(refused(app).values())
 
 
-@pytest.mark.parametrize(("size", "words"), [
-    (0, "0 B"), (900, "900 B"), (2_560, "2.5 KB"), (5 * 1024 * 1024, "5.0 MB"),
-    (3 * 1024 ** 3, "3.0 GB"),
-])
+@pytest.mark.parametrize(
+    ("size", "words"),
+    [
+        (0, "0 B"),
+        (900, "900 B"),
+        (2_560, "2.5 KB"),
+        (5 * 1024 * 1024, "5.0 MB"),
+        (3 * 1024**3, "3.0 GB"),
+    ],
+)
 def test_a_size_reads_in_the_unit_it_needs(size, words):
     assert admin_health.size_words(size) == words
 
@@ -217,8 +226,12 @@ def test_the_page_shows_the_deploy_with_its_start(app):
 
 def test_every_count_starts_at_nothing_and_each_is_named(app):
     assert refused(app) == {
-        "Same file again": 0, "Daily file cap": 0, "Sign-up cap": 0, "File too large": 0,
-        "Disk nearly full": 0, "Unverified broker map": 0,
+        "Same file again": 0,
+        "Daily file cap": 0,
+        "Sign-up cap": 0,
+        "File too large": 0,
+        "Disk nearly full": 0,
+        "Unverified broker map": 0,
     }
 
 
@@ -307,7 +320,7 @@ def test_the_counts_say_who_they_leave_out(app, client):
     upload(client, CLEAN)
     upload(client, CLEAN)
     section = admin_text(app)
-    section = section[section.index("System health"):section.index("Traders</h2>")]
+    section = section[section.index("System health") : section.index("Traders</h2>")]
     assert "visitor" not in section
 
 
@@ -318,8 +331,12 @@ def charges_client(app, engine, content: bytes) -> TestClient:
     with make_session(engine) as sess:
         url = f"/imports/{sess.scalars(select(m.Import.id)).one()}/charges"
     csrf = CSRF.search(client.get("/upload").text).group(1)
-    client.post(url, files={"file": ("charges.csv", content, "text/csv")},
-                data={"csrf_token": csrf}, follow_redirects=False)
+    client.post(
+        url,
+        files={"file": ("charges.csv", content, "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
     return client
 
 
@@ -329,8 +346,12 @@ def test_the_same_charges_file_again_is_counted(app, engine):
     with make_session(engine) as sess:
         url = f"/imports/{sess.scalars(select(m.Import.id)).one()}/charges"
     csrf = CSRF.search(client.get("/upload").text).group(1)
-    client.post(url, files={"file": ("charges.csv", CHARGES, "text/csv")},
-                data={"csrf_token": csrf}, follow_redirects=False)
+    client.post(
+        url,
+        files={"file": ("charges.csv", CHARGES, "text/csv")},
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
     only(app, "Same file again")
 
 
@@ -346,8 +367,15 @@ def test_the_charges_step_closed_in_production_is_counted(app, engine):
     app.state.settings = dataclasses.replace(app.state.settings, production=True)
     with make_session(engine) as sess:
         url = f"/imports/{sess.scalars(select(m.Import.id)).one()}/charges"
-    assert client.post(url, files={"file": ("c.csv", CHARGES, "text/csv")},
-                       data={"csrf_token": csrf}, follow_redirects=False).status_code == 503
+    assert (
+        client.post(
+            url,
+            files={"file": ("c.csv", CHARGES, "text/csv")},
+            data={"csrf_token": csrf},
+            follow_redirects=False,
+        ).status_code
+        == 503
+    )
     only(app, "Unverified broker map")
 
 

@@ -32,8 +32,10 @@ def latest_page(client, engine) -> str:
 
 def later(**changes) -> str:
     context = {**CONTEXT["import_review.html#later"], **changes}
-    return template_env().get_template("import_review.html").render(
-        title="T", csrf_token="x", **context
+    return (
+        template_env()
+        .get_template("import_review.html")
+        .render(title="T", csrf_token="x", **context)
     )
 
 
@@ -80,21 +82,22 @@ def test_nothing_changed_says_so():
 
 
 def test_many_changes_are_counted_not_all_listed():
-    page = later(
-        changed_days=[f"2026-09-0{i}" for i in range(1, 6)], shrunk_days=[]
-    )
+    page = later(changed_days=[f"2026-09-0{i}" for i in range(1, 6)], shrunk_days=[])
     assert "5 days changed: 01 Sep 2026, 02 Sep 2026, 03 Sep 2026 and 2 more." in readable(page)
 
 
 def test_a_day_that_lost_rows_is_never_behind_the_toggle():
     page = later(
         days=[day("2026-09-08", 90, 80, shrank=True)],
-        changed_days=["2026-09-08"], shrunk_days=["2026-09-08"],
+        changed_days=["2026-09-08"],
+        shrunk_days=["2026-09-08"],
     )
     assert "08 Sep 2026 has fewer rows than before." in page
     assert page.index("fewer rows than before") < page.index("<details")
 
 
 def test_two_days_that_lost_rows_read_in_the_plural():
-    page = later(changed_days=["2026-09-07", "2026-09-08"], shrunk_days=["2026-09-07", "2026-09-08"])
+    page = later(
+        changed_days=["2026-09-07", "2026-09-08"], shrunk_days=["2026-09-07", "2026-09-08"]
+    )
     assert "07 Sep 2026, 08 Sep 2026 have fewer rows than before." in page

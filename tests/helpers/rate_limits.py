@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/api/test_rate_limits.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_rate_limits.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
@@ -21,8 +20,12 @@ def sign_up(client, login_id, password=PASSWORD):
     csrf = CSRF.search(client.get("/signup").text).group(1)
     return client.post(
         "/signup",
-        data={"login_id": login_id, "display_name": login_id, "password": password,
-              "csrf_token": csrf},
+        data={
+            "login_id": login_id,
+            "display_name": login_id,
+            "password": password,
+            "csrf_token": csrf,
+        },
         follow_redirects=False,
     )
 
@@ -37,6 +40,14 @@ def stored_files(engine, login_id, count, at) -> None:
     owner = trader_id(engine, login_id)
     with make_session(engine) as sess:
         for n in range(count):
-            sess.add(m.RawFile(trader_id=owner, sha256=f"{login_id}{at.isoformat()}{n}", original_name="old.csv",
-                               size=1, stored_path="old", uploaded_at=at))
+            sess.add(
+                m.RawFile(
+                    trader_id=owner,
+                    sha256=f"{login_id}{at.isoformat()}{n}",
+                    original_name="old.csv",
+                    size=1,
+                    stored_path="old",
+                    uploaded_at=at,
+                )
+            )
         sess.commit()

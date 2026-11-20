@@ -18,19 +18,25 @@ CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 
 def rows(engine) -> list[m.DwellEvent]:
     with make_session(engine) as sess:
-        return list(sess.scalars(select(m.DwellEvent).where(m.DwellEvent.surface == "scope_chapter")))
+        return list(
+            sess.scalars(select(m.DwellEvent).where(m.DwellEvent.surface == "scope_chapter"))
+        )
 
 
 def test_a_first_visit_starts_at_chapter_1(client):
     body = client.get("/mirror").text
-    assert ">Continue: What your tradebook has been hiding<" in body  # TICKET-903/910: the first page
+    assert (
+        ">Continue: What your tradebook has been hiding<" in body
+    )  # TICKET-903/910: the first page
     assert "home__chapter--read" not in body
 
 
 def test_opening_a_chapter_marks_it_read(client):
     client.get("/mirror/chapter/1")
     body = client.get("/mirror").text
-    assert ">Continue: What your tradebook has been hiding<" in body  # TICKET-903: opening a chapter reads no page
+    assert (
+        ">Continue: What your tradebook has been hiding<" in body
+    )  # TICKET-903: opening a chapter reads no page
     assert body.count("home__chapter--read") == 1
     assert 'class="scope__opened"' in body
 
@@ -55,12 +61,21 @@ def test_the_key_carries_no_figures(client, engine):
 def test_one_traders_reading_does_not_mark_anothers(client, engine):
     client.get("/mirror/chapter/1")
     with make_session(engine) as sess:
-        sess.add(m.Trader(display_name="Other", login_id="other",
-                          password_hash=auth.hash_password("a-long-enough-password"),
-                          created_at=datetime.now(UTC), development_data=True))
+        sess.add(
+            m.Trader(
+                display_name="Other",
+                login_id="other",
+                password_hash=auth.hash_password("a-long-enough-password"),
+                created_at=datetime.now(UTC),
+                development_data=True,
+            )
+        )
         sess.commit()
     other = TestClient(create_app())
     csrf = CSRF.search(other.get("/login").text).group(1)
-    other.post("/login", data={"login_id": "other", "password": "a-long-enough-password", "csrf_token": csrf},
-               follow_redirects=False)
+    other.post(
+        "/login",
+        data={"login_id": "other", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert "home__chapter--read" not in other.get("/mirror").text

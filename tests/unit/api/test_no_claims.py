@@ -112,9 +112,27 @@ def test_the_disclaimer_is_exempt_by_name_not_by_luck():
 # The never-say list in the Scope engineering handoff, section 6 (27 Oct). Every new
 # Scope template is audited against it, so the list above must hold all of it.
 HANDOFF_NEVER_SAY = {
-    "guaranteed", "profitable", "winning", "signal", "tip", "guru", "mentor", "fund",
-    "platform", "tilt", "emotional", "psychology", "disease", "cure", "dna", "revenge",
-    "ai-powered", "no issues detected", "your plan", "your system", "your rule",
+    "guaranteed",
+    "profitable",
+    "winning",
+    "signal",
+    "tip",
+    "guru",
+    "mentor",
+    "fund",
+    "platform",
+    "tilt",
+    "emotional",
+    "psychology",
+    "disease",
+    "cure",
+    "dna",
+    "revenge",
+    "ai-powered",
+    "no issues detected",
+    "your plan",
+    "your system",
+    "your rule",
 }
 
 
@@ -132,23 +150,31 @@ def test_templates_in_subfolders_are_audited_too(tmp_path):
     assert found == ["facts/money.html", "top.html"]
 
 
-@pytest.mark.parametrize("sentence", [
-    "We'll email you when it is ready.",
-    "We will email a copy of your deletion.",
-    "We will send you an email to confirm.",
-    "Check your inbox for the link.",
-    "A receipt was sent to your email.",
-    "You will hear from us by email.",
-])
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "We'll email you when it is ready.",
+        "We will email a copy of your deletion.",
+        "We will send you an email to confirm.",
+        "Check your inbox for the link.",
+        "A receipt was sent to your email.",
+        "You will hear from us by email.",
+    ],
+)
 def test_an_email_promise_is_caught(sentence):
     assert any(re.search(p, sentence.lower()) for p in EMAIL_PROMISES), sentence
 
 
-@pytest.mark.parametrize("sentence", [
-    ("This page is the confirmation — we have no way to email you, and we did not "
-     "keep an address to email."),
-    "At least 12 characters. There is no email on your account, so",
-])
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        (
+            "This page is the confirmation — we have no way to email you, and we did not "
+            "keep an address to email."
+        ),
+        "At least 12 characters. There is no email on your account, so",
+    ],
+)
 def test_saying_there_is_no_email_is_not_a_promise(sentence):
     """Both are on main today, and both are the honest sentence ADR-007 asks for."""
     assert not any(re.search(p, sentence.lower()) for p in EMAIL_PROMISES), sentence

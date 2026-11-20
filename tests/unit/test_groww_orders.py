@@ -37,15 +37,28 @@ def parsed():
 
 
 def plan(body: str | None = None, *, production: bool = True) -> pl.ImportPlan:
-    return pl.plan_import(body if body is not None else text(), production=production,
-                          context=pl.ImportContext(trader_id="t", source_account="A",
-                                                   code_version="test"))
+    return pl.plan_import(
+        body if body is not None else text(),
+        production=production,
+        context=pl.ImportContext(trader_id="t", source_account="A", code_version="test"),
+    )
 
 
-def row(symbol: str, *, name: str = "X", isin: str = "", side: str = "BUY", qty: str = "65",
-        value: str = "6500", exchange: str = "NSE", when: str = "12-11-2026 10:00 AM",
-        status: str = "Executed") -> list[str]:
-    line = f"{name},{symbol},{isin},{side},{qty},{value},{exchange},1000000000000001,{when},{status}"
+def row(
+    symbol: str,
+    *,
+    name: str = "X",
+    isin: str = "",
+    side: str = "BUY",
+    qty: str = "65",
+    value: str = "6500",
+    exchange: str = "NSE",
+    when: str = "12-11-2026 10:00 AM",
+    status: str = "Executed",
+) -> list[str]:
+    line = (
+        f"{name},{symbol},{isin},{side},{qty},{value},{exchange},1000000000000001,{when},{status}"
+    )
     return [HEADER, line]
 
 
@@ -193,27 +206,75 @@ def test_the_import_records_the_adapter_and_the_profile_versions():
 # ---------- 7. Profiles reused: contracts named the exchanges' way ----------
 
 
-@pytest.mark.parametrize(("symbol", "name", "exchange", "when", "want"), [
-    ("NIFTY26N1724000CE", "", "NSE", "12-11-2026 10:00 AM",
-     (Segment.OPT, "NIFTY", date(2026, 11, 17), Decimal(24000), OptionType.CE)),
-    ("NIFTY26D0124000PE", "", "NSE", "12-11-2026 10:00 AM",
-     (Segment.OPT, "NIFTY", date(2026, 12, 1), Decimal(24000), OptionType.PE)),
-    ("BANKNIFTY26NOV52000PE", "", "NSE", "10-11-2026 11:00 AM",
-     (Segment.OPT, "BANKNIFTY", date(2026, 11, 24), Decimal(52000), OptionType.PE)),
-    ("NIFTY26NOVFUT", "", "NSE", "10-11-2026 11:00 AM",
-     (Segment.FUT, "NIFTY", date(2026, 11, 24), None, None)),
-    ("NIFTY24DEC24000CE", "", "NSE", "02-12-2024 10:00 AM",
-     (Segment.OPT, "NIFTY", date(2024, 12, 26), Decimal(24000), OptionType.CE)),
-    ("SENSEX25JAN80000CE", "", "BSE", "02-01-2025 10:00 AM",
-     (Segment.OPT, "SENSEX", date(2025, 1, 28), Decimal(80000), OptionType.CE)),
-    # Thursday 30 Mar 2023 was a holiday (Ram Navami): the monthly expired on the Wednesday
-    ("NIFTY23MAR17000CE", "", "NSE", "01-03-2023 10:00 AM",
-     (Segment.OPT, "NIFTY", date(2023, 3, 29), Decimal(17000), OptionType.CE)),
-    ("NIFTY26NOV24000CE", "NIFTY 23 Nov 24000 Call", "NSE", "10-11-2026 11:00 AM",
-     (Segment.OPT, "NIFTY", date(2026, 11, 23), Decimal(24000), OptionType.CE)),
-    ("NSE-NIFTY-17Nov26-24000-CE", "", "NSE", "12-11-2026 10:00 AM",
-     (Segment.OPT, "NIFTY", date(2026, 11, 17), Decimal(24000), OptionType.CE)),
-])
+@pytest.mark.parametrize(
+    ("symbol", "name", "exchange", "when", "want"),
+    [
+        (
+            "NIFTY26N1724000CE",
+            "",
+            "NSE",
+            "12-11-2026 10:00 AM",
+            (Segment.OPT, "NIFTY", date(2026, 11, 17), Decimal(24000), OptionType.CE),
+        ),
+        (
+            "NIFTY26D0124000PE",
+            "",
+            "NSE",
+            "12-11-2026 10:00 AM",
+            (Segment.OPT, "NIFTY", date(2026, 12, 1), Decimal(24000), OptionType.PE),
+        ),
+        (
+            "BANKNIFTY26NOV52000PE",
+            "",
+            "NSE",
+            "10-11-2026 11:00 AM",
+            (Segment.OPT, "BANKNIFTY", date(2026, 11, 24), Decimal(52000), OptionType.PE),
+        ),
+        (
+            "NIFTY26NOVFUT",
+            "",
+            "NSE",
+            "10-11-2026 11:00 AM",
+            (Segment.FUT, "NIFTY", date(2026, 11, 24), None, None),
+        ),
+        (
+            "NIFTY24DEC24000CE",
+            "",
+            "NSE",
+            "02-12-2024 10:00 AM",
+            (Segment.OPT, "NIFTY", date(2024, 12, 26), Decimal(24000), OptionType.CE),
+        ),
+        (
+            "SENSEX25JAN80000CE",
+            "",
+            "BSE",
+            "02-01-2025 10:00 AM",
+            (Segment.OPT, "SENSEX", date(2025, 1, 28), Decimal(80000), OptionType.CE),
+        ),
+        # Thursday 30 Mar 2023 was a holiday (Ram Navami): the monthly expired on the Wednesday
+        (
+            "NIFTY23MAR17000CE",
+            "",
+            "NSE",
+            "01-03-2023 10:00 AM",
+            (Segment.OPT, "NIFTY", date(2023, 3, 29), Decimal(17000), OptionType.CE),
+        ),
+        (
+            "NIFTY26NOV24000CE",
+            "NIFTY 23 Nov 24000 Call",
+            "NSE",
+            "10-11-2026 11:00 AM",
+            (Segment.OPT, "NIFTY", date(2026, 11, 23), Decimal(24000), OptionType.CE),
+        ),
+        (
+            "NSE-NIFTY-17Nov26-24000-CE",
+            "",
+            "NSE",
+            "12-11-2026 10:00 AM",
+            (Segment.OPT, "NIFTY", date(2026, 11, 17), Decimal(24000), OptionType.CE),
+        ),
+    ],
+)
 def test_a_contract_is_read_from_its_symbol(symbol, name, exchange, when, want):
     (fill,) = one(symbol, name=name or "X", exchange=exchange, when=when).fills
     assert (fill.segment, fill.symbol, fill.expiry, fill.strike, fill.option_type) == want
@@ -226,16 +287,19 @@ def test_a_share_is_its_symbol_with_its_isin_and_a_bse_share_finds_the_bse_profi
     assert found is not None and found.key == ("BSE", "*")
 
 
-@pytest.mark.parametrize(("symbol", "kw", "why"), [
-    ("NOT A CONTRACT", {}, "cannot be identified"),
-    ("CRUDEOIL26NOV5000CE", {"exchange": "MCX"}, "no rule for that exchange"),
-    ("NIFTY26N3124000CE", {}, "no real expiry"),
-    ("NIFTY26N1024000CE", {}, "before the trade"),
-    ("INFY", {"isin": "INE009A01021", "status": "Cancelled"}, "Cancelled"),
-    ("INFY", {"isin": "INE009A01021", "side": "HOLD"}, "unknown side"),
-    ("INFY", {"isin": "INE009A01021", "when": "2026-11-12 10:00"}, "unparseable"),
-    ("INFY", {"isin": "INE009A01021", "value": "0"}, "must be positive"),
-])
+@pytest.mark.parametrize(
+    ("symbol", "kw", "why"),
+    [
+        ("NOT A CONTRACT", {}, "cannot be identified"),
+        ("CRUDEOIL26NOV5000CE", {"exchange": "MCX"}, "no rule for that exchange"),
+        ("NIFTY26N3124000CE", {}, "no real expiry"),
+        ("NIFTY26N1024000CE", {}, "before the trade"),
+        ("INFY", {"isin": "INE009A01021", "status": "Cancelled"}, "Cancelled"),
+        ("INFY", {"isin": "INE009A01021", "side": "HOLD"}, "unknown side"),
+        ("INFY", {"isin": "INE009A01021", "when": "2026-11-12 10:00"}, "unparseable"),
+        ("INFY", {"isin": "INE009A01021", "value": "0"}, "must be positive"),
+    ],
+)
 def test_a_row_that_cannot_be_read_is_rejected_with_its_reason(symbol, kw, why):
     got = one(symbol, **kw)
     assert not got.fills and why in got.rejected[0].reason

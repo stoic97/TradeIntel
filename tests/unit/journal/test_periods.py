@@ -27,13 +27,17 @@ FIXTURE = Path("tests/fixtures/mirror_contract/main.json")
 
 def load() -> list[Trip]:
     return [
-        Trip(trip_id=r["trip_id"], trading_day=r["trading_day"],
-             entry_ts=datetime.fromisoformat(r["entry_ts"]),
-             exit_ts=datetime.fromisoformat(r["exit_ts"]),
-             holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
-             lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
-             symbol=r["symbol"])
+        Trip(
+            trip_id=r["trip_id"],
+            trading_day=r["trading_day"],
+            entry_ts=datetime.fromisoformat(r["entry_ts"]),
+            exit_ts=datetime.fromisoformat(r["exit_ts"]),
+            holding_seconds=r["holding_seconds"],
+            net=Decimal(r["net"]),
+            lots=r["lots"],
+            risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+            symbol=r["symbol"],
+        )
         for r in json.loads(FIXTURE.read_text())
     ]
 
@@ -45,11 +49,19 @@ def thin(days: int, trips_per_day: int) -> list[Trip]:
         for i in range(trips_per_day):
             day = f"2026-09-{d + 1:02d}"
             entry = datetime.fromisoformat(f"{day}T09:{i * 5:02d}:00+05:30")
-            out.append(Trip(trip_id=f"d{d}t{i}", trading_day=day, entry_ts=entry,
-                            exit_ts=entry, holding_seconds=60, net=Decimal(-100),
-                            lots=1,
-                            risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE,
-                            symbol="WIDGETOIL"))
+            out.append(
+                Trip(
+                    trip_id=f"d{d}t{i}",
+                    trading_day=day,
+                    entry_ts=entry,
+                    exit_ts=entry,
+                    holding_seconds=60,
+                    net=Decimal(-100),
+                    lots=1,
+                    risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE,
+                    symbol="WIDGETOIL",
+                )
+            )
     return out
 
 
@@ -87,16 +99,14 @@ def test_days_are_complete_when_a_later_day_exists():
 
 
 def test_an_export_date_completes_the_last_day():
-    periods = pd.periods_for(load(), unit=s.JournalUnit.DAY,
-                             export_date="2026-09-11")
+    periods = pd.periods_for(load(), unit=s.JournalUnit.DAY, export_date="2026-09-11")
     assert all(p.complete for p in periods)
     assert len(periods) == 8
 
 
 def test_an_export_date_on_the_last_day_does_not_complete_it():
     """The export ran during that day; more of it may exist."""
-    periods = pd.periods_for(load(), unit=s.JournalUnit.DAY,
-                             export_date="2026-09-10")
+    periods = pd.periods_for(load(), unit=s.JournalUnit.DAY, export_date="2026-09-10")
     assert periods[-1].complete is False
 
 
@@ -109,24 +119,21 @@ def test_a_period_carries_the_trips_it_covers():
 
 
 def test_weeks_run_monday_to_sunday():
-    periods = pd.periods_for(load(), unit=s.JournalUnit.WEEK,
-                             export_date="2026-09-20")
+    periods = pd.periods_for(load(), unit=s.JournalUnit.WEEK, export_date="2026-09-20")
     assert periods[0].period_start == "2026-08-31", "the Monday of that ISO week"
     assert periods[0].period_end == "2026-09-06"
     assert len(periods) == 2, "01-04 Sep in one week, 07-10 Sep in the next"
 
 
 def test_trip_groups_are_runs_of_n_in_entry_order():
-    periods = pd.periods_for(load(), unit=s.JournalUnit.PER_N_TRIPS,
-                             export_date=None, n=10)
+    periods = pd.periods_for(load(), unit=s.JournalUnit.PER_N_TRIPS, export_date=None, n=10)
     assert len(periods) == 4
     assert all(len(p.trips) == 10 for p in periods)
     assert periods[0].trips[0].trip_id == "t01"
 
 
 def test_a_trailing_group_of_fewer_than_n_is_incomplete():
-    periods = pd.periods_for(load()[:25], unit=s.JournalUnit.PER_N_TRIPS,
-                             export_date=None, n=10)
+    periods = pd.periods_for(load()[:25], unit=s.JournalUnit.PER_N_TRIPS, export_date=None, n=10)
     assert len(periods) == 3
     assert periods[-1].complete is False
     assert len(periods[-1].trips) == 5

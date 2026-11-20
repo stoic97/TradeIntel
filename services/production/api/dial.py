@@ -47,12 +47,19 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
     items, minis = [], {}
-    if view["kind"] == "home" and size == "phone" and any("phone_label" in i for i in view["items"]):
+    if (
+        view["kind"] == "home"
+        and size == "phone"
+        and any("phone_label" in i for i in view["items"])
+    ):
         view = {**view, "figSizes": HUB_FIG_SIZES_PHONE}  # all of them the kit's own classes
     for item in view["items"]:
         if size == "phone":  # a phone's wedge can say the same fact in fewer words
-            item = {**item, "figure": item.get("phone_figure", item["figure"]),
-                    "label": item.get("phone_label", item.get("label", ""))}
+            item = {
+                **item,
+                "figure": item.get("phone_figure", item["figure"]),
+                "label": item.get("phone_label", item.get("label", "")),
+            }
         _text(item["name"], "name")
         _text(item["figure"], "figure")
         _text(item.get("label") or "", "label")

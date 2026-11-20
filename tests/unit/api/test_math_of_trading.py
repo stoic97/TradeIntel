@@ -155,9 +155,19 @@ def test_a_book_below_the_minimum_has_no_figure_to_show():
     """Never a percentage: there is nothing on the row for a page to print by mistake."""
     book = only_book(make([100] * 12 + [-50] * 17))
     row = book.whole
-    for value in (row.win_percent, row.break_even_percent, row.average_winner, row.average_loser,
-                  row.median_winner, row.median_loser, row.winner_needed, row.winner_gap,
-                  row.more_winners, row.winners_median_seconds, row.losers_median_seconds):
+    for value in (
+        row.win_percent,
+        row.break_even_percent,
+        row.average_winner,
+        row.average_loser,
+        row.median_winner,
+        row.median_loser,
+        row.winner_needed,
+        row.winner_gap,
+        row.more_winners,
+        row.winners_median_seconds,
+        row.losers_median_seconds,
+    ):
         assert value is None
     assert book.years == ()
     assert book.quick_closes is None and book.biggest_losers is None and book.top_winners is None
@@ -195,8 +205,11 @@ def test_the_minimum_is_the_frameworks_n_min():
 
 def test_books_use_the_one_definition_of_a_book():
     """Crude's two contracts are one book, and a share is in with the shares."""
-    trips = (make([100] * 30, symbol="CRUDEOIL") + make([100] * 2, symbol="CRUDEOILM", start_id=30)
-             + make([100], symbol="WIDGETCO", is_option=False, segment="EQ"))
+    trips = (
+        make([100] * 30, symbol="CRUDEOIL")
+        + make([100] * 2, symbol="CRUDEOILM", start_id=30)
+        + make([100], symbol="WIDGETCO", is_option=False, segment="EQ")
+    )
     assert [b.whole.label for b in mx.math_by_book(trips)] == ["Crude options", "Stocks and ETFs"]
     assert {b.whole.label for b in mx.math_by_book(trips)} == {mx.trade_book(t) for t in trips}
 
@@ -285,7 +298,7 @@ def text(page):
 
 def row_of(page: str, label: str) -> str:
     """The summary table's row for a book, as HTML."""
-    found = re.search(rf'<tr[^>]*>\s*<td[^>]*>{re.escape(label)}</td>.*?</tr>', page, re.DOTALL)
+    found = re.search(rf"<tr[^>]*>\s*<td[^>]*>{re.escape(label)}</td>.*?</tr>", page, re.DOTALL)
     assert found, label
     return found[0]
 
@@ -362,18 +375,36 @@ def test_more_than_one_big_loser_reads_in_the_plural_and_one_lot_in_the_singular
 
 def test_the_top_winners_line_gives_the_number_and_no_verdict():
     text = readable(fact_page("math", YEAR_ONE))
-    assert "The 2 biggest of your 12 winners made 59% of what your winners made in this book." in text
+    assert (
+        "The 2 biggest of your 12 winners made 59% of what your winners made in this book." in text
+    )
 
 
 def test_both_ways_are_shown_and_neither_is_picked(text):
     assert "shows both and does not pick one" in text
 
 
-@pytest.mark.parametrize("words", [
-    "hold longer", "holding longer", "let winners run", "letting winners run", "a typical trade",
-    "your entries", "entries got worse", "is the problem", "aren't the problem", "cut fast",
-    "you'd have", "you would have", "broken even", "you should", "a ratio of", "winning",
-])
+@pytest.mark.parametrize(
+    "words",
+    [
+        "hold longer",
+        "holding longer",
+        "let winners run",
+        "letting winners run",
+        "a typical trade",
+        "your entries",
+        "entries got worse",
+        "is the problem",
+        "aren't the problem",
+        "cut fast",
+        "you'd have",
+        "you would have",
+        "broken even",
+        "you should",
+        "a ratio of",
+        "winning",
+    ],
+)
 def test_the_page_keeps_the_dont_list(words):
     for page in (fact_page("math", BOTH), chapter_page(2, BOTH)):
         assert words not in readable(page).lower(), words
@@ -434,4 +465,7 @@ def test_the_chapter_reads_same_day_only():
 def test_the_facts_figure_is_the_strike_rate():
     context = SF.record_context(BOTH)
     figs = SF.facts(context, IMP)
-    assert figs["math"]["figure"] == f'{formatting.out_of_a_hundred(context["strike"].rate_percent)} trades'
+    assert (
+        figs["math"]["figure"]
+        == f"{formatting.out_of_a_hundred(context['strike'].rate_percent)} trades"
+    )

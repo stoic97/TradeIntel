@@ -34,8 +34,12 @@ def _readable(html: str) -> str:
 
 def _upload(client, body: str) -> None:
     token = CSRF.search(client.get("/upload").text).group(1)
-    sent = client.post("/upload", files={"file": ("t.csv", body.encode(), "text/csv")},
-                       data={"csrf_token": token}, follow_redirects=False)
+    sent = client.post(
+        "/upload",
+        files={"file": ("t.csv", body.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
 
 
@@ -54,8 +58,9 @@ def client(engine):
 
 
 def _card(client) -> str:
-    return re.search(r'<a class="scope-card on-navy".*?</a>', client.get("/").text,
-                     flags=re.DOTALL).group(0)
+    return re.search(
+        r'<a class="scope-card on-navy".*?</a>', client.get("/").text, flags=re.DOTALL
+    ).group(0)
 
 
 def _rows(client) -> list[str]:
@@ -112,11 +117,14 @@ def test_the_three_days_are_the_ones_the_report_named_in_its_order(client):
     assert days == ["11 Feb 2025", "12 Feb 2025", "10 Feb 2025"]
 
 
-@pytest.mark.parametrize(("index", "words"), [
-    (0, ("Your longest losing run: 4 losses in a row", "5 trades", "+₹10")),
-    (1, ("Your busiest day: 6 trades", "6 trades", "+₹5")),
-    (2, ("This was one of your five worst days", "2 trades", "−₹490")),
-])
+@pytest.mark.parametrize(
+    ("index", "words"),
+    [
+        (0, ("Your longest losing run: 4 losses in a row", "5 trades", "+₹10")),
+        (1, ("Your busiest day: 6 trades", "6 trades", "+₹5")),
+        (2, ("This was one of your five worst days", "2 trades", "−₹490")),
+    ],
+)
 def test_each_day_says_why_and_its_trades_and_rupees(client, index, words):
     row = _readable(_rows(client)[index])
     for word in words:
@@ -125,7 +133,9 @@ def test_each_day_says_why_and_its_trades_and_rupees(client, index, words):
 
 def test_a_day_links_its_journal(client, engine):
     with make_session(engine) as sess:
-        journal = sess.scalars(select(m.Journal).where(m.Journal.period_start == "2025-02-11")).one()
+        journal = sess.scalars(
+            select(m.Journal).where(m.Journal.period_start == "2025-02-11")
+        ).one()
         wanted = journal.id
     assert f'href="/journals/{wanted}"' in _rows(client)[0]
 
@@ -157,9 +167,13 @@ def test_no_upload_yet_still_goes_where_the_trader_belongs(engine):
 
 def test_a_record_with_no_journal_yet_has_the_verdict_and_no_empty_list(engine):
     """One day, the file's last: it has a result but no Journal, so no list and no heading."""
-    one_day = "\n".join(FILE.split("\n")[:1] + [
-        row for row in FILE.split("\n")[1:] if row.startswith("2025-02-14")
-    ]) + "\n"
+    one_day = (
+        "\n".join(
+            FILE.split("\n")[:1]
+            + [row for row in FILE.split("\n")[1:] if row.startswith("2025-02-14")]
+        )
+        + "\n"
+    )
     signed_in = sign_up(TestClient(create_app()), engine, "HOME-3", "home-3")
     _upload(signed_in, one_day)
     body = signed_in.get("/").text
@@ -175,11 +189,20 @@ def test_journals_that_cover_more_than_a_day_keep_the_latest_under_their_own_nam
         imp = sess.scalars(select(m.Import)).one()
         for journal in sess.scalars(select(m.Journal)).all():
             sess.delete(journal)
-        sess.add(m.Journal(
-            trader_id=trader.id, import_id=imp.id, unit=s.JournalUnit.WEEK,
-            period_start="2025-02-10", period_end="2025-02-14", version_no=1,
-            generated_at=datetime.now(UTC), opened_at=None, trip_ids=json.dumps([]), sections="{}",
-        ))
+        sess.add(
+            m.Journal(
+                trader_id=trader.id,
+                import_id=imp.id,
+                unit=s.JournalUnit.WEEK,
+                period_start="2025-02-10",
+                period_end="2025-02-14",
+                version_no=1,
+                generated_at=datetime.now(UTC),
+                opened_at=None,
+                trip_ids=json.dumps([]),
+                sections="{}",
+            )
+        )
         sess.commit()
     body = client.get("/").text
     assert '<h2 class="card-title">Latest Journals</h2>' in body

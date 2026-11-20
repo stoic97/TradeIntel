@@ -41,7 +41,9 @@ def test_the_served_pages_open_with_the_title_and_the_sentence(client, monkeypat
 def test_the_served_chapter_goes_on_to_its_first_page(client):
     """TICKET-903: a chapter goes on to its own first page, from scope_map."""
     page = client.get("/mirror/chapter/3").text
-    assert page.rindex("Next: After two straight losses") > page.index("Does this match your trading?")
+    assert page.rindex("Next: After two straight losses") > page.index(
+        "Does this match your trading?"
+    )
 
 
 def test_the_served_busiest_page_tells_the_day_and_goes_on(client):

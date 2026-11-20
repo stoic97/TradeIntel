@@ -32,12 +32,13 @@ from services.production.db import models as m
 
 def for_trader(sess: Session, trader: m.Trader) -> list[m.RiskBudgetDeclaration]:
     """Every declaration this trader has made, oldest first."""
-    return list(sess.scalars(
-        select(m.RiskBudgetDeclaration)
-        .where(m.RiskBudgetDeclaration.trader_id == trader.id)
-        .order_by(m.RiskBudgetDeclaration.effective_from,
-                  m.RiskBudgetDeclaration.id)
-    ).all())
+    return list(
+        sess.scalars(
+            select(m.RiskBudgetDeclaration)
+            .where(m.RiskBudgetDeclaration.trader_id == trader.id)
+            .order_by(m.RiskBudgetDeclaration.effective_from, m.RiskBudgetDeclaration.id)
+        ).all()
+    )
 
 
 def in_force(

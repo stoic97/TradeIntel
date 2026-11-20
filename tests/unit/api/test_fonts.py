@@ -42,17 +42,21 @@ def font_faces(css: str) -> list[dict]:
     """Each @font-face as its family, weight, file and unicode ranges."""
     faces = []
     for body in FONT_FACE.findall(css):
+
         def prop(name, body=body):
             m = re.search(rf"{name}\s*:\s*([^;]+);", body)
             return m.group(1).strip() if m else None
+
         src = prop("src") or ""
         url = re.search(r"url\(\s*[\"']?([^\"')]+)", src)
-        faces.append({
-            "family": (prop("font-family") or "").strip("\"'"),
-            "weight": prop("font-weight"),
-            "url": url.group(1) if url else None,
-            "ranges": ranges(prop("unicode-range")),
-        })
+        faces.append(
+            {
+                "family": (prop("font-family") or "").strip("\"'"),
+                "weight": prop("font-weight"),
+                "url": url.group(1) if url else None,
+                "ranges": ranges(prop("unicode-range")),
+            }
+        )
     return faces
 
 
@@ -92,9 +96,11 @@ def test_a_face_without_a_unicode_range_names_no_character():
 
 @pytest.mark.parametrize("family,weight", FACES)
 def test_the_rupee_sign_has_a_face_of_its_own_in_every_font_the_app_uses(family, weight):
-    serving = [f for f in served_faces()
-               if f["family"] == family and f["weight"] == weight
-               and names(f["ranges"], RUPEE)]
+    serving = [
+        f
+        for f in served_faces()
+        if f["family"] == family and f["weight"] == weight and names(f["ranges"], RUPEE)
+    ]
     assert serving, f"no {family} {weight} face names U+20B9"
     for face in serving:
         assert face["url"].startswith("/static/fonts/"), face["url"]

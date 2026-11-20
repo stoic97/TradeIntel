@@ -58,7 +58,8 @@ def test_every_leg_keeps_its_strike_and_type(uploaded, engine):
     with make_session(engine) as sess:
         rows = sess.scalars(select(m.Trip)).all()
     assert {(r.option_type, int(r.strike)) for r in rows if r.position_id} == {
-        ("CE", 5000), ("CE", 5100),
+        ("CE", 5000),
+        ("CE", 5100),
     }
 
 
@@ -73,7 +74,8 @@ def test_the_spread_is_its_legs_added_up(uploaded, engine):
     assert p.net == Decimal(1300)
     assert p.trading_day == "2026-10-14"
     assert [(leg.label, leg.net) for leg in p.legs] == [
-        ("Bought 5100 CE", Decimal(-600)), ("Sold 5000 CE", Decimal(1900)),
+        ("Bought 5100 CE", Decimal(-600)),
+        ("Sold 5000 CE", Decimal(1900)),
     ]
 
 
@@ -130,15 +132,29 @@ def test_chapter_four_says_it_in_plain_words(uploaded, path):
 
 def test_a_declared_budget_still_outranks_a_structure(uploaded, engine):
     page = uploaded.get("/budget").text
-    uploaded.post("/budget", data={"value": "3000", "unit": "INR", "effective_from": "2026-10-01",
-                                   "csrf_token": CSRF.search(page).group(1)})
+    uploaded.post(
+        "/budget",
+        data={
+            "value": "3000",
+            "unit": "INR",
+            "effective_from": "2026-10-01",
+            "csrf_token": CSRF.search(page).group(1),
+        },
+    )
     assert spread(engine).risk_unit_source is s.RiskUnitSourceV1.DECLARED_BUDGET
 
 
 def declare_a_budget(client):
     page = client.get("/budget").text
-    client.post("/budget", data={"value": "3000", "unit": "INR", "effective_from": "2026-10-01",
-                                 "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        "/budget",
+        data={
+            "value": "3000",
+            "unit": "INR",
+            "effective_from": "2026-10-01",
+            "csrf_token": CSRF.search(page).group(1),
+        },
+    )
 
 
 def test_a_budget_measures_the_naked_sale_and_it_still_reads_uncapped(uploaded, engine):
@@ -177,7 +193,7 @@ def _say_yes(client, jid: int) -> None:
 
 
 def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):
-    jid = journal_for(engine, '2026-10-14')
+    jid = journal_for(engine, "2026-10-14")
     _say_yes(uploaded, jid)
     page = text(uploaded.get(f"/journals/{jid}").text)
     assert "Trade 1 — +₹1,300" in page

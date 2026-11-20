@@ -54,8 +54,12 @@ def redeem(client, engine, login_id="rikk", password="a-long-enough-password"):
     csrf = token(client, "/signup")
     response = client.post(
         "/signup",
-        data={"login_id": login_id, "display_name": "Rikk", "password": password,
-              "csrf_token": csrf},
+        data={
+            "login_id": login_id,
+            "display_name": "Rikk",
+            "password": password,
+            "csrf_token": csrf,
+        },
         follow_redirects=False,
     )
     client.cookies.clear()
@@ -75,9 +79,11 @@ def test_login_succeeds_and_the_session_persists(client, app_env):
     _, engine = app_env
     redeem(client, engine)
     csrf = token(client, "/login")
-    response = client.post("/login", data={
-        "login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
-        follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code in (302, 303)
     assert client.get("/account").status_code == 200
 
@@ -95,13 +101,19 @@ def test_a_wrong_password_does_not_say_which_half_was_wrong(client, app_env):
     redeem(client, engine)
 
     csrf = token(client, "/login")
-    wrong_password = client.post("/login", data={
-        "login_id": "rikk", "password": "wrong-but-long-enough", "csrf_token": csrf})
+    wrong_password = client.post(
+        "/login", data={"login_id": "rikk", "password": "wrong-but-long-enough", "csrf_token": csrf}
+    )
 
     csrf2 = token(client, "/login")
-    unknown_user = client.post("/login", data={
-        "login_id": "nobody-at-all", "password": "wrong-but-long-enough",
-        "csrf_token": csrf2})
+    unknown_user = client.post(
+        "/login",
+        data={
+            "login_id": "nobody-at-all",
+            "password": "wrong-but-long-enough",
+            "csrf_token": csrf2,
+        },
+    )
 
     assert wrong_password.status_code == unknown_user.status_code == 400
     assert CSRF.sub("", wrong_password.text) == CSRF.sub("", unknown_user.text)
@@ -112,11 +124,14 @@ def test_an_unknown_login_id_gives_the_same_answer(client, app_env):
     _, engine = app_env
     redeem(client, engine)
     csrf = token(client, "/login")
-    unknown = client.post("/login", data={
-        "login_id": "nobody", "password": "a-long-enough-password", "csrf_token": csrf})
+    unknown = client.post(
+        "/login",
+        data={"login_id": "nobody", "password": "a-long-enough-password", "csrf_token": csrf},
+    )
     csrf2 = token(client, "/login")
-    wrong = client.post("/login", data={
-        "login_id": "rikk", "password": "also-wrong-but-long", "csrf_token": csrf2})
+    wrong = client.post(
+        "/login", data={"login_id": "rikk", "password": "also-wrong-but-long", "csrf_token": csrf2}
+    )
     assert unknown.status_code == wrong.status_code == 400
 
 
@@ -134,9 +149,11 @@ def test_logout_ends_the_session(client, app_env):
     _, engine = app_env
     redeem(client, engine)
     csrf = token(client, "/login")
-    client.post("/login", data={"login_id": "rikk",
-                                "password": "a-long-enough-password",
-                                "csrf_token": csrf}, follow_redirects=False)
+    client.post(
+        "/login",
+        data={"login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert client.get("/account").status_code == 200
     csrf_out = token(client, "/account")
     client.post("/logout", data={"csrf_token": csrf_out})
@@ -146,17 +163,23 @@ def test_logout_ends_the_session(client, app_env):
 def test_a_post_without_a_csrf_token_is_rejected(client, app_env):
     _, engine = app_env
     redeem(client, engine)
-    response = client.post("/login", data={
-        "login_id": "rikk", "password": "a-long-enough-password"})
+    response = client.post(
+        "/login", data={"login_id": "rikk", "password": "a-long-enough-password"}
+    )
     assert response.status_code == 403
 
 
 def test_a_forged_csrf_token_is_rejected(client, app_env):
     _, engine = app_env
     redeem(client, engine)
-    response = client.post("/login", data={
-        "login_id": "rikk", "password": "a-long-enough-password",
-        "csrf_token": "not-a-real-token"})
+    response = client.post(
+        "/login",
+        data={
+            "login_id": "rikk",
+            "password": "a-long-enough-password",
+            "csrf_token": "not-a-real-token",
+        },
+    )
     assert response.status_code == 403
 
 
@@ -164,9 +187,11 @@ def test_the_session_cookie_is_httponly_and_samesite(client, app_env):
     _, engine = app_env
     redeem(client, engine)
     csrf = token(client, "/login")
-    response = client.post("/login", data={
-        "login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
-        follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "rikk", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     cookie = response.headers.get("set-cookie", "")
     assert "httponly" in cookie.lower()
     assert "samesite=lax" in cookie.lower()

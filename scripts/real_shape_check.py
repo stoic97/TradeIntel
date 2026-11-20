@@ -23,6 +23,7 @@ repo (SR-006).
 
 Usage:  uv run python scripts/real_shape_check.py <path-to-export.csv>
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -42,9 +43,11 @@ def moments(name: str, v: np.ndarray) -> None:
     if v.size < 3:
         print(f"  {name:12s} n={v.size:4d}  too few to describe")
         return
-    print(f"  {name:12s} n={v.size:4d}  mean {v.mean():+8.3f}  sd {v.std(ddof=1):7.3f}  "
-          f"exkurt {stats.kurtosis(v):+7.2f}  skew {stats.skew(v):+6.2f}  "
-          f"distinct {np.unique(np.round(v, 6)).size}")
+    print(
+        f"  {name:12s} n={v.size:4d}  mean {v.mean():+8.3f}  sd {v.std(ddof=1):7.3f}  "
+        f"exkurt {stats.kurtosis(v):+7.2f}  skew {stats.skew(v):+6.2f}  "
+        f"distinct {np.unique(np.round(v, 6)).size}"
+    )
 
 
 def split_report(label: str, values: np.ndarray, cond: np.ndarray) -> None:
@@ -57,8 +60,10 @@ def split_report(label: str, values: np.ndarray, cond: np.ndarray) -> None:
         print(f"  variance ratio comparison/condition = {ratio:.2f}")
         # Levene is robust to non-normality, which this data is not short of.
         stat, p = stats.levene(c, nc, center="median")
-        print(f"  Levene equal-variance test: W={stat:.2f}, p={p:.4f}"
-              f"   -> {'DIFFERENT spread' if p < 0.05 else 'no evidence of different spread'}")
+        print(
+            f"  Levene equal-variance test: W={stat:.2f}, p={p:.4f}"
+            f"   -> {'DIFFERENT spread' if p < 0.05 else 'no evidence of different spread'}"
+        )
         print(f"  mean difference (condition - comparison) = {c.mean() - nc.mean():+.3f}")
 
 
@@ -74,14 +79,20 @@ def main(path: Path) -> None:
     print(f"  segment  {dict(Counter(t.segment.value for t in trips))}")
     print(f"  exchange {dict(Counter(t.exchange for t in trips))}")
     opts = [t for t in trips if t.segment.value == "OPT"]
-    print(f"  option direction {dict(Counter(t.direction.value for t in opts))}"
-          "   <- SHORT means premium received, which is NOT the risk (TD-001)")
-    print(f"  risk source by direction: "
-          f"{dict(Counter((t.direction.value, t.risk_unit_source.value) for t in opts))}")
+    print(
+        f"  option direction {dict(Counter(t.direction.value for t in opts))}"
+        "   <- SHORT means premium received, which is NOT the risk (TD-001)"
+    )
+    print(
+        f"  risk source by direction: "
+        f"{dict(Counter((t.direction.value, t.risk_unit_source.value) for t in opts))}"
+    )
 
     fut = [t for t in trips if t.r_multiple is not None]
     print(f"\ntrips with an R      {len(fut)}")
-    print(f"by symbol            {dict(Counter(t.symbol.rstrip('0123456789') for t in fut).most_common(6))}")
+    print(
+        f"by symbol            {dict(Counter(t.symbol.rstrip('0123456789') for t in fut).most_common(6))}"
+    )
     print(f"risk unit source     {dict(Counter(t.risk_unit_source.value for t in fut))}")
     if not fut:
         return
@@ -102,10 +113,12 @@ def main(path: Path) -> None:
 
     # B2's population, computed on realised money so "loss" means what he felt.
     obs = [
-        b2.Obs(day=int(t.entry_ts.date().toordinal()),
-               entry_at=t.entry_ts.timestamp(),
-               exit_at=t.exit_ts.timestamp(),
-               r=float(t.gross_pnl - t.fees) / t.quantity)
+        b2.Obs(
+            day=int(t.entry_ts.date().toordinal()),
+            entry_at=t.entry_ts.timestamp(),
+            exit_at=t.exit_ts.timestamp(),
+            r=float(t.gross_pnl - t.fees) / t.quantity,
+        )
         for t in fut
     ]
     order = sorted(range(len(obs)), key=lambda i: (obs[i].day, obs[i].entry_at))
@@ -115,14 +128,20 @@ def main(path: Path) -> None:
     days = np.array([o.day for o in obs_s])
     per_day = np.bincount(np.unique(days, return_inverse=True)[1])
     print("\n=== DENSITY (does he clear the intake bar?) ===")
-    print(f"  trading days {per_day.size}, trips/day min {per_day.min()} "
-          f"median {int(np.median(per_day))} mean {per_day.mean():.2f} max {per_day.max()}")
-    print(f"  B2 population {int(in_pop.sum())} of {len(obs_s)}; "
-          f"condition {int(cond.sum())}, comparison {int(in_pop.sum() - cond.sum())}")
+    print(
+        f"  trading days {per_day.size}, trips/day min {per_day.min()} "
+        f"median {int(np.median(per_day))} mean {per_day.mean():.2f} max {per_day.max()}"
+    )
+    print(
+        f"  B2 population {int(in_pop.sum())} of {len(obs_s)}; "
+        f"condition {int(cond.sum())}, comparison {int(in_pop.sum() - cond.sum())}"
+    )
     n_min_c, n_min_comp = b2.N_MIN
     ok = cond.sum() >= n_min_c and (in_pop.sum() - cond.sum()) >= n_min_comp
-    print(f"  n_min {n_min_c}/{n_min_comp} on the WHOLE history: "
-          f"{'clears' if ok else 'STARVED'}  (training zone is ~70% of this)")
+    print(
+        f"  n_min {n_min_c}/{n_min_comp} on the WHOLE history: "
+        f"{'clears' if ok else 'STARVED'}  (training zone is ~70% of this)"
+    )
 
     # The question this script exists for.
     pts_s = np.array([points[i] for i in order])
@@ -131,8 +150,10 @@ def main(path: Path) -> None:
     print("\n=== THE QUESTION: same spread after two losses? ===")
     split_report("points per lot, population only", pts_s[pop], cond[pop].astype(bool))
     split_report("net P&L per unit, population only", net_s[pop], cond[pop].astype(bool))
-    print("\nFor reference, corpus A's planted k=4 cell: variance ratio 4.98, "
-          "condition exkurt +11.1 against comparison -1.3.")
+    print(
+        "\nFor reference, corpus A's planted k=4 cell: variance ratio 4.98, "
+        "condition exkurt +11.1 against comparison -1.3."
+    )
 
 
 if __name__ == "__main__":

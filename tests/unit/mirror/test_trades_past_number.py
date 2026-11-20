@@ -68,9 +68,17 @@ def trip(name, opened, closed, net, number) -> mx.Trip:
     exit_ = datetime.fromisoformat(f"2026-{closed}T10:10:00+05:30")
     source = s.RiskUnitSourceV1.UNCAPPED if name == UNCAPPED else s.RiskUnitSourceV1.PREMIUM_PAID
     return mx.Trip(
-        trip_id=name, symbol="WIDGETOIL", trading_day=entry.date().isoformat(), entry_ts=entry,
-        exit_ts=exit_, holding_seconds=int((exit_ - entry).total_seconds()), net=Decimal(net),
-        lots=1, risk_unit_source=source, number_in_force=number, uncapped=name == UNCAPPED,
+        trip_id=name,
+        symbol="WIDGETOIL",
+        trading_day=entry.date().isoformat(),
+        entry_ts=entry,
+        exit_ts=exit_,
+        holding_seconds=int((exit_ - entry).total_seconds()),
+        net=Decimal(net),
+        lots=1,
+        risk_unit_source=source,
+        number_in_force=number,
+        uncapped=name == UNCAPPED,
     )
 
 
@@ -150,35 +158,63 @@ def add_history(engine, rows=HISTORY, exchange="MCX") -> None:
     with make_session(engine) as sess:
         previous = sess.scalars(select(m.Import)).first()
         imp = m.Import(
-            trader_id=previous.trader_id, raw_file_id=previous.raw_file_id, source_account="A",
-            adapter_id="dhan_tradebook_v1", adapter_version="1", filemap_version="1",
-            code_version="fixturesha", outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-            rows_in=len(rows), rows_parsed=len(rows), rows_excluded=0, fees_available=False,
-            version_no=2, trips_reconstructed=len(rows), trips_refused=0,
-            density_default_unit="day", created_at=datetime.now(UTC),
+            trader_id=previous.trader_id,
+            raw_file_id=previous.raw_file_id,
+            source_account="A",
+            adapter_id="dhan_tradebook_v1",
+            adapter_version="1",
+            filemap_version="1",
+            code_version="fixturesha",
+            outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+            rows_in=len(rows),
+            rows_parsed=len(rows),
+            rows_excluded=0,
+            fees_available=False,
+            version_no=2,
+            trips_reconstructed=len(rows),
+            trips_refused=0,
+            density_default_unit="day",
+            created_at=datetime.now(UTC),
         )
         sess.add(imp)
         sess.flush()
         for name, opened, closed, net, _number in rows:
             source = (
-                s.RiskUnitSourceV1.UNCAPPED if name == UNCAPPED
-                else s.RiskUnitSourceV1.PREMIUM_PAID
+                s.RiskUnitSourceV1.UNCAPPED if name == UNCAPPED else s.RiskUnitSourceV1.PREMIUM_PAID
             )
-            sess.add(m.Trip(
-                import_id=imp.id, trip_id=name, trading_day=f"2026-{opened}", exchange=exchange,
-                symbol="WIDGETOIL", segment="OPT",
-                direction="SHORT" if name == UNCAPPED else "LONG",
-                entry_ts=datetime.fromisoformat(f"2026-{opened}T10:00:00+05:30"),
-                exit_ts=datetime.fromisoformat(f"2026-{closed}T10:10:00+05:30"),
-                quantity=100, entry_price=Decimal(100), exit_price=Decimal(100),
-                gross=Decimal(net), fees=Decimal(0), net=Decimal(net), fees_available=False,
-                risk_unit_source=source, uncapped=name == UNCAPPED,
-            ))
+            sess.add(
+                m.Trip(
+                    import_id=imp.id,
+                    trip_id=name,
+                    trading_day=f"2026-{opened}",
+                    exchange=exchange,
+                    symbol="WIDGETOIL",
+                    segment="OPT",
+                    direction="SHORT" if name == UNCAPPED else "LONG",
+                    entry_ts=datetime.fromisoformat(f"2026-{opened}T10:00:00+05:30"),
+                    exit_ts=datetime.fromisoformat(f"2026-{closed}T10:10:00+05:30"),
+                    quantity=100,
+                    entry_price=Decimal(100),
+                    exit_price=Decimal(100),
+                    gross=Decimal(net),
+                    fees=Decimal(0),
+                    net=Decimal(net),
+                    fees_available=False,
+                    risk_unit_source=source,
+                    uncapped=name == UNCAPPED,
+                )
+            )
         sess.commit()
 
 
-def record(client, value="500", unit="INR", effective_from="2026-09-03", capital=None,
-           follow_redirects=True):
+def record(
+    client,
+    value="500",
+    unit="INR",
+    effective_from="2026-09-03",
+    capital=None,
+    follow_redirects=True,
+):
     token = TOKEN.search(client.get("/budget").text).group(1)
     data = {"value": value, "unit": unit, "effective_from": effective_from, "csrf_token": token}
     if capital:
@@ -215,15 +251,27 @@ def test_the_loader_reads_the_day_in_the_instruments_zone(client, engine):
     with make_session(engine) as sess:
         imp = sess.scalars(select(m.Import).order_by(m.Import.id.desc())).first()
         stored = sess.scalars(select(m.Trip).where(m.Trip.import_id == imp.id)).one()
-        sess.add(m.Trip(
-            import_id=imp.id, trip_id="y", trading_day="2026-09-03", exchange=stored.exchange,
-            symbol=stored.symbol, segment=stored.segment, direction=stored.direction,
-            entry_ts=datetime.fromisoformat("2026-09-03T00:30:00+05:30"),
-            exit_ts=datetime.fromisoformat("2026-09-03T00:40:00+05:30"),
-            quantity=stored.quantity, entry_price=stored.entry_price,
-            exit_price=stored.exit_price, gross=stored.gross, fees=stored.fees, net=stored.net,
-            fees_available=False, risk_unit_source=stored.risk_unit_source,
-        ))
+        sess.add(
+            m.Trip(
+                import_id=imp.id,
+                trip_id="y",
+                trading_day="2026-09-03",
+                exchange=stored.exchange,
+                symbol=stored.symbol,
+                segment=stored.segment,
+                direction=stored.direction,
+                entry_ts=datetime.fromisoformat("2026-09-03T00:30:00+05:30"),
+                exit_ts=datetime.fromisoformat("2026-09-03T00:40:00+05:30"),
+                quantity=stored.quantity,
+                entry_price=stored.entry_price,
+                exit_price=stored.exit_price,
+                gross=stored.gross,
+                fees=stored.fees,
+                net=stored.net,
+                fees_available=False,
+                risk_unit_source=stored.risk_unit_source,
+            )
+        )
         sess.commit()
     record(client)
     assert numbers_on(engine)["y"] == OLD
@@ -276,7 +324,11 @@ def test_the_two_pages_read_one_function_so_they_cannot_disagree(client, engine,
     add_history(engine)
     record_both_numbers(client)
     decided = mx.TradesPastNumber(
-        count=77, trip_ids=[], measured=90, before_number=0, held_past_day=0,
+        count=77,
+        trip_ids=[],
+        measured=90,
+        before_number=0,
+        held_past_day=0,
         state=s.ResultState.COUNTED_FACT,
     )
     monkeypatch.setattr(mx, "trades_past_number", lambda _trips: decided)

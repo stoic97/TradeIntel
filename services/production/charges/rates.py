@@ -52,13 +52,13 @@ class Segment(StrEnum):
 
 
 class Component(StrEnum):
-    STT = "STT"            # securities transaction tax (NSE, BSE)
-    CTT = "CTT"            # commodity transaction tax (MCX)
+    STT = "STT"  # securities transaction tax (NSE, BSE)
+    CTT = "CTT"  # commodity transaction tax (MCX)
     EXCHANGE = "EXCHANGE"  # the exchange's transaction charge
-    SEBI = "SEBI"          # SEBI turnover fee
-    STAMP = "STAMP"        # stamp duty
-    GST = "GST"            # on brokerage, exchange charges, the SEBI fee and IPFT
-    IPFT = "IPFT"          # NSE's investor protection fund charge
+    SEBI = "SEBI"  # SEBI turnover fee
+    STAMP = "STAMP"  # stamp duty
+    GST = "GST"  # on brokerage, exchange charges, the SEBI fee and IPFT
+    IPFT = "IPFT"  # NSE's investor protection fund charge
 
 
 SIDES = ("buy", "sell")
@@ -137,10 +137,18 @@ def _row(raw: dict) -> Rate:
     source = raw.get("source")
     if not isinstance(source, str) or not source.strip():
         raise InvalidTable(f"{where}: every row names the document that set it")
-    return Rate(id=raw["id"], segment=segment, component=component, side=raw["side"],
-                base=raw["base"], rate=value, effective_from=_date(raw.get("effective_from"), where),
-                added=_date(raw.get("added"), where), source=source.strip(),
-                note=str(raw.get("note") or "").strip())
+    return Rate(
+        id=raw["id"],
+        segment=segment,
+        component=component,
+        side=raw["side"],
+        base=raw["base"],
+        rate=value,
+        effective_from=_date(raw.get("effective_from"), where),
+        added=_date(raw.get("added"), where),
+        source=source.strip(),
+        note=str(raw.get("note") or "").strip(),
+    )
 
 
 def load(path: Path = TABLE) -> tuple[date, list[Rate], list[dict]]:
@@ -165,8 +173,15 @@ def _shipped() -> tuple[date, list[Rate], list[dict]]:
     return _LOADED
 
 
-def rate(segment: Segment, component: Component, side: str, on: date, *,
-         as_of: date | None = None, table: tuple[date, list[Rate], list[dict]] | None = None) -> Rate:
+def rate(
+    segment: Segment,
+    component: Component,
+    side: str,
+    on: date,
+    *,
+    as_of: date | None = None,
+    table: tuple[date, list[Rate], list[dict]] | None = None,
+) -> Rate:
     """The row in force on ``on`` (as the table stood on ``as_of``), or :class:`NotCovered`.
 
     Of the rows for this segment, component and side that had been added by ``as_of``, the
@@ -175,20 +190,32 @@ def rate(segment: Segment, component: Component, side: str, on: date, *,
     """
     starts, rows, _ = table if table is not None else _shipped()
     if on < starts:
-        raise NotCovered(f"the rate table starts on {starts.isoformat()}; {on.isoformat()} is before it")
-    found = [r for r in rows
-             if r.segment == segment and r.component == component and r.side == side
-             and r.effective_from <= on and (as_of is None or r.added <= as_of)]
+        raise NotCovered(
+            f"the rate table starts on {starts.isoformat()}; {on.isoformat()} is before it"
+        )
+    found = [
+        r
+        for r in rows
+        if r.segment == segment
+        and r.component == component
+        and r.side == side
+        and r.effective_from <= on
+        and (as_of is None or r.added <= as_of)
+    ]
     if not found:
         raise NotCovered(f"no {component} rate for {segment}, {side} side, on {on.isoformat()}")
     return max(found, key=lambda r: (r.effective_from, r.added, r.id))
 
 
 _BOTH = (("buy",), ("sell",))
-_EVERY_ORDER = tuple((c, s) for c in (Component.EXCHANGE, Component.SEBI, Component.GST) for (s,) in _BOTH)
+_EVERY_ORDER = tuple(
+    (c, s) for c in (Component.EXCHANGE, Component.SEBI, Component.GST) for (s,) in _BOTH
+)
 
 
-def _required(tax: Component, tax_sides: tuple[str, ...], *, ipft: bool) -> tuple[tuple[Component, str], ...]:
+def _required(
+    tax: Component, tax_sides: tuple[str, ...], *, ipft: bool
+) -> tuple[tuple[Component, str], ...]:
     extra = tuple((Component.IPFT, s) for (s,) in _BOTH) if ipft else ()
     return tuple((tax, s) for s in tax_sides) + _EVERY_ORDER + ((Component.STAMP, "buy"),) + extra
 
@@ -211,9 +238,15 @@ GST_ON = (Component.EXCHANGE, Component.SEBI, Component.IPFT)
 """What GST is levied on, of what this table holds. Brokerage is the broker's (TICKET-912)."""
 
 
-def statutory(segment: Segment, side: str, value: Decimal, on: date, *,
-              as_of: date | None = None, table: tuple[date, list[Rate], list[dict]] | None = None,
-              ) -> dict[Component, Decimal]:
+def statutory(
+    segment: Segment,
+    side: str,
+    value: Decimal,
+    on: date,
+    *,
+    as_of: date | None = None,
+    table: tuple[date, list[Rate], list[dict]] | None = None,
+) -> dict[Component, Decimal]:
     """The statutory charges on one made-up order of ``value`` (turnover, or premium for
     options), unrounded, by component. GST is on the exchange charge, the SEBI fee and IPFT;
     GST on brokerage comes with brokerage (TICKET-912)."""

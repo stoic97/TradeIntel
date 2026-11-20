@@ -39,8 +39,10 @@ def flags_by_day(trips: list[mx.Trip]) -> dict[str, list[Flag]]:
 
     run = mx.longest_losing_run(trips)
     named_run = run.length >= SHORTEST_RUN
-    run_label = (f"{'Part of your' if run.crosses_days else 'Your'} longest losing run: "
-                 f"{losses_in_a_row(run.length)}")
+    run_label = (
+        f"{'Part of your' if run.crosses_days else 'Your'} longest losing run: "
+        f"{losses_in_a_row(run.length)}"
+    )
     if named_run:
         name(run.days[0], run_label, "run")
 
@@ -70,7 +72,8 @@ def to_start_with(journals: list, flags: dict[str, list[Flag]]) -> list:
     """
     by_day = {j.period_start: j for j in journals if j.period_start == j.period_end}
     named = [by_day[day] for day in flags if day in by_day]
-    return named[:k.JOURNALS_ON_SURFACE]
+    return named[: k.JOURNALS_ON_SURFACE]
+
 
 WORTH, NEW, REMEMBER, PERIOD = "worth", "new", "remember", "period"
 """How a Journal is offered (TICKET-906)."""

@@ -27,10 +27,13 @@ node = pytest.mark.skipif(shutil.which("node") is None, reason="Node is not inst
 
 def run(expression: str):
     """Evaluate an expression against motion.js's exports (as `m`) under Node."""
-    program = f"const m = require({json.dumps(str(SCRIPT.resolve()))});" \
-              f"process.stdout.write(JSON.stringify({expression}));"
-    done = subprocess.run(["node", "-e", program], capture_output=True, text=True,
-                          check=True, timeout=30)
+    program = (
+        f"const m = require({json.dumps(str(SCRIPT.resolve()))});"
+        f"process.stdout.write(JSON.stringify({expression}));"
+    )
+    done = subprocess.run(
+        ["node", "-e", program], capture_output=True, text=True, check=True, timeout=30
+    )
     return json.loads(done.stdout)
 
 
@@ -68,10 +71,10 @@ def test_only_a_whole_number_counts():
     cases = {
         "96%": {"to": 96, "suffix": "%"},
         " 10 ": {"to": 10, "suffix": ""},
-        "15.8%": None,     # a decimal is shown as it is
+        "15.8%": None,  # a decimal is shown as it is
         "3.0": None,
         "−₹24,000": None,  # a rupee figure is shown as it is (kit: fade only)
-        "—": None,         # a state
+        "—": None,  # a state
         "4·6": None,
         "": None,
     }
@@ -89,6 +92,8 @@ def test_a_count_starts_at_nothing_and_ends_on_the_value():
 
 @node
 def test_figures_count_on_the_dial_opening_and_on_a_fact_rising():
-    got = run('["vt-in vt-tap-2", "vt-lens", "vt-out vt-tap-1", "vt-back", ""]'
-              ".map(c => m.countSelector(c))")
+    got = run(
+        '["vt-in vt-tap-2", "vt-lens", "vt-out vt-tap-1", "vt-back", ""]'
+        ".map(c => m.countSelector(c))"
+    )
     assert got == [".scope__figure", ".fact__figure .num", None, None, None]

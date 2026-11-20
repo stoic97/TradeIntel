@@ -77,8 +77,12 @@ def record_report_answer(
         return
     sess.add(
         m.ReportFeedback(
-            trader_id=trader.id, import_id=import_id, trading_day=WHOLE_REPORT, answer=answer,
-            note=(note or "").strip()[:NOTE_LIMIT] or None, answered_at=datetime.now(UTC),
+            trader_id=trader.id,
+            import_id=import_id,
+            trading_day=WHOLE_REPORT,
+            answer=answer,
+            note=(note or "").strip()[:NOTE_LIMIT] or None,
+            answered_at=datetime.now(UTC),
         )
     )
     try:
@@ -89,19 +93,21 @@ def record_report_answer(
 
 def flagged_days(sess: Session, trader: m.Trader, import_id: int) -> set[str]:
     """The days of this report the trader has said look wrong."""
-    return set(sess.scalars(
-        select(m.ReportFeedback.trading_day).where(
-            m.ReportFeedback.trader_id == trader.id,
-            m.ReportFeedback.import_id == import_id,
-            m.ReportFeedback.trading_day != WHOLE_REPORT,
-        )
-    ).all())
+    return set(
+        sess.scalars(
+            select(m.ReportFeedback.trading_day).where(
+                m.ReportFeedback.trader_id == trader.id,
+                m.ReportFeedback.import_id == import_id,
+                m.ReportFeedback.trading_day != WHOLE_REPORT,
+            )
+        ).all()
+    )
 
 
 def flag_day(
     sess: Session, *, trader: m.Trader, import_id: int, trading_day: str, note: str | None
 ) -> None:
-    """"Is this day wrong?": kept with the report's own answers, so there is one route to read.
+    """ "Is this day wrong?": kept with the report's own answers, so there is one route to read.
 
     The first flag on a day stands, like every answer here.
     """
@@ -109,8 +115,12 @@ def flag_day(
         return
     sess.add(
         m.ReportFeedback(
-            trader_id=trader.id, import_id=import_id, trading_day=trading_day, answer="wrong",
-            note=(note or "").strip()[:NOTE_LIMIT] or None, answered_at=datetime.now(UTC),
+            trader_id=trader.id,
+            import_id=import_id,
+            trading_day=trading_day,
+            answer="wrong",
+            note=(note or "").strip()[:NOTE_LIMIT] or None,
+            answered_at=datetime.now(UTC),
         )
     )
     try:

@@ -195,9 +195,7 @@ class Trip(Base, _InsertOnly):
     ctr_risk_source: Mapped[str | None] = mapped_column(String(32))
     risk_unit_value: Mapped[Decimal | None] = mapped_column(DecimalText)
     risk_unit_source: Mapped[s.RiskUnitSourceV1] = mapped_column(EnumText(s.RiskUnitSourceV1, 32))
-    risk_budget_ref: Mapped[int | None] = mapped_column(
-        ForeignKey("risk_budget_declaration.id")
-    )
+    risk_budget_ref: Mapped[int | None] = mapped_column(ForeignKey("risk_budget_declaration.id"))
     position_id: Mapped[str | None] = mapped_column(String(64))
     """The position this leg is part of, when it has more than one leg (Annex H). Null
     is a position of its own, which is every trip of an import made before Annex H."""

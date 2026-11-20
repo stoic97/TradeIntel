@@ -149,14 +149,16 @@ class Series:
             offset = len(header)
             for raw in f:
                 sha.update(raw)
-                stamp = raw[:raw.find(b",")].decode()
+                stamp = raw[: raw.find(b",")].decode()
                 d, _, clock = stamp.partition(" ")
                 h, m, sec = clock.split(":")
                 if sec != "00":
                     raise Unusable(f"{self.path.name}: {stamp} is not on a whole minute")
                 key = (d, int(h), int(m))
                 if last and key <= last:
-                    raise Unusable(f"{self.path.name}: {stamp} doesn't come after the row before it")
+                    raise Unusable(
+                        f"{self.path.name}: {stamp} doesn't come after the row before it"
+                    )
                 if not last or d != last[0]:
                     this = date.fromisoformat(d)
                     if day is not None:
@@ -172,8 +174,10 @@ class Series:
             raise Unusable(f"{self.path.name} has no bars")
         usual = Counter(recent).most_common(1)[0][0]
         if usual != session_open:
-            raise Unusable(f"{self.path.name}: the session's first bar is usually at {usual:%H:%M}, "
-                           f"not the open, {session_open:%H:%M}, so its stamping can't be established")
+            raise Unusable(
+                f"{self.path.name}: the session's first bar is usually at {usual:%H:%M}, "
+                f"not the open, {session_open:%H:%M}, so its stamping can't be established"
+            )
         return sha.hexdigest()
 
     def covers(self, day: date) -> bool:
@@ -194,8 +198,9 @@ class Series:
                     continue
                 stamp, o, h, low, c, *_ = line.split(",")
                 where = f"{self.path.name}, {stamp}"
-                bars[_stamp(stamp, where)] = Bar(_price(o, where), _price(h, where), _price(low, where),
-                                                 _price(c, where))
+                bars[_stamp(stamp, where)] = Bar(
+                    _price(o, where), _price(h, where), _price(low, where), _price(c, where)
+                )
         self._cache[day] = bars
         if len(self._cache) > DAY_CACHE:
             self._cache.popitem(last=False)
@@ -263,20 +268,28 @@ def load_mapping(path: Path = MAPPING) -> Mapping:
             raise InvalidMapping(f"{name}: give a series file or a synthetic series, one of them")
         for profile in entry.get("profiles") or []:
             if profile in by_profile:
-                raise InvalidMapping(f"{profile} is mapped twice ({by_profile[profile]} and {name})")
+                raise InvalidMapping(
+                    f"{profile} is mapped twice ({by_profile[profile]} and {name})"
+                )
             by_profile[profile] = name
         if entry.get("synthetic"):
             start = entry["synthetic"].get("start")
             if not isinstance(start, str):
                 raise InvalidMapping(f"{name}: a synthetic start price is written as a string")
-    return Mapping(version=version, by_profile=by_profile, entries=entries, stocks=doc.get("stocks"))
+    return Mapping(
+        version=version, by_profile=by_profile, entries=entries, stocks=doc.get("stocks")
+    )
 
 
 class Prices:
     """The layer's front door: which underlying, which series, and the answer for one minute."""
 
-    def __init__(self, data_dir: Path | None = None, mapping_path: Path = MAPPING,
-                 profiles_dir: Path = PROFILES) -> None:
+    def __init__(
+        self,
+        data_dir: Path | None = None,
+        mapping_path: Path = MAPPING,
+        profiles_dir: Path = PROFILES,
+    ) -> None:
         self.data_dir = data_dir if data_dir is not None else market_dir()
         self.mapping = load_mapping(mapping_path)
         self.profiles = registry.load_all(profiles_dir)
@@ -288,7 +301,10 @@ class Prices:
         if named:
             return named
         stocks = self.mapping.stocks or {}
-        if f"{exchange}:*" in (stocks.get("profiles") or []) and (exchange, symbol) not in self.profiles:
+        if (
+            f"{exchange}:*" in (stocks.get("profiles") or [])
+            and (exchange, symbol) not in self.profiles
+        ):
             return symbol
         return None
 
@@ -316,9 +332,19 @@ class Prices:
             session = self._session(underlying)
             if entry and entry.get("synthetic"):
                 syn = entry["synthetic"]
-                return SyntheticSeries(underlying, date.fromisoformat(syn["from"]), date.fromisoformat(syn["to"]),
-                                       int(syn["seed"]), Decimal(syn["start"]), session)
-            name = entry["series"] if entry else self.mapping.stocks["series"].format(symbol=underlying.lower())
+                return SyntheticSeries(
+                    underlying,
+                    date.fromisoformat(syn["from"]),
+                    date.fromisoformat(syn["to"]),
+                    int(syn["seed"]),
+                    Decimal(syn["start"]),
+                    session,
+                )
+            name = (
+                entry["series"]
+                if entry
+                else self.mapping.stocks["series"].format(symbol=underlying.lower())
+            )
             return Series.open(underlying, self.data_dir / name, session[0])
         except Unusable as exc:
             return exc
@@ -334,9 +360,15 @@ class Prices:
             return Answer(Kind.NO_SERIES, why=self.why(underlying) or f"no series for {underlying}")
         day = (minute.replace(tzinfo=None) if minute.tzinfo else minute).date()
         if not s.covers(day):
-            return Answer(Kind.NOT_COVERED, why=f"{underlying}'s series doesn't cover {day.isoformat()}")
+            return Answer(
+                Kind.NOT_COVERED, why=f"{underlying}'s series doesn't cover {day.isoformat()}"
+            )
         bar = s.bar(minute)
-        return Answer(Kind.BAR, bar=bar) if bar else Answer(Kind.NO_BAR, why=f"no {underlying} bar at {minute:%H:%M}")
+        return (
+            Answer(Kind.BAR, bar=bar)
+            if bar
+            else Answer(Kind.NO_BAR, why=f"no {underlying} bar at {minute:%H:%M}")
+        )
 
     def for_count(self, underlyings: list[str]) -> dict[str, Series | SyntheticSeries]:
         """The usable series by underlying, in the shape TICKET-891's count takes. An underlying
@@ -350,7 +382,10 @@ class Prices:
         for u in sorted(set(underlyings)):
             s = self.series(u)
             if isinstance(s, Series):
-                out["series"][u] = {"sha256": s.manifest.sha256, "as_of": s.manifest.as_of.isoformat()}
+                out["series"][u] = {
+                    "sha256": s.manifest.sha256,
+                    "as_of": s.manifest.as_of.isoformat(),
+                }
             elif isinstance(s, SyntheticSeries):
                 out["series"][u] = {"synthetic": s.manifest_digest}
             else:

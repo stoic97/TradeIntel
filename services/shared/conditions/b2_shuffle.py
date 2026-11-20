@@ -63,7 +63,7 @@ class ShuffleResult:
     n_condition: int
     n_comparison: int
     difference: float | None  # condition mean less comparison mean
-    p: float | None           # before the correction
+    p: float | None  # before the correction
     p_adjusted: float | None = None  # for the family fixed in advance
     halves: tuple[float | None, float | None] | None = None
     level: str = NOT_ENOUGH
@@ -105,7 +105,9 @@ def shuffle_within_days(r: np.ndarray, day: np.ndarray, rng: np.random.Generator
     return moved
 
 
-def _difference(r: np.ndarray, pop: np.ndarray, first: np.ndarray, second: np.ndarray) -> tuple[float, int, int]:
+def _difference(
+    r: np.ndarray, pop: np.ndarray, first: np.ndarray, second: np.ndarray
+) -> tuple[float, int, int]:
     cond = (r[first] < 0) & (r[second] < 0)
     n_condition = int(cond.sum())
     n_comparison = len(pop) - n_condition
@@ -136,8 +138,9 @@ def _same_way(both: tuple[float | None, float | None]) -> bool:
     return all(gap is not None and gap < 0 for gap in both)
 
 
-def shuffle_test(obs: Sequence[Obs], draws: int = DRAWS,
-                 checks: tuple[str, ...] | None = None) -> ShuffleResult:
+def shuffle_test(
+    obs: Sequence[Obs], draws: int = DRAWS, checks: tuple[str, ...] | None = None
+) -> ShuffleResult:
     """Would shuffling each day's outcomes put the condition this far below the comparison,
     corrected for the family of checks, and does it point the same way in both halves?"""
     checks = checks or multiplicity.family()
@@ -165,5 +168,6 @@ def shuffle_test(obs: Sequence[Obs], draws: int = DRAWS,
         level = WORTH_WATCHING
     else:
         level = NOTHING
-    return ShuffleResult(n_condition, n_comparison, observed, p, adjusted, split, level,
-                         len(checks))
+    return ShuffleResult(
+        n_condition, n_comparison, observed, p, adjusted, split, level, len(checks)
+    )

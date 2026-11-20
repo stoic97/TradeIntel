@@ -94,7 +94,9 @@ class Trip:
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
     uncapped: bool = False  # can lose without limit, whatever it is measured against
     premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
-    point_value: Decimal | None = None  # rupees a one-point move makes on one lot, today's (TICKET-907)
+    point_value: Decimal | None = (
+        None  # rupees a one-point move makes on one lot, today's (TICKET-907)
+    )
 
     @property
     def is_win(self) -> bool:
@@ -371,8 +373,9 @@ def share_of_losses(trips: list[Trip]) -> ShareOfLosses:
     """
     worst = five_worst_days(trips)
     if worst.state is not s.ResultState.COUNTED_FACT:
-        return ShareOfLosses(Decimal(0), Decimal(0), None, False, 0, Decimal(0),
-                             s.ResultState.INSUFFICIENT_SAMPLE)
+        return ShareOfLosses(
+            Decimal(0), Decimal(0), None, False, 0, Decimal(0), s.ResultState.INSUFFICIENT_SAMPLE
+        )
 
     series = daily_series(trips)
     total = sum((t.net for t in trips), Decimal(0))
@@ -386,10 +389,12 @@ def share_of_losses(trips: list[Trip]) -> ShareOfLosses:
     shown = all_losses < 0
 
     return ShareOfLosses(
-        five_day_sum=worst.sum, total=total,
+        five_day_sum=worst.sum,
+        total=total,
         share_percent=_whole_percent(worst_losses, all_losses) if shown else None,
         shown_as_percentage=shown,
-        other_days_count=len(other_days), other_days_net=other_net,
+        other_days_count=len(other_days),
+        other_days_net=other_net,
         state=s.ResultState.COUNTED_FACT,
         worst_day_count=len(worst.days),
         trading_day_count=len(series),
@@ -400,8 +405,7 @@ def share_of_losses(trips: list[Trip]) -> ShareOfLosses:
 def day_counts(trips: list[Trip]) -> DayCounts:
     """Trip count per eligible day, the normal (median) day, and the busiest."""
     if not trips:
-        return DayCounts([], Decimal(0), "", 0, Decimal(0),
-                         s.ResultState.INSUFFICIENT_SAMPLE)
+        return DayCounts([], Decimal(0), "", 0, Decimal(0), s.ResultState.INSUFFICIENT_SAMPLE)
     days = _by_day(trips)
     counts = [len(day_trips) for day_trips in days.values()]
     normal = Decimal(str(median(counts)))
@@ -410,8 +414,10 @@ def day_counts(trips: list[Trip]) -> DayCounts:
         key=lambda pair: (pair[1], pair[0]),
     )
     return DayCounts(
-        counts=counts, normal_day=_trim(normal),
-        busiest_day=busiest_day, busiest_trips=busiest_trips,
+        counts=counts,
+        normal_day=_trim(normal),
+        busiest_day=busiest_day,
+        busiest_trips=busiest_trips,
         busiest_vs_normal=_round(Decimal(busiest_trips) / normal),
         state=s.ResultState.COUNTED_FACT,
     )
@@ -454,8 +460,10 @@ def option_result(trips: list[Trip]) -> OptionResult | None:
     gain = max(gains, key=lambda t: t.net, default=None)
     days = (gain.exit_ts.date() - gain.entry_ts.date()).days if gain else None
     return OptionResult(
-        net=sum((t.net for t in options), Decimal(0)), count=len(options),
-        held_gain=gain, held_gain_days=days,
+        net=sum((t.net for t in options), Decimal(0)),
+        count=len(options),
+        held_gain=gain,
+        held_gain_days=days,
     )
 
 
@@ -588,10 +596,12 @@ def b2_observations(trips: list[Trip]) -> list[Obs]:
     """The trips as the shared B2 definition and its shuffle test read them, in net rupees."""
     day_index = {day: i for i, day in enumerate(sorted({t.trading_day for t in trips}))}
     return [
-        Obs(day=day_index[t.trading_day],
+        Obs(
+            day=day_index[t.trading_day],
             entry_at=t.entry_ts.timestamp(),
             exit_at=t.exit_ts.timestamp(),
-            r=float(t.net))
+            r=float(t.net),
+        )
         for t in trips
     ]
 
@@ -604,8 +614,9 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     the same answer on the same trips (PRD 6.3).
     """
     if not trips:
-        return TwoStraightLosses(0, 0, 0, [], Decimal(0), Decimal(0), None, None,
-                                 s.ResultState.INSUFFICIENT_SAMPLE)
+        return TwoStraightLosses(
+            0, 0, 0, [], Decimal(0), Decimal(0), None, None, s.ResultState.INSUFFICIENT_SAMPLE
+        )
 
     in_pop, cond = population_and_condition(b2_observations(trips))
 
@@ -626,8 +637,12 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
         condition_trip_ids=[t.trip_id for t in condition_trips],
         condition_net=condition_net,
         comparison_net=comparison_net,
-        condition_mean=_trim(_round(condition_net / len(condition_trips))) if condition_trips else None,
-        comparison_mean=_trim(_round(comparison_net / len(comparison_trips))) if comparison_trips else None,
+        condition_mean=_trim(_round(condition_net / len(condition_trips)))
+        if condition_trips
+        else None,
+        comparison_mean=_trim(_round(comparison_net / len(comparison_trips)))
+        if comparison_trips
+        else None,
         outside=len(outside_trips),
         outside_net=outside_net,
         outside_mean=_trim(_round(outside_net / len(outside_trips))) if outside_trips else None,
@@ -680,10 +695,11 @@ def strike_rate(trips: list[Trip]) -> StrikeRate:
     losses = sum(1 for t in trips if t.is_loss)
     scratches = sum(1 for t in trips if t.is_scratch)
     if wins + losses == 0:
-        return StrikeRate(wins, losses, scratches, None,
-                          s.ResultState.INSUFFICIENT_SAMPLE)
+        return StrikeRate(wins, losses, scratches, None, s.ResultState.INSUFFICIENT_SAMPLE)
     return StrikeRate(
-        wins=wins, losses=losses, scratches=scratches,
+        wins=wins,
+        losses=losses,
+        scratches=scratches,
         rate_percent=_trim(_round(Decimal(wins) / Decimal(wins + losses) * 100, "0.1")),
         state=s.ResultState.COUNTED_FACT,
     )
@@ -736,15 +752,15 @@ def holding_time(trips: list[Trip]) -> HoldingTime:
         return HoldingTime(
             int(median(winners)) if winners else None,
             int(median(losers)) if losers else None,
-            None, s.ResultState.INSUFFICIENT_SAMPLE,
+            None,
+            s.ResultState.INSUFFICIENT_SAMPLE,
         )
     winners_median = int(median(winners))
     losers_median = int(median(losers))
     # Not trimmed: a ratio of exactly three reads as 3.0, not 3. The trailing
     # zero says "this is a ratio, measured" rather than "this is a round number".
     ratio = (
-        _round(Decimal(winners_median) / Decimal(losers_median), "0.1")
-        if losers_median else None
+        _round(Decimal(winners_median) / Decimal(losers_median), "0.1") if losers_median else None
     )
     return HoldingTime(winners_median, losers_median, ratio, s.ResultState.COUNTED_FACT)
 
@@ -810,14 +826,16 @@ def clocks_by_book(trips: list[Trip]) -> list[BookClock]:
     for book, by_hour in books.items():
         hours = [clock_hour_of(hour, by_hour[hour]) for hour in sorted(by_hour)]
         largest = max(hours, key=lambda h: (abs(h.net), h.trips, -h.hour))
-        clocks.append(BookClock(
-            book=book,
-            hours=hours,
-            trips=sum(h.trips for h in hours),
-            net=sum((h.net for h in hours), Decimal(0)),
-            largest=largest,
-            larger_per_trade=_larger_per_trade(hours, largest),
-        ))
+        clocks.append(
+            BookClock(
+                book=book,
+                hours=hours,
+                trips=sum(h.trips for h in hours),
+                net=sum((h.net for h in hours), Decimal(0)),
+                largest=largest,
+                larger_per_trade=_larger_per_trade(hours, largest),
+            )
+        )
     return sorted(clocks, key=lambda c: (-c.trips, c.book))
 
 
@@ -847,8 +865,10 @@ def longest_losing_run(trips: list[Trip]) -> LosingRun:
             current = []
     days = sorted({t.trading_day for t in best})
     return LosingRun(
-        length=len(best), trip_ids=[t.trip_id for t in best],
-        crosses_days=len(days) > 1, days=days,
+        length=len(best),
+        trip_ids=[t.trip_id for t in best],
+        crosses_days=len(days) > 1,
+        days=days,
         state=s.ResultState.COUNTED_FACT if best else s.ResultState.INSUFFICIENT_SAMPLE,
     )
 
@@ -875,8 +895,11 @@ def costliest_losing_run(trips: list[Trip]) -> LosingRun:
     worst = min(runs, key=lambda run: (_run_net(run), -len(run)))
     days = sorted({t.trading_day for t in worst})
     return LosingRun(
-        length=len(worst), trip_ids=[t.trip_id for t in worst],
-        crosses_days=len(days) > 1, days=days, state=s.ResultState.COUNTED_FACT,
+        length=len(worst),
+        trip_ids=[t.trip_id for t in worst],
+        crosses_days=len(days) > 1,
+        days=days,
+        state=s.ResultState.COUNTED_FACT,
     )
 
 
@@ -930,7 +953,7 @@ class RunStory:
 
 
 def call_or_put(trip: Trip) -> str | None:
-    """"CE" or "PE" on one option. A position of several legs is neither, and nor is a share."""
+    """ "CE" or "PE" on one option. A position of several legs is neither, and nor is a share."""
     if not trip.is_option or len(trip.lines) != 1:
         return None
     return trip.lines[0].option_type or None
@@ -954,7 +977,8 @@ def _flips(trades: list[Trip]) -> int:
     return sum(
         1
         for prev, cur in pairwise(trades)
-        if call_or_put(prev) and call_or_put(cur)
+        if call_or_put(prev)
+        and call_or_put(cur)
         and call_or_put(prev) != call_or_put(cur)
         and book_of(prev.symbol) == book_of(cur.symbol)
     )
@@ -975,7 +999,7 @@ def _size_rise(trades: list[Trip]) -> SizeRise | None:
     if first is None:
         return None
     steps = [sizes[first - 1], sizes[first]]
-    for size in sizes[first + 1:]:
+    for size in sizes[first + 1 :]:
         if size < steps[-1]:
             break
         if size > steps[-1]:
@@ -1287,13 +1311,15 @@ def math_by_book(trips: list[Trip]) -> list[BookMath]:
         years: dict[str, list[Trip]] = {}
         for trip in book_trips:
             years.setdefault(trip.trading_day[:4], []).append(trip)
-        out.append(BookMath(
-            whole=whole,
-            years=tuple(math_row(year, years[year]) for year in sorted(years)),
-            quick_closes=_quick_closes(book_trips),
-            top_winners=_top_winners(book_trips),
-            biggest_losers=_biggest_losers(book_trips),
-        ))
+        out.append(
+            BookMath(
+                whole=whole,
+                years=tuple(math_row(year, years[year]) for year in sorted(years)),
+                quick_closes=_quick_closes(book_trips),
+                top_winners=_top_winners(book_trips),
+                biggest_losers=_biggest_losers(book_trips),
+            )
+        )
     return out
 
 
@@ -1350,11 +1376,15 @@ def _strip_side(trip: Trip) -> str | None:
 def busiest_day_story(trips: list[Trip], day: str) -> BusiestDayStory:
     """One day told in its own terms: which book, which strike, what size, how often the side
     changed, how long each was held. See BusiestDayStory for what each part covers."""
-    on_day = sorted((t for t in trips if t.trading_day == day), key=lambda t: (t.entry_ts, t.trip_id))
+    on_day = sorted(
+        (t for t in trips if t.trading_day == day), key=lambda t: (t.entry_ts, t.trip_id)
+    )
     by_book: dict[str, list[Trip]] = {}
     for t in on_day:
         by_book.setdefault(trade_book(t), []).append(t)
-    book = next((b for b, ts in by_book.items() if len(ts) >= 2 and len(ts) * 2 > len(on_day)), None)
+    book = next(
+        (b for b, ts in by_book.items() if len(ts) >= 2 and len(ts) * 2 > len(on_day)), None
+    )
     book_trips = by_book[book] if book else []
     book_is_options = bool(book_trips) and book_trips[0].is_option
     drawn = book_trips if book_is_options else [t for t in on_day if t.is_option]
@@ -1438,11 +1468,13 @@ def premium_by_book(trips: list[Trip]) -> list[PremiumPaid]:
         results = [abs(t.net) / t.premium * 100 for t in options if not t.is_scratch]
         if len(results) < LOSS_SIZES_MINIMUM:
             continue
-        read.append(PremiumPaid(
-            book=book,
-            paid=median(t.premium for t in options),
-            percent=int(median(results).to_integral_value()),
-        ))
+        read.append(
+            PremiumPaid(
+                book=book,
+                paid=median(t.premium for t in options),
+                percent=int(median(results).to_integral_value()),
+            )
+        )
     return read
 
 
@@ -1490,8 +1522,10 @@ class Verdict:
 
     @property
     def made_back(self) -> bool:
-        """"Made back" is only true of a part of what the options lost."""
-        return bool(self.standout and self.options_net < 0 and self.standout.net < -self.options_net)
+        """ "Made back" is only true of a part of what the options lost."""
+        return bool(
+            self.standout and self.options_net < 0 and self.standout.net < -self.options_net
+        )
 
 
 def _worst_of_book(trips: list[Trip]) -> tuple[str | None, Decimal | None]:
@@ -1504,7 +1538,9 @@ def _worst_of_book(trips: list[Trip]) -> tuple[str | None, Decimal | None]:
 
 def _book_result(label: str, trips: list[Trip], standout: Standout | None = None) -> BookResult:
     worst_day, worst_net = _worst_of_book(trips)
-    return BookResult(label, sum((t.net for t in trips), Decimal(0)), len(trips), worst_day, worst_net, standout)
+    return BookResult(
+        label, sum((t.net for t in trips), Decimal(0)), len(trips), worst_day, worst_net, standout
+    )
 
 
 def _standout(others: list[Trip]) -> Standout | None:
@@ -1550,9 +1586,12 @@ def verdict(trips: list[Trip]) -> Verdict:
         holds_it = standout is not None and any(t.symbol == standout.symbol for t in ts)
         rows.append(_book_result(book, ts, standout if holds_it else None))
     return Verdict(
-        options_net=sum((t.net for t in options), Decimal(0)), options_trades=len(options),
-        others_net=sum((t.net for t in others), Decimal(0)), others_trades=len(others),
-        books=tuple(rows), standout=standout,
+        options_net=sum((t.net for t in options), Decimal(0)),
+        options_trades=len(options),
+        others_net=sum((t.net for t in others), Decimal(0)),
+        others_trades=len(others),
+        books=tuple(rows),
+        standout=standout,
     )
 
 
@@ -1607,9 +1646,14 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     rows, lost_days, lost_after = [], 0, Decimal(0)
     for day in worst:
         ordered = sorted(by_day[day.trading_day], key=lambda t: t.entry_ts)
-        rows.append(WorstDayRow(
-            day.trading_day, tuple(dict.fromkeys(trade_book(t) for t in ordered)), day.trips, day.net,
-        ))
+        rows.append(
+            WorstDayRow(
+                day.trading_day,
+                tuple(dict.fromkeys(trade_book(t) for t in ordered)),
+                day.trips,
+                day.net,
+            )
+        )
         rest = sum((t.net for t in ordered[1:]), Decimal(0))
         if ordered[0].is_loss and rest < 0:
             lost_days += 1
@@ -1619,16 +1663,17 @@ def five_days_read(trips: list[Trip]) -> FiveDaysRead | None:
     story = None
     if len(worst_first) > 1 and worst[0].net < 0:
         story = WorstDayStory(
-            worst[0].trading_day, worst_first[0].net, len(worst_first) - 1, worst[0].net,
+            worst[0].trading_day,
+            worst_first[0].net,
+            len(worst_first) - 1,
+            worst[0].net,
         )
     return FiveDaysRead(
         rows=tuple(rows),
         first_lost_days=lost_days,
         lost_after_first=lost_after,
         shared_book=next((b for b in rows[0].books if b in shared), None),
-        past_nine=sum(
-            any(t.entry_ts.hour >= 21 for t in by_day[day.trading_day]) for day in worst
-        ),
+        past_nine=sum(any(t.entry_ts.hour >= 21 for t in by_day[day.trading_day]) for day in worst),
         story=story,
     )
 
@@ -1676,20 +1721,22 @@ def worst_day_blocks(trips: list[Trip]) -> tuple[DayBlock, ...]:
         for trip in ordered:
             total += trip.net
             running.append(total)
-        blocks.append(DayBlock(
-            trading_day=day.trading_day,
-            books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
-            book=_main_book(ordered),
-            trades=len(ordered),
-            net=day.net,
-            first_in=ordered[0].entry_ts,
-            last_out=max(t.exit_ts for t in ordered),
-            running=tuple(running),
-            first_net=ordered[0].net,
-            later=len(ordered) - 1,
-            later_lost=sum(t.is_loss for t in ordered[1:]),
-            longest_run=_longest_run_in(ordered),
-        ))
+        blocks.append(
+            DayBlock(
+                trading_day=day.trading_day,
+                books=tuple(dict.fromkeys(trade_book(t) for t in ordered)),
+                book=_main_book(ordered),
+                trades=len(ordered),
+                net=day.net,
+                first_in=ordered[0].entry_ts,
+                last_out=max(t.exit_ts for t in ordered),
+                running=tuple(running),
+                first_net=ordered[0].net,
+                later=len(ordered) - 1,
+                later_lost=sum(t.is_loss for t in ordered[1:]),
+                longest_run=_longest_run_in(ordered),
+            )
+        )
     return tuple(blocks)
 
 
@@ -1704,7 +1751,8 @@ def risk_figure_counts(trips: list[Trip]) -> RiskFigureCounts:
         counts[trip.risk_unit_source] += 1
     showable = sum(counts[source] for source in s.SHOWABLE_DENOMINATORS)
     return RiskFigureCounts(
-        counts=counts, showable=showable,
+        counts=counts,
+        showable=showable,
         state=s.ResultState.COUNTED_FACT if trips else s.ResultState.INSUFFICIENT_SAMPLE,
     )
 
@@ -1865,11 +1913,15 @@ def points_per_lot(trips: list[Trip], amount: Decimal) -> list[PointsPerLot]:
     rows = []
     for book, symbols in books.items():
         ordered = sorted(symbols.items(), key=lambda kv: (-len(kv[1]), kv[0]))
-        rows.append(PointsPerLot(
-            book=book,
-            parts=tuple((sym, _trim(_round(amount / ts[0].point_value))) for sym, ts in ordered),
-            trades=sum(len(ts) for _, ts in ordered),
-        ))
+        rows.append(
+            PointsPerLot(
+                book=book,
+                parts=tuple(
+                    (sym, _trim(_round(amount / ts[0].point_value))) for sym, ts in ordered
+                ),
+                trades=sum(len(ts) for _, ts in ordered),
+            )
+        )
     return sorted(rows, key=lambda r: (-r.trades, r.book))
 
 
@@ -1877,9 +1929,11 @@ def journal_unit_default(trips: list[Trip]) -> JournalUnitDefault:
     """Trading day unless the median eligible day is thinner than two trips."""
     counts = day_counts(trips)
     if counts.state is not s.ResultState.COUNTED_FACT:
-        return JournalUnitDefault(Decimal(0), s.JournalUnit.PER_N_TRIPS,
-                                  s.ResultState.INSUFFICIENT_SAMPLE)
+        return JournalUnitDefault(
+            Decimal(0), s.JournalUnit.PER_N_TRIPS, s.ResultState.INSUFFICIENT_SAMPLE
+        )
     from services.production.journal import constants as k
+
     unit = (
         s.JournalUnit.DAY
         if counts.normal_day >= k.DENSITY_THRESHOLD_TRIPS_PER_DAY
@@ -1994,8 +2048,11 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
     for book, book_trips in sorted(_same_day_by_book(trips).items()):
         first_days = _first_days(book_trips)
         if len(book_trips) < minimum or not first_days:
-            rows.append(BookHalves(book, len(book_trips), held.get(book, 0),
-                                   s.ResultState.INSUFFICIENT_SAMPLE))
+            rows.append(
+                BookHalves(
+                    book, len(book_trips), held.get(book, 0), s.ResultState.INSUFFICIENT_SAMPLE
+                )
+            )
             continue
         first = [t for t in book_trips if t.trading_day in first_days]
         second = [t for t in book_trips if t.trading_day not in first_days]
@@ -2009,7 +2066,17 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
             )
         else:
             control = halves_shuffle.HalvesResult(float(change), None)
-        rows.append(BookHalves(book, len(book_trips), held.get(book, 0),
-                               s.ResultState.COUNTED_FACT, one, two,
-                               _half_counts(book, book_trips), change, control))
+        rows.append(
+            BookHalves(
+                book,
+                len(book_trips),
+                held.get(book, 0),
+                s.ResultState.COUNTED_FACT,
+                one,
+                two,
+                _half_counts(book, book_trips),
+                change,
+                control,
+            )
+        )
     return rows

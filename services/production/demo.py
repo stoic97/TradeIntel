@@ -68,9 +68,12 @@ def demo_import(sess: Session, trader: m.Trader) -> m.Import | None:
 def has_real_record(sess: Session, trader: m.Trader) -> bool:
     """Whether he has a real upload with trades. Then the demo is neither offered nor taken:
     it would become the record the report reads, and hide his own."""
-    return sess.scalars(
-        select(m.Import.id)
-        .join(m.Trip, m.Trip.import_id == m.Import.id)
-        .where(m.Import.trader_id == trader.id, m.Import.source_account != ACCOUNT)
-        .limit(1)
-    ).first() is not None
+    return (
+        sess.scalars(
+            select(m.Import.id)
+            .join(m.Trip, m.Trip.import_id == m.Import.id)
+            .where(m.Import.trader_id == trader.id, m.Import.source_account != ACCOUNT)
+            .limit(1)
+        ).first()
+        is not None
+    )

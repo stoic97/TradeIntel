@@ -34,14 +34,18 @@ GOLDEN = Path("data/golden/groww_orders_sample.ctr.json")
 
 def _import():
     content = FIXTURE.read_bytes()
-    parsed = parse(pl.text_of(content).splitlines(), trader_id="FIXTURE",
-                   raw_hash=hashlib.sha256(content).hexdigest())
+    parsed = parse(
+        pl.text_of(content).splitlines(),
+        trader_id="FIXTURE",
+        raw_hash=hashlib.sha256(content).hexdigest(),
+    )
     return parsed, reconstruct(parsed.fills, fees_available=parsed.fees_available)
 
 
 def test_the_fixture_is_what_its_script_writes():
     assert FIXTURE.read_bytes() == make_groww_fixture.build(), (
-        "run: uv run python scripts/make_groww_fixture.py")
+        "run: uv run python scripts/make_groww_fixture.py"
+    )
 
 
 def test_parsing_twice_gives_identical_bytes():
@@ -51,7 +55,8 @@ def test_parsing_twice_gives_identical_bytes():
 def test_the_import_matches_the_committed_golden():
     """If this fails, a number changed. Read the diff before regenerating."""
     assert canonical_json(snapshot(*_import())) == GOLDEN.read_text(encoding="utf-8"), (
-        "run `uv run python scripts/regenerate_golden.py --groww` to see the diff")
+        "run `uv run python scripts/regenerate_golden.py --groww` to see the diff"
+    )
 
 
 def test_the_golden_covers_the_cases_it_claims_to():
@@ -76,6 +81,7 @@ def test_the_order_filled_at_several_prices_stays_exact():
 
 def test_the_fixture_and_golden_are_not_gitignored():
     for path in (FIXTURE, GOLDEN):
-        done = subprocess.run(["git", "check-ignore", "-q", str(path)],
-                              capture_output=True, check=False)
+        done = subprocess.run(
+            ["git", "check-ignore", "-q", str(path)], capture_output=True, check=False
+        )
         assert done.returncode == 1, f"{path} is gitignored and would never be committed"

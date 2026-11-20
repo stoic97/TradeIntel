@@ -47,22 +47,27 @@ def eligibility_page(request: Request):
         if framework.lock is reader.LockState.TAMPERED:
             # The case the lock exists to catch. Every threshold below would be a
             # number nobody agreed to, shown as one everybody did.
-            return page(request, "eligibility_unreadable.html", status_code=503,
-                        title="We cannot say yet")
+            return page(
+                request, "eligibility_unreadable.html", status_code=503, title="We cannot say yet"
+            )
 
         try:
             trips, imp = loader.load_for(sess, trader)
         except profiles.UnknownInstrument:
-            return page(request, "eligibility_unreadable.html", status_code=503,
-                        title="We cannot say yet")
+            return page(
+                request, "eligibility_unreadable.html", status_code=503, title="We cannot say yet"
+            )
 
         if imp is None:
             return RedirectResponse("/upload", status_code=303)
 
         result = el.assess(trips, framework)
         return page(
-            request, "eligibility.html", title="What we can check",
-            result=result, trips=len(trips),
+            request,
+            "eligibility.html",
+            title="What we can check",
+            result=result,
+            trips=len(trips),
             days=len({t.trading_day for t in trips}),
             framework=framework,
             draft=framework.lock is not reader.LockState.LOCKED,

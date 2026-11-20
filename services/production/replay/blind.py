@@ -49,8 +49,8 @@ from services.shared.schemas.ctr_v1 import Direction, OptionType
 OLD_AFTER_DAYS = 180
 """A trade is old enough once this many days have passed: about two quarters, past the
 weeks a trader remembers a chart for. Stated on the page."""
-CARDS = 10            # at most: half his own entries, half random moments
-WINDOW_MINUTES = 60   # the market shown before the moment
+CARDS = 10  # at most: half his own entries, half random moments
+WINDOW_MINUTES = 60  # the market shown before the moment
 HORIZON_MINUTES = 15  # what "next" means at the reveal
 KEEP_AWAY_MINUTES = 30  # a random moment is at least this far from any of his entries
 SEED = 20261113
@@ -73,32 +73,32 @@ class Card:
 
     number: int
     underlying: str
-    moment: datetime     # the minute he decides at; nothing from it on is shown
-    direction: int       # the side he would take
+    moment: datetime  # the minute he decides at; nothing from it on is shown
+    direction: int  # the side he would take
     shown: tuple[Bar, ...]
 
 
 @dataclass(frozen=True)
 class Dealt:
     card: Card
-    real: bool           # kept apart from the card: the reveal reads it, the card never does
+    real: bool  # kept apart from the card: the reveal reads it, the card never does
     trip_id: str | None
 
 
 @dataclass(frozen=True)
 class Reveal:
     real: bool
-    points: float        # the underlying's move from the last shown close to the horizon,
-    agreed: bool         # in the card's direction, before charges
+    points: float  # the underlying's move from the last shown close to the horizon,
+    agreed: bool  # in the card's direction, before charges
 
 
 @dataclass(frozen=True)
 class Score:
     calls: int
     right: int
-    band: tuple[int, int]   # what a coin flip gives on this many calls, 95% two-sided
+    band: tuple[int, int]  # what a coin flip gives on this many calls, 95% two-sided
     took: int
-    took_points: float      # on the cards he took, in his direction, before charges
+    took_points: float  # on the cards he took, in his direction, before charges
 
 
 def direction_of(trip) -> int | None:
@@ -138,19 +138,32 @@ def eligible(entries: list[Entry], series: dict[str, MinuteBars], today: date) -
     for e in entries:
         bars = series.get(e.underlying)
         moment = _minute(e.entry_ts)
-        if (e.direction in (1, -1) and moment.date() <= cutoff and bars is not None
-                and bars.covers(moment.date()) and _window(bars, moment) is not None
-                and _has_horizon(bars, moment)):
+        if (
+            e.direction in (1, -1)
+            and moment.date() <= cutoff
+            and bars is not None
+            and bars.covers(moment.date())
+            and _window(bars, moment) is not None
+            and _has_horizon(bars, moment)
+        ):
             out.append(e)
     return out
 
 
-def _month_minutes(bars: MinuteBars, year: int, month: int, minutes: list[datetime]) -> list[datetime]:
+def _month_minutes(
+    bars: MinuteBars, year: int, month: int, minutes: list[datetime]
+) -> list[datetime]:
     return [m for m in minutes if (m.year, m.month) == (year, month)]
 
 
-def deal(entries: list[Entry], series: dict[str, MinuteBars], today: date, *, key: str = "",
-         candidates: dict[str, list[datetime]] | None = None) -> list[Dealt]:
+def deal(
+    entries: list[Entry],
+    series: dict[str, MinuteBars],
+    today: date,
+    *,
+    key: str = "",
+    candidates: dict[str, list[datetime]] | None = None,
+) -> list[Dealt]:
     """The cards: up to CARDS // 2 of his old entries and as many random moments, matched on
     underlying, month and direction, shuffled. ``candidates`` lists each underlying's
     minutes to draw from (every bar's start, in the series' own order)."""
@@ -166,22 +179,36 @@ def deal(entries: list[Entry], series: dict[str, MinuteBars], today: date, *, ke
     for e, direction in zip(real, directions, strict=True):
         bars = series[e.underlying]
         moment = _minute(e.entry_ts)
-        options = [m for m in _month_minutes(bars, moment.year, moment.month,
-                                             (candidates or {}).get(e.underlying, []))
-                   if m.date() <= today - timedelta(days=OLD_AFTER_DAYS)]
+        options = [
+            m
+            for m in _month_minutes(
+                bars, moment.year, moment.month, (candidates or {}).get(e.underlying, [])
+            )
+            if m.date() <= today - timedelta(days=OLD_AFTER_DAYS)
+        ]
         rng.shuffle(options)
         random_moment = next(
-            (m for m in options
-             if all(abs((m - n).total_seconds()) >= KEEP_AWAY_MINUTES * 60
-                    for n in near[e.underlying])
-             and _window(bars, m) is not None and _has_horizon(bars, m)), None)
+            (
+                m
+                for m in options
+                if all(
+                    abs((m - n).total_seconds()) >= KEEP_AWAY_MINUTES * 60
+                    for n in near[e.underlying]
+                )
+                and _window(bars, m) is not None
+                and _has_horizon(bars, m)
+            ),
+            None,
+        )
         if random_moment is None:
             continue  # no random moment to match it: the real one is left out too
         dealt.append((moment, e.underlying, e.direction, True, e.trip_id))
         dealt.append((random_moment, e.underlying, direction, False, None))
     rng.shuffle(dealt)
-    return [Dealt(Card(i + 1, u, m, d, _window(series[u], m)), real_, tid)
-            for i, (m, u, d, real_, tid) in enumerate(dealt)]
+    return [
+        Dealt(Card(i + 1, u, m, d, _window(series[u], m)), real_, tid)
+        for i, (m, u, d, real_, tid) in enumerate(dealt)
+    ]
 
 
 def reveal(dealt: Dealt, series: dict[str, MinuteBars]) -> Reveal:
@@ -199,13 +226,13 @@ def coin_band(n: int, cover: float = 0.95) -> tuple[int, int]:
     tail = (1 - cover) / 2
     cdf, low, high = 0.0, 0, n
     for k in range(n + 1):
-        cdf += comb(n, k) / 2 ** n
+        cdf += comb(n, k) / 2**n
         if cdf >= tail:
             low = k
             break
     cdf = 0.0
     for k in range(n + 1):
-        cdf += comb(n, k) / 2 ** n
+        cdf += comb(n, k) / 2**n
         if cdf >= 1 - tail:
             high = k
             break
@@ -225,5 +252,5 @@ def score(dealt: list[Dealt], calls: str, series: dict[str, MinuteBars]) -> Scor
             right += r.agreed
         elif call == "S":
             right += not r.agreed
-    n = len([c for c in calls[:len(dealt)] if c in "TS"])
+    n = len([c for c in calls[: len(dealt)] if c in "TS"])
     return Score(n, right, coin_band(n), took, took_points)

@@ -36,18 +36,51 @@ from tests.helpers.scope_facts import fact_page
 
 def option(when, kind, net, *, day="2026-09-02", strike=5000, lots=1, held=180, symbol="WIDGETIDX"):
     entry = datetime.fromisoformat(f"{day}T{when}:00+05:30")
-    line = mx.TradeLine(symbol, "OPT", "Buy", lots * 50, Decimal(10), Decimal(11), Decimal(net),
-                        Decimal(strike), kind, entry)
-    return mx.Trip(f"{day}-{when}", symbol, day, entry, entry + timedelta(seconds=held), held,
-                   Decimal(net), lots, s.RiskUnitSourceV1.PREMIUM_PAID, is_option=True, lines=(line,))
+    line = mx.TradeLine(
+        symbol,
+        "OPT",
+        "Buy",
+        lots * 50,
+        Decimal(10),
+        Decimal(11),
+        Decimal(net),
+        Decimal(strike),
+        kind,
+        entry,
+    )
+    return mx.Trip(
+        f"{day}-{when}",
+        symbol,
+        day,
+        entry,
+        entry + timedelta(seconds=held),
+        held,
+        Decimal(net),
+        lots,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+        is_option=True,
+        lines=(line,),
+    )
 
 
 def share(when, net, *, day="2026-09-02", symbol="WIDGETETF"):
     entry = datetime.fromisoformat(f"{day}T{when}:00+05:30")
-    line = mx.TradeLine(symbol, "EQ", "Buy", 10, Decimal(100), Decimal(101), Decimal(net),
-                        entry_ts=entry)
-    return mx.Trip(f"{day}-{when}", symbol, day, entry, entry + timedelta(minutes=3), 180,
-                   Decimal(net), 1, s.RiskUnitSourceV1.UNAVAILABLE, is_option=False, lines=(line,))
+    line = mx.TradeLine(
+        symbol, "EQ", "Buy", 10, Decimal(100), Decimal(101), Decimal(net), entry_ts=entry
+    )
+    return mx.Trip(
+        f"{day}-{when}",
+        symbol,
+        day,
+        entry,
+        entry + timedelta(minutes=3),
+        180,
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.UNAVAILABLE,
+        is_option=False,
+        lines=(line,),
+    )
 
 
 QUIET = [option("09:20", "CE", 10, day="2026-09-01"), option("09:20", "CE", 10, day="2026-09-03")]
@@ -107,9 +140,17 @@ def test_the_story_is_three_short_paragraphs_on_a_phone():
 def test_the_metric_counts_what_the_docstring_counts():
     story = mx.busiest_day_story(DAY, "2026-09-02")
     assert (story.trades, story.net) == (6, Decimal(780))
-    assert (story.book, story.book_trades, story.book_net) == ("WIDGETIDX options", 5, Decimal(-220))
+    assert (story.book, story.book_trades, story.book_net) == (
+        "WIDGETIDX options",
+        5,
+        Decimal(-220),
+    )
     assert (story.strike, story.lots, story.switches) == (Decimal(5000), 1, 3)
-    assert (story.median_hold_seconds, story.longest_hold_seconds, story.holds_alike) == (180, 180, True)
+    assert (story.median_hold_seconds, story.longest_hold_seconds, story.holds_alike) == (
+        180,
+        180,
+        True,
+    )
     assert [t.side for t in story.strip] == ["CE", "PE", "PE", "CE", "PE"]
 
 
@@ -117,9 +158,13 @@ def test_the_metric_counts_what_the_docstring_counts():
 
 
 def test_no_book_with_more_than_half_of_the_day_says_so_and_names_none():
-    day = [option("09:20", "CE", 50), option("09:30", "PE", 50),
-           option("09:40", "CE", 50, symbol="WIDGETOIL"), option("09:50", "PE", 50, symbol="WIDGETOIL"),
-           *QUIET]
+    day = [
+        option("09:20", "CE", 50),
+        option("09:30", "PE", 50),
+        option("09:40", "CE", 50, symbol="WIDGETOIL"),
+        option("09:50", "PE", 50, symbol="WIDGETOIL"),
+        *QUIET,
+    ]
     story = story_of(day)
     assert "02 Sep 2026: 4 trades. No one book made up more than half of them." in story
     assert " were " not in story
@@ -135,15 +180,22 @@ def test_half_is_not_more_than_half():
 def test_a_book_with_every_trade_says_all_and_has_one_figure():
     day = [option("09:20", "CE", 50), option("09:30", "CE", -80), *QUIET]
     story = story_of(day)
-    assert "02 Sep 2026: 2 trades. All 2 were WIDGETIDX options, all on the 5000 strike, one lot each." in story
+    assert (
+        "02 Sep 2026: 2 trades. All 2 were WIDGETIDX options, all on the 5000 strike, one lot each."
+        in story
+    )
     assert "All 2 trades that day: −₹30." in story
     assert "WIDGETIDX options that day" not in story
     assert "every book" not in story
 
 
 def test_two_strikes_are_said_as_two_and_the_switches_are_between_calls_and_puts():
-    day = [option("09:20", "CE", 50), option("09:30", "PE", 50, strike=5100),
-           option("09:40", "CE", 50), *QUIET]
+    day = [
+        option("09:20", "CE", 50),
+        option("09:30", "PE", 50, strike=5100),
+        option("09:40", "CE", 50),
+        *QUIET,
+    ]
     story = story_of(day)
     assert "All 3 were WIDGETIDX options, on 2 strikes, one lot each." in story
     assert "You switched between calls and puts 2 times between" in story
@@ -176,8 +228,12 @@ def test_no_switch_says_they_were_all_one_side():
 
 def test_holds_that_differ_are_not_said_as_each_about_one_figure():
     """Holds of 1, 3 and 60 minutes: the middle one is 3, and "each about 3" would be false."""
-    day = [option("09:20", "CE", 50, held=60), option("09:30", "PE", 50, held=180),
-           option("09:40", "CE", 50, held=3600), *QUIET]
+    day = [
+        option("09:20", "CE", 50, held=60),
+        option("09:30", "PE", 50, held=180),
+        option("09:40", "CE", 50, held=3600),
+        *QUIET,
+    ]
     story = story_of(day)
     assert "holding each" not in story
     assert "You held them about 3 minutes at the median, and 60 minutes at the longest." in story
@@ -193,7 +249,9 @@ def test_a_hold_under_a_minute_is_not_called_zero_minutes():
 def test_a_trade_held_past_the_day_is_not_in_the_story():
     """TICKET-855: Chapter 3 reads same-day trades, so the page is what it is without it."""
     held_over = option("09:30", "PE", 50)
-    held_over = replace(held_over, exit_ts=held_over.entry_ts + timedelta(days=2), holding_seconds=172800)
+    held_over = replace(
+        held_over, exit_ts=held_over.entry_ts + timedelta(days=2), holding_seconds=172800
+    )
     same_day = [option("09:20", "CE", 50), *QUIET]
     assert story_of([same_day[0], held_over, *QUIET]) == story_of(same_day)
 
@@ -202,7 +260,10 @@ def test_a_day_of_shares_tells_no_strike_lots_or_switches_and_draws_no_strip():
     day = [share("09:20", 50), share("09:30", -20), *QUIET]
     page = fact_page("busiest", day)
     story = story_of(day)
-    assert "All 2 were Stocks and ETFs. You traded them between 9:20 am and 9:33 am, holding each about 3 minutes." in story
+    assert (
+        "All 2 were Stocks and ETFs. You traded them between 9:20 am and 9:33 am, holding each about 3 minutes."
+        in story
+    )
     for word in ("strike", " lot", "switched", "call", "put"):
         assert word not in story, word
     assert "chart__call" not in page
@@ -223,12 +284,33 @@ def test_a_position_of_several_legs_is_not_a_switch():
     calls either side of it did not switch."""
     entry = datetime.fromisoformat("2026-09-02T09:30:00+05:30")
     legs = tuple(
-        mx.TradeLine("WIDGETIDX", "OPT", side, 50, Decimal(10), Decimal(11), Decimal(25),
-                     Decimal(strike), kind, entry)
+        mx.TradeLine(
+            "WIDGETIDX",
+            "OPT",
+            side,
+            50,
+            Decimal(10),
+            Decimal(11),
+            Decimal(25),
+            Decimal(strike),
+            kind,
+            entry,
+        )
         for side, strike, kind in (("Buy", 5000, "CE"), ("Sell", 5100, "PE"))
     )
-    position = mx.Trip("spread", "WIDGETIDX", "2026-09-02", entry, entry + timedelta(minutes=3), 180,
-                       Decimal(50), 1, s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, is_option=True, lines=legs)
+    position = mx.Trip(
+        "spread",
+        "WIDGETIDX",
+        "2026-09-02",
+        entry,
+        entry + timedelta(minutes=3),
+        180,
+        Decimal(50),
+        1,
+        s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,
+        is_option=True,
+        lines=legs,
+    )
     day = [option("09:20", "CE", 50), position, option("09:40", "CE", 50), *QUIET]
     story = mx.busiest_day_story(day, "2026-09-02")
     assert story.switches == 0
@@ -240,18 +322,39 @@ def test_a_position_of_several_legs_is_not_a_switch():
 def test_a_position_alone_says_there_is_no_call_or_put_to_follow():
     entry = datetime.fromisoformat("2026-09-02T09:30:00+05:30")
     legs = tuple(
-        mx.TradeLine("WIDGETIDX", "OPT", side, 50, Decimal(10), Decimal(11), Decimal(25),
-                     Decimal(strike), kind, entry)
+        mx.TradeLine(
+            "WIDGETIDX",
+            "OPT",
+            side,
+            50,
+            Decimal(10),
+            Decimal(11),
+            Decimal(25),
+            Decimal(strike),
+            kind,
+            entry,
+        )
         for side, strike, kind in (("Buy", 5000, "CE"), ("Sell", 5100, "PE"))
     )
     positions = [
-        mx.Trip(f"p{i}", "WIDGETIDX", "2026-09-02", entry + timedelta(hours=i),
-                entry + timedelta(hours=i, minutes=3), 180, Decimal(50), 1,
-                s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS, is_option=True, lines=legs)
+        mx.Trip(
+            f"p{i}",
+            "WIDGETIDX",
+            "2026-09-02",
+            entry + timedelta(hours=i),
+            entry + timedelta(hours=i, minutes=3),
+            180,
+            Decimal(50),
+            1,
+            s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,
+            is_option=True,
+            lines=legs,
+        )
         for i in range(2)
     ]
-    assert "These were positions of several legs, so there is no call or put to follow." in story_of(
-        [*positions, *QUIET]
+    assert (
+        "These were positions of several legs, so there is no call or put to follow."
+        in story_of([*positions, *QUIET])
     )
 
 
@@ -266,9 +369,11 @@ def test_a_trade_with_no_stored_legs_is_named_only_as_far_as_is_known():
 
 
 def test_it_follows_whatever_day_was_busiest_not_one_file():
-    later = [option("09:20", "CE", 1, day="2026-10-05", symbol="WIDGETOIL"),
-             option("09:30", "PE", 1, day="2026-10-05", symbol="WIDGETOIL"),
-             option("09:40", "PE", 1, day="2026-10-05", symbol="WIDGETOIL")]
+    later = [
+        option("09:20", "CE", 1, day="2026-10-05", symbol="WIDGETOIL"),
+        option("09:30", "PE", 1, day="2026-10-05", symbol="WIDGETOIL"),
+        option("09:40", "PE", 1, day="2026-10-05", symbol="WIDGETOIL"),
+    ]
     story = story_of([*later, *BOOK[:2]])
     assert story.startswith("05 Oct 2026: 3 trades. All 3 were WIDGETOIL options")
 
@@ -330,8 +435,14 @@ def test_the_page_draws_the_strip_with_the_book_it_covers():
 
 
 def test_with_no_book_to_follow_the_strip_covers_every_option_that_day():
-    day = [option("09:20", "CE", 50), option("09:30", "PE", 50, symbol="WIDGETOIL"), share("09:40", 5),
-           share("09:50", 5, symbol="WIDGETTWO"), share("10:00", 5, symbol="WIDGETTWO"), *QUIET]
+    day = [
+        option("09:20", "CE", 50),
+        option("09:30", "PE", 50, symbol="WIDGETOIL"),
+        share("09:40", 5),
+        share("09:50", 5, symbol="WIDGETTWO"),
+        share("10:00", 5, symbol="WIDGETTWO"),
+        *QUIET,
+    ]
     # Shares are one book, with 3 of the 5 trades: the options are outside it, and still drawn.
     assert mx.busiest_day_story(day, "2026-09-02").book == "Stocks and ETFs"
     assert "The 2 option trades that day, in order." in readable(fact_page("busiest", day))
@@ -346,8 +457,13 @@ def test_the_list_keeps_strike_and_side_on_its_rows():
 
 
 def card_sentences(page: str, number: int) -> list[str]:
-    card = page.split(f'<span class="story-card__num">{number}</span>')[1].split("story-card__foot")[0]
-    return [readable(x) for x in re.findall(r'<span class="mirror mirror--card">(.*?)</span>\s*\n', card, re.DOTALL)]
+    card = page.split(f'<span class="story-card__num">{number}</span>')[1].split(
+        "story-card__foot"
+    )[0]
+    return [
+        readable(x)
+        for x in re.findall(r'<span class="mirror mirror--card">(.*?)</span>\s*\n', card, re.DOTALL)
+    ]
 
 
 def test_the_busiest_page_says_none_of_its_cards_sentences():
@@ -372,8 +488,13 @@ def test_the_down_page_says_only_the_opening_sentence_of_its_card():
     assert len(said) == 2
     for sentence in said[1:]:
         assert sentence not in page, sentence
-    for table_line in ("Table 1", "Table 2", "Your other trades after two had closed", "Every other trade",
-                       "A scratch trade ends the run."):
+    for table_line in (
+        "Table 1",
+        "Table 2",
+        "Your other trades after two had closed",
+        "Every other trade",
+        "A scratch trade ends the run.",
+    ):
         assert table_line not in page, table_line
 
 
@@ -381,9 +502,11 @@ def test_the_down_page_says_what_it_counts_and_gives_both_averages_with_no_compa
     """DOWN (test_chapter_three_describes): 4 qualify, 2 right after two losses in a row
     averaging +137.5, the other 2 averaging -100.5."""
     page = readable(fact_page("down", DOWN))
-    assert ("These are the 4 trades you opened once at least two earlier trades that day had closed. "
-            "2 came right after two losses in a row, and averaged +₹137.5. "
-            "The other 2 came when the two most recent had not both lost, and averaged −₹100.5.") in page
+    assert (
+        "These are the 4 trades you opened once at least two earlier trades that day had closed. "
+        "2 came right after two losses in a row, and averaged +₹137.5. "
+        "The other 2 came when the two most recent had not both lost, and averaged −₹100.5."
+    ) in page
     for word in ("better", "worse", "more than", "less than", "higher", "lower"):
         assert word not in page, word
 
@@ -415,10 +538,17 @@ def test_the_down_page_with_nothing_counted_says_so():
 def test_a_long_down_list_sits_behind_the_link_with_book_and_year_filters():
     """18 trades in a row that lose, on each of two days: the first two of a day have nothing
     before them, so 16 a day follow two straight losses. 32 in all, past the 30 a page draws."""
+
     def losing_day(day, symbol):
         start = datetime.fromisoformat(f"{day}T09:15:00+05:30")
         return [
-            option((start + timedelta(minutes=10 * i)).strftime("%H:%M"), "CE", -5, day=day, symbol=symbol)
+            option(
+                (start + timedelta(minutes=10 * i)).strftime("%H:%M"),
+                "CE",
+                -5,
+                day=day,
+                symbol=symbol,
+            )
             for i in range(18)
         ]
 
@@ -446,11 +576,15 @@ def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
     figs = SF.facts(SF.record_context(DAY), IMP)
     item = SF.chapter_view(3, figs)["items"][1]
     assert (item["figure"], item["label"].replace("\xa0", " ")) == (
-        "6 trades", "on your\nbusiest day,\n02 Sep 2026")
+        "6 trades",
+        "on your\nbusiest day,\n02 Sep 2026",
+    )
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
-def test_the_chapters_dial_says_a_count_after_two_straight_losses_and_no_direction(opened, monkeypatch):
+def test_the_chapters_dial_says_a_count_after_two_straight_losses_and_no_direction(
+    opened, monkeypatch
+):
     if opened:
         monkeypatch.setattr(mx, "post_loss_sentence_may_show", lambda trips: True)
     figure = dial_figures(DOWN)["After two straight losses"]
@@ -482,8 +616,12 @@ NUMBER_LINE = "Chapter 4: What we read, and the one number only you can give us.
 
 
 def buttons(html: str) -> list[tuple[str, str]]:
-    return [(href, readable(label)) for href, label in
-            re.findall(r'<a class="btn[^"]*" href="([^"]+)">(.*?)</a>', html, re.DOTALL)]
+    return [
+        (href, readable(label))
+        for href, label in re.findall(
+            r'<a class="btn[^"]*" href="([^"]+)">(.*?)</a>', html, re.DOTALL
+        )
+    ]
 
 
 def test_the_way_into_chapter_four_uses_its_real_title():
@@ -512,12 +650,18 @@ def test_the_chapter_page_goes_on_to_its_first_page():
 
 @pytest.mark.parametrize("n", [1, 2, 4])
 def test_no_other_chapter_gains_the_button(n):
-    assert "/mirror/chapter/4\"" not in re.sub(r'<nav.*?</nav>', "", chapter_page(n, DAY), flags=re.DOTALL)
+    assert '/mirror/chapter/4"' not in re.sub(
+        r"<nav.*?</nav>", "", chapter_page(n, DAY), flags=re.DOTALL
+    )
 
 
 @pytest.mark.parametrize(
     "page",
-    [lambda t: fact_page("busiest", t), lambda t: fact_page("down", t), lambda t: chapter_page(3, t)],
+    [
+        lambda t: fact_page("busiest", t),
+        lambda t: fact_page("down", t),
+        lambda t: chapter_page(3, t),
+    ],
     ids=["busiest", "down", "chapter"],
 )
 def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):

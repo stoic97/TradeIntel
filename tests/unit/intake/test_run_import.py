@@ -159,7 +159,9 @@ def test_a_day_that_loses_rows_shrinks_even_when_the_trips_match():
     shrunk = pl.plan_import(
         fewer,
         context=pl.ImportContext(
-            trader_id="fx", source_account="A", code_version="testsha",
+            trader_id="fx",
+            source_account="A",
+            code_version="testsha",
             existing_days={day: 6},
         ),
     )

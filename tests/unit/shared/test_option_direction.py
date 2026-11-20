@@ -29,12 +29,20 @@ U = od.Underlying
 def own_side(direction, segment):
     """A future or share, bought or sold."""
     return ctr_v2.RoundTrip(
-        trader_id="T01", broker="dhan", exchange="MCX" if segment is Segment.FUT else "NSE",
-        segment=segment, symbol="CRUDEOIL" if segment is Segment.FUT else "RELIANCE",
+        trader_id="T01",
+        broker="dhan",
+        exchange="MCX" if segment is Segment.FUT else "NSE",
+        segment=segment,
+        symbol="CRUDEOIL" if segment is Segment.FUT else "RELIANCE",
         expiry=leg(LONG, 23000, 10).expiry if segment is Segment.FUT else None,
-        direction=direction, entry_ts=T0, exit_ts=T0 + timedelta(hours=1), quantity=1,
-        entry_price=Decimal(100), exit_price=Decimal(101),
-        gross_pnl=Decimal(1) if direction is LONG else Decimal(-1), fees=Decimal(0),
+        direction=direction,
+        entry_ts=T0,
+        exit_ts=T0 + timedelta(hours=1),
+        quantity=1,
+        entry_price=Decimal(100),
+        exit_price=Decimal(101),
+        gross_pnl=Decimal(1) if direction is LONG else Decimal(-1),
+        fees=Decimal(0),
         fill_ids=[f"{segment.value}{direction.value}"],
     )
 
@@ -60,13 +68,17 @@ def test_a_one_leg_position_answers_as_its_trip(side, kind, expected):
 
 
 @pytest.mark.parametrize("segment", [Segment.FUT, Segment.EQ], ids=["future", "share"])
-@pytest.mark.parametrize(("side", "expected"), [(LONG, U.LONG), (SHORT, U.SHORT)],
-                         ids=["bought -> long", "sold -> short"])
+@pytest.mark.parametrize(
+    ("side", "expected"),
+    [(LONG, U.LONG), (SHORT, U.SHORT)],
+    ids=["bought -> long", "sold -> short"],
+)
 def test_a_non_option_trip_takes_its_own_side(segment, side, expected):
     assert od.underlying_direction(own_side(side, segment)) is expected
 
 
 # ------------------------------------------------------------ the inversion (gate 3)
+
 
 @pytest.mark.parametrize("kind", [CE, PE], ids=["call", "put"])
 def test_selling_inverts_buying_and_does_not_copy_it(kind):
@@ -92,6 +104,7 @@ def test_the_answer_is_not_the_contract_side():
 
 # ------------------------------------------------------------ multi-leg (spec 4.7.8, TICKET-902)
 
+
 def test_a_debit_vertical_is_long_under_the_multi_leg_convention():
     """The debit vertical of test_positions.py: bought 23000 CE at 30, sold 23100 CE at 10.
 
@@ -106,6 +119,7 @@ def test_a_debit_vertical_is_long_under_the_multi_leg_convention():
 
 # ------------------------------------------------------------ never the result (gate 4)
 
+
 @pytest.mark.parametrize(("side", "kind", "expected"), SINGLE_LEG)
 def test_a_winner_and_a_loser_of_one_shape_agree(side, kind, expected):
     winner = leg(side, 23000, 30, 40 if side is LONG else 20, kind=kind)
@@ -114,8 +128,20 @@ def test_a_winner_and_a_loser_of_one_shape_agree(side, kind, expected):
     assert od.underlying_direction(winner) is od.underlying_direction(loser) is expected
 
 
-FORBIDDEN = {"gross_pnl", "net_pnl", "gross", "net", "fees", "r_multiple", "risk_unit",
-             "entry_price", "exit_price", "is_win", "is_loss", "is_scratch"}
+FORBIDDEN = {
+    "gross_pnl",
+    "net_pnl",
+    "gross",
+    "net",
+    "fees",
+    "r_multiple",
+    "risk_unit",
+    "entry_price",
+    "exit_price",
+    "is_win",
+    "is_loss",
+    "is_scratch",
+}
 
 
 def test_the_module_never_reads_a_result_or_a_price():
@@ -125,6 +151,7 @@ def test_the_module_never_reads_a_result_or_a_price():
 
 
 # ------------------------------------------------------------ beside uncapped (gate 5)
+
 
 @pytest.mark.parametrize("kind", [CE, PE], ids=["sold call", "sold put"])
 def test_uncapped_is_about_selling_and_direction_is_about_the_underlying(kind):

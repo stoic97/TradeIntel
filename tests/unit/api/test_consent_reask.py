@@ -27,6 +27,7 @@ def app_env(tmp_path, monkeypatch):
 def signed_in(app_env):
     return consent_signed_in(app_env)
 
+
 ASKED_AGAIN = "We have changed this text since you last agreed, so we are asking again."
 OLD = "0-draft"
 
@@ -34,10 +35,18 @@ OLD = "0-draft"
 def grant(engine, purpose: s.ConsentPurpose, version: str = OLD) -> None:
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
-        sess.add(m.ConsentEvent(
-            trader_id=trader.id, purpose=purpose, scope="v1", terms_version=version,
-            granted=True, at=datetime.now(UTC), method="web", wording_shown="x" * 100,
-        ))
+        sess.add(
+            m.ConsentEvent(
+                trader_id=trader.id,
+                purpose=purpose,
+                scope="v1",
+                terms_version=version,
+                granted=True,
+                at=datetime.now(UTC),
+                method="web",
+                wording_shown="x" * 100,
+            )
+        )
         sess.commit()
 
 
@@ -54,8 +63,9 @@ def latest(engine) -> dict[s.ConsentPurpose, m.ConsentEvent]:
 
 
 def agree(client, **fields):
-    return client.post("/consent", data={"csrf_token": token(client), **fields},
-                       follow_redirects=False)
+    return client.post(
+        "/consent", data={"csrf_token": token(client), **fields}, follow_redirects=False
+    )
 
 
 @pytest.mark.parametrize("path", ["/upload", "/budget", "/mirror", "/eligibility"])

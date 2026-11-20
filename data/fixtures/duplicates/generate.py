@@ -30,8 +30,7 @@ from decimal import Decimal
 from pathlib import Path
 
 HEADER = (
-    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,"
-    "Quantity/Lot,Trade Price,Trade Value,Status"
+    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
 )
 HEADER_WITH_ID = HEADER + ",Order ID"
 HERE = Path(__file__).parent
@@ -47,26 +46,18 @@ where a real export says 100.
 """
 
 
-def row(date: str, time: str, name: str, side: str, lots: int, lot_price: str,
-        value: str) -> str:
+def row(date: str, time: str, name: str, side: str, lots: int, lot_price: str, value: str) -> str:
     """One row, written the way the broker writes it.
 
     Call sites give lots and the value of one lot, because that is how a person
     thinks about the trade. The file carries units and the price of one unit,
     because that is what Dhan writes.
     """
-    assert Decimal(value) == lots * Decimal(lot_price), (
-        f"{lots} x {lot_price} is not {value}"
-    )
+    assert Decimal(value) == lots * Decimal(lot_price), f"{lots} x {lot_price} is not {value}"
     units = lots * LOT
     unit_price = (Decimal(value) / units).quantize(Decimal("0.01"))
-    assert unit_price * units == Decimal(value), (
-        f"{value} over {units} units is not a clean price"
-    )
-    return (
-        f"{date},{time},{name},{side},INTRADAY,MCX,Commodity,{units},"
-        f"{unit_price},{value},Traded"
-    )
+    assert unit_price * units == Decimal(value), f"{value} over {units} units is not a clean price"
+    return f"{date},{time},{name},{side},INTRADAY,MCX,Commodity,{units},{unit_price},{value},Traded"
 
 
 def write(name: str, header: str, lines: list[str]) -> None:
@@ -80,19 +71,71 @@ def main() -> None:
         "repeated_legitimate_fills.csv",
         HEADER,
         [
-            row("2026-10-16", "10:15:03", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5000.00", "5000.00"),
-            row("2026-10-16", "10:15:03", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5000.00", "5000.00"),
-            row("2026-10-16", "11:02:40", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 2, "5010.00", "10020.00"),
-            row("2026-10-16", "14:31:19", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "4990.00", "4990.00"),
-            row("2026-10-16", "14:31:19", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "4990.00", "4990.00"),
-            row("2026-10-16", "15:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 2, "4985.00", "9970.00"),
+            row(
+                "2026-10-16",
+                "10:15:03",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "BUY",
+                1,
+                "5000.00",
+                "5000.00",
+            ),
+            row(
+                "2026-10-16",
+                "10:15:03",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "BUY",
+                1,
+                "5000.00",
+                "5000.00",
+            ),
+            row(
+                "2026-10-16",
+                "11:02:40",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "SELL",
+                2,
+                "5010.00",
+                "10020.00",
+            ),
+            row(
+                "2026-10-16",
+                "14:31:19",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "SELL",
+                1,
+                "4990.00",
+                "4990.00",
+            ),
+            row(
+                "2026-10-16",
+                "14:31:19",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "SELL",
+                1,
+                "4990.00",
+                "4990.00",
+            ),
+            row(
+                "2026-10-16",
+                "15:00:00",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "BUY",
+                2,
+                "4985.00",
+                "9970.00",
+            ),
         ],
     )
 
     block = [
         row("2026-10-15", "09:30:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5100.00", "5100.00"),
-        row("2026-10-15", "09:45:12", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "5120.00", "5120.00"),
-        row("2026-10-15", "10:05:55", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 3, "5115.00", "15345.00"),
+        row(
+            "2026-10-15", "09:45:12", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "5120.00", "5120.00"
+        ),
+        row(
+            "2026-10-15", "10:05:55", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 3, "5115.00", "15345.00"
+        ),
     ]
     write("duplicated_block.csv", HEADER, [*block, *block])
 
@@ -100,20 +143,58 @@ def main() -> None:
         "clean.csv",
         HEADER,
         [
-            row("2026-10-14", "09:20:01", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5200.00", "5200.00"),
-            row("2026-10-14", "10:11:30", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "5215.00", "5215.00"),
-            row("2026-10-14", "13:40:07", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 2, "5190.00", "10380.00"),
-            row("2026-10-14", "14:55:44", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 2, "5205.00", "10410.00"),
+            row(
+                "2026-10-14",
+                "09:20:01",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "BUY",
+                1,
+                "5200.00",
+                "5200.00",
+            ),
+            row(
+                "2026-10-14",
+                "10:11:30",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "SELL",
+                1,
+                "5215.00",
+                "5215.00",
+            ),
+            row(
+                "2026-10-14",
+                "13:40:07",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "BUY",
+                2,
+                "5190.00",
+                "10380.00",
+            ),
+            row(
+                "2026-10-14",
+                "14:55:44",
+                "WIDGETOIL 19 NOV 5000 CALL",
+                "SELL",
+                2,
+                "5205.00",
+                "10410.00",
+            ),
         ],
     )
 
     with_ids = [
-        row("2026-10-13", "09:30:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5300.00", "5300.00") + ",ORD-1",
-        row("2026-10-13", "09:30:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5300.00", "5300.00") + ",ORD-1",
-        row("2026-10-13", "10:00:00", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "5310.00", "5310.00") + ",ORD-2",
-        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00") + ",ORD-3",
-        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00") + ",ORD-3",
-        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00") + ",ORD-3",
+        row("2026-10-13", "09:30:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5300.00", "5300.00")
+        + ",ORD-1",
+        row("2026-10-13", "09:30:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5300.00", "5300.00")
+        + ",ORD-1",
+        row("2026-10-13", "10:00:00", "WIDGETOIL 19 NOV 5000 CALL", "SELL", 1, "5310.00", "5310.00")
+        + ",ORD-2",
+        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00")
+        + ",ORD-3",
+        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00")
+        + ",ORD-3",
+        row("2026-10-13", "11:00:00", "WIDGETOIL 19 NOV 5000 CALL", "BUY", 1, "5295.00", "5295.00")
+        + ",ORD-3",
     ]
     write("with_fill_ids.csv", HEADER_WITH_ID, with_ids)
 

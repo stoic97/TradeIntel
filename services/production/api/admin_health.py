@@ -83,8 +83,10 @@ def build(app: FastAPI) -> dict:
     database = _database_bytes(app.state.engine)
     counts = app.state.since_restart
     return {
-        "upload": {"answer": _upload_answer(used, config.production),
-                   "daily_cap": k.UPLOADS_PER_ACCOUNT_PER_DAY},
+        "upload": {
+            "answer": _upload_answer(used, config.production),
+            "daily_cap": k.UPLOADS_PER_ACCOUNT_PER_DAY,
+        },
         "disk": _disk_words(used),
         "database_size": size_words(database) if database is not None else admin_view.NOT_RECORDED,
         "stored_size": size_words(_stored_bytes(config.file_store)),

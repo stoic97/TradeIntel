@@ -320,7 +320,9 @@ def assess(
         interval_inside=bool(lo >= GATE_LOW and hi <= GATE_HIGH),
         envelope_inside=bool(env_lo >= GATE_LOW and env_hi <= GATE_HIGH),
         verdict=_verdict(
-            rate, lo, hi,
+            rate,
+            lo,
+            hi,
             cluster_hi=c_hi,
             n_evaluable=n_evaluable,
             n_clusters=n_clusters,

@@ -53,7 +53,8 @@ def test_no_sold_trade_is_left_out():
 def test_each_sold_trade_keeps_its_result():
     r = reconstruct(BOOK, short_options=True)
     assert sorted(t.gross_pnl for t in r.round_trips if t.direction is Direction.SHORT) == [
-        Decimal(50), Decimal(1300),
+        Decimal(50),
+        Decimal(1300),
     ]
 
 

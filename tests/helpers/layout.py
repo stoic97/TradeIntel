@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/api/test_layout.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_layout.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 

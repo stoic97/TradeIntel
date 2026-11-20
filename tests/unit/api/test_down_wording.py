@@ -64,6 +64,8 @@ def test_the_opening_sentence_does_not_say_the_other_trades_were_while_down():
     """The comparison group is every other trade that qualified, and on some of them the
     trader was not down. The sentence shows only once the gate opens, so a page test can't
     see it until then: this reads the words themselves."""
-    opening = Path("services/production/api/templates/scope/_opening.html").read_text(encoding="utf-8")
+    opening = Path("services/production/api/templates/scope/_opening.html").read_text(
+        encoding="utf-8"
+    )
     assert "while down" not in opening
     assert "Your other trades after two had closed averaged" in opening

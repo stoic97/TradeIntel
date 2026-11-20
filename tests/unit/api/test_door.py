@@ -15,11 +15,18 @@ from tests.helpers.read_again import words
 from tests.helpers.upload import CSRF
 
 QUESTION = "When your first trade of the day loses, what usually happens next?"
-ANSWERS = {"make-back": "I make it back", "break-even": "I break even",
-           "lose-more": "I lose more", "unknown": "I don't know"}
+ANSWERS = {
+    "make-back": "I make it back",
+    "break-even": "I break even",
+    "lose-more": "I lose more",
+    "unknown": "I don't know",
+}
 ROWS = (
     ("You give us", "The trade file your broker lets you download. Never your broker login."),
-    ("You get", "Your own trades, counted: where your results came from, with the trades behind every figure."),
+    (
+        "You get",
+        "Your own trades, counted: where your results came from, with the trades behind every figure.",
+    ),
     ("You won't get", "Tips or courses. No buy or sell calls, ever."),
     ("Brokers", "Dhan today. Others are coming."),
     ("Cost", "Free today."),
@@ -75,8 +82,11 @@ def test_an_answer_it_does_not_know_is_no_answer(engine):
 def test_signing_up_needs_only_a_login_id_and_a_password(engine):
     client = TestClient(create_app())
     csrf = CSRF.search(client.get("/?said=unknown").text).group(1)
-    response = client.post("/signup", data={"login_id": "newcomer", "password": "a-long-enough-password",
-                                            "csrf_token": csrf}, follow_redirects=False)
+    response = client.post(
+        "/signup",
+        data={"login_id": "newcomer", "password": "a-long-enough-password", "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "newcomer")).one()
@@ -98,7 +108,9 @@ def test_the_door_has_sign_in_and_the_sample(engine):
 def test_sign_in_carries_the_logo_and_a_way_to_reach_us(engine):
     page = door("/login")
     assert 'class="lockup' in page
-    assert ("Forgot your password? Your account has no email, so a reset goes through us: "
-            "team@plusev.in") in words(page)
+    assert (
+        "Forgot your password? Your account has no email, so a reset goes through us: "
+        "team@plusev.in"
+    ) in words(page)
     assert 'href="mailto:team@plusev.in"' in page
     assert 'href="/"' in page
