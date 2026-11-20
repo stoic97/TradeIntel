@@ -1,0 +1,6 @@
+{#- The shape of your days: options and futures held overnight against those closed the same day. -#}
+<section class="shape" id="overnight">
+  <h2 class="card-title numbers__heading">Held overnight</h2>
+  <p class="body-small numbers__thin">Options and futures closed on a later day than you opened them.{% if overnight.longest %} The longest was held <a class="link" href="{{ overnight.longest_href }}">{{ Figure(overnight.longest, "days")|count }} {{ "day" if overnight.longest == 1 else "days" }}</a>.{% endif %}{% if overnight.shares %} <span class="num">{{ Figure(overnight.shares, "trades")|count }}</span> {{ "trade in shares is" if overnight.shares == 1 else "trades in shares are" }} counted apart.{% endif %}</p>
+  {{ table(overnight.rows) }}
+</section>

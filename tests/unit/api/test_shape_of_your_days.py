@@ -167,7 +167,7 @@ def test_made_money_days_from_thirty_days():
     record = [trip(f"x{i}", f"2026-{1 + i // 28:02d}-{1 + i % 28:02d}T10:00", "10" if i < 20 else "-5")
               for i in range(31)]
     third = fn("day_trades")(record)["thirds"][0]
-    assert third["days"] == 31 and round(float(third["rate"])) == 65  # 20 of 31 days
+    assert third["days"] == 31 and third["rate"] == D("64.5")  # 20 of 31 days
 
 
 def test_a_third_opens_exactly_its_trades():
