@@ -138,9 +138,20 @@ def test_month_labels_on_102_weeks_skip_collisions_and_january_shows_its_year():
     points = [(6 + step * (i + .5), (start + timedelta(weeks=i)).isoformat()) for i in range(102)]
     labels = c.time_labels(points, kind="month", y=294)
     _gaps_ok(labels)
-    assert "2025" in _texts(labels) and "2026" in _texts(labels)
-    assert all(t in ("2025", "2026") or re.fullmatch(r"[A-Z][a-z]{2}", t) for t in _texts(labels))
     assert len(labels) < 24  # 23 months would collide at this width
+    assert "Jan" not in _texts(labels)  # a January that fits is written as its year
+    for lab in labels:
+        assert lab.text == points[lab.index][1][:4] if points[lab.index][1][5:7] == "01" else lab.text != "2025"
+
+
+def test_january_shows_its_year_when_it_fits():
+    from datetime import date
+    c = charts()
+    months = [date(2025, m, 1).isoformat() for m in range(9, 13)] + [date(2026, m, 1).isoformat() for m in range(1, 5)]
+    labels = c.time_labels([(6 + 36 * i, m) for i, m in enumerate(months)], kind="month", y=294)
+    assert _texts(labels) == ["Sep", "Oct", "Nov", "Dec", "2026", "Feb", "Mar", "Apr"]
+    years = c.time_labels([(6 + 36 * i, m[:7]) for i, m in enumerate(months)], kind="year", y=294)
+    assert _texts(years) == ["2025", "2026"]
 
 
 def test_minute_of_day_labels_for_a_trading_session():
@@ -214,10 +225,20 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
     css = APP_CSS.read_text(encoding="utf-8")
     assert css.count("/* charts toolkit */") == 1
     block = css.split("/* charts toolkit */", 1)[1].split("\n/*", 1)[0]
-    drawn = set(re.findall(r'\bch-[a-z0-9-]+', MODULE.read_text(encoding="utf-8")))
-    drawn = {d for d in drawn if not d.endswith("-")}
-    assert drawn, "the toolkit draws no classes"
-    for cls in drawn | {f"ch-cell--{t}-{n}" for t in ("gain", "loss") for n in range(1, 5)}:
+    c = charts()
+    lo, hi = D(-10000), D(20000)
+    drawn_markup = "".join([
+        *c.axis(lo, hi, D(5000), _y(lo, hi), left=6, right=58, width=358, ref=(D(5000), "a line"), last=D(-1)),
+        *c.axis(lo, hi, D(5000), _y(lo, hi), left=6, right=58, width=358, last=D(1)),
+        *c.axis(lo, hi, D(5000), _y(lo, hi), left=6, right=58, width=358, last=D(0)),
+        *(lab.svg for lab in c.time_labels([(10, 0), (60, 5)], kind="offset", y=294)),
+        c.text_table([["a", Figure(1, "trades")]], ["x", "y"]),
+    ])
+    drawn = set(re.findall(r'\bch-[a-z0-9-]+', drawn_markup))
+    for value in (None, D(0), 3, D(1), D(-1), D(2), D(-2), D(3), D(-3), D(4), D(-4)):
+        drawn |= set(c.cell_tone(value, D(4)).split())
+    assert len(drawn) > 15, drawn
+    for cls in drawn:
         assert f".{cls}" in block, cls
     assert "<script" not in MODULE.read_text(encoding="utf-8")
     css_files = sorted(p.name for p in APP_CSS.parent.glob("*.css"))
