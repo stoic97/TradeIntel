@@ -42,8 +42,9 @@ CHOICES: dict[str, tuple[tuple[str, str], ...]] = {
     "target": (("price", "A price I set"), ("none", "No target"), ("dont_remember", "Don't remember")),
     "planned": (("yes", "Yes"), ("no", "No"), ("dont_remember", "Don't remember")),
 }
-"""TICKET-1008: three per-trade questions with fixed answers, one tap each. No free text, so the
-consent's "what you type into the Journal" covers them as it covers the stop question."""
+"""TICKET-1008: three per-trade questions with fixed answers, one tap each, and no free text.
+They are Journal answers like the stop question, under consent v1's "the Journals written from
+those trades", and go with "every Journal" when he deletes."""
 
 QUESTIONS = {"exit_how": "How did it end?", "target": "Did it have a target?",
              "planned": "Planned before the session?"}
