@@ -58,6 +58,7 @@ Layout follows `docs/methodology.md` section 5. A folder is created when its fir
 | `services/production/db/` | The product tables (`models.py`), the engine, session and migration runner, and the column types |
 | `services/production/eligibility/` | Which checks a history can support, and which it cannot |
 | `services/production/journal/` | The Journal: its fields, periods and prose, and which five he sees |
+| `services/production/market/` | Market data on the server: the Fyers connection for market data only (`fyers.py`), the day's token handled like a key (`token.py`), and the timer-run `cli market-sync` that keeps each series current (`sync.py`) |
 | `services/production/mirror/` | The Mirror: `metrics.py` is the one place each figure is decided; the loader, the guess before the reveal, chapter feedback |
 | `services/production/prices/` | Price-series layer: one 1-minute series per underlying (`underlyings.yaml`) |
 | `services/production/replay/` | Blind replay: his real entries mixed with random moments, the result hidden |
