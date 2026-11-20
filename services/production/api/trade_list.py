@@ -173,7 +173,7 @@ def _line(t: mx.Trip, lookup: dict) -> Choice | None:
     chosen = lookup.get(LINE_OF)
     if chosen is None or t.trip_id not in chosen[1]:
         return None
-    return 0, chosen[0], process.LABELS.get(chosen[0], "From Your process")
+    return 0, chosen[0], process.label(chosen[0])
 
 
 @dataclass(frozen=True)
@@ -217,7 +217,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     lookup = {**expiries, HALF_OF: mx.half_of(behind)}
     if key == "risk" and query.get("line"):
         from services.production.api import process
-        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"]) or frozenset())
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"))
+                           or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue

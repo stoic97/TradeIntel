@@ -468,6 +468,9 @@ def scope_fact_trades(request: Request, key: str):
     _trips, imp, context = record
     with make_session(request.app.state.engine) as sess:
         expiries = loader.expiries_for(sess, imp)
+        if key == "risk" and request.query_params.get("line"):
+            from services.production.api import process_bars
+            context = {**context, "stored_bars": process_bars.stored(sess, imp.id)}
     chapter, index = SM.chapter_of(key)
     return page(request, "scope/trades.html", title=f"{SM.FACTS[key].title}: see all trades",
                 body_class="screen__body--fact", chapter=chapter, index=index,
