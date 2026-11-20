@@ -90,3 +90,13 @@ it is superseded by a new ADR, or gains a dated entry in an Amendments section a
 at its end, and its original Decision text stays as it was.** `tests/unit/repo/test_frozen_docs.py`
 holds each frozen file's version and digest, so an edit that skips the bump fails CI.
 Applied retroactively in TICKET-931.
+
+### SR-014 — the two seat rules bind Phase 0, so they live here and not in an archived plan
+*20 Nov 2026.* R-Spec section 14 names the seats, and two of them cannot be merged: whoever
+runs the isolation read does not rule on it (runner is not the ruler), and whoever writes a
+test does not validate it. Both were first written in the Phase 0 plan of 3 October. That plan
+was archived in TICKET-933, and TICKET-897's plan applies both rules this cycle, so a rule in
+live use cannot sit only in an archived document, where nobody looks for live practice.
+**Whoever runs the isolation read does not rule on it; whoever writes a test does not
+validate it.** The archived plan is `docs/archive/trade_dna_phase0_plan.md`; its README row
+points here.
