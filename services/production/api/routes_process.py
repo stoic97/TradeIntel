@@ -41,13 +41,15 @@ def your_process(request: Request):
     with make_session(request.app.state.engine) as sess:
         capital = capital_told(sess, imp.trader_id)
         figures = process_bars.stored(sess, imp.id)
+        ranges = process_bars.ranges(sess, imp.id)
         before = persist.earlier_reading(sess, imp)
         if before is not None:
             trader = sess.get(m.Trader, imp.trader_id)
             old, _imp = loader.load_for(sess, trader, imp=before)
             chosen = RF.valid(RF.decode(request.cookies.get(RF.COOKIE)), old, None)
             earlier = P.Reading(RF.apply(old, chosen, None), capital=capital,
-                                figures=process_bars.stored(sess, before.id))
-    rows = P.build(P.Reading(trips, capital=capital, figures=figures), earlier)
+                                figures=process_bars.stored(sess, before.id),
+                                ranges=process_bars.ranges(sess, before.id))
+    rows = P.build(P.Reading(trips, capital=capital, figures=figures, ranges=ranges), earlier)
     return page(request, "process.html", title="Your process", imp=imp, rows=rows,
                 trades=len(trips), earlier=earlier is not None)

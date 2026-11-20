@@ -88,6 +88,7 @@ class Reading:
     trips: list
     capital: Decimal | None = None
     figures: dict[str, Bars] | None = None  # by trip id; None when none are stored for this file
+    ranges: dict[tuple[str, str], Decimal] | None = None  # (underlying, day) -> the day's range, points
 
 
 @dataclass(frozen=True)
@@ -448,7 +449,72 @@ def execution(reading: Reading) -> Row:
     return Row("execution", "Execution", tuple(lines), notes=notes)
 
 
-ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution]
+
+# ---------- Market ----------
+
+THIRDS = ("quiet", "middle", "wide")
+DAYS_AT = 30  # traded days an underlying needs before its days are split into thirds
+MONTH_REASON = "contract month differs from the near-month series"
+"""The bar-figures worker's reason for a crude trade on another month's contract; a page may not
+name the worker module, so the words are held here and a test holds them to the worker's."""
+
+
+def _cut(values: list[Decimal]) -> tuple[Decimal, Decimal]:
+    """His own cut points: the range at the end of his first third of days and of his second."""
+    v = sorted(values)
+    return v[ceil(len(v) / 3) - 1], v[ceil(2 * len(v) / 3) - 1]
+
+
+def market(reading: Reading) -> Row:
+    """His days in thirds by how far the market moved that day, per underlying."""
+    ranges, figures = reading.ranges, reading.figures or {}
+    if ranges is None:
+        return Row("market", "Market", (), empty="No market figures for this file yet.")
+    by_day: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    apart = 0
+    for t in reading.trips:
+        bars = figures.get(t.trip_id)
+        if bars is None or bars.underlying is None:
+            continue
+        if bars.reason == MONTH_REASON:
+            apart += 1
+            continue
+        if (bars.underlying, t.trading_day) in ranges:
+            by_day[bars.underlying][t.trading_day].append(t)
+    lines: list[Line] = []
+    for name in sorted(by_day, key=lambda u: (-len(by_day[u]), u)):
+        traded = by_day[name]
+        if len(traded) < DAYS_AT:
+            few = f" {_s(len(traded), 'day', 'days')} with the market's range: too few days."
+            lines.append(Line(f"range-{name}", (f"In {name}: ", _count(len(traded), "days"), few), meets=False))
+            continue
+        quiet_to, wide_from = _cut([ranges[(name, d)] for d in traded])
+        cut = (f"In {name}, by how far the market moved on the days you traded: quiet: up to ",
+               _points(quiet_to), " points · middle · wide: over ", _points(wide_from), " points.")
+        lines.append(Line(f"range-{name}", cut))
+        for third in THIRDS:
+            chosen = [d for d in traded if (ranges[(name, d)] <= quiet_to if third == "quiet"
+                                           else ranges[(name, d)] > wide_from if third == "wide"
+                                           else quiet_to < ranges[(name, d)] <= wide_from)]
+            trades = [t for d in chosen for t in traded[d]]
+            made = sum(1 for d in chosen if sum((t.net for t in traded[d]), Decimal(0)) > 0)
+            key = f"range-{name}-{third}"
+            result = sum((t.net for t in trades), Decimal(0))
+            lines.append(Line(key, (f"{third.capitalize()} days: ", _count(len(chosen), "days", key),
+                                    f" {_s(len(chosen), 'day', 'days')}, ", _count(len(trades), "trades", key),
+                                    f" {_s(len(trades), 'trade', 'trades')}, ", _rupees(result, signed=True),
+                                    "; made money on ", _count(made, "days"), " of ", _count(len(chosen), "days"),
+                                    f" {_s(len(chosen), 'day', 'days')}."),
+                              {key: _ids(trades)}, Measure(made, "days", "count")))
+    apart_line = f"{apart} {_s(apart, 'trade', 'trades')} on a contract month the series doesn't follow left out."
+    notes = (apart_line,) if apart else ()
+    if not lines:
+        return Row("market", "Market", (), empty="No traded days with the market's range yet.", notes=notes)
+    return Row("market", "Market", tuple(lines), notes=notes)
+
+
+ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution,
+                                        market]
 """The page's rows, in order. A later row is one more builder here."""
 
 HOME_ROWS = ("risk", "sizing", "consistency")
@@ -467,6 +533,9 @@ def label(key: str) -> str:
     """What the trade list says a line's trades are."""
     if key.startswith("kept-"):
         return f"Moved your way, held 45 minutes or more, {key[5:]}"
+    if key.startswith("range-"):
+        _r, *name, third = key.split("-")
+        return f"{third.capitalize()} days, {'-'.join(name)}"
     if key.startswith("gave-back-"):
         return f"Went more than your usual move your way and closed at a loss, {key[10:]}"
     return LABELS.get(key, "From Your process")
@@ -481,9 +550,10 @@ def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
             for row in rows]
 
 
-def members(trips, key: str, figures: dict[str, Bars] | None = None) -> frozenset[str] | None:
+def members(trips, key: str, figures: dict[str, Bars] | None = None,
+            ranges: dict[tuple[str, str], Decimal] | None = None) -> frozenset[str] | None:
     """The trades behind one figure, asked of the same builders the page drew it from."""
-    reading = Reading(list(trips), figures=figures)
+    reading = Reading(list(trips), figures=figures, ranges=ranges)
     for builder in ROWS:
         for ln in builder(reading).lines:
             if key in ln.sets:

@@ -217,8 +217,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     lookup = {**expiries, HALF_OF: mx.half_of(behind)}
     if key == "risk" and query.get("line"):
         from services.production.api import process
-        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"))
-                           or frozenset())
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"),
+                                                          ranges=ctx.get("stored_ranges")) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
