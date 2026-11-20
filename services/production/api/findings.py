@@ -74,6 +74,7 @@ LABELS: dict[str, Finding] = {f.key: f for f in (
     Finding("clock", K.AT_CLICK, R.SEEN),          # the hour he opens in
     Finding("down", K.AT_CLICK, R.SEEN),           # the last two trades' results
     Finding("busiest", K.ONLY_AFTER, R.SEEN),      # the busiest day, known once it is over
+    Finding("after-close", K.ONLY_AFTER, R.SEEN),  # the half hour after he closed, counted
     Finding("unread", K.ONLY_AFTER, R.SEEN),       # what the file held, known on reading it
     Finding("risk", K.AT_CLICK, R.SEEN),           # a trade's size against his number
     Finding("not-told", K.ONLY_AFTER, R.SEEN),
