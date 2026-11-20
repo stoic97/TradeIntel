@@ -27,7 +27,7 @@ Decided here, and each threshold is his own:
 * **What moved:** each line's figure beside the earlier reading's, only when both meet the line's
   minimum. No arrow, no colour, no "better" or "worse".
 
-**Execution** (TICKET-1010) reads the bar figures stored off the web app (``bar_trade_figure``: how
+**Execution** reads the bar figures stored off the web app (``bar_trade_figure``: how
 far each trade's underlying went his way while he held, and what he took, in points), never bars.
 Only holds of 45 minutes or more: on 1-minute bars the best price reached is biased for short
 holds (TD-004). Per underlying, because points never add across markets. Kept is Σ took ÷ Σ way
@@ -383,7 +383,7 @@ def consistency(reading: Reading) -> Row:
     return Row("consistency", "Consistency", tuple(lines))
 
 
-# ---------- Execution (TICKET-1010) ----------
+# ---------- Execution ----------
 
 def _median(values: list[Decimal]) -> Decimal:
     return Decimal(str(statistics.median(values))) if values else Decimal(0)
