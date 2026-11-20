@@ -76,9 +76,9 @@ def _reaches_a_sampler(node: ast.FunctionDef, src: str) -> bool:
 def test_the_research_fit_marker_is_registered():
     """An unregistered marker only warns, and the test runs anyway - so a misspelled
     mark would put a fit straight back into the required job."""
-    block = re.search(r"^\[tool\.pytest\.ini_options\](.*?)(?=^\[|\Z)", PYPROJECT, re.M | re.S)
+    block = re.search(r"^\[tool\.pytest\.ini_options\](.*?)(?=^\[|\Z)", PYPROJECT, re.MULTILINE | re.DOTALL)
     assert block, "pyproject.toml has no [tool.pytest.ini_options]"
-    markers = re.search(r"^markers = \[(.*?)\]", block.group(1), re.M | re.S)
+    markers = re.search(r"^markers = \[(.*?)\]", block.group(1), re.MULTILINE | re.DOTALL)
     assert markers, "[tool.pytest.ini_options] declares no markers"
     entry = re.search(rf'"{MARKER}:\s*([^"]+)"', markers.group(1))
     assert entry and entry.group(1).strip(), f"{MARKER} is not registered with a description"
@@ -120,7 +120,7 @@ def test_the_marker_is_on_exactly_the_tests_that_reach_a_sampler():
 def test_make_test_and_the_required_job_select_the_same_tests():
     """make test is the deploy check (handoff 12, step 2). If it and CI's required job
     disagree about what runs, one of the two is lying to whoever reads it."""
-    recipe = re.search(r"^test:.*\n(?:\t.*\n)+", MAKEFILE, re.M)
+    recipe = re.search(r"^test:.*\n(?:\t.*\n)+", MAKEFILE, re.MULTILINE)
     assert recipe, "the Makefile has no test target"
     assert SELECTOR in recipe.group(0), recipe.group(0)
     assert "-m research_fit" in MAKEFILE, "no test-research target for the marked tests"
