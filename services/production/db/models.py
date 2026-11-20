@@ -566,7 +566,7 @@ class BarTradeFigure(Base):
     path: Mapped[str | None] = mapped_column(Text)
     short: Mapped[bool] = mapped_column(Boolean, default=False)
     after_exit: Mapped[str | None] = mapped_column(Text)
-    """The 30 minutes after the exit, as JSON, the exit's close as zero (TICKET-1009)."""
+    """The 30 minutes after the exit, as JSON, the exit's close as zero."""
 
 
 class BarPathSummary(Base):

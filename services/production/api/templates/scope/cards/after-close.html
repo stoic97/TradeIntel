@@ -1,4 +1,4 @@
-{#- After you closed, as a card (TICKET-1009): how many of his measured losing trades the market
+{#- After you closed, as a card: how many of his measured losing trades the market
     came back past the entry on, within 30 minutes of the exit. Stored figures only. -#}
 {% from "_components.html" import story_card, trades_behind, chart %}
 {% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}

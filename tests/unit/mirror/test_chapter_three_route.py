@@ -48,7 +48,9 @@ def test_the_served_busiest_page_tells_the_day_and_goes_on(client):
     page = client.get("/mirror/fact/busiest").text
     day = formatting.day(mx.day_counts(TRIPS).busiest_day)
     assert f"{day}: {mx.day_counts(TRIPS).busiest_trips} trades." in readable(page)
-    assert 'aria-label="Next, chapter 4: What we read"' in page  # TICKET-903: the spine's Next
+    assert "Next: After you closed" in page  # the spine's Next: chapter 3 now ends on After you closed
+    last = client.get("/mirror/fact/after-close").text
+    assert 'aria-label="Next, chapter 4: What we read"' in last  # TICKET-903: the spine's Next
 
 
 def test_the_served_down_page_goes_to_the_next_fact(client):

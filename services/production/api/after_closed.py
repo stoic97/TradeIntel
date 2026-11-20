@@ -1,6 +1,6 @@
 """After you closed: the 30 minutes after each exit, and the losing trades the market came back on.
 
-Reads what the bar-figure job stored (``bar_trade_figure.after_exit``, ``took``; TICKET-1009) and
+Reads what the bar-figure job stored (``bar_trade_figure.after_exit``, ``took``) and
 never a bar: the page draws stored numbers only.
 
 * **"Came back past your entry."** A losing trade (his result below zero) came back when, within

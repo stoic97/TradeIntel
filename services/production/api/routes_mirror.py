@@ -92,7 +92,7 @@ def load_record(request: Request):
 
 
 def _with_close_bars(sess, imp, context: dict) -> dict:
-    """The import's stored after-exit paths beside the record (TICKET-1009): read, never worked
+    """The import's stored after-exit paths beside the record: read, never worked
     out here, and never a bar."""
     context["bars_after_close"] = ACL.load(sess, imp)
     return context

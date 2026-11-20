@@ -126,7 +126,7 @@ class Measured:
     short: bool = False
     after_exit: tuple[Decimal, ...] = ()
     """The close at +1 ... +30 minutes after the exit minute, less the exit's close, in his
-    direction; index 0 is the exit itself (TICKET-1009). Cut at the session end, like ``path``."""
+    direction; index 0 is the exit itself. Cut at the session end, like ``path``."""
     waiting: tuple[date, ...] = ()
     days_read: tuple[tuple[str, str], ...] = ()
 

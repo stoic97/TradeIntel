@@ -43,7 +43,7 @@ def test_the_chapters_and_facts_are_the_handoffs():
 def test_every_fact_has_a_chart_the_geometry_draws():
     # The hold and strike charts stay in the geometry, pinned there, with no fact drawing them.
     # After you closed is not one of the kit's charts, which CHARTS holds to the kit's JavaScript
-    # byte for byte; its own module draws it in the kit's shape (TICKET-1009).
+    # byte for byte; its own module draws it in the kit's shape.
     from services.production.api import after_closed
     from services.production.api import scope_geometry as G
 
