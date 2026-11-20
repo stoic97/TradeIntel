@@ -21,6 +21,19 @@ def _point(text: str | None) -> Decimal | None:
     return None if text is None else Decimal(text)
 
 
+def ranges(sess: Session, import_id: int) -> dict[tuple[str, str], Decimal] | None:
+    """Each (underlying, day) he traded and how far the market moved that day, in points, or None
+    when none are stored for this import (TICKET-1011)."""
+    model = getattr(m, "BarDayRange", None)
+    if model is None:
+        return None
+    try:
+        rows = sess.scalars(select(model).where(model.import_id == import_id)).all()
+    except (OperationalError, ProgrammingError):
+        return None
+    return {(r.underlying, r.day): Decimal(r.range_points) for r in rows} or None
+
+
 def stored(sess: Session, import_id: int) -> dict[str, Bars] | None:
     """Each trade's stored figures by trip id, or None when none are stored for this import."""
     model = getattr(m, "BarTradeFigure", None)

@@ -466,8 +466,51 @@ def _cut(values: list[Decimal]) -> tuple[Decimal, Decimal]:
 
 
 def market(reading: Reading) -> Row:
-    """RED stub (TICKET-1011)."""
-    return Row("market", "Market", (), empty="stub")
+    """His days in thirds by how far the market moved that day, per underlying."""
+    ranges, figures = reading.ranges, reading.figures or {}
+    if ranges is None:
+        return Row("market", "Market", (), empty="No market figures for this file yet.")
+    by_day: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    apart = 0
+    for t in reading.trips:
+        bars = figures.get(t.trip_id)
+        if bars is None or bars.underlying is None:
+            continue
+        if bars.reason == MONTH_REASON:
+            apart += 1
+            continue
+        if (bars.underlying, t.trading_day) in ranges:
+            by_day[bars.underlying][t.trading_day].append(t)
+    lines: list[Line] = []
+    for name in sorted(by_day, key=lambda u: (-len(by_day[u]), u)):
+        traded = by_day[name]
+        if len(traded) < DAYS_AT:
+            few = f" {_s(len(traded), 'day', 'days')} with the market's range: too few days."
+            lines.append(Line(f"range-{name}", (f"In {name}: ", _count(len(traded), "days"), few), meets=False))
+            continue
+        quiet_to, wide_from = _cut([ranges[(name, d)] for d in traded])
+        cut = (f"In {name}, by how far the market moved on the days you traded: quiet: up to ",
+               _points(quiet_to), " points · middle · wide: over ", _points(wide_from), " points.")
+        lines.append(Line(f"range-{name}", cut))
+        for third in THIRDS:
+            chosen = [d for d in traded if (ranges[(name, d)] <= quiet_to if third == "quiet"
+                                           else ranges[(name, d)] > wide_from if third == "wide"
+                                           else quiet_to < ranges[(name, d)] <= wide_from)]
+            trades = [t for d in chosen for t in traded[d]]
+            made = sum(1 for d in chosen if sum((t.net for t in traded[d]), Decimal(0)) > 0)
+            key = f"range-{name}-{third}"
+            result = sum((t.net for t in trades), Decimal(0))
+            lines.append(Line(key, (f"{third.capitalize()} days: ", _count(len(chosen), "days", key),
+                                    f" {_s(len(chosen), 'day', 'days')}, ", _count(len(trades), "trades", key),
+                                    f" {_s(len(trades), 'trade', 'trades')}, ", _rupees(result, signed=True),
+                                    "; made money on ", _count(made, "days"), " of ", _count(len(chosen), "days"),
+                                    f" {_s(len(chosen), 'day', 'days')}."),
+                              {key: _ids(trades)}, Measure(made, "days", "count")))
+    apart_line = f"{apart} {_s(apart, 'trade', 'trades')} on a contract month the series doesn't follow left out."
+    notes = (apart_line,) if apart else ()
+    if not lines:
+        return Row("market", "Market", (), empty="No traded days with the market's range yet.", notes=notes)
+    return Row("market", "Market", tuple(lines), notes=notes)
 
 
 ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution,
