@@ -237,8 +237,8 @@ def _draw(candles: list[Candle], rows: list[Row], marks: list[Mark], day: date, 
 
     slot = plot_w * FIVE / span
     body = max(1.0, slot * 0.7)
-    out = [f'<svg class="dc-chart" viewBox="0 0 {WIDTH} {HEIGHT}" width="100%" role="img" '
-           f'aria-label="The market that day, in five-minute candles, with your trades on it">']
+    out = [(f'<svg class="dc-chart" viewBox="0 0 {WIDTH} {HEIGHT}" width="100%" role="img" '
+            f'aria-label="The market that day, in five-minute candles, with your trades on it">')]
     for v in (hi - pad, (hi + lo) / 2, lo + pad):
         out.append(f'<line x1="{LEFT}" x2="{LEFT + plot_w}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="ch-grid"/>'
                    f'<text x="{LEFT + plot_w + 4}" y="{y(v) + 4:.1f}" class="ch-axis">{formatting.count(v)}</text>')

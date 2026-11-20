@@ -1,4 +1,3 @@
-# ruff: noqa: DTZ001 - the series are naive IST by convention (TICKET-893); so are these bars
 """TICKET-1000: your day on the market chart.
 
 The day page draws the underlying's 5-minute candles for that day, folded from that one day's
