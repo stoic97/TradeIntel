@@ -88,6 +88,7 @@ class Reading:
     trips: list
     capital: Decimal | None = None
     figures: dict[str, Bars] | None = None  # by trip id; None when none are stored for this file
+    ranges: dict[tuple[str, str], Decimal] | None = None  # (underlying, day) -> the day's range, points
 
 
 @dataclass(frozen=True)
@@ -448,7 +449,29 @@ def execution(reading: Reading) -> Row:
     return Row("execution", "Execution", tuple(lines), notes=notes)
 
 
-ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution]
+
+# ---------- Market (TICKET-1011) ----------
+
+THIRDS = ("quiet", "middle", "wide")
+DAYS_AT = 30  # traded days an underlying needs before its days are split into thirds
+MONTH_REASON = "contract month differs from the near-month series"
+"""The bar-figures worker's reason for a crude trade on another month's contract; a page may not
+name the worker module, so the words are held here and a test holds them to the worker's."""
+
+
+def _cut(values: list[Decimal]) -> tuple[Decimal, Decimal]:
+    """His own cut points: the range at the end of his first third of days and of his second."""
+    v = sorted(values)
+    return v[ceil(len(v) / 3) - 1], v[ceil(2 * len(v) / 3) - 1]
+
+
+def market(reading: Reading) -> Row:
+    """RED stub (TICKET-1011)."""
+    return Row("market", "Market", (), empty="stub")
+
+
+ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution,
+                                        market]
 """The page's rows, in order. A later row is one more builder here."""
 
 HOME_ROWS = ("risk", "sizing", "consistency")
@@ -467,6 +490,9 @@ def label(key: str) -> str:
     """What the trade list says a line's trades are."""
     if key.startswith("kept-"):
         return f"Moved your way, held 45 minutes or more, {key[5:]}"
+    if key.startswith("range-"):
+        _r, *name, third = key.split("-")
+        return f"{third.capitalize()} days, {'-'.join(name)}"
     if key.startswith("gave-back-"):
         return f"Went more than your usual move your way and closed at a loss, {key[10:]}"
     return LABELS.get(key, "From Your process")
@@ -481,9 +507,10 @@ def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
             for row in rows]
 
 
-def members(trips, key: str, figures: dict[str, Bars] | None = None) -> frozenset[str] | None:
+def members(trips, key: str, figures: dict[str, Bars] | None = None,
+            ranges: dict[tuple[str, str], Decimal] | None = None) -> frozenset[str] | None:
     """The trades behind one figure, asked of the same builders the page drew it from."""
-    reading = Reading(list(trips), figures=figures)
+    reading = Reading(list(trips), figures=figures, ranges=ranges)
     for builder in ROWS:
         for ln in builder(reading).lines:
             if key in ln.sets:
