@@ -54,6 +54,8 @@ def admin(request: Request):
         sess.commit()
         view = admin_view.build(sess, running_version=request.app.state.code_version,
                                 production=config.production, last_looked=last_looked,
+                                sort=request.query_params.get("sort"),
+                                all_columns=request.query_params.get("columns") == "all",
                                 admin_ids=config.admin_login_ids)
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
                 body_class="admin", health=admin_health.build(request.app), **view)

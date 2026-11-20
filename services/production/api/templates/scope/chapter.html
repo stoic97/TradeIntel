@@ -22,7 +22,7 @@
   {%- endif %}
   <div class="story-list">
   {%- for fact in chapter.facts %}
-    {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% endwith %}
+    {% with number=loop.index, f=facts[fact.key] %}{% include "scope/cards/_state.html" if f.state else "scope/cards/" ~ fact.key ~ ".html" %}{% include "scope/_ladder.html" %}{% endwith %}
   {%- endfor %}
   </div>
   {%- if chapter.feedback and not sample %}
