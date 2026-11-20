@@ -48,6 +48,39 @@
   </dl>
   <p class="body-small admin__note">Read when this page loads. These refusals leave no row, so nothing else here can show them. The counts are held in memory with no trader against them, and a restart sets them back to nothing. A server error is a request that crashed; a refusal is not one. The app can't read backups, so this page says nothing about whether they ran: check them by <code>docs/runbooks/deploy.md</code>, section 5.</p>
 
+  <h2 class="heading admin__head" id="market">Market data</h2>
+  {%- if market.said %}
+  <p class="body-small admin__note">{{ market.said }}</p>
+  {%- endif %}
+  <dl class="admin__quiet body-small">
+    <dt>Fyers</dt><dd>{% if market.configured %}{{ market.login }}{% else %}not set up on this server{% endif %}</dd>
+    <dt>Last run</dt><dd>{{ market.run }}</dd>
+    <dt>Stock days</dt><dd>Stock days waiting: {{ market.waiting|count }}</dd>
+  </dl>
+  <div class="admin__scroll">
+    <table class="table admin__table">
+      <thead><tr><th>Series</th><th>Last day held</th><th>Days behind</th><th>Last run</th></tr></thead>
+      <tbody>
+      {%- for row in market.rows %}
+        <tr><td>{{ row.underlying }}</td><td>{{ row.last }}</td><td>{{ row.behind }}</td><td>{{ row.run }}</td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  {%- if market.configured %}
+  <form method="post" action="/admin/fyers/connect">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn--secondary" type="submit">Connect Fyers</button>
+  </form>
+  <form method="post" action="/admin/fyers/paste">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="body-small" for="fyers-address">{% if market.one_click %}If the login didn't come back here, paste{% else %}After logging in, paste{% endif %} the whole address bar it ended on</label>
+    <textarea id="fyers-address" name="address" rows="2"></textarea>
+    <button class="btn btn--secondary" type="submit">Use this login</button>
+  </form>
+  {%- endif %}
+  <p class="body-small admin__note">The day's login ends at 06:00 the next morning, and the code in the address works for a few minutes only, once. The login can place orders, so the server keeps it encrypted and nothing on this page or in any log shows it. A run every ten minutes adds each finished session (never today's) and fetches the stock days traders' trades need. Counts and dates only: this card never shows a price.</p>
+
   <h2 class="heading admin__head">Traders</h2>
   <div class="admin__scroll">
     <table class="table admin__table">

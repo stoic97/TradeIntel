@@ -171,7 +171,8 @@ def test_the_token_is_in_no_column_no_page_and_no_log(app, engine, caplog):
         for table in m.Base.metadata.sorted_tables:
             for row in sess.execute(text(f'SELECT * FROM "{table.name}"')):
                 assert TOKEN not in " ".join(str(v) for v in row), table.name
-    assert T.read(make_session(engine), app.state.settings.file_key, now=datetime.now(UTC)) == TOKEN
+    with make_session(engine) as sess:
+        assert T.read(sess, app.state.settings.file_key, now=datetime.now(UTC)) == TOKEN
 
 
 # ---------- the card ----------
@@ -209,8 +210,8 @@ def test_the_card_shows_each_series_last_day_and_days_behind_and_never_a_price(a
 
 def test_on_a_server_with_no_fyers_keys_the_card_has_no_forms(app, engine, monkeypatch):
     monkeypatch.delenv("FYERS_APP_ID")
-    client, _ = admin(app, engine)
+    client = signed_in(app, add_trader(engine, ADMIN))
     page = client.get("/admin").text
     card = page[page.index('id="market"'):]
-    assert "not set up on this server" in card and "<form" not in card
-    assert client.post("/admin/fyers/connect", data={"csrf_token": CSRF.search(page)[1]}).status_code == 404
+    assert "not set up on this server" in card and "<form" not in page and "csrf_token" not in page
+    assert client.post("/admin/fyers/connect", data={"csrf_token": "any"}).status_code == 404

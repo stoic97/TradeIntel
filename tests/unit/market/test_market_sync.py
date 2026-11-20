@@ -1,3 +1,4 @@
+# ruff: noqa: DTZ001 - the series are naive IST by convention (TICKET-893); so are these bars
 """TICKET-998: the market sync adds each finished session, through the one day writer.
 
 A fake broker stands in for Fyers and a fake clock for time, so nothing here touches the network,
@@ -122,7 +123,7 @@ def test_only_finished_sessions_after_the_last_day_held_are_added_never_today(tm
     assert sorted(m_.days) == ["2026-03-02", "2026-03-03", "2026-03-05", "2026-03-06"]
     assert m_.as_of == date(2026, 3, 6) and "2026-03-07" not in m_.days
     assert all(m_.days[d].checked == ds.CALENDAR_CHECK for d in ("2026-03-05", "2026-03-06"))
-    probe, *fetches = [a for a in broker.asked if a["symbol"] == CRUDE]  # the first finds the near month
+    _probe, *fetches = [a for a in broker.asked if a["symbol"] == CRUDE]  # the first finds the near month
     assert fetches
     assert datetime.fromtimestamp(int(fetches[0]["range_from"]), IST).date() == date(2026, 3, 4)
     assert all(datetime.fromtimestamp(int(a["range_to"]), IST).date() < TODAY for a in fetches), \

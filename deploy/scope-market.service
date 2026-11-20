@@ -1,0 +1,41 @@
+# /etc/systemd/system/scope-market.service
+#
+# The market sync (TICKET-998): one run of `cli market-sync`, started by scope-market.timer,
+# that adds each finished session to /srv/scope/data/market and fetches the stock days traders
+# need, then exits. Not a second app process: ADR-007's one process still serves every request.
+# With no usable Fyers login it records "needs login", touches nothing, and exits 0.
+
+[Unit]
+Description=PlusEV Scope market sync (one run)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=scope
+Group=scope
+WorkingDirectory=/srv/scope
+
+# The same keys as the app: SCOPE_DB, SCOPE_FILE_KEY (the token is decrypted with it, here and
+# nowhere else) and FYERS_APP_ID, FYERS_SECRET_KEY, FYERS_REDIRECT_URI. Root-owned, 0600.
+EnvironmentFile=/etc/scope/scope.env
+
+ExecStart=/srv/scope/.venv/bin/python -m services.production.api.cli market-sync
+
+# It must never starve the app on a 512 MB, one-vCPU droplet: lower priority, half a CPU at
+# most, and killed rather than allowed past 200 MB. A run works one day at a time, so it needs
+# a few MB; the limit is a ceiling, not a target.
+Nice=10
+CPUQuota=50%
+MemoryMax=200M
+TimeoutStartSec=15min
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/scope/data
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
