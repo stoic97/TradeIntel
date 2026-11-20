@@ -92,7 +92,7 @@ def load_record(request: Request):
 
 
 def _with_bars(sess, imp, context: dict) -> dict:
-    """The import's stored bar figures beside the record's (TICKET-1001): read, never worked out
+    """The import's stored bar figures beside the record's: read, never worked out
     here, and never a bar."""
     context["bars"] = AC.load(sess, imp)
     return context
@@ -302,7 +302,7 @@ def scope_fact(request: Request, key: str):
     chapter, index = SM.chapter_of(key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
-    if key == "after" and request.query_params.get("u"):  # the chip he picked (TICKET-1001)
+    if key == "after" and request.query_params.get("u"):  # the chip he picked
         figs["after"].update(SF.after_page(context, request.query_params["u"]))
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}

@@ -404,7 +404,7 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .against__losses { display: block; width: 100%; height: 12px; margin-top: var(--space-2); fill: var(--color-navy); }
 .against__range { display: block; width: 100%; margin-top: var(--space-1); }
 
-/* after you clicked (TICKET-1001): his paths beside random moments' band, stored figures only */
+/* after you clicked (after you clicked): his paths beside random moments' band, stored figures only */
 .after .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
 .after .chip { text-decoration: none; }
 .after .chip--on { background: var(--color-ink); color: var(--color-page); }

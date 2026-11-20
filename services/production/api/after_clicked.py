@@ -1,4 +1,4 @@
-"""After you clicked: the 30 minutes after each entry, beside random moments (TICKET-1001).
+"""After you clicked: the 30 minutes after each entry, beside random moments.
 
 Reads what the bar-figure job stored (999: ``bar_trade_figure`` per trade, ``bar_path_summary``
 per underlying) and never a bar: the page draws stored numbers only.

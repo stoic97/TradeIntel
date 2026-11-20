@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -143,7 +144,7 @@ def test_chapter_two_lists_it_after_the_clock():
 # ---------- the page, on stored rows ----------
 
 def _store(engine, measured: int, reasons: list[str]):
-    trips = json.loads(open("tests/fixtures/mirror_contract/main.json", encoding="utf-8").read())
+    trips = json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text(encoding="utf-8"))
     with make_session(engine) as sess:
         imp = sess.scalars(select(m.Import)).first()
         for i, t in enumerate(trips):

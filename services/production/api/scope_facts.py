@@ -102,7 +102,7 @@ def _f(value) -> float:
 def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
-    if kind == "after":  # stored figures only (TICKET-1001); not a kit chart, so not in G.CHARTS
+    if kind == "after":  # stored figures only; not a kit chart, so not in G.CHARTS
         return AC.geometry(AC.view(ctx), w, h, mini=mini)
     if kind == "worst":
         return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
@@ -802,7 +802,7 @@ def _after_figure(v: dict) -> Figure:
 
 
 def after_page(ctx: dict, pick: str | None = None) -> dict:
-    """The after-you-clicked page for one underlying (TICKET-1001): its view, its chart at the
+    """The after-you-clicked page for one underlying: its view, its chart at the
     page's size, and its table. The route passes the chip the trader picked."""
     v = AC.view(ctx, pick)
     return {"view": v, "page_chart": AC.geometry(v), "table": AC.table(v) if v["enough"] else ""}
