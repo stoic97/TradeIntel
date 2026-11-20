@@ -97,6 +97,10 @@ FACTORS: tuple[Factor, ...] = (
     F("Sequence", "Same strike again", K.AT_CLICK, S.IN_YOUR_FILE),
     F("Sequence", "Losing runs", K.ONLY_AFTER, S.WORKED_OUT, facts=("run",)),
     F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, facts=("busiest",)),
+    F("Sequence", "Minutes since the last close, and its direction", K.AT_CLICK, S.WORKED_OUT,
+      filters=("after",), facts=("back-in", "same-way")),
+    F("Sequence", "The day after a best or worst day", K.BEFORE, S.WORKED_OUT,
+      filters=("next_day",), facts=("next-day",)),
     # Size
     F("Size", "Lots", K.AT_CLICK, S.WORKED_OUT, checks=("R1",)),
     F("Size", "Change from the last trade", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R2",)),

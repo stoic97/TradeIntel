@@ -65,6 +65,10 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Your behaviour",
         (
             Fact("down", "After two straight losses", "down"),
+            # What you do next: off the phone dial, so the phone keeps the wedges it had.
+            Fact("back-in", "How fast you went back in", "backin", on_phone_dial=False),
+            Fact("same-way", "Same way again", "sameway", on_phone_dial=False),
+            Fact("next-day", "The day after a big day", "nextday", on_phone_dial=False),
             Fact("busiest", "Your busiest day", "busy"),
         ),
         feedback=True,
@@ -268,6 +272,12 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return [t for t in trips if t.trip_id in ids]
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)
+    if key == "back-in":
+        return mx.subset(trips, list(ctx["next_trades"].group_of))
+    if key == "same-way":
+        return mx.subset(trips, list(ctx["next_trades"].way_ids))
+    if key == "next-day":
+        return mx.subset(trips, list(ctx["day_after"].group_of))
     if key == "run":
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":

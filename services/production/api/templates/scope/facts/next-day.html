@@ -1,0 +1,16 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{#- The day after a big day: the next day he traded after his best tenth and his worst tenth of
+    days (at least three each), against his other days. Counts, side by side. -#}
+{% block head %}
+    <p class="mirror">{{ f.line }}</p>
+    <p class="mirror">Your days are the days you closed trades on. Your best days: {{ f.best_days|join(", ") }}. Your worst days: {{ f.worst_days|join(", ") }}. Each is your best or worst tenth of days, at least three each. The day after is the next day you traded. Lots are counted on option trades.</p>
+{% endblock %}
+{% block body %}
+  {% if f.page_chart %}{% call figure(1, "Trades a day on the day after", f.page_chart) %}
+    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>After your best days</span><span><span class="legend__swatch legend__swatch--red"></span>After your worst days</span><span><span class="legend__swatch legend__swatch--light"></span>Your other days</span></div>
+  {% endcall %}{% endif %}
+  <table class="table"><thead><tr><th></th><th class="table__num">Days</th><th class="table__num">Trades</th><th class="table__num">Average lots</th><th class="table__num">Made money</th></tr></thead>
+  <tbody>{% for r in f.rows %}<tr><td class="table__text">{% if r.href %}<a class="link" href="{{ r.href }}">{{ r.label }}</a>{% else %}{{ r.label }}{% endif %}</td><td class="table__num">{{ Figure(r.days, "days")|count }}</td><td class="table__num">{{ Figure(r.trades, "trades")|count }}</td><td class="table__num">{% if r.lots is not none %}{{ Figure(r.lots, "lots")|lots }}{% else %}—{% endif %}</td><td class="table__num">{% if r.rate is not none %}{{ Figure(r.rate, "percent")|out_of_a_hundred }}{% else %}too few{% endif %}</td></tr>{% endfor %}</tbody></table>
+{% endblock %}
+{% block caption %}Every trade on the day after one of your best or worst days, and on your other days.{% endblock %}

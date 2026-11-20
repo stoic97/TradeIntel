@@ -433,3 +433,6 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__fill--loss { background: var(--color-loss); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* What you do next (chapter 3): the red swatch for "after your worst days". */
+.legend__swatch--red { background: var(--color-loss); }

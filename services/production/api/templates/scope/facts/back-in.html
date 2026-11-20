@@ -1,0 +1,17 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{#- How fast you went back in: the minutes from the last trade that closed to the next one, the
+    same day, after a loss and after a win. His medians, side by side; no word for fast or slow. -#}
+{% block head %}
+    <p class="mirror">{{ f.line }}</p>
+    <p class="mirror">Each trade here opened once an earlier trade that day had closed, and is set against the last of those to close: after a loss, or after a win. A trade still open when the next one started is not the one before it.
+    {%- if f.scratch %} <span class="num">{{ Figure(f.scratch, "trades")|count }}</span> came right after a trade that finished level, and are in neither group.{% endif %}</p>
+{% endblock %}
+{% block body %}
+  {% if f.page_chart %}{% call figure(1, "Minutes to your next trade, after a loss and after a win", f.page_chart) %}
+    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>After a loss</span><span><span class="legend__swatch legend__swatch--faint"></span>After a win</span><span>| the median</span></div>
+  {% endcall %}{% endif %}
+  <table class="table"><thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Median minutes</th></tr></thead>
+  <tbody>{% for g in f.groups %}<tr><td class="table__text">{% if g.trades %}<a class="link" href="{{ g.href }}">{{ g.label }}</a>{% else %}{{ g.label }}{% endif %}</td><td class="table__num">{{ Figure(g.trades, "trades")|count }}</td><td class="table__num">{% if g.median is not none %}{{ Figure(g.median, "minutes")|count }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table>
+{% endblock %}
+{% block caption %}Every trade you opened right after a loss or a win, the same day.{% endblock %}

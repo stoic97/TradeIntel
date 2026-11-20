@@ -156,6 +156,33 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+AFTER_OF = "the last trade's result before each trade"
+"""The lookup's key for each trade's group: the result of the last trade that closed before it
+opened, the same day (How fast you went back in, Same way again)."""
+
+AFTERS = (("loss", "After a loss"), ("win", "After a win"))
+
+
+def _after(t: mx.Trip, lookup: dict) -> Choice | None:
+    group = lookup.get(AFTER_OF, {}).get(t.trip_id)
+    for place, (value, label) in enumerate(AFTERS):
+        if group == value:
+            return place, value, label
+    return None
+
+
+NEXT_DAY_OF = "the day each trade's day came after"
+NEXT_DAYS = (("best", "After a best day"), ("worst", "After a worst day"), ("other", "Other days"))
+
+
+def _next_day(t: mx.Trip, lookup: dict) -> Choice | None:
+    group = lookup.get(NEXT_DAY_OF, {}).get(t.trip_id)
+    for place, (value, label) in enumerate(NEXT_DAYS):
+        if group == value:
+            return place, value, label
+    return None
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
@@ -176,6 +203,8 @@ FILTERS = (
     Filter("closed", "Day closed", closed_on, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way"})),
+    Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
 )
 
 
@@ -188,7 +217,9 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
+    lookup = {**expiries, HALF_OF: mx.half_of(behind),
+              AFTER_OF: ctx["next_trades"].group_of if "next_trades" in ctx else {},
+              NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {}}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue

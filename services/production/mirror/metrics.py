@@ -2158,3 +2158,123 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
                                s.ResultState.COUNTED_FACT, one, two,
                                _half_counts(book, book_trips), change, control))
     return rows
+
+# ---------- What you do next: chapter 3's three order facts ----------
+# Counts and his own medians. A trade's previous is the same-day trade that closed most recently
+# before it opened (b2's "resolved": exited before this entry, so an overlapping trade is never
+# previous); a trade after one that finished level is in neither group, and counted.
+
+
+@dataclass(frozen=True)
+class NextTrades:
+    after_loss: tuple[Trip, ...]   # the trades that came next, after a losing trade
+    after_win: tuple[Trip, ...]
+    scratch: int                   # trades that came next after one that finished level
+    minutes: dict[str, Decimal]    # each next trade: minutes from the previous one's exit
+    group_of: dict[str, str]       # each next trade: "loss" or "win"
+    loss_median: Decimal | None
+    win_median: Decimal | None
+    same_after_loss: int
+    other_after_loss: int
+    same_after_win: int
+    other_after_win: int
+    no_direction: int              # pairs with a trade of no single direction, left out
+    way_ids: frozenset[str]        # next trades whose pair has both directions
+
+    @property
+    def state(self) -> s.ResultState:
+        return s.ResultState.COUNTED_FACT if self.after_loss else s.ResultState.INSUFFICIENT_SAMPLE
+
+    @property
+    def way_state(self) -> s.ResultState:
+        return (s.ResultState.COUNTED_FACT if self.same_after_loss + self.other_after_loss
+                else s.ResultState.INSUFFICIENT_SAMPLE)
+
+
+def _direction(trip: Trip) -> int | None:
+    from services.production.replay.blind import direction_of  # the shared rule, read once
+    return direction_of(trip) if trip.lines else None
+
+
+def next_trades(same_day: list[Trip]) -> NextTrades:
+    """Each same-day trade and its previous one: how many minutes later, and which way."""
+    by_day: dict[str, list[Trip]] = {}
+    for t in same_day:
+        by_day.setdefault(t.trading_day, []).append(t)
+    loss, win, minutes, group = [], [], {}, {}
+    scratch = no_dir = 0
+    way = {("loss", True): 0, ("loss", False): 0, ("win", True): 0, ("win", False): 0}
+    way_ids = set()
+    for members in by_day.values():
+        for t in sorted(members, key=lambda t: (t.entry_ts, t.trip_id)):
+            closed = [p for p in members if p is not t and p.exit_ts < t.entry_ts]
+            if not closed:
+                continue
+            prev = max(closed, key=lambda p: (p.exit_ts, p.trip_id))
+            if prev.is_scratch:
+                scratch += 1
+                continue
+            g = "loss" if prev.is_loss else "win"
+            (loss if g == "loss" else win).append(t)
+            group[t.trip_id] = g
+            minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
+            a, b = _direction(prev), _direction(t)
+            if a is None or b is None:
+                no_dir += 1
+            else:
+                way[(g, a == b)] += 1
+                way_ids.add(t.trip_id)
+
+    def mid(group_trips):
+        return median([minutes[t.trip_id] for t in group_trips]) if group_trips else None
+
+    return NextTrades(tuple(loss), tuple(win), scratch, minutes, group, mid(loss), mid(win),
+                      way[("loss", True)], way[("loss", False)], way[("win", True)], way[("win", False)],
+                      no_dir, frozenset(way_ids))
+
+
+BIG_DAYS_AT_LEAST = 3
+"""His best tenth and worst tenth of traded days, at least this many each."""
+
+
+@dataclass(frozen=True)
+class DayAfter:
+    best: tuple[str, ...]          # his best days, by the day he closed, best first
+    worst: tuple[str, ...]
+    groups: dict[str, tuple[Trip, ...]]   # "best", "worst", "other": trades on the day after
+    days_in: dict[str, int]
+    group_of: dict[str, str]
+    state: s.ResultState
+
+
+def day_after(trips: list[Trip]) -> DayAfter:
+    """The next day he traded after each of his best and worst days, and all his other next days.
+
+    Days are the day he closed, as the calendar counts them. A day's group is its previous traded
+    day's: after a best day, after a worst day, or other. Fewer than twice the minimum of traded
+    days, so best and worst can't each have it apart, draws nothing."""
+    nets: dict[str, Decimal] = {}
+    on: dict[str, list[Trip]] = {}
+    for t in trips:
+        day = t.exit_ts.date().isoformat()
+        nets[day] = nets.get(day, Decimal(0)) + t.net
+        on.setdefault(day, []).append(t)
+    days = sorted(nets)
+    empty = {"best": (), "worst": (), "other": ()}
+    if len(days) < 2 * BIG_DAYS_AT_LEAST:
+        return DayAfter((), (), empty, {"best": 0, "worst": 0, "other": 0}, {},
+                        s.ResultState.INSUFFICIENT_SAMPLE)
+    n = max(BIG_DAYS_AT_LEAST, ceil(len(days) / 10))
+    best = tuple(sorted(days, key=lambda d: (-nets[d], d))[:n])
+    worst = tuple(sorted((d for d in days if d not in best), key=lambda d: (nets[d], d))[:n])
+    groups: dict[str, list[Trip]] = {"best": [], "worst": [], "other": []}
+    days_in = {"best": 0, "worst": 0, "other": 0}
+    group_of: dict[str, str] = {}
+    for before, day in pairwise(days):
+        g = "best" if before in best else "worst" if before in worst else "other"
+        groups[g] += on[day]
+        days_in[g] += 1
+        for t in on[day]:
+            group_of[t.trip_id] = g
+    return DayAfter(best, worst, {g: tuple(v) for g, v in groups.items()}, days_in, group_of,
+                    s.ResultState.COUNTED_FACT if groups["best"] else s.ResultState.INSUFFICIENT_SAMPLE)
