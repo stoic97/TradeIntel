@@ -16,7 +16,7 @@
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
     {%- if v.enough %}
-    <p class="mirror">30 minutes after you clicked, the market had moved a median <span class="num">{{ Figure(v.his_end|abs, "points")|count }}</span> {{ "point" if (v.his_end|abs) == 1 else "points" }} {{ "your way" if v.his_end >= 0 else "against you" }}; from random moments, <span class="num">{{ Figure((v.random_end or 0)|abs, "points")|count }}</span>{% if v.random_end %} {{ "your way" if v.random_end > 0 else "against you" }}{% endif %}.</p>
+    <p class="mirror">30 minutes after you clicked, the market had moved a median <span class="num">{{ Figure(v.his_points, "points")|count }}</span> {{ v.his_unit }}{% if v.his_way %} {{ v.his_way }}{% endif %}; from random moments, <span class="num">{{ Figure(v.random_points, "points")|count }}</span>{% if v.random_way %} {{ v.random_way }}{% endif %}.</p>
     {%- endif %}
 {% endblock %}
 {% block gross %}{{ super() }}{% if f.state %}<section class="after" id="after" aria-label="After you clicked">{{ counts() }}</section>{% endif %}{% endblock %}
@@ -28,7 +28,7 @@
       <figcaption class="figure__caption">Figure {{ Figure(1, "figure") }} · Points the market moved your way after you clicked, {{ v.underlying }}</figcaption>
       <svg class="chart ac-chart" viewBox="0 0 {{ f.page_chart.w }} {{ f.page_chart.h }}" width="{{ f.page_chart.w }}" height="{{ f.page_chart.h }}" aria-hidden="true">{% for part in f.page_chart.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}{{ f.page_chart.labels }}</svg>
       <div class="figure__axis"><span>0</span><span>minutes after you clicked</span><span>{{ Figure(30, "minutes")|count }}</span></div>
-      <p class="legend"><span><span class="legend__swatch ac-swatch--band"></span>Random moments: the middle 95%, median dashed, ending at <span class="num">{{ Figure(v.random_end or 0, "points")|count }}</span> points</span><span><span class="legend__swatch ac-swatch--his"></span>Your median, ending at <span class="num">{{ Figure(v.his_end, "points")|count }}</span> points; your middle half shaded</span></p>
+      <p class="legend"><span><span class="legend__swatch ac-swatch--band"></span>Random moments: the middle 95%, median dashed, ending at <span class="num">{{ Figure(v.random_end, "points")|count }}</span> points</span><span><span class="legend__swatch ac-swatch--his"></span>Your median, ending at <span class="num">{{ Figure(v.his_end, "points")|count }}</span> points; your middle half shaded</span></p>
     </figure>
     <p class="body-small">The random moments are drawn from your whole record's months, so they stay the same whatever you filter.</p>
     {{ f.table }}

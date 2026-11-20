@@ -150,8 +150,17 @@ def view(ctx: dict, pick: str | None = None) -> dict:
         "faint": _evenly(his, FAINT),
     }
     out["his_end"] = whole(_end(out["his_median"]))
-    out["random_end"] = whole(_end(out["random_median"]))
+    out["random_end"] = whole(_end(out["random_median"])) or 0
+    out.update(said(out["his_end"], "his"), **said(out["random_end"], "random"))
     return out
+
+
+def said(n: int | None, who: str) -> dict:
+    """How a sentence says where a line ends: whole points, without a sign, and which way."""
+    if n is None:
+        return {f"{who}_points": None, f"{who}_way": "", f"{who}_unit": "points"}
+    return {f"{who}_points": abs(n), f"{who}_way": "your way" if n > 0 else "against you" if n < 0 else "",
+            f"{who}_unit": "point" if abs(n) == 1 else "points"}
 
 
 # ---------- the chart ----------
