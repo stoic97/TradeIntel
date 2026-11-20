@@ -1,4 +1,3 @@
-# ruff: noqa: DTZ001 - the series are naive IST by convention (TICKET-893); so are these bars
 """TICKET-997: market data stored by day, checked when written.
 
 One gzip file per underlying per trading day, and a manifest that lists every day with its row

@@ -235,7 +235,9 @@ def test_the_mirror_fixture_is_counted_against_bars_with_no_network():
 def test_the_891_count_reads_day_files_unchanged(tmp_path):
     write_days(tmp_path, "NIFTY", nse_day(date(2026, 3, 2)) + nse_day(date(2026, 3, 3)))
     p = L.Prices(data_dir=tmp_path)
-    entries = [PM.Entry(f"t{i}", "NIFTY", T + timedelta(minutes=5 + i), 1) for i in range(3)]
+    from zoneinfo import ZoneInfo
+    ist = ZoneInfo("Asia/Kolkata")
+    entries = [PM.Entry(f"t{i}", "NIFTY", (T + timedelta(minutes=5 + i)).replace(tzinfo=ist), 1) for i in range(3)]
     got = PM.count(entries, p.for_count(["NIFTY"]), draws=50)
     assert got.total == 3 and got.before.measured == 3, got.unmeasured
 

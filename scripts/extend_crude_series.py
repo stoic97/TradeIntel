@@ -4,6 +4,10 @@ Run once a month (the runbook, ``docs/runbooks/crude-series.md``, has the line):
 
     uv run --with fyers-apiv3 python scripts/extend_crude_series.py --token-file <path to a Fyers token>
 
+It extends the day files in ``<SCOPE_MARKET_DIR>/CRUDEOIL/`` (TICKET-997), one gzip file per
+session, written through ``services/shared/market/day_store.py``. The first time, split the old
+single file into day files with ``scripts/split_series_by_day.py``.
+
 What it does, in order, and what makes it stop:
 
 1. **Finds the near month.** The broker serves its continuous future relative to the
@@ -18,8 +22,8 @@ What it does, in order, and what makes it stop:
    the next run.
 4. **Checks every session added.** A weekday with no bars, a part session or a weekend
    session must be in ``mcx_sessions.yaml`` with a reason, or nothing is written.
-5. **Writes** the series (the held bytes unchanged, the new bars after them) and its
-   manifest, and prints the line to add to ``data/market/CROSSINGS.md``.
+5. **Writes** each new session as a day file (the held days untouched), then the manifest, and
+   prints the line to add to ``data/market/CROSSINGS.md``.
 
 The token is read from a file outside the repository and never written anywhere. Until
 the fund and the product have separate accounts (ADR 002), the connection is the fund's,
@@ -31,9 +35,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -41,6 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from services.shared.market import day_store as ds
 from services.shared.market import series as ms
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -48,16 +52,13 @@ OVERLAP_DAYS = 10
 MAX_OHLC_MISMATCH = 0.001
 CHUNK_DAYS = 99  # the broker answers at most 100 days of 1-minute bars per request
 MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
-DEFAULT_SERIES = ROOT / "data" / "market" / "crude_1m_current.csv"
+DEFAULT_FOLDER = ROOT / "data" / "market" / "CRUDEOIL"
+SESSION_OPEN = time(9, 0)  # MCX_CRUDEOIL.yaml's session_start
 FMT = "%Y-%m-%d %H:%M:%S"
 
 
 class Refused(Exception):
     """The run wrote nothing, and the message says why."""
-
-
-def manifest_path(series: str | Path) -> Path:
-    return Path(series).with_suffix(".json")
 
 
 def _history(client, symbol: str, start: datetime, end: datetime) -> dict:
@@ -98,18 +99,21 @@ def _stamp(line: str) -> datetime:
     return datetime.strptime(line.split(",", 1)[0], FMT)  # noqa: DTZ007 - the series is naive IST
 
 
-def _held(data: bytes) -> tuple[dict[datetime, list[str]], datetime, datetime, int]:
-    """The held bars of the last ``OVERLAP_DAYS``, the first and last bar, and the row count."""
-    rows = data.decode("utf-8").splitlines()[1:]
-    first, last = _stamp(rows[0]), _stamp(rows[-1])
-    since = last.date() - timedelta(days=OVERLAP_DAYS)
+def _held(store: ds.DayStore) -> tuple[dict[datetime, list[str]], datetime, bytes]:
+    """The held bars of the last ``OVERLAP_DAYS``, the last bar held, and the header line."""
+    last_day = date.fromisoformat(max(store.days))
+    since = last_day - timedelta(days=OVERLAP_DAYS)
     tail: dict[datetime, list[str]] = {}
-    for line in reversed(rows):
-        t = _stamp(line)
-        if t.date() < since:
-            break
-        tail[t] = line.split(",")[1:]
-    return tail, first, last, len(rows)
+    header, last = b"", None
+    for key in sorted(store.days):
+        if date.fromisoformat(key) < since:
+            continue
+        text = store.text(date.fromisoformat(key))
+        header, rows = text.split(b"\n", 1)[0] + b"\n", text.decode("utf-8").splitlines()[1:]
+        for line in rows:
+            last = _stamp(line)
+            tail[last] = line.split(",")[1:]
+    return tail, last, header
 
 
 def _seam(held: dict[datetime, list[str]], got: dict[datetime, list[str]]) -> None:
@@ -125,12 +129,13 @@ def _seam(held: dict[datetime, list[str]], got: dict[datetime, list[str]]) -> No
         raise Refused(f"seam: {len(ohl)} of {len(both)} held bars differ in open, high or low")
 
 
-def extend(base: str | Path, out: str | Path, client, *, today: date,
-           calendar: dict[date, ms.SessionException], built: date,
-           base_source: str | None = None) -> ms.SeriesManifest:
-    base, out = Path(base), Path(out)
-    data = base.read_bytes()
-    held, first, last, n_held = _held(data)
+def extend(folder: str | Path, client, *, today: date, calendar: dict[date, ms.SessionException],
+           built: date, session_open: time = SESSION_OPEN) -> ds.DayManifest:
+    store = ds.DayStore(folder, "CRUDEOIL")
+    if store.manifest is None:
+        raise Refused(f"{Path(folder)} holds no day files yet: split the series first with "
+                      "scripts/split_series_by_day.py")
+    held, last, header = _held(store)
     symbol = near_month_symbol(client, today)
     got = fetch(client, symbol, last.date() - timedelta(days=OVERLAP_DAYS), today)
     _seam(held, got)
@@ -144,27 +149,25 @@ def extend(base: str | Path, out: str | Path, client, *, today: date,
         raise Refused("sessions without a reason in mcx_sessions.yaml: "
                       + "; ".join(f"{d} {seen}" for d, seen in check.unexplained))
 
-    newline = b"\r\n" if data.split(b"\n", 1)[0].endswith(b"\r") else b"\n"
-    body = data if data.endswith(b"\n") else data + newline
-    body += b"".join((t.strftime(FMT) + "," + ",".join(new[t])).encode() + newline for t in sorted(new))
+    newline = b"\r\n" if header.endswith(b"\r\n") else b"\n"
+    by_day: dict[date, list[bytes]] = {}
+    for t in sorted(new):
+        by_day.setdefault(t.date(), []).append((t.strftime(FMT) + "," + ",".join(new[t])).encode() + newline)
+    day_check = ds.mcx_check(calendar, session_open)
+    try:
+        for day, rows in by_day.items():
+            store.put(day, header, rows, check=day_check)
+    except ds.Refused as exc:
+        raise Refused(f"a day was refused, and the manifest is unchanged: {exc}") from None
 
-    prior = manifest_path(base)
-    before = (ms.read_manifest(prior).source if prior.exists()
-              else base_source or f"{base.name}, {first:%Y-%m-%d} to {last:%Y-%m-%d}")
-    m = ms.SeriesManifest(
-        underlying="CRUDEOIL", serves=ms.CRUDE_SERVES, file=out.name,
-        sha256=hashlib.sha256(body).hexdigest(), rows=n_held + len(new),
-        first_bar=first, last_bar=max(new), as_of=as_of,
-        source=(f"{before}; then the Fyers history API, {symbol} with cont_flag=1 (near-month continuous), "
+    before = store.manifest
+    return store.save(
+        serves=ms.CRUDE_SERVES, roll=ms.ROLL_CONVENTION, clock=ms.CLOCK, interval="1 minute", built=built,
+        source=(f"{before.source}; then the Fyers history API, {symbol} with cont_flag=1 (near-month continuous), "
                 f"{added_from:%Y-%m-%d} to {as_of:%Y-%m-%d}, pulled {built:%Y-%m-%d}"),
-        roll=ms.ROLL_CONVENTION, clock=ms.CLOCK, interval="1 minute", built=built, extended_from=added_from,
-        sessions=tuple(f"{d:%Y-%m-%d} {seen}: {reason}" for d, seen, reason in check.listed),
+        sessions=before.sessions + tuple(f"{d:%Y-%m-%d} {seen}: {reason}" for d, seen, reason in check.listed),
+        as_of=as_of,
     )
-    tmp = out.with_name(out.name + ".part")
-    tmp.write_bytes(body)
-    os.replace(tmp, out)
-    ms.write_manifest(m, manifest_path(out))
-    return m
 
 
 def _client(token_file: Path):
@@ -181,27 +184,27 @@ def _client(token_file: Path):
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--token-file", type=Path, required=True, help="a Fyers token file, outside the repository")
-    p.add_argument("--series", type=Path, default=DEFAULT_SERIES, help="the series to extend (default: %(default)s)")
-    p.add_argument("--base", type=Path, help="first run only: the file to start from, when --series does not exist")
-    p.add_argument("--base-source", help="first run only: where --base came from, for the manifest")
+    p.add_argument("--folder", type=Path, default=DEFAULT_FOLDER,
+                   help="the crude day files to extend (default: %(default)s)")
     a = p.parse_args(argv)
-    base = a.series if a.series.exists() else a.base
-    if base is None:
-        p.error(f"{a.series} does not exist yet: pass --base, the file it starts from")
     today = datetime.now(IST).date()
+    before = ds.read_manifest(a.folder).days.keys() if (a.folder / ds.MANIFEST).exists() else set()
     try:
-        m = extend(base, a.series, _client(a.token_file), today=today, calendar=ms.load_calendar(), built=today,
-                   base_source=a.base_source)
+        m = extend(a.folder, _client(a.token_file), today=today, calendar=ms.load_calendar(), built=today)
     except Refused as e:
-        print(f"refused, nothing written: {e}", file=sys.stderr)
+        print(f"refused, manifest unchanged: {e}", file=sys.stderr)
         return 2
-    print(f"{m.file}: {m.rows:,} bars, {m.first_bar:%Y-%m-%d} to {m.as_of:%Y-%m-%d}, sha256 {m.sha256}")
+    added = sorted(set(m.days) - set(before))
+    rows = sum(e.rows for e in m.days.values())
+    digest = hashlib.sha256(ds.manifest_bytes(a.folder)).hexdigest()
+    print(f"CRUDEOIL: {rows:,} bars in {len(m.days):,} day files, {m.first_day():%Y-%m-%d} to "
+          f"{m.as_of:%Y-%m-%d}; manifest sha256 {digest}")
     for s in m.sessions:
         print("  ", s)
     print("\nAdd to data/market/CROSSINGS.md:")
-    print(f"| {m.built:%Y-%m-%d} | `data/market/{m.file}` | Fyers history API, near-month continuous, "
-          f"through the fund's connection | - | `{m.sha256}` | MCX crude 1-min OHLCV, added "
-          f"{m.extended_from:%Y-%m-%d} to {m.as_of:%Y-%m-%d}. Prices only. |")
+    print(f"| {m.built:%Y-%m-%d} | `data/market/CRUDEOIL/` | Fyers history API, near-month continuous, "
+          f"through the fund's connection | - | `{digest}` (manifest) | MCX crude 1-min OHLCV, added "
+          f"{added[0]} to {m.as_of:%Y-%m-%d}, {len(added)} day files. Prices only. |")
     return 0
 
 
