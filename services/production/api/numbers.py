@@ -21,12 +21,17 @@ the trade list reads it (``trade_list.left_bucket``), so a row and the list it o
 """
 from __future__ import annotations
 
+import calendar as _calendar
 from collections import Counter
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
+from services.production.api import charts, formatting
 from services.production.api import scope_map as SM
 from services.production.api import trade_list as TL
+from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
+from services.shared.market import closures
 
 MINIMUM = mx.BOOK_ROW_MINIMUM
 EVERY_TRADE = "risk"
@@ -36,6 +41,11 @@ TENTH = Decimal("0.1")
 
 def _trades(**filters) -> str:
     return SM.see_all_href(EVERY_TRADE, **filters)
+
+
+def closed_day_href(iso: str) -> str:
+    """Every trade he closed on this date (TICKET-993), for a day on which nothing opened."""
+    return _trades(closed_day=iso)
 
 
 def _side(net: Decimal) -> str:
@@ -64,6 +74,10 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
     def day_href(iso: str) -> str | None:
         return f"/mirror/day/{iso}" if iso in opened_on else None
 
+    def any_day_href(iso: str) -> str:
+        """A day's trades: its day page when one opened then, else the trades closed that day."""
+        return day_href(iso) or closed_day_href(iso)
+
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
     for t in ordered:  # in date order, so a tie goes to the earlier day
@@ -81,8 +95,8 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
                    "href": _trades(result="winners")},
         "loser": {"value": None if even.average_loser is None else -even.average_loser,
                   "count": strike.losses, "href": _trades(result="losers")},
-        "best_day": {"value": best[1], "day": best[0], "href": day_href(best[0])},
-        "worst_day": {"value": worst[1], "day": worst[0], "href": day_href(worst[0])},
+        "best_day": {"value": best[1], "day": best[0], "href": any_day_href(best[0])},
+        "worst_day": {"value": worst[1], "day": worst[0], "href": any_day_href(worst[0])},
         "months": {"made": sum(1 for c in months if c.net > 0), "of": len(months),
                    "href": _trades()},
         "per_day": {"value": (Decimal(len(trips)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
@@ -113,4 +127,89 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
         "last": ordered[-1].exit_ts.date().isoformat(), "gross": gross, "minimum": MINIMUM,
         "tiles": tiles, "weekdays": _rows(weekday_rows), "expiry": _rows(expiry_rows),
         "no_expiry": no_expiry, "books": _rows(book_rows),
+    }
+
+
+# ---------- Your calendar (TICKET-993) ----------
+
+MONTHS_SHOWN = 12
+"""On All, the latest this many months; "Show all N months" asks for the rest."""
+SCALE_AT = Decimal("0.9")
+"""A cell's colour is measured against this percentile of the day results in view, so one huge
+day doesn't wash every other cell out. Beyond it, a cell takes the strongest step."""
+WEEKDAY_LETTERS = ("M", "T", "W", "T", "F", "S", "S")
+
+
+def _percentile(values: list[Decimal], at: Decimal) -> Decimal:
+    """Linear between ranks (numpy's default): with few days, the nearest rank would be the
+    largest day, and the scale would be the outlier it exists to set aside."""
+    if not values:
+        return Decimal(0)
+    ordered = sorted(values)
+    pos = at * (len(ordered) - 1)
+    low = int(pos)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (pos - low) * (ordered[high] - ordered[low])
+
+
+def _shut() -> frozenset[date]:
+    """NSE's closed weekdays: only to grey a day with no trades, never to move one."""
+    known = closures.load().get("NSE")
+    return known.closed if known else frozenset()
+
+
+def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool = False) -> dict:
+    """His calendar: a block a month, newest first, a cell a day he closed trades on.
+
+    Each day's result and each month's are the running result's own candles (986), so a cell
+    and a candle can't disagree; nothing is added up a second way. A day is the day he closed.
+    """
+    run = mx.running_result(trips)
+    days = {c.period: c for c in run.candles["day"]}
+    months = list(reversed(run.candles["month"]))
+    cut = None
+    if not show_all and not year_chosen and len(months) > MONTHS_SHOWN:
+        cut = (MONTHS_SHOWN, len(months))
+        months = months[:MONTHS_SHOWN]
+    shown = {m.period for m in months}
+    in_view = [c for p, c in days.items() if p[:7] in shown]
+    scale = _percentile([abs(c.net) for c in in_view], SCALE_AT)
+    opened_on = {t.trading_day for t in trips}
+    shut = _shut()
+
+    blocks = []
+    for m in months:
+        year, month = (int(x) for x in m.period.split("-"))
+        weeks = []
+        for week in _calendar.Calendar(firstweekday=0).monthdatescalendar(year, month):
+            row = []
+            for d in week:
+                if d.month != month:
+                    row.append(None)
+                    continue
+                iso = d.isoformat()
+                c = days.get(iso)
+                traded = c is not None and c.trades > 0
+                href = None
+                if traded:
+                    href = f"/mirror/day/{iso}" if iso in opened_on else closed_day_href(iso)
+                row.append({
+                    "day": d.day, "iso": iso,
+                    "net": c.net if traded else None,
+                    "trades": c.trades if traded else 0,
+                    "tone": charts.cell_tone(c.net if traded else None, scale),
+                    "href": href,
+                    "closed": not traded and d.weekday() < 5 and d in shut,
+                })
+            weeks.append(row)
+        blocks.append({"period": m.period, "label": date(year, month, 1).strftime("%b %Y"),
+                       "net": m.net, "trades": m.trades, "weeks": weeks})
+
+    rows = [[formatting.day(c.period), Figure(c.trades, "trades"), Figure(c.net, "rupees")]
+            for c in sorted(in_view, key=lambda c: c.period, reverse=True) if c.trades]
+    return {
+        "months": blocks, "cut": cut, "all_href": "?months=all#calendar", "scale": scale,
+        "letters": WEEKDAY_LETTERS,
+        "table": charts.text_table(rows, ["Day", "Trades", "Result"],
+                                   caption="Every day you closed a trade, as numbers"),
     }
