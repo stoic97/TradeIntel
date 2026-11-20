@@ -108,7 +108,7 @@ def client(market):
             sess.add(m.Trip(
                 import_id=imp.id, trip_id=trip_id, trading_day=opened.astimezone(IST).date().isoformat(),
                 exchange=exchange, symbol=symbol, segment="OPT", direction="LONG", option_type=kind,
-                strike=Decimal(P), entry_ts=opened, exit_ts=closed, quantity=75 if exchange == "NSE" else 100,
+                strike=Decimal(P), entry_ts=opened, exit_ts=closed, quantity=65 if exchange == "NSE" else 100,
                 entry_price=Decimal(100), exit_price=Decimal(100), gross=Decimal(net), fees=Decimal(0),
                 net=Decimal(net), fees_available=False, risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID))
         stored = {"t1": ("62", "18", "21", None), "t2": (None, None, None, "waiting for this day's data"),
