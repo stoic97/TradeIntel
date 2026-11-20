@@ -29,6 +29,11 @@
 .admin__scroll { overflow-x: auto; max-width: 100%; }
 .admin__table th, .admin__table td { padding-right: var(--space-3); white-space: nowrap; }
 .admin__stale { color: var(--color-loss); font-weight: 600; }
+.admin__traders-box { max-height: 80vh; overflow: auto; }
+.admin__traders thead th { position: sticky; top: 0; z-index: 1; background: var(--color-page); }
+.admin__who { position: sticky; left: 0; background: var(--color-page); }
+.admin__traders thead th.admin__who { z-index: 2; }
+.admin__fold { margin-top: var(--space-3); }
 .admin__note, .admin__notes { margin-top: var(--space-3); max-width: 80ch; color: var(--color-muted); }
 .admin__notes { padding-left: var(--space-4); }
 .admin__journey { white-space: nowrap; }
@@ -475,3 +480,22 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .ch-cell--loss-3 { fill: var(--color-loss); fill-opacity: .62; }
 .ch-cell--loss-4 { fill: var(--color-loss); fill-opacity: .9; }
 .ch-table td, .ch-table th { font-size: 12px; }
+
+/* TICKET-988: Your numbers */
+.numbers__top { color: var(--color-faint); }
+.numbers__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-4); }
+.numbers__tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); background: var(--color-surface); border-radius: 12px; min-width: 0; }
+.numbers__tile p { margin: 0; }
+.numbers__figure { font: 500 20px/26px var(--font-mono); white-space: nowrap; }
+.numbers__note, .numbers__thin { color: var(--color-faint); }
+.numbers__heading { margin-top: var(--space-8); }
+.numbers__table td, .numbers__table th { padding-left: var(--space-2); font-size: 13px; }
+.numbers__table td:first-child, .numbers__table th:first-child { padding-left: 0; }
+.numbers__table td.num { white-space: nowrap; }
+.numbers__bar { display: block; position: relative; height: 4px; margin-top: var(--space-1); background: var(--color-hairline); border-radius: 2px; }
+.numbers__bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--color-faint); }
+.numbers__fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.numbers__fill--gain { background: var(--color-gain); }
+.numbers__fill--loss { background: var(--color-loss); }
+.numbers__foot { margin-top: var(--space-6); }
+@media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }

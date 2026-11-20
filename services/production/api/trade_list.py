@@ -100,6 +100,42 @@ def _hour(t: mx.Trip, _expiries: dict) -> Choice:
     return hour, str(hour), f"{hour:02d}:00"
 
 
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+LEFT_BUCKETS = (
+    ("expiry-day", "Expiry day", None, 0),
+    ("1", "1 day left", 1, 1),
+    ("2-6", "2–6 days left", 2, 6),
+    ("7-plus", "7+ days left", 7, None),
+)
+"""Calendar days from the day a trade was closed to its contract's expiry (TICKET-988). Not the
+days-to-expiry filter above, which counts from the day it was opened."""
+
+
+def days_left(t: mx.Trip, expiries: dict) -> int | None:
+    """Days from the close to the contract's expiry, read by the first leg; None with no expiry."""
+    if not t.lines:
+        return None
+    expiry: date | None = expiries.get(loader.expiry_key(t.lines[0]))
+    return None if expiry is None else (expiry - t.exit_ts.date()).days
+
+
+def left_bucket(t: mx.Trip, expiries: dict) -> Choice | None:
+    days = days_left(t, expiries)
+    if days is None:
+        return None
+    for place, (value, label, low, high) in enumerate(LEFT_BUCKETS):
+        if (low is None or days >= low) and (high is None or days <= high):
+            return place, value, label
+    return None
+
+
+def closed_on(t: mx.Trip, _expiries: dict) -> Choice:
+    """The weekday he closed it, in the instrument's zone."""
+    day = t.exit_ts.weekday()
+    return day, WEEKDAYS[day].lower(), WEEKDAYS[day]
+
+
 def _year(t: mx.Trip, _expiries: dict) -> Choice:
     year = t.trading_day[:4]
     return year, year, year
@@ -149,6 +185,10 @@ FILTERS = (
     Filter("dte", "Days to expiry", _expiry),
     Filter("hour", "Hour opened", _hour),
     Filter("year", "Year", _year),
+    # The Your numbers page opens every trade by the day it was closed and by the days its
+    # contract had left then (TICKET-988); offered on that list only.
+    Filter("closed", "Day closed", closed_on, only=frozenset({"risk"})),
+    Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
     Filter("after", "After a loss or a win", _after, only=frozenset({"size"})),
 )

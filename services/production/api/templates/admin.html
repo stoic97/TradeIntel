@@ -5,6 +5,7 @@
 {% block head_scripts %}{% endblock %}
 {% block content %}
   <h1 class="title">Admin</h1>
+  <p class="body-small"><a class="link" href="/">Home</a> · <a class="link" href="/account">Account, to sign out</a></p>
   <p class="body-small">Running deploy: <span class="num">{{ running_version }}</span>. Times are IST. {{ dev_left_out }} of everything until their own list at the end.</p>
 
   <h2 class="heading admin__head">{% if new_since.last_looked %}New since you last looked, {{ new_since.last_looked }}{% else %}This is your first look{% endif %}</h2>
@@ -49,21 +50,26 @@
   <p class="body-small admin__note">Read when this page loads. These refusals leave no row, so nothing else here can show them. The counts are held in memory with no trader against them, and a restart sets them back to nothing. A server error is a request that crashed; a refusal is not one. The app can't read backups, so this page says nothing about whether they ran: check them by <code>docs/runbooks/deploy.md</code>, section 5.</p>
 
   <h2 class="heading admin__head">Traders</h2>
-  <div class="admin__scroll">
-    <table class="table admin__table">
+  <p class="body-small">{% if all_columns %}<a class="link" href="/admin">Show the seven main columns</a>{% else %}<a class="link" href="/admin?columns=all">Show every column</a>{% endif %}</p>
+  <div class="admin__scroll admin__traders-box">
+    <table class="table admin__table admin__traders">
       <thead><tr>
-        <th>Trader</th><th>Login id</th><th>File</th><th>Journey</th><th>Files uploaded</th><th>First upload</th><th>Days active</th><th>Rows read</th><th>Rows refused</th><th>Files refused</th><th>Duplicates flagged</th><th>Would read differently</th><th>Facts read</th><th>In the report</th><th>Drawer opens</th>
+        <th class="admin__who"><a class="link" href="{{ sort_links.name }}">Trader</a></th><th><a class="link" href="{{ sort_links.file }}">File</a></th><th><a class="link" href="{{ sort_links.journey }}">Journey</a></th><th><a class="link" href="{{ sort_links.facts }}">Facts read</a></th><th><a class="link" href="{{ sort_links.minutes }}">In the report</a></th><th><a class="link" href="{{ sort_links.activity }}">Last activity</a></th><th><a class="link" href="{{ sort_links.issues }}">Issues</a></th>
+        {%- if all_columns %}
+        <th>Login id</th><th>Files uploaded</th><th>First upload</th><th>Days active</th><th>Rows read</th><th>Would read differently</th>
         {%- for n in feedback_chapters %}<th>Chapter {{ n }} match?</th>{% endfor -%}
-        <th>Whole report</th><th>Journals opened</th><th>Journals written</th><th>Budget</th><th>Guess</th><th>Leaving card</th><th>Would pay</th><th>Pay question</th><th>Signed up</th><th>Last activity</th>
+        <th>Whole report</th><th>Journals opened</th><th>Journals written</th><th>Budget</th>{% if guess_on %}<th>Guess</th>{% endif %}{% if leaving_on %}<th>Leaving card</th>{% endif %}<th>Would pay</th><th>Pay question</th><th>Signed up</th>
+        {%- endif %}
       </tr></thead>
       <tbody>
       {%- for row in rows %}
         <tr>
-          <td>{{ row.name }}</td><td><a href="{{ row.href }}">{{ row.login_id }}</a></td><td>{{ row.file }}</td><td class="admin__journey">{% for step in row.journey %}<span{% if not step.done %} class="admin__todo"{% endif %}>{{ "✓" if step.done else "–" }} {{ step.label }}</span> {% endfor %}</td><td>{{ row.files_uploaded }}</td><td>{{ row.first_upload }}</td><td>{{ row.days_active }}</td><td>{{ row.rows_read }}</td><td>{{ row.rows_refused }}</td><td>{{ row.uploads_refused }}</td><td>{{ row.duplicates }}</td>
-          <td{% if row.reads_differently == "yes" %} class="admin__stale"{% endif %}>{{ row.reads_differently }}</td>
-          <td>{{ row.facts_read }}</td><td>{{ row.minutes }}</td><td>{{ row.drawer_opens }}</td>
+          <td class="admin__who">{{ row.name }}<br><span class="body-small"><a href="{{ row.href }}">{{ row.login_id }}</a></span></td><td>{{ row.file }}</td><td class="admin__journey">{% for step in row.journey %}<span{% if not step.done %} class="admin__todo"{% endif %}>{{ "✓" if step.done else "–" }} {{ step.label }}</span> {% endfor %}</td><td>{{ row.facts_read }}</td><td>{{ row.minutes }}</td><td>{{ row.last_activity }}</td><td class="admin__stale">{{ row.issues }}</td>
+          {%- if all_columns %}
+          <td>{{ row.login_id }}</td><td>{{ row.files_uploaded }}</td><td>{{ row.first_upload }}</td><td>{{ row.days_active }}</td><td>{{ row.rows_read }}</td><td{% if row.reads_differently == "yes" %} class="admin__stale"{% endif %}>{{ row.reads_differently }}</td>
           {%- for said in row.chapters %}<td>{{ said }}</td>{% endfor -%}
-          <td>{{ row.report }}</td><td>{{ row.journals_opened }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td><td>{{ row.guess }}</td><td>{{ row.leaving }}</td><td>{{ row.wtp }}</td><td>{{ row.pay_progress }}</td><td>{{ row.signed_up }}</td><td>{{ row.last_activity }}</td>
+          <td>{{ row.report }}</td><td>{{ row.journals_opened }}</td><td>{{ row.journals_written }}</td><td>{{ row.budget }}</td>{% if guess_on %}<td>{{ row.guess }}</td>{% endif %}{% if leaving_on %}<td>{{ row.leaving }}</td>{% endif %}<td>{{ row.wtp }}</td><td>{{ row.pay_progress }}</td><td>{{ row.signed_up }}</td>
+          {%- endif %}
         </tr>
       {%- else %}
         <tr><td colspan="7">No traders yet.</td></tr>
@@ -71,6 +77,8 @@
       </tbody>
     </table>
   </div>
+  <details class="admin__fold">
+  <summary class="body-small">What each column can and can't know</summary>
   <ul class="admin__notes body-small">
     <li><strong>File:</strong> what the trader's report reads now: real, demo or none. A real upload removes the demo, so someone who tried it and moved on counts as real only, and "tried the demo" is a floor. On the top card a refused file counts as a real file brought, though it gives no report to read.</li>
     <li><strong>Would read differently:</strong> "yes" says today's code would build this trader's latest file read differently, the same check that offers them a re-read. A deploy that changed no reading leaves it "no".</li>
@@ -78,7 +86,6 @@
     <li><strong>Days active:</strong> India dates with any stored action. A visit that writes nothing leaves no date, so this is a floor.</li>
     <li><strong>Pay question:</strong> how close the would-pay question is: journals opened, and settled in, meaning a second file or a fortnight since the first.</li>
     <li><strong>Facts read, in the report:</strong> a fact counts once its heading has been on screen for a second and then left it. A fact page closed with its heading still on screen sends nothing, so these are floors. Old dwell keys count as the fact they moved to.</li>
-    <li><strong>Drawer opens:</strong> no page has a drawer now, so this can only be older events.</li>
     <li><strong>Refused, duplicates:</strong> rows are from the latest file read. Files refused counts stored refusals. A byte-identical re-upload is refused before anything is written, so those refusals are not visible here.</li>
     <li><strong>Last activity:</strong> the latest thing stored about this trader: sign-up, consent, an upload, reading, an answer, a journal opened or written, a budget, a charges file, the guess, the leaving card or would pay. It is a floor: a visit that writes nothing can't show. The table is sorted by it. An account from before sign-up times were kept can show "—".</li>
     <li><strong>Notes:</strong> what a trader typed is not shown, only that a note exists.</li>
@@ -86,6 +93,7 @@
     <li><strong>Switched off here:</strong> {{ features_off|join(", ") }}. "—" until the trader-facing feature is on.</li>
     {%- endif %}
   </ul>
+  </details>
 
   <h2 class="heading admin__head">Latest events</h2>
   <ol class="admin__feed body-small">
@@ -135,9 +143,8 @@
     <dt>Would pay</dt><dd>asked {{ quiet.wtp_asked|count }}; yes {{ quiet.wtp.yes|count }}, no {{ quiet.wtp.no|count }}, maybe {{ quiet.wtp.maybe|count }}; {{ told.wtp_noted|count }} with a note</dd>
   </dl>
 
-  <h2 class="heading admin__head">The quiet panel</h2>
+  <h2 class="heading admin__head">Consent declines and deletions</h2>
   <dl class="admin__quiet body-small">
-    <dt>Most-opened drawer</dt><dd>{{ quiet.most_opened }}</dd>
     <dt>Consent declines</dt><dd>{{ quiet.consent_declines|count }}</dd>
     <dt>Deletions</dt><dd>{{ quiet.deletions|count }} (last {{ quiet.last_deletion }})</dd>
   </dl>
