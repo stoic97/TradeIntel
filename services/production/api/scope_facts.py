@@ -931,6 +931,9 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         if n < 10:  # a lone digit reads as a serial: it keeps a word beside it (TICKET-853)
             return _wedge(_of(_trades(n), "right after a loss"), phone="a loss",
                           phone_shown=f"{formatting.count(n)} after")
+        if n >= WIDE_COUNT:  # "113 trades" is too wide for the desktop wedge: the noun moves under
+            return _wedge(_of(_trades(n), "trades right after a loss"), shown=formatting.count(n),
+                          phone="after\na loss", phone_shown=formatting.count(n))
         return _wedge(_of(_trades(n), "right after a loss"), phone="after\na loss",
                       phone_shown=formatting.count(n))
     if key == "busiest":

@@ -252,3 +252,27 @@ def test_a_row_opens_its_trades(client):
         page = client.get(f"/mirror/fact/size/trades?after={side}")
         if page.status_code == 200 and f'value="{side}"' in page.text:
             assert len(re.findall(r'<article class="trade">', page.text)) <= every
+
+
+def test_a_three_figure_count_still_fits_the_desktop_dial():
+    """113 trades after a loss on the demo measured -13.8 on desktop, past the dial's -13; the
+    dial test's own fixture has 27, so it couldn't see it. Here 132 follow a loss."""
+    from services.production.api import scope_facts as SF
+    from services.production.api import scope_geometry as G
+    from tests.helpers.scope_chapters import IMP
+    trips = _planted(after_loss_lots=3)
+    figs = SF.facts(SF.record_context(trips), IMP)
+    items = SF.chapter_view(3, figs)["items"]
+    size = next(i for i in items if i["name"] == "Your size after a loss")
+    assert size["figure"] == "132" and "trades" in size["label"]
+    for which in ("desktop", "phone"):
+        z = G.SIZES[which]
+        rr = G.radii(z["R"])
+        drawn = items if which == "desktop" else [
+            {**i, "figure": i.get("phone_figure", i["figure"]),
+             "label": i.get("phone_label", i.get("label", ""))} for i in items]
+        sec = G.sectors(len(drawn), False)
+        lay = G.layout_contents(drawn, sec, rr, z["figSizesChapter"])
+        for k, block in enumerate(lay["blocks"]):
+            clear = G.block_clearance(sec["slices"][k], sec["span"], lay["radius"][k], block, rr)
+            assert clear >= -13, (which, items[k]["name"], clear)
