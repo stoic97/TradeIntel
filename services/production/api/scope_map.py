@@ -43,6 +43,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("hidden", "What your tradebook has been hiding", "notold"),
             Fact("worst-days", "Your worst trading days", "worst"),
             Fact("money", "Where the money came from", "money"),
+            Fact("charges", "Where the money went", "waterfall"),
         ),
         feedback=True,
     ),
@@ -78,6 +79,12 @@ CHAPTERS: tuple[Chapter, ...] = (
 )
 
 FACTS: dict[str, Fact] = {f.key: f for c in CHAPTERS for f in c.facts}
+
+OFF_THE_DIAL = frozenset({"charges"})
+"""Pages of their chapter that have no wedge on its dial (TICKET-995). A fourth wedge on
+chapter 1's phone dial doesn't clear its slice whatever it says (test_dial_states_facts: every
+wedge at -13.3 or worse against -13), so where the money went is read from the chapter's
+pages, its card and All pages until the dial has room for a fourth slice."""
 
 FIGURES: dict[str, Fact] = {**FACTS, "share": Fact("share", "Share of your losses", "share")}
 """Everything with a figure. The share has no page of its own now: its one new row is a line on
@@ -261,6 +268,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return [t for t in trips if t.trading_day in days]
     if key == "money":
         ids = {t.trip_id for t in ctx["best"] + ctx["worst"] + ctx["held_past_day"].trips}
+        return [t for t in trips if t.trip_id in ids]
+    if key == "charges":  # the trades the waterfall counts; the left-out ones are counted apart
+        ids = set(ctx["charges"].included)
         return [t for t in trips if t.trip_id in ids]
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)

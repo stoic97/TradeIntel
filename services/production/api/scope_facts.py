@@ -19,10 +19,11 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
-from services.production.api import dial, findings, formatting
+from services.production.api import charges_view, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
+from services.production.charges import waterfall as W
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle, multiplicity
 from services.shared.schemas import scope_v1 as s
@@ -34,6 +35,7 @@ CARD_H = {
     "worst": 84,
     "share": 56,
     "money": 150,
+    "waterfall": 84,
     "strike": 40,
     "run": 40,
     "clock": 84,
@@ -45,12 +47,14 @@ NOT_TOLD = 4
 score, a cost, a change. Counted from the sentence, which is the Mirror's own."""
 
 
-def record_context(trips: list[mx.Trip]) -> dict:
+def record_context(trips: list[mx.Trip], charges: W.Waterfall | None = None) -> dict:
     """Every Appendix A figure the Mirror and the Scope read, computed once.
 
     Moved here from routes_mirror so a page test reads the same figures the route
     does. The last five are PRD 6.3's comparison: trades after two straight losses
-    against the rest, on strike rate and average lots.
+    against the rest, on strike rate and average lots. ``charges`` is where the money went
+    (TICKET-995), read from the database by the route over the same trades; without it no
+    trade's charges are known.
     """
     same_day = mx.same_day_trips(trips)
     # Chapter 3 reads the same trades as Chapter 2 [TICKET-855]: a position held past the day
@@ -90,6 +94,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "rest_strike": mx.strike_rate(rest),
         "rest_lots": mx.average_lots(rest),
         "days_with_the_condition": len({t.trading_day for t in after}),
+        "charges": charges if charges is not None else W.EMPTY,
     }
 
 
@@ -128,6 +133,10 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_busy(days.counts, _f(days.normal_day), w, h)
     if kind == "read":
         return G.chart_read(imp.rows_parsed, imp.rows_in, w, h, mini)
+    if kind == "waterfall":
+        wf = ctx["charges"]
+        return G.chart_waterfall(_f(wf.before), [_f(st.amount) for st in wf.steps], _f(wf.after),
+                                 w, h, mini)
     if kind == "risk":
         c = ctx["risk"].counts
         # The kit's chart has four bands. A spread's maximum loss is recorded and never
@@ -151,6 +160,8 @@ def _state(key: str, ctx: dict) -> str:
         return "not-enough"  # every trade was held past its day
     if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
         return "not-enough"  # no book has the minimum of same-day trades
+    if key == "charges" and not ctx["charges"].included:
+        return "not-in-file"  # no trade here carries a charge: none in the file, none worked out
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -186,6 +197,9 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(formatting.rupees(
             found.same_day_net if found.same_day_count else ctx["held_past_day"].net
         ), "rupees")
+    if key == "charges":
+        return Figure(formatting.rupees(ctx["charges"].charges, signed=False), "rupees",
+                      of="in charges")
     if key == "math":
         return Figure(f'{formatting.out_of_a_hundred(ctx["strike"].rate_percent)} trades', "trades")
     if key == "run":
@@ -718,6 +732,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
+    out["charges"].update(charges_view.view(ctx["charges"], ctx))
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
     options = mx.option_result(trips)
@@ -869,6 +884,9 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         best = formatting.rupees(ctx["best"][0].net)
         return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
                       phone="best\ntrade", phone_shown=best.removeprefix("+"))
+    if key == "charges":
+        paid = formatting.rupees(ctx["charges"].charges, signed=False)
+        return _wedge(Figure(paid, "rupees", of="in charges"), shown=paid)
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
@@ -926,6 +944,8 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     c = S.chapter(n)
     items = []
     for f in c.facts:
+        if f.key in S.OFF_THE_DIAL:
+            continue
         fig = figs[f.key]
         item = {
             "name": f.title,

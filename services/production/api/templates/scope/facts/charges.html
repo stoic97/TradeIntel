@@ -1,0 +1,25 @@
+{% extends "scope/fact.html" %}
+{#- Where the money went (TICKET-995): what his trades made before charges, each charge
+    stepping it down, and what was left. Every figure is decided in charges.waterfall and
+    worded in charges_view; each step opens the trades it was charged on. It shows what
+    happened, in order, and no other result beside it. -#}
+{#- The gross line says every figure below is before charges: true only while nothing here
+    carries a charge. -#}
+{% block gross %}{% if f.state %}{{ super() }}{% endif %}{% endblock %}
+{% block head %}
+    {{ f.svg }}
+    <ol class="wf-steps">
+      <li class="wf-row wf-row--total"><a class="wf-step" href="{{ f.all_href }}"><span class="wf-step__label">Before charges</span> <span class="num num--{{ f.before|tone }}">{{ Figure(f.before, "rupees")|rupees }}</span></a></li>
+      {%- for r in f.rows %}
+      <li class="wf-row"><a class="wf-step" href="{{ r.href }}"><span class="wf-step__name">{{ r.name }}</span> <span class="num num--loss">{{ Figure(r.stepped, "rupees")|rupees }}</span></a></li>
+      {%- endfor %}
+      <li class="wf-row wf-row--total"><a class="wf-step" href="{{ f.all_href }}"><span class="wf-step__label">After charges</span> <span class="num num--{{ f.after|tone }}">{{ Figure(f.after, "rupees")|rupees }}</span></a></li>
+    </ol>
+    {%- if f.jolt %}
+    <p class="mirror wf-jolt">{% if f.jolt.winner is not none %}Your average winner is {{ Figure(f.jolt.winner, "rupees")|rupees(signed=false) }}. {% endif %}Each trade pays {{ Figure(f.jolt.per_trade, "rupees")|rupees(signed=false) }} in charges.</p>
+    {%- endif %}
+    {%- if f.left_out %}
+    <p class="body wf-left-out"><span class="num">{{ Figure(f.left_out, "trades")|count }}</span> {{ "trade is" if f.left_out == 1 else "trades are" }} not in this: {{ "its" if f.left_out == 1 else "their" }} result is before charges.</p>
+    {%- endif %}
+{% endblock %}
+{% block caption %}Every trade in the waterfall, by the day you opened it.{% endblock %}

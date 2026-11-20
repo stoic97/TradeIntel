@@ -48,7 +48,7 @@ def waterfall():
 
 def table():
     assert hasattr(m, "TripCharge"), "no trip_charge table in models"
-    return table()
+    return m.__dict__["TripCharge"]
 
 
 def trade(day: str, sold: str = "57.00", at: str = "10") -> list[str]:
@@ -153,16 +153,18 @@ def test_a_trade_before_the_rate_table_is_left_out_and_counted(client, engine):
 
 
 def test_an_old_import_with_the_tradebook_s_charges_is_one_tradebook_step(client, engine):
-    imp_id = store(engine, dhan("2025-10-01", "2025-10-02"), None)
-    with make_session(engine) as sess:  # an import stored before this ticket: no source rows,
-        for r in sess.scalars(select(table()).where(table().import_id == imp_id)):
-            sess.delete(r)                # and its file carried its own charges
-        sess.flush()
-        sess.execute(m.Import.__table__.update().where(m.Import.id == imp_id)
-                     .values(fees_available=True))
-        sess.execute(m.Trip.__table__.update().where(m.Trip.import_id == imp_id)
-                     .values(fees=D(30), net=D(470)))
+    """An import stored before this ticket: its file carried charges, and it has no source rows."""
+    import dataclasses
+    planned = plan(dhan("2025-10-01", "2025-10-02"), None)
+    old = dataclasses.replace(
+        planned, fees_available=True, trip_fees_source=(), trip_fees_components=(),
+        trips=tuple(t.model_copy(update={"fees": D(30)}) for t in planned.trips))
+    with make_session(engine) as sess:
+        trader = sess.scalars(select(m.Trader)).first()
+        imp = persist.write_plan(sess, trader=trader, plan=old, raw_sha256="b" * 64,
+                                 original_name="made-up.csv", stored_path="x", size=1)
         sess.commit()
+        assert sess.scalars(select(table()).where(table().import_id == imp.id)).first() is None
     html = page(client)
     assert re.findall(r'class="wf-step__name">([^<]+)<', html) == ["Charges in your tradebook"]
 
@@ -190,16 +192,13 @@ def test_a_charges_file_day_is_one_step_and_after_charges_is_home_s_net(client, 
 
 # ---------- 5. the jolt line, at 30 included trades ----------
 
-def _days(n: int) -> list[str]:
-    from datetime import date, timedelta
-    return [(date(2025, 1, 1) + timedelta(days=i)).isoformat() for i in range(n)]
-
-
 def _mixed(n: int) -> str:
-    """n trades a day apart, every third a loser (sold at 47.00), so there is an average winner."""
+    """n trades, two a day from 1 Oct 2025 (before the made-up contract's 17 Oct expiry), every
+    third a loser (sold at 47.00), so the report has an average winner."""
     rows = []
-    for i, d in enumerate(_days(n)):
-        rows += trade(d, "47.00" if i % 3 == 0 else "57.00")
+    for i in range(n):
+        day = f"2025-10-{1 + i // 2:02d}"
+        rows += trade(day, "47.00" if i % 3 == 0 else "57.00", at=("10", "12")[i % 2])
     return "\n".join([DHAN, *rows]) + "\n"
 
 

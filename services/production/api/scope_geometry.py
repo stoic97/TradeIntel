@@ -1061,6 +1061,39 @@ def chart_call_put(trades: list, w: float, h: float) -> dict:
     return _chart(w, h, m)
 
 
+def chart_waterfall(before: float, steps: list, after: float, w: float, h: float,
+                    mini: bool = False) -> dict:
+    """Where the money went (TICKET-995): before charges, each charge stepping it down, after.
+
+    Not the kit's: its kit charts in CHARTS are held to the kit's JavaScript by the parity
+    cases, which have no waterfall, so this one adds an entry and changes none."""
+    bars = [before, *[-a for a in steps], after]
+    level, tops = 0.0, []
+    for i, v in enumerate(bars):
+        if i in (0, len(bars) - 1):
+            tops.append((0.0, v))
+            level = v
+        else:
+            tops.append((level, level + v))
+            level += v
+    lo = min([0.0] + [min(a, b) for a, b in tops])
+    hi = max([0.0] + [max(a, b) for a, b in tops])
+    span = (hi - lo) or 1.0
+    n = len(bars)
+    bw = w / n
+
+    def y(v: float) -> float:
+        return (hi - v) / span * h
+
+    m = {"ink": "", "red": "", "axis": f"M0 {fmt(y(0))}H{js_str(w)}"}
+    for i, (a, b) in enumerate(tops):
+        top, bottom = sorted((y(a), y(b)))
+        r = _r2(i * bw + bw * (0.1 if mini else 0.18), top, bw * (0.8 if mini else 0.64),
+                max(0.6, bottom - top))
+        m["ink" if i in (0, n - 1) else "red"] += r
+    return _chart(w, h, m)
+
+
 CHARTS = {
     "worst": chart_worst,
     "share": chart_share,
@@ -1074,6 +1107,7 @@ CHARTS = {
     "read": chart_read,
     "risk": chart_risk,
     "notold": chart_notold,
+    "waterfall": chart_waterfall,
 }
 
 
