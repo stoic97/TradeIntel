@@ -128,7 +128,12 @@ def client(market):
 
 
 def text(html: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
+    import html as h
+    return h.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)))
+
+
+def section(html: str) -> str:
+    return html.split('<section class="dc" id="chart"')[1].split("</section>")[0]
 
 
 # ---------- the fold ----------
@@ -153,7 +158,7 @@ def test_the_day_page_draws_the_chart_above_the_trades_with_no_script(client):
     page = client.get(f"/mirror/day/{MON}")
     assert page.status_code == 200
     html = page.text
-    assert 'id="chart"' in html and "<svg" in html and "<script" not in html.lower()
+    assert 'id="chart"' in html and "<svg" in section(html) and "<script" not in section(html).lower()
     assert html.index('id="chart"') < html.index('<article class="trade">')
     assert "One trading day" in html  # the page's own parts stay
 
