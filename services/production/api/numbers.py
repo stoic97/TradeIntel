@@ -103,12 +103,6 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
                     "most": busiest[1], "day": busiest[0], "href": day_href(busiest[0])},
     }
 
-    weekdays: dict[int, list[mx.Trip]] = {}
-    for t in ordered:
-        weekdays.setdefault(t.exit_ts.weekday(), []).append(t)
-    weekday_rows = [(TL.WEEKDAYS[d], weekdays[d], _trades(closed=TL.WEEKDAYS[d].lower()))
-                    for d in sorted(weekdays)]
-
     left: dict[str, list[mx.Trip]] = {value: [] for value, _, _, _ in TL.LEFT_BUCKETS}
     no_expiry = 0
     for t in ordered:
@@ -125,7 +119,7 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
     return {
         "trades": len(trips), "first": ordered[0].exit_ts.date().isoformat(),
         "last": ordered[-1].exit_ts.date().isoformat(), "gross": gross, "minimum": MINIMUM,
-        "tiles": tiles, "weekdays": _rows(weekday_rows), "expiry": _rows(expiry_rows),
+        "tiles": tiles, "expiry": _rows(expiry_rows),
         "no_expiry": no_expiry, "books": _rows(book_rows),
     }
 
@@ -212,4 +206,83 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
         "letters": WEEKDAY_LETTERS,
         "table": charts.text_table(rows, ["Day", "Trades", "Result"],
                                    caption="Every day you closed a trade, as numbers"),
+    }
+
+
+# ---------- When you trade (TICKET-994) ----------
+
+DAYS = (("all", "All days"), ("expiry", "Expiry day"), ("other", "Other days"))
+SPLIT_AT = 15
+"""Past MAX_COLUMNS hours, the grid splits into the hours before this and from it."""
+MAX_COLUMNS = 13
+"""The hour columns a phone fits at 24 px each beside the weekday labels, without scrolling."""
+CELL_W, CELL_H, LABEL_W, HEAD_H = 24, 22, 34, 14
+
+
+def when(trips: list[mx.Trip], expiries: dict, *, days: str = "all") -> dict:
+    """Weekday x hour, by when he opened the trade, as the trade list's hour filter reads it.
+
+    Each cell is its trades' result, toned against the 90th percentile of the cells in view and
+    hatched under the clock's own minimum. No cell is called best or worst; the figures are in
+    each cell's tap target and in the text table.
+    """
+    days = days if days in dict(DAYS) else "all"
+    side = {t.trip_id: TL.expiry_day_or_not(t, expiries) for t in trips}
+    left_out = sum(1 for choice in side.values() if choice is None)
+    shown = trips if days == "all" else [
+        t for t in trips if side[t.trip_id] is not None and side[t.trip_id][1] == days]
+
+    cells: dict[tuple[int, int], list[mx.Trip]] = {}
+    for t in shown:
+        cells.setdefault((t.entry_ts.weekday(), t.entry_ts.hour), []).append(t)
+    nets = {k: sum((t.net for t in ts), Decimal(0)) for k, ts in cells.items()}
+    scale = _percentile([abs(n) for n in nets.values()], SCALE_AT)
+    weekdays = [*range(5), *sorted({d for d, _ in cells if d >= 5})]
+    hours = sorted({h for _, h in cells})
+    if len(hours) > MAX_COLUMNS:
+        splits = [[h for h in hours if h < SPLIT_AT], [h for h in hours if h >= SPLIT_AT]]
+    else:
+        splits = [hours]
+
+    def cell(day: int, hour: int, column: int, row: int) -> dict:
+        ts = cells.get((day, hour), [])
+        net = nets.get((day, hour))
+        x, y = LABEL_W + CELL_W * column + 1, HEAD_H + CELL_H * row + 1
+        hatched = 0 < len(ts) < mx.SMALL_SAMPLE_TRIPS
+        chip = {"days": days} if days != "all" else {}
+        return {
+            "hour": hour, "trades": len(ts), "net": net if ts else None, "x": x, "y": y,
+            "tone": charts.cell_tone(net if ts else None, scale), "hatched": hatched,
+            "hatch": charts.hatch(x, y, CELL_W - 2, CELL_H - 2) if hatched else None,
+            "href": _trades(opened=TL.WEEKDAYS[day].lower(), hour=str(hour), **chip) if ts else None,
+        }
+
+    blocks = []
+    for part in splits:
+        rows = [{"weekday": TL.WEEKDAYS[d], "short": TL.WEEKDAYS[d][:3], "y": HEAD_H + CELL_H * r,
+                 "cells": [cell(d, h, c, r) for c, h in enumerate(part)]}
+                for r, d in enumerate(weekdays)]
+        blocks.append({
+            "hours": list(part), "rows": rows,
+            "columns": [{"hour": h, "x": LABEL_W + CELL_W * c + CELL_W // 2} for c, h in enumerate(part)],
+            "width": LABEL_W + CELL_W * len(part), "height": HEAD_H + CELL_H * len(weekdays),
+        })
+
+    table = []
+    for d in weekdays:
+        for h in hours:
+            ts = cells.get((d, h))
+            if not ts:
+                continue
+            rate = mx.strike_rate(ts).rate_percent if len(ts) >= mx.CLOCK_MINIMUM_TRADES else None
+            table.append([TL.WEEKDAYS[d], f"{h:02d}:00", Figure(len(ts), "trades"),
+                          Figure(nets[(d, h)], "rupees"),
+                          Figure(rate, "percent") if rate is not None else "too few"])
+    return {
+        "days": days, "left_out": left_out, "scale": scale, "blocks": blocks,
+        "chips": [{"label": label, "href": f"?days={value}#when", "on": value == days}
+                  for value, label in DAYS],
+        "cell_w": CELL_W - 2, "cell_h": CELL_H - 2,
+        "table": charts.text_table(table, ["Day", "Hour", "Trades", "Result", "Made money"],
+                                   caption="Every hour you opened trades in, as numbers"),
     }
