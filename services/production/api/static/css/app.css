@@ -427,3 +427,12 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__fill--loss { background: var(--color-loss); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* TICKET-1008: the journal's one-tap trade questions, and what he said after */
+.journal-chips { border: 0; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.journal-chips legend { width: 100%; margin-bottom: var(--space-1); }
+.journal-chip { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-hairline); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: 500 13px/1 var(--font-sans); cursor: pointer; }
+.journal-chip--on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-navy); }
+.said-after { margin-top: var(--space-5); }
+.said-after__question { margin-top: var(--space-3); }
+.said-after__line { margin: var(--space-1) 0; }

@@ -36,13 +36,28 @@ from sqlalchemy.orm import Session
 from services.production.db import models as m
 from services.shared.schemas import scope_v1 as s
 
-PER_TRIP_FIELDS = frozenset({"planned_sl", "rationale", "stop_existed_at_entry"})
+CHOICES: dict[str, tuple[tuple[str, str], ...]] = {
+    "exit_how": (("stop", "At my stop"), ("target", "At my target"), ("closed", "I closed it"),
+                 ("expiry", "Held to expiry"), ("dont_remember", "Don't remember")),
+    "target": (("price", "A price I set"), ("none", "No target"), ("dont_remember", "Don't remember")),
+    "planned": (("yes", "Yes"), ("no", "No"), ("dont_remember", "Don't remember")),
+}
+"""TICKET-1008: three per-trade questions with fixed answers, one tap each. No free text, so the
+consent's "what you type into the Journal" covers them as it covers the stop question."""
+
+QUESTIONS = {"exit_how": "How did it end?", "target": "Did it have a target?",
+             "planned": "Planned before the session?"}
+DONT_REMEMBER = "dont_remember"
+"""An answer, counted as one, and left out of every rate."""
+
+PER_TRIP_FIELDS = frozenset({"planned_sl", "rationale", "stop_existed_at_entry", *CHOICES})
 PER_PERIOD_FIELDS = frozenset({"note"})
 KNOWN_FIELDS = PER_TRIP_FIELDS | PER_PERIOD_FIELDS
 
 
 class UnknownField(Exception):
-    """A field name the Journal does not have. The set is closed on purpose."""
+    """A field name the Journal does not have, or an answer one of its fixed questions doesn't
+    offer. Both sets are closed on purpose."""
 
 
 def capture_phase(
@@ -107,6 +122,9 @@ def record(
             f"{field!r} is not a Journal field. The set is closed: {sorted(KNOWN_FIELDS)}"
         )
 
+    if field in CHOICES and value not in {v for v, _ in CHOICES[field]}:
+        raise UnknownField(f"{value!r} is not an answer to {field!r}: {[v for v, _ in CHOICES[field]]}")
+
     entered_at = datetime.now(UTC)
     previous = _latest(sess, journal, field, trip_id)
     entry = m.JournalFieldEntry(
@@ -158,3 +176,21 @@ def trips_with_a_planned_stop(sess: Session, *, journal: m.Journal) -> set[str]:
                m.JournalFieldEntry.trip_id.is_not(None))
     ).all()
     return {row.trip_id for row in rows if row.value}
+
+
+def answers_by_trip(sess: Session, trader: m.Trader) -> dict[str, dict[str, str]]:
+    """His answer as it stands to each fixed question, for every trade he has answered, across
+    all his Journals (TICKET-1008). A trade's id is a hash of the trade, so an answer follows it
+    from one version of a Journal to the next; the latest answer stands."""
+    rows = sess.scalars(
+        select(m.JournalFieldEntry)
+        .join(m.Journal, m.JournalFieldEntry.journal_id == m.Journal.id)
+        .where(m.Journal.trader_id == trader.id,
+               m.JournalFieldEntry.field.in_(tuple(CHOICES)),
+               m.JournalFieldEntry.trip_id.is_not(None))
+        .order_by(m.JournalFieldEntry.id)
+    ).all()
+    out: dict[str, dict[str, str]] = {}
+    for row in rows:
+        out.setdefault(row.trip_id, {})[row.field] = row.value
+    return out

@@ -66,6 +66,17 @@ def _day(engine) -> m.Journal:
         return sess.scalars(select(m.Journal).where(m.Journal.period_start == "2026-09-01")).first()
 
 
+def _cards(client, journal: m.Journal) -> str:
+    """The day page with its trade cards. A day not worth a look asks "Do you remember this
+    day?" first (906); he says yes, and the cards follow."""
+    page = client.get(f"/journals/{journal.id}").text
+    if "Do you remember this day?" in page:
+        token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page).group(1)
+        client.post(f"/journals/{journal.id}/remember", data={"answer": "yes", "csrf_token": token})
+        page = client.get(f"/journals/{journal.id}").text
+    return page
+
+
 def test_an_answer_is_saved_and_a_changed_one_is_a_new_row(engine, client):
     assert {"exit_how", "target", "planned"} <= fl.KNOWN_FIELDS
     with make_session(engine) as sess:
@@ -91,7 +102,7 @@ def test_an_answer_off_the_list_is_refused(engine, client):
 
 def test_one_tap_on_the_card_saves_the_answer(engine, client):
     journal = _day(engine)
-    page = client.get(f"/journals/{journal.id}").text
+    page = _cards(client, journal)
     assert "How did it end?" in page and "Planned before the session?" in page
     assert re.search(r'<button[^>]*name="exit_how"[^>]*value="closed"', page)
     token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page).group(1)
@@ -107,7 +118,8 @@ def test_one_tap_on_the_card_saves_the_answer(engine, client):
 
 
 def test_the_card_carries_no_script(engine, client):
-    page = client.get(f"/journals/{_day(engine).id}").text
+    page = _cards(client, _day(engine))
+    assert "How did it end?" in page
     main = re.search(r"<main.*?</main>", page, re.DOTALL).group(0)
     assert "<script" not in main
 
@@ -173,7 +185,7 @@ def test_the_journals_page_says_said_after_the_trade_beside_every_count(engine, 
                     data={"csrf_token": token, "trip_id": tid, "exit_how": value})
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", client.get("/journals").text))
     assert "I closed it: 2 trades, 2 of them losses" in text
-    assert "answered for 3 of 40 trades" in text
+    assert "Answered for 3 of 40 trades" in text
     count_lines = re.findall(r"[^.]*\d+ trades?, \d+ of them loss[^.]*", text)
     assert count_lines and all("said after the trade" in line for line in count_lines), count_lines
 
