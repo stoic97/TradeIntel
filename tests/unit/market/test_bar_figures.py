@@ -1,4 +1,4 @@
-# ruff: noqa: DTZ001 - the series are naive IST by convention (TICKET-893); so are these bars
+
 """TICKET-999: bar figures worked out off the web app.
 
 For each trade, in underlying points and in the trade's direction: how far the market went his
@@ -250,7 +250,7 @@ def sess():
 
 
 def test_the_job_stores_each_trade_asks_for_the_stock_days_it_lacks_and_waits(sess, prices):
-    trader, imp = a_trader_with_trips(sess, "job1")
+    _trader, imp = a_trader_with_trips(sess, "job1")
     BF.run(sess, prices, now=datetime(2026, 3, 20, 5, 0, tzinfo=UTC))
     rows = {r.trip_id: r for r in sess.scalars(select(m.BarTradeFigure).where(m.BarTradeFigure.import_id == imp.id))}
     assert rows["a"].reason is None and Decimal(rows["a"].took) == Decimal(21)
@@ -264,7 +264,7 @@ def test_the_job_stores_each_trade_asks_for_the_stock_days_it_lacks_and_waits(se
 
 
 def test_a_waiting_job_is_filled_when_its_day_arrives(sess, prices, tmp_path):
-    trader, imp = a_trader_with_trips(sess, "job2")
+    _trader, imp = a_trader_with_trips(sess, "job2")
     BF.run(sess, prices, now=datetime(2026, 3, 20, 5, 0, tzinfo=UTC))
     seed(tmp_path, "INFY", {MON: day_rows(MON, time(9, 15), time(15, 30), 1500)})
     BF.run(sess, L.Prices(data_dir=tmp_path), now=datetime(2026, 3, 20, 5, 10, tzinfo=UTC))
