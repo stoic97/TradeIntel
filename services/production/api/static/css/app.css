@@ -521,3 +521,12 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
+
+/* Your process: rows stack; a figure's link keeps a 44 px tap target without moving the text. */
+.process__row { margin: var(--space-6) 0; padding-top: var(--space-4); border-top: 1px solid var(--color-hairline); }
+.process__line, .process-preview p { line-height: 1.7; overflow-wrap: anywhere; }
+.process__line a, .process-preview a { display: inline-block; padding: 10px 0; margin: -10px 0; }
+.process__note { color: var(--color-muted); }
+.process-preview { margin: var(--space-4) 0; }
+.process-preview__name { font-weight: 600; margin-right: var(--space-1); }
+.home__process { margin: var(--space-2) 0 var(--space-4); }

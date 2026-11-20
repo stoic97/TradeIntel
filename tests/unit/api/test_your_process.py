@@ -272,6 +272,9 @@ def test_every_figure_opens_exactly_its_trades():
             for ln in row.lines:
                 for key, ids in ln.sets.items():
                     href = P().href(key)
+                    if not ids:  # a figure of 0 opens nothing: no link is drawn
+                        assert f'href="{href}"' not in str(ln.text).replace("&amp;", "&")
+                        continue
                     assert parse_qs(urlparse(href).query) == {"line": [key]}
                     assert _listed(href, record) == len(ids), key
 
