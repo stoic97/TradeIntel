@@ -31,11 +31,15 @@ def test_home_has_the_four_chapters_in_order_each_scoping_in():
 
 def test_without_caption_lines_the_dial_is_the_kits_byte_for_byte():
     """The one Python-only addition to the port changes nothing unless it is used."""
-    view = {"kind": "home", "centre": {"figure": "96%"},
-            "items": [{"name": c.name, "figure": "1", "href": "/x"} for c in S.CHAPTERS]}
+    view = {
+        "kind": "home",
+        "centre": {"figure": "96%"},
+        "items": [{"name": c.name, "figure": "1", "href": "/x"} for c in S.CHAPTERS],
+    }
     built = G.build_dial(view, "phone", dial.OPTS)
-    with_default = G.build_dial({**view, "centre": {"figure": "96%", "captionLines": None}},
-                                "phone", dial.OPTS)
+    with_default = G.build_dial(
+        {**view, "centre": {"figure": "96%", "captionLines": None}}, "phone", dial.OPTS
+    )
     assert G.render_dial_svg(built) == G.render_dial_svg(with_default)
 
 
@@ -52,7 +56,10 @@ def test_home_is_the_kits_page():
     assert '<span class="lockup__name">PlusEV</span>' in page
     assert '<p class="label">Counted from your file</p>' in page
     assert '<h1 class="title fact__title">Your option trades' in page
-    assert "40 trades · 8 trading days · before charges</span><span>No buy or sell calls, ever.</span>" in page
+    assert (
+        "40 trades · 8 trading days · before charges</span><span>No buy or sell calls, ever.</span>"
+        in page
+    )
     assert "every rupee figure below is gross" in page
     assert "Computed from import 7 by Scope version fixturesha" in page
     assert 'aria-current="page">Scope</a>' in page

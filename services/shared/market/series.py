@@ -92,8 +92,9 @@ def _shape(minutes: list[datetime]) -> str:
     return "full"
 
 
-def check_sessions(minutes: Iterable[datetime], start: date, end: date,
-                   calendar: dict[date, SessionException]) -> SessionCheck:
+def check_sessions(
+    minutes: Iterable[datetime], start: date, end: date, calendar: dict[date, SessionException]
+) -> SessionCheck:
     by_day: dict[date, list[datetime]] = {}
     for m in minutes:
         if start <= m.date() <= end:
@@ -107,7 +108,9 @@ def check_sessions(minutes: Iterable[datetime], start: date, end: date,
         weekend = day.weekday() >= 5
         if seen == "full" and not weekend:
             if entry is not None and entry.kind != "special":
-                unexplained.append((day, f"full session, but the calendar says {entry.kind.replace('_', ' ')}"))
+                unexplained.append(
+                    (day, f"full session, but the calendar says {entry.kind.replace('_', ' ')}")
+                )
         elif seen == "no bars" and weekend:
             pass
         elif entry is not None and (entry.kind == "special" or _SEEN.get(entry.kind) == seen):

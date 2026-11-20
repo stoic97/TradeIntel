@@ -177,8 +177,13 @@ def page_number(key: str) -> int:
 
 
 def _step(to: Fact, small: str) -> dict:
-    return {"key": to.key, "small": small, "title": to.title, "label": f"{small}: {to.title}",
-            "href": fact_href(to.key)}
+    return {
+        "key": to.key,
+        "small": small,
+        "title": to.title,
+        "label": f"{small}: {to.title}",
+        "href": fact_href(to.key),
+    }
 
 
 def previous_step(key: str) -> dict | None:
@@ -231,10 +236,21 @@ def spine(key: str, read: frozenset[str]) -> dict:
         "previous": previous_step(key),
         "next": next_step(key),
         "chapters": [
-            {"number": c.number, "name": c.name, "pages": [
-                {"key": f.key, "title": f.title, "number": page_number(f.key),
-                 "href": fact_href(f.key), "read": f.key in read, "current": f.key == key}
-                for f in c.facts]}
+            {
+                "number": c.number,
+                "name": c.name,
+                "pages": [
+                    {
+                        "key": f.key,
+                        "title": f.title,
+                        "number": page_number(f.key),
+                        "href": fact_href(f.key),
+                        "read": f.key in read,
+                        "current": f.key == key,
+                    }
+                    for f in c.facts
+                ],
+            }
             for c in CHAPTERS
         ],
     }
@@ -283,7 +299,10 @@ RISK_SOURCES = (
     ("Your declared budget", (s.RiskUnitSourceV1.DECLARED_BUDGET,)),
     ("Your stop", (s.RiskUnitSourceV1.DEFINED_STOP,)),
     ("Premium paid", (s.RiskUnitSourceV1.PREMIUM_PAID,)),
-    ("Stocks, ETFs and futures: no premium to measure against", (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR)),
+    (
+        "Stocks, ETFs and futures: no premium to measure against",
+        (s.RiskUnitSourceV1.UNAVAILABLE, s.RiskUnitSourceV1.INFERRED_ATR),
+    ),
     ("A spread's maximum loss", (s.RiskUnitSourceV1.STRUCTURE_MAX_LOSS,)),
     ("Uncapped: a sold option", (s.RiskUnitSourceV1.UNCAPPED,)),
 )

@@ -19,7 +19,9 @@ from tests import conftest
 def schema_of(path: Path) -> list[tuple]:
     connection = sqlite3.connect(path)
     try:
-        return sorted(connection.execute("select type, name, sql from sqlite_master").fetchall(), key=str)
+        return sorted(
+            connection.execute("select type, name, sql from sqlite_master").fetchall(), key=str
+        )
     finally:
         connection.close()
 
@@ -28,7 +30,10 @@ def test_production_keeps_argon2_at_its_full_strength():
     defaults = PasswordHasher()
     real = conftest.REAL_HASHER
     assert (real.time_cost, real.memory_cost, real.parallelism) == (
-        defaults.time_cost, defaults.memory_cost, defaults.parallelism)
+        defaults.time_cost,
+        defaults.memory_cost,
+        defaults.parallelism,
+    )
     assert real.verify(real.hash("a-long-enough-password"), "a-long-enough-password")
 
 
@@ -78,5 +83,6 @@ def test_each_test_starts_with_its_own_database(tmp_path, monkeypatch):
     run_migrations(second)
     with second.connect() as connection:
         found = connection.exec_driver_sql(
-            "select count(*) from sqlite_master where name = 'only_in_one'").scalar()
+            "select count(*) from sqlite_master where name = 'only_in_one'"
+        ).scalar()
     assert found == 0

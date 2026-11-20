@@ -4,6 +4,7 @@ refreshed by one script that never touches production.
 These read the files in deploy/. What only the droplet can show (the 401, the certificate,
 yesterday's traders on staging) is checked on the box, in the PR.
 """
+
 import re
 import shutil
 import subprocess
@@ -27,14 +28,25 @@ def _key(line):
 
 
 def test_the_staging_unit_differs_from_production_in_the_five_permitted_lines_only():
-    prod, staging = _directives(DEPLOY / "scope.service"), _directives(DEPLOY / "scope-staging.service")
+    prod, staging = (
+        _directives(DEPLOY / "scope.service"),
+        _directives(DEPLOY / "scope-staging.service"),
+    )
     assert [_key(ln) for ln in prod] == [_key(ln) for ln in staging]
     changed = {_key(a) for a, b in zip(prod, staging, strict=True) if a != b}
-    assert changed == {"Description", "WorkingDirectory", "EnvironmentFile", "ExecStart", "ReadWritePaths"}
+    assert changed == {
+        "Description",
+        "WorkingDirectory",
+        "EnvironmentFile",
+        "ExecStart",
+        "ReadWritePaths",
+    }
 
 
 def test_the_staging_unit_can_write_only_its_own_data():
-    staging = dict(ln.split("=", 1) for ln in _directives(DEPLOY / "scope-staging.service") if "=" in ln)
+    staging = dict(
+        ln.split("=", 1) for ln in _directives(DEPLOY / "scope-staging.service") if "=" in ln
+    )
     assert staging["ReadWritePaths"] == "/srv/scope-staging/data"
     assert staging["ProtectSystem"] == "strict"
     assert staging["EnvironmentFile"] == "/etc/scope/staging.env"
@@ -56,7 +68,7 @@ def test_the_refresh_script_never_names_production_except_its_backups():
 
 def test_the_refresh_script_does_the_steps_in_order():
     text = SCRIPT.read_text(encoding="utf-8")
-    body = text[text.index("set -Eeuo pipefail"):]
+    body = text[text.index("set -Eeuo pipefail") :]
     steps = [
         'systemctl stop "$SERVICE"',
         '"$BACKUPS"/scope-*.db',
@@ -90,7 +102,7 @@ def _block(caddyfile, host):
     for j in range(i, len(caddyfile)):
         depth += {"{": 1, "}": -1}.get(caddyfile[j], 0)
         if depth == 0:
-            return caddyfile[i:j + 1]
+            return caddyfile[i : j + 1]
     raise AssertionError("unbalanced")
 
 
@@ -98,11 +110,13 @@ def test_every_staging_path_sits_behind_the_password_robots_included():
     caddy = (DEPLOY / "Caddyfile").read_text(encoding="utf-8")
     block = _block(caddy, "staging.scope.plusev.in")
     assert "basic_auth {" in block
-    assert block.index("basic_auth") < block.index("handle /robots.txt") < block.index("reverse_proxy")
+    assert (
+        block.index("basic_auth") < block.index("handle /robots.txt") < block.index("reverse_proxy")
+    )
     assert "reverse_proxy 127.0.0.1:8001" in block
     assert "Disallow: /" in block
     prod = _block(caddy, "scope.plusev.in")
-    for header in re.findall(r"^\t\t(\S+) ", prod[prod.index("header {"):], flags=re.MULTILINE):
+    for header in re.findall(r"^\t\t(\S+) ", prod[prod.index("header {") :], flags=re.MULTILINE):
         assert f"\t\t{header} " in block, header
 
 
@@ -120,8 +134,14 @@ def test_the_env_example_names_every_setting_with_a_comment_and_no_real_value():
             key, value = line.split("=", 1)
             settings[key] = value
             assert lines[n - 1].startswith("#"), f"{key} has no comment above it"
-    assert set(settings) == {"SCOPE_SECRET_KEY", "SCOPE_FILE_KEY", "SCOPE_DB", "SCOPE_FILES",
-                             "SCOPE_PRODUCTION", "ADMIN_LOGIN_IDS"}
+    assert set(settings) == {
+        "SCOPE_SECRET_KEY",
+        "SCOPE_FILE_KEY",
+        "SCOPE_DB",
+        "SCOPE_FILES",
+        "SCOPE_PRODUCTION",
+        "ADMIN_LOGIN_IDS",
+    }
     assert settings["SCOPE_PRODUCTION"] == "1"
     assert settings["SCOPE_DB"] == "sqlite:////srv/scope-staging/data/scope.db"
     assert settings["SCOPE_FILES"] == "/srv/scope-staging/data/files"

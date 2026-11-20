@@ -69,13 +69,15 @@ def test_the_total_does_not_move():
 def test_a_day_that_sells_first_and_nets_flat_keeps_to_itself():
     """Held share from day 0. Day 1 sells 6 at 110, buys 6 at 105: a short day of +30, and
     the held share is untouched until it is sold at 130 on day 2 for +30."""
-    result = reconstruct([
-        eq(Side.BUY, 1, 100, 0, D),
-        eq(Side.SELL, 3, 110, DAY, I),
-        eq(Side.SELL, 3, 110, DAY + 30, I),
-        eq(Side.BUY, 6, 105, DAY + 60, I),
-        eq(Side.SELL, 1, 130, 2 * DAY, D),
-    ])
+    result = reconstruct(
+        [
+            eq(Side.BUY, 1, 100, 0, D),
+            eq(Side.SELL, 3, 110, DAY, I),
+            eq(Side.SELL, 3, 110, DAY + 30, I),
+            eq(Side.BUY, 6, 105, DAY + 60, I),
+            eq(Side.SELL, 1, 130, 2 * DAY, D),
+        ]
+    )
     assert shape(result) == [(0, 2, 1, Decimal(30)), (1, 1, 6, Decimal(30))]
 
 
@@ -87,42 +89,50 @@ def test_with_no_lot_from_that_day_it_closes_the_older_one():
 
 def test_a_close_larger_than_the_day_takes_that_day_then_the_older_lot():
     """Sell 8: 6 from today at 110 (+60 at 120), then 2 from day 0 at 100 (+40). One trip."""
-    result = reconstruct([
-        eq(Side.BUY, 5, 100, 0, D),
-        eq(Side.BUY, 6, 110, DAY, I),
-        eq(Side.SELL, 8, 120, DAY + 30, I),
-    ])
+    result = reconstruct(
+        [
+            eq(Side.BUY, 5, 100, 0, D),
+            eq(Side.BUY, 6, 110, DAY, I),
+            eq(Side.SELL, 8, 120, DAY + 30, I),
+        ]
+    )
     assert shape(result) == [(0, 1, 8, Decimal(100))]
     assert [o.quantity for o in result.open_positions] == [3]
 
 
 def test_a_short_day_works_the_same_way():
     """A short from day 0, then a short and cover on day 1 at +5 a unit."""
-    result = reconstruct([
-        eq(Side.SELL, 1, 100, 0, M),
-        eq(Side.SELL, 4, 105, DAY, I),
-        eq(Side.BUY, 4, 100, DAY + 30, I),
-        eq(Side.BUY, 1, 90, DAY + 60, M),
-    ])
+    result = reconstruct(
+        [
+            eq(Side.SELL, 1, 100, 0, M),
+            eq(Side.SELL, 4, 105, DAY, I),
+            eq(Side.BUY, 4, 100, DAY + 30, I),
+            eq(Side.BUY, 1, 90, DAY + 60, M),
+        ]
+    )
     assert shape(result) == [(0, 1, 1, Decimal(10)), (1, 1, 4, Decimal(20))]
     assert all(t.direction is Direction.SHORT for t in result.round_trips)
 
 
 def test_a_non_intraday_close_is_still_fifo():
-    result = reconstruct([
-        eq(Side.BUY, 1, 100, 0, D),
-        eq(Side.BUY, 1, 110, DAY, I),
-        eq(Side.SELL, 1, 120, DAY + 30, D),
-    ])
+    result = reconstruct(
+        [
+            eq(Side.BUY, 1, 100, 0, D),
+            eq(Side.BUY, 1, 110, DAY, I),
+            eq(Side.SELL, 1, 120, DAY + 30, D),
+        ]
+    )
     assert shape(result) == [(0, 1, 1, Decimal(20))]
 
 
 def test_a_file_with_no_product_column_is_still_fifo():
-    result = reconstruct([
-        fill(Side.BUY, 1, 100, 0, **EQ),
-        fill(Side.BUY, 1, 110, DAY, **EQ),
-        fill(Side.SELL, 1, 120, DAY + 30, **EQ),
-    ])
+    result = reconstruct(
+        [
+            fill(Side.BUY, 1, 100, 0, **EQ),
+            fill(Side.BUY, 1, 110, DAY, **EQ),
+            fill(Side.SELL, 1, 120, DAY + 30, **EQ),
+        ]
+    )
     assert shape(result) == [(0, 1, 1, Decimal(20))]
 
 

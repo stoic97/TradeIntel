@@ -39,8 +39,12 @@ def home(request: Request):
     with make_session(request.app.state.engine) as sess:
         trader = current_trader(request, sess)
         if trader is None:
-            return page(request, "home.html", title="Scope",
-                        said=door.said(request.query_params.get("said")))
+            return page(
+                request,
+                "home.html",
+                title="Scope",
+                said=door.said(request.query_params.get("said")),
+            )
         trips, imp = loader.load_for(sess, trader)
         if not trips:
             return RedirectResponse(landing_for(sess, trader), status_code=303)
@@ -60,7 +64,8 @@ def home(request: Request):
                     "trades": len(trades_of(covered)),
                     "net": sum(t.net for t in covered),
                     "why": " · ".join(f.label for f in flags[journal.period_start])
-                    if named else None,
+                    if named
+                    else None,
                 }
             )
         return page(

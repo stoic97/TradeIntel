@@ -34,26 +34,38 @@ def _structure(path: Path) -> dict[str, tuple]:
     """Each table's columns, indexes and foreign keys, plus every view and trigger."""
     connection = sqlite3.connect(path)
     try:
-        tables = [row[0] for row in connection.execute(
-            "select name from sqlite_master where type = 'table' "
-            "and name not like 'sqlite_%' order by name").fetchall()]
+        tables = [
+            row[0]
+            for row in connection.execute(
+                "select name from sqlite_master where type = 'table' "
+                "and name not like 'sqlite_%' order by name"
+            ).fetchall()
+        ]
         found: dict[str, tuple] = {}
         for table in tables:
             columns = tuple(connection.execute(f'pragma table_info("{table}")').fetchall())
             indexes = []
             for row in connection.execute(f'pragma index_list("{table}")').fetchall():
                 name, unique = row[1], row[2]
-                names = tuple(c[2] for c in
-                              connection.execute(f'pragma index_info("{name}")').fetchall())
+                names = tuple(
+                    c[2] for c in connection.execute(f'pragma index_info("{name}")').fetchall()
+                )
                 label = "autoindex" if name.startswith("sqlite_autoindex") else name
                 indexes.append((label, unique, names))
-            keys = sorted((tuple(r[2:5]) for r in
-                           connection.execute(f'pragma foreign_key_list("{table}")').fetchall()),
-                          key=str)
+            keys = sorted(
+                (
+                    tuple(r[2:5])
+                    for r in connection.execute(f'pragma foreign_key_list("{table}")').fetchall()
+                ),
+                key=str,
+            )
             found[table] = (columns, tuple(sorted(indexes, key=str)), tuple(keys))
-        found[OTHER] = tuple(connection.execute(
-            "select type, name, coalesce(sql, '') from sqlite_master "
-            "where type in ('view', 'trigger') order by type, name").fetchall())
+        found[OTHER] = tuple(
+            connection.execute(
+                "select type, name, coalesce(sql, '') from sqlite_master "
+                "where type in ('view', 'trigger') order by type, name"
+            ).fetchall()
+        )
         return found
     finally:
         connection.close()
@@ -100,7 +112,8 @@ def test_every_migration_step_reverses_to_the_schema_before_it(tmp_path):
                 assert _version(path) == below
                 assert got == seen[below], (
                     f"downgrading {revision} did not restore {below}: "
-                    f"{_differences(seen[below], got)} differ")
+                    f"{_differences(seen[below], got)} differ"
+                )
 
         command.upgrade(config, chain[-1])
         assert _version(path) == chain[-1]

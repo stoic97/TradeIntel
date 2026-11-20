@@ -20,9 +20,24 @@ from tests.helpers.read_again import send
 from tests.helpers.read_again import words as _words
 from tests.helpers.upload import CSRF
 
-SCREENS = ("/rules", "/rules/today", "/rules/set", "/rules/set?factor=most_trades",
-           "/rules/click", "/rules/click?book=Other")
-NUDGES = ("recommend", "we suggest", "suggested", "best", "better", "good rule", "you should", "try ")
+SCREENS = (
+    "/rules",
+    "/rules/today",
+    "/rules/set",
+    "/rules/set?factor=most_trades",
+    "/rules/click",
+    "/rules/click?book=Other",
+)
+NUDGES = (
+    "recommend",
+    "we suggest",
+    "suggested",
+    "best",
+    "better",
+    "good rule",
+    "you should",
+    "try ",
+)
 NOT_OURS = ("your rule", "your plan", "your system")  # the framework's own language rule
 
 
@@ -49,6 +64,7 @@ def test_signed_out_they_ask_for_sign_in(engine):
     from fastapi.testclient import TestClient
 
     from services.production.api.app import create_app
+
     for path in SCREENS:
         assert TestClient(create_app()).get(path, follow_redirects=False).status_code == 303
 
@@ -56,8 +72,12 @@ def test_signed_out_they_ask_for_sign_in(engine):
 def test_no_screen_has_a_text_input(client):
     send(client)
     pages = [client.get(p).text for p in SCREENS]
-    pages.append(client.post("/rules/click", data={"book": "Other", "reason": "My setup",
-                                                    "csrf_token": token(client)}).text)
+    pages.append(
+        client.post(
+            "/rules/click",
+            data={"book": "Other", "reason": "My setup", "csrf_token": token(client)},
+        ).text
+    )
     for page in pages:
         assert "<textarea" not in page
         for tag in re.findall(r"<input[^>]*>", page):
@@ -79,16 +99,19 @@ def test_the_chips_are_shown_alike_in_their_listed_order(client):
     page = client.get("/rules/today").text
     for key in chips.BEFORE_SESSION:
         f = chips.FACTORS[key]
-        form = page[page.index(f'name="factor" value="{key}"'):]
-        form = form[:form.index("</form>")]
+        form = page[page.index(f'name="factor" value="{key}"') :]
+        form = form[: form.index("</form>")]
         assert re.findall(r'name="value" value="(\d+)"', form) == [str(v) for v in f.values]
         assert len(set(re.findall(r'<button class="([^"]+)"', form))) == 1
 
 
 def test_a_tap_sets_a_dated_rule_for_today(client, engine):
     before = datetime.now(UTC)
-    r = client.post("/rules/today", data={"factor": "most_trades", "value": "3",
-                                          "csrf_token": token(client)}, follow_redirects=False)
+    r = client.post(
+        "/rules/today",
+        data={"factor": "most_trades", "value": "3", "csrf_token": token(client)},
+        follow_redirects=False,
+    )
     assert r.status_code == 303
     (rule,) = declarations(engine)
     assert (rule.factor, rule.value, rule.screen) == ("most_trades", 3, "before_session")
@@ -98,8 +121,12 @@ def test_a_tap_sets_a_dated_rule_for_today(client, engine):
 
 
 def test_a_chip_the_lists_dont_hold_is_refused(client, engine):
-    for data in ({"factor": "most_trades", "value": "7"}, {"factor": "most_lots", "value": "2"},
-                 {"factor": "nonsense", "value": "1"}, {"factor": "most_trades", "value": "x"}):
+    for data in (
+        {"factor": "most_trades", "value": "7"},
+        {"factor": "most_lots", "value": "2"},
+        {"factor": "nonsense", "value": "1"},
+        {"factor": "most_trades", "value": "x"},
+    ):
         r = client.post("/rules/today", data={**data, "csrf_token": token(client)})
         assert r.status_code == 400, data
     assert declarations(engine) == []
@@ -107,8 +134,10 @@ def test_a_chip_the_lists_dont_hold_is_refused(client, engine):
 
 def test_a_rule_is_never_edited_a_newer_one_is_added(client, engine):
     for value in ("3", "5"):
-        client.post("/rules/today", data={"factor": "most_trades", "value": value,
-                                          "csrf_token": token(client)})
+        client.post(
+            "/rules/today",
+            data={"factor": "most_trades", "value": value, "csrf_token": token(client)},
+        )
     first, second = declarations(engine)
     assert (first.value, second.value) == (3, 5) and first.declared_at <= second.declared_at
     assert issubclass(m.RuleDeclaration, m._InsertOnly)
@@ -119,8 +148,11 @@ def test_a_rule_is_never_edited_a_newer_one_is_added(client, engine):
 def test_a_standing_rule_takes_two_taps_and_counts_from_then_on(client, engine):
     page = client.get("/rules/set").text
     assert 'href="/rules/set?factor=most_lots"' in page
-    r = client.post("/rules/set", data={"factor": "most_lots", "value": "2",
-                                        "csrf_token": token(client)}, follow_redirects=False)
+    r = client.post(
+        "/rules/set",
+        data={"factor": "most_lots", "value": "2", "csrf_token": token(client)},
+        follow_redirects=False,
+    )
     assert r.status_code == 303
     (rule,) = declarations(engine)
     assert rule.applies_to is None and rule.screen == "standing"
@@ -130,10 +162,18 @@ def test_count_and_cost_come_first_and_not_enough_trades_yet_renders(client, eng
     send(client)  # six trades, early January 2024, no charges column
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
-        sess.add(m.RuleDeclaration(trader_id=trader.id, text="At most 5 lots a trade",
-                                   declared_at=datetime(2024, 1, 1, tzinfo=UTC), factor="most_lots",
-                                   value=5, applies_from="2024-01-01", applies_to=None,
-                                   screen="standing"))
+        sess.add(
+            m.RuleDeclaration(
+                trader_id=trader.id,
+                text="At most 5 lots a trade",
+                declared_at=datetime(2024, 1, 1, tzinfo=UTC),
+                factor="most_lots",
+                value=5,
+                applies_from="2024-01-01",
+                applies_to=None,
+                screen="standing",
+            )
+        )
         sess.commit()
     said = words(client.get("/rules").text)
     assert "6 trades counted. Your file has no charges, so their cost isn't known." in said
@@ -142,14 +182,24 @@ def test_count_and_cost_come_first_and_not_enough_trades_yet_renders(client, eng
     assert "Kept on" not in said
 
 
-def test_at_the_number_stated_at_the_start_it_says_how_often_it_was_kept(client, engine, monkeypatch):
+def test_at_the_number_stated_at_the_start_it_says_how_often_it_was_kept(
+    client, engine, monkeypatch
+):
     send(client)
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
-        sess.add(m.RuleDeclaration(trader_id=trader.id, text="At most 5 lots a trade",
-                                   declared_at=datetime(2024, 1, 1, tzinfo=UTC), factor="most_lots",
-                                   value=5, applies_from="2024-01-01", applies_to=None,
-                                   screen="standing"))
+        sess.add(
+            m.RuleDeclaration(
+                trader_id=trader.id,
+                text="At most 5 lots a trade",
+                declared_at=datetime(2024, 1, 1, tzinfo=UTC),
+                factor="most_lots",
+                value=5,
+                applies_from="2024-01-01",
+                applies_to=None,
+                screen="standing",
+            )
+        )
         sess.commit()
     monkeypatch.setattr(A, "VERDICT_AT", 6)
     said = words(client.get("/rules").text)
@@ -162,23 +212,31 @@ def test_before_a_trade_two_taps_store_a_note_and_show_his_own_counts(client, en
     page = client.get("/rules/click").text
     books = re.findall(r'href="/rules/click\?book=([^"]+)"', page)
     assert "Other" in books and len(books) >= 2
-    r = client.post("/rules/click", data={"book": "Other", "reason": "My setup",
-                                          "csrf_token": token(client)})
+    r = client.post(
+        "/rules/click", data={"book": "Other", "reason": "My setup", "csrf_token": token(client)}
+    )
     said = words(r.text)
     assert "Noted: Other, My setup." in said
     assert "In Other your file has 6 trades" in said
     with make_session(engine) as sess:
         assert sess.scalar(select(func.count()).select_from(m.PreTradeNote)) == 1
-    bad = client.post("/rules/click", data={"book": "Other", "reason": "Because I said so",
-                                            "csrf_token": token(client)})
+    bad = client.post(
+        "/rules/click",
+        data={"book": "Other", "reason": "Because I said so", "csrf_token": token(client)},
+    )
     assert bad.status_code == 400
 
 
 def test_deleting_the_account_takes_his_rules_and_notes(client, engine, tmp_path):
     from services.production.accounts import deletion
     from services.production.accounts.file_store import FileStore
-    client.post("/rules/today", data={"factor": "most_trades", "value": "3", "csrf_token": token(client)})
-    client.post("/rules/click", data={"book": "Other", "reason": "News", "csrf_token": token(client)})
+
+    client.post(
+        "/rules/today", data={"factor": "most_trades", "value": "3", "csrf_token": token(client)}
+    )
+    client.post(
+        "/rules/click", data={"book": "Other", "reason": "News", "csrf_token": token(client)}
+    )
     store = FileStore(tmp_path, TEST_FILE_KEY)
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()

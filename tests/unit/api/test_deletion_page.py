@@ -48,17 +48,17 @@ def test_the_page_says_what_goes_and_what_cannot_be_undone(client):
 
 
 def test_nothing_happens_without_the_box(client, engine):
-    response = client.post("/account/delete",
-                           data={"csrf_token": CSRF.search(
-                               client.get("/account/delete").text).group(1)})
+    response = client.post(
+        "/account/delete",
+        data={"csrf_token": CSRF.search(client.get("/account/delete").text).group(1)},
+    )
     assert response.status_code == 400
     with make_session(engine) as sess:
         assert sess.scalars(select(m.Trader)).all() != []
 
 
 def test_nothing_happens_without_the_token(client, engine):
-    response = client.post("/account/delete",
-                           data={"understood": "yes", "csrf_token": "forged"})
+    response = client.post("/account/delete", data={"understood": "yes", "csrf_token": "forged"})
     assert response.status_code == 403
     with make_session(engine) as sess:
         assert sess.scalars(select(m.Trader)).all() != []
@@ -71,8 +71,7 @@ def test_pressing_it_empties_every_location(client, engine, store):
     assert store.exists(digest)
 
     csrf = CSRF.search(client.get("/account/delete").text).group(1)
-    response = client.post("/account/delete",
-                           data={"understood": "yes", "csrf_token": csrf})
+    response = client.post("/account/delete", data={"understood": "yes", "csrf_token": csrf})
     assert response.status_code == 200
     assert "deleted" in response.text.lower()
 
@@ -90,15 +89,13 @@ def test_he_is_signed_out_afterwards(client):
 
 def test_it_needs_signing_in(engine):
     anonymous = TestClient(create_app())
-    assert anonymous.get("/account/delete",
-                         follow_redirects=False).status_code in (302, 303)
+    assert anonymous.get("/account/delete", follow_redirects=False).status_code in (302, 303)
 
 
 def test_the_account_page_links_to_delete_everything(client):
     """[TICKET-802] The upload page promises deletion, and nothing led to this page."""
     assert (
-        '<a class="settings-row" href="/account/delete"><span class="body">'
-        "Delete everything</span>"
+        '<a class="settings-row" href="/account/delete"><span class="body">Delete everything</span>'
     ) in client.get("/account").text
 
 

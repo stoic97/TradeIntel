@@ -51,7 +51,7 @@ class Checked:
 class Count:
     rule: Rule
     trades: tuple[Checked, ...]
-    fees: Decimal | None   # charges on these trades, when his file carries them
+    fees: Decimal | None  # charges on these trades, when his file carries them
 
     @property
     def kept(self) -> int:
@@ -100,13 +100,17 @@ def count(rules: list[Rule], trips: list, fees: dict[str, Decimal] | None = None
     for day, day_trips in by_day.items():
         for i, trip in enumerate(day_trips):
             for factor in chips.FACTORS:
-                live = [r for r in rules if r.factor == factor and r.declared_at <= trip.entry_ts
-                        and _applies(r, day)]
+                live = [
+                    r
+                    for r in rules
+                    if r.factor == factor and r.declared_at <= trip.entry_ts and _applies(r, day)
+                ]
                 if not live:
                     continue
                 rule = max(live, key=lambda r: (r.declared_at, r.id))
-                governed[rule.id].append(Checked(trip.trip_id, day, trip.entry_ts,
-                                                 _kept(rule, trip, day_trips[:i])))
+                governed[rule.id].append(
+                    Checked(trip.trip_id, day, trip.entry_ts, _kept(rule, trip, day_trips[:i]))
+                )
     out = []
     for rule in sorted(rules, key=lambda r: (r.declared_at, r.id), reverse=True):
         checked = tuple(governed.get(rule.id, ()))

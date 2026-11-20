@@ -25,12 +25,27 @@ def verdict(state: str, check: str = "B2") -> SimpleNamespace:
 def page(*blocked: SimpleNamespace) -> str:
     short = [v for v in blocked if v.state.value == "insufficient_sample"]
     waiting = [v for v in blocked if v.state.value == "required_data_missing"]
-    result = SimpleNamespace(total=19, enough=[], short=short, waiting=waiting,
-                             blocked=list(blocked), undetermined=[],
-                             waiting_counts={"finer_prices": len(waiting)} if waiting else {})
-    return template_env().get_template("eligibility.html").render(
-        title="What we can check", result=result, trips=40, days=8, csrf_token="x",
-        framework=SimpleNamespace(version="1.0.0"), draft=True,
+    result = SimpleNamespace(
+        total=19,
+        enough=[],
+        short=short,
+        waiting=waiting,
+        blocked=list(blocked),
+        undetermined=[],
+        waiting_counts={"finer_prices": len(waiting)} if waiting else {},
+    )
+    return (
+        template_env()
+        .get_template("eligibility.html")
+        .render(
+            title="What we can check",
+            result=result,
+            trips=40,
+            days=8,
+            csrf_token="x",
+            framework=SimpleNamespace(version="1.0.0"),
+            draft=True,
+        )
     )
 
 

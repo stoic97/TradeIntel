@@ -40,16 +40,29 @@ def engine(tmp_path, monkeypatch):
 def sign_up(login_id: str) -> TestClient:
     client = TestClient(create_app())
     csrf = CSRF.search(client.get("/signup").text).group(1)
-    client.post("/signup", data={"login_id": login_id, "display_name": login_id,
-                                 "password": PASSWORD, "csrf_token": csrf},
-                follow_redirects=False)
+    client.post(
+        "/signup",
+        data={
+            "login_id": login_id,
+            "display_name": login_id,
+            "password": PASSWORD,
+            "csrf_token": csrf,
+        },
+        follow_redirects=False,
+    )
     return client
 
 
 def delete_account(client: TestClient) -> None:
     csrf = CSRF.search(client.get("/account/delete").text).group(1)
-    assert client.post("/account/delete", data={"understood": "yes", "csrf_token": csrf},
-                       follow_redirects=False).status_code == 200
+    assert (
+        client.post(
+            "/account/delete",
+            data={"understood": "yes", "csrf_token": csrf},
+            follow_redirects=False,
+        ).status_code
+        == 200
+    )
 
 
 def holding(cookie: str) -> TestClient:
@@ -85,8 +98,11 @@ def test_an_old_session_cannot_delete_a_later_account(engine):
     delete_account(first)
     sign_up("second")
 
-    holding(old_cookie).post("/account/delete", data={"understood": "yes", "csrf_token": old_page},
-                             follow_redirects=False)
+    holding(old_cookie).post(
+        "/account/delete",
+        data={"understood": "yes", "csrf_token": old_page},
+        follow_redirects=False,
+    )
     with make_session(engine) as sess:
         assert sess.scalars(select(m.Trader.login_id)).all() == ["second"]
 
@@ -101,7 +117,9 @@ def test_a_session_for_a_deleted_account_is_signed_out(engine):
 def test_a_new_password_ends_older_sessions(engine):
     client = sign_up("reset")
     with make_session(engine) as sess:
-        sess.execute(update(m.Trader).values(password_hash=auth.hash_password("another-long-password")))
+        sess.execute(
+            update(m.Trader).values(password_hash=auth.hash_password("another-long-password"))
+        )
         sess.commit()
     assert client.get("/account", follow_redirects=False).headers["location"] == "/login"
 
@@ -119,8 +137,11 @@ def test_signing_in_again_gives_a_working_session(engine):
     first = sign_up("again")
     first.cookies.clear()
     csrf = CSRF.search(first.get("/login").text).group(1)
-    first.post("/login", data={"login_id": "again", "password": PASSWORD, "csrf_token": csrf},
-               follow_redirects=False)
+    first.post(
+        "/login",
+        data={"login_id": "again", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert first.get("/account").status_code == 200
 
 
@@ -131,8 +152,11 @@ def test_someone_holding_an_old_session_can_still_sign_in(engine):
     sign_up("returning")
     client = holding(old_cookie)
     csrf = CSRF.search(client.get("/login").text).group(1)
-    response = client.post("/login", data={"login_id": "returning", "password": PASSWORD,
-                                           "csrf_token": csrf}, follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "returning", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     assert "Signed in as returning." in " ".join(client.get("/account").text.split())
 
@@ -143,7 +167,8 @@ def test_the_cookie_carries_no_part_of_the_password_hash(engine):
     with make_session(engine) as sess:
         stored = sess.scalars(select(m.Trader.password_hash)).one()
     carried = URLSafeSerializer(KEY, salt=auth.SESSION_SALT).loads(
-        client.cookies.get(auth.SESSION_COOKIE))
+        client.cookies.get(auth.SESSION_COOKIE)
+    )
     assert carried["a"] == auth.account_mark(stored, KEY)
     assert stored not in json.dumps(carried) and "argon" not in json.dumps(carried)
 

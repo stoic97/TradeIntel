@@ -37,8 +37,15 @@ from tests.unit.mirror.wording import page_text
 IST = timezone(timedelta(hours=5, minutes=30))
 OIL, IDX = "WIDGETOIL options", "WIDGETIDX options"
 TITLE = "What your tradebook has been hiding"
-IMP = types.SimpleNamespace(fees_available=False, trips_refused=0, rows_in=40, rows_parsed=40,
-                            id=1, trips_reconstructed=40, rows_excluded=0)
+IMP = types.SimpleNamespace(
+    fees_available=False,
+    trips_refused=0,
+    rows_in=40,
+    rows_parsed=40,
+    id=1,
+    trips_reconstructed=40,
+    rows_excluded=0,
+)
 
 
 def _built(module, name: str):
@@ -53,12 +60,22 @@ def _shuffle_module():
         pytest.fail("services/shared/conditions/halves_shuffle.py is not built yet (TICKET-910)")
 
 
-def trip(i: int, day: str, net: int, symbol: str = "WIDGETOIL", minute: int = 0,
-         held: bool = False) -> mx.Trip:
+def trip(
+    i: int, day: str, net: int, symbol: str = "WIDGETOIL", minute: int = 0, held: bool = False
+) -> mx.Trip:
     entry = datetime.fromisoformat(day).replace(hour=10, minute=minute, tzinfo=IST)
     leave = entry + (timedelta(days=1) if held else timedelta(minutes=5))
-    return mx.Trip(f"T{i}", symbol, day, entry, leave, int((leave - entry).total_seconds()),
-                   Decimal(net), 1, s.RiskUnitSourceV1.PREMIUM_PAID)
+    return mx.Trip(
+        f"T{i}",
+        symbol,
+        day,
+        entry,
+        leave,
+        int((leave - entry).total_seconds()),
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+    )
 
 
 # WIDGETOIL: six trading days over two months. Halves: 5, 6, 20 Jan | 2, 3, 10 Feb.
@@ -72,10 +89,13 @@ def trip(i: int, day: str, net: int, symbol: str = "WIDGETOIL", minute: int = 0,
 # A position opened 6 Jan and held overnight (+999) is not a same-day trade: it counts nowhere.
 # WIDGETIDX: two days of its own, on days WIDGETOIL did not trade; it never rises above 0.
 BOOKS = [
-    trip(1, "2026-01-05", 100), trip(2, "2026-01-05", -40, minute=10),
-    trip(3, "2026-01-06", -50), trip(4, "2026-01-06", 999, minute=20, held=True),
+    trip(1, "2026-01-05", 100),
+    trip(2, "2026-01-05", -40, minute=10),
+    trip(3, "2026-01-06", -50),
+    trip(4, "2026-01-06", 999, minute=20, held=True),
     trip(5, "2026-01-20", 30),
-    trip(6, "2026-02-02", -80), trip(7, "2026-02-02", 10, minute=10),
+    trip(6, "2026-02-02", -80),
+    trip(7, "2026-02-02", 10, minute=10),
     trip(8, "2026-02-03", 200),
     trip(9, "2026-02-10", -20),
     trip(10, "2026-03-02", -10, symbol="WIDGETIDX"),
@@ -89,6 +109,7 @@ def _rows(**kw) -> dict:
 
 
 # ---- gate 1: each book on its own trading days
+
 
 def test_each_book_is_split_on_its_own_trading_days():
     rows = _rows(minimum=1)
@@ -107,11 +128,22 @@ def test_an_odd_number_of_days_puts_the_middle_day_in_the_second_half():
 
 # ---- gate 2: the counts, by hand from the table above
 
+
 def test_the_counts_for_each_half_and_the_whole_book():
     oil = _rows(minimum=1)[OIL]
-    got = {name: (h.days, h.trades, h.green_days, h.green_day_percent, h.months, h.green_months,
-                  h.days_since_high, h.net_per_trade)
-           for name, h in (("first", oil.first), ("second", oil.second), ("whole", oil.whole))}
+    got = {
+        name: (
+            h.days,
+            h.trades,
+            h.green_days,
+            h.green_day_percent,
+            h.months,
+            h.green_months,
+            h.days_since_high,
+            h.net_per_trade,
+        )
+        for name, h in (("first", oil.first), ("second", oil.second), ("whole", oil.whole))
+    }
     assert got == {
         "first": (3, 4, 2, 67, 1, 1, 2, Decimal(10)),
         "second": (3, 4, 1, 33, 1, 1, 1, Decimal("27.5")),
@@ -146,6 +178,7 @@ def test_a_book_under_the_minimum_has_no_figure_to_print():
 
 
 # ---- gate 3: the control, whole days shuffled between the halves
+
 
 def test_the_control_is_whole_days_shuffled_between_the_halves_two_sided():
     hs = _shuffle_module()
@@ -186,6 +219,7 @@ def test_production_reaches_the_control_without_research():
 
 # ---- the page, on the 40-trip contract fixture
 
+
 def _page(client) -> str:
     r = client.get("/mirror/fact/hidden")
     assert r.status_code == 200, "the page is not built yet"
@@ -198,7 +232,9 @@ def test_the_page_is_the_first_of_the_report(client):
     assert S.page_number("hidden") == 1  # TICKET-903's one order: every surface reads it
     html = _page(client)
     assert "CHAPTER 1 \u00b7 FACT 1 OF 3" in html
-    assert re.search(rf'class="rail__count[^"]*">1 of {len(S.PAGES)}<', html)  # page_text writes it [N] of [N]
+    assert re.search(
+        rf'class="rail__count[^"]*">1 of {len(S.PAGES)}<', html
+    )  # page_text writes it [N] of [N]
     assert 'data-dwell-line="hidden"' in html
     chapter = client.get(S.chapter_href(1)).text
     assert chapter.index(TITLE) < chapter.index("Your worst trading days")
@@ -219,7 +255,9 @@ def test_each_book_has_its_table_and_every_count_opens_its_trades(client):  # ga
     for head in ("First half", "Second half", "All its days"):
         assert head in text, head
     assert "before charges" in text.lower()
-    links = [h.replace("&amp;", "&") for h in re.findall(r'<a class="figure-link" href="([^"]+)"', html)]
+    links = [
+        h.replace("&amp;", "&") for h in re.findall(r'<a class="figure-link" href="([^"]+)"', html)
+    ]
     halves = [h for h in links if h.startswith("/mirror/fact/hidden/trades")]
     assert any("book=WIDGETOIL+options" in h and "half=first" in h for h in halves)
     assert any("book=WIDGETOIL+options" in h and "half=second" in h for h in halves)
@@ -231,8 +269,10 @@ def _fixture_halves() -> tuple[list, list]:
     same_day = [t for t in trips if t["exit_ts"][:10] == t["trading_day"]]
     days = sorted({t["trading_day"] for t in same_day})
     first = set(days[: len(days) // 2])
-    return ([t for t in same_day if t["trading_day"] in first],
-            [t for t in same_day if t["trading_day"] not in first])
+    return (
+        [t for t in same_day if t["trading_day"] in first],
+        [t for t in same_day if t["trading_day"] not in first],
+    )
 
 
 @pytest.mark.parametrize("half", ["first", "second"])
@@ -256,6 +296,7 @@ def test_the_kits_stylesheet_is_untouched():  # gate 7
 
 
 # ---- the money wedge on a phone (founder, 14 Nov): fewer words, a plus may go, never a minus
+
 
 def _money_wedge(trips):
     return SF.facts(SF.record_context(trips), IMP)["money"]["wedge"]

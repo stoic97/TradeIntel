@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/api/test_journals_worth_writing.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_journals_worth_writing.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
@@ -43,16 +42,20 @@ def _rows(day: str, trades: list[tuple[int, int]]) -> list[str]:
         got = paid + net
         hour, opened, closed = 10 + n, f"{10 + n}:00:00", f"{10 + n}:05:00"
         assert hour < 23
-        rows.append(f"{day},{opened},{OPTION},BUY,INTRADAY,MCX,Commodity,{quantity},"
-                    f"50.00,{paid:.2f},Traded")
-        rows.append(f"{day},{closed},{OPTION},SELL,INTRADAY,MCX,Commodity,{quantity},"
-                    f"{got / quantity:.2f},{got:.2f},Traded")
+        rows.append(
+            f"{day},{opened},{OPTION},BUY,INTRADAY,MCX,Commodity,{quantity},50.00,{paid:.2f},Traded"
+        )
+        rows.append(
+            f"{day},{closed},{OPTION},SELL,INTRADAY,MCX,Commodity,{quantity},"
+            f"{got / quantity:.2f},{got:.2f},Traded"
+        )
     return rows
 
 
-FILE = "\n".join(
-    [HEADER, *[row for day, trades in HISTORY.items() for row in _rows(day, trades)]]
-) + "\n"
+FILE = (
+    "\n".join([HEADER, *[row for day, trades in HISTORY.items() for row in _rows(day, trades)]])
+    + "\n"
+)
 
 
 def _journal_ids(engine) -> dict[str, int]:

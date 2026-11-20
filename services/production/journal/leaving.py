@@ -50,15 +50,19 @@ def due(sess: Session, trader: m.Trader, *, production: bool) -> bool:
     if not ready(production) or _first(sess, m.LeavingCardShown, trader) is not None:
         return False
     read = sess.scalars(
-        select(m.Journal.id)
-        .where(m.Journal.trader_id == trader.id, m.Journal.opened_at.is_not(None))
+        select(m.Journal.id).where(
+            m.Journal.trader_id == trader.id, m.Journal.opened_at.is_not(None)
+        )
     ).first()
     return read is not None
 
 
 def mark_shown(sess: Session, trader: m.Trader) -> None:
-    sess.add(m.LeavingCardShown(trader_id=trader.id, copy_version=COPY_VERSION,
-                                shown_at=datetime.now(UTC)))
+    sess.add(
+        m.LeavingCardShown(
+            trader_id=trader.id, copy_version=COPY_VERSION, shown_at=datetime.now(UTC)
+        )
+    )
     try:
         sess.flush()
     except IntegrityError:  # two tabs raced: it was shown once either way
@@ -76,13 +80,15 @@ def record(sess: Session, *, trader: m.Trader, answer: str | None) -> m.LeavingC
     if first is not None:
         return first
     words = (answer or "").strip()[:LONGEST]
-    sess.add(m.LeavingCardAnswer(
-        trader_id=trader.id,
-        outcome=ANSWERED if words else DISMISSED,
-        answer=words or None,
-        copy_version=COPY_VERSION,
-        answered_at=datetime.now(UTC),
-    ))
+    sess.add(
+        m.LeavingCardAnswer(
+            trader_id=trader.id,
+            outcome=ANSWERED if words else DISMISSED,
+            answer=words or None,
+            copy_version=COPY_VERSION,
+            answered_at=datetime.now(UTC),
+        )
+    )
     try:
         sess.flush()
     except IntegrityError:

@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/test_reconstruction.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/test_reconstruction.py by TICKET-945, so that no test file imports another."""
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal

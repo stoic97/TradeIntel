@@ -23,8 +23,8 @@ DATA_EXTENSIONS = re.compile(
     r"\.(csv|tsv|xlsx|xls|pdf|parquet|jsonl|db|sqlite\d*|zip)$", re.IGNORECASE
 )
 ALLOWED = (
-    "data/fixtures/",   # synthetic fixtures: no real trader's trades
-    "data/golden/",     # their goldens
+    "data/fixtures/",  # synthetic fixtures: no real trader's trades
+    "data/golden/",  # their goldens
     "data/null_rate/",  # a synthetic research run (planted signal, fixed seed); research seat's call
     "tests/fixtures/",  # test inputs, synthetic
 )
@@ -37,11 +37,14 @@ def git(*args: str) -> str:
 
 def ignored(path: str) -> bool:
     """Whether git would refuse to add this path. --no-index: the rules, not the index."""
-    return subprocess.run(["git", "check-ignore", "--no-index", "-q", path],
-                          check=False).returncode == 0
+    return (
+        subprocess.run(["git", "check-ignore", "--no-index", "-q", path], check=False).returncode
+        == 0
+    )
 
 
 # ---------- the tree ----------
+
 
 def test_no_tracked_data_file_outside_the_allowed_paths():
     tracked = git("ls-files").splitlines()
@@ -52,18 +55,37 @@ def test_no_tracked_data_file_outside_the_allowed_paths():
 
 # ---------- the ignore rules ----------
 
+
 def test_anything_under_data_is_ignored_unless_it_is_an_allowed_path():
-    for path in ("data/x.pdf", "data/x.json", "data/x.txt", "data/partner/tradebook.csv",
-                 "data/null_rate_new/x.jsonl", "data/market/prices.csv"):
+    for path in (
+        "data/x.pdf",
+        "data/x.json",
+        "data/x.txt",
+        "data/partner/tradebook.csv",
+        "data/null_rate_new/x.jsonl",
+        "data/market/prices.csv",
+    ):
         assert ignored(path), path
-    for path in ("data/fixtures/x.csv", "data/golden/x.json", "data/market/CROSSINGS.md",
-                 "data/null_rate/recall-b2.meta.json"):
+    for path in (
+        "data/fixtures/x.csv",
+        "data/golden/x.json",
+        "data/market/CROSSINGS.md",
+        "data/null_rate/recall-b2.meta.json",
+    ):
         assert not ignored(path), path
 
 
 def test_a_contract_note_a_tsv_or_a_database_is_ignored_anywhere():
-    for path in ("foo.tsv", "contract_note.pdf", "docs/x.pdf", "scope.db", "x.sqlite",
-                 "x.sqlite3", "services/x.db", "notes/export.jsonl"):
+    for path in (
+        "foo.tsv",
+        "contract_note.pdf",
+        "docs/x.pdf",
+        "scope.db",
+        "x.sqlite",
+        "x.sqlite3",
+        "services/x.db",
+        "notes/export.jsonl",
+    ):
         assert ignored(path), path
 
 
@@ -73,6 +95,7 @@ def test_synthetic_fixtures_of_any_type_can_still_be_added():
 
 
 # ---------- the deletion log ----------
+
 
 def test_the_repository_holds_no_deletion_log():
     """A log row is an identifier of a person whose data we just deleted. It lives on the
@@ -87,7 +110,10 @@ def test_the_repository_holds_no_deletion_log():
 def test_the_runbook_says_where_the_log_lives_and_every_reference_follows_it():
     runbook = Path("docs/runbooks/data-deletion.md").read_text(encoding="utf-8")
     assert SERVER_LOG in runbook
-    refs = [f"{f}" for f in git("grep", "-l", "deletion-log.md").splitlines()
-            if SERVER_LOG not in Path(f).read_text(encoding="utf-8")
-            and f != "tests/unit/repo/test_no_data_in_git.py"]
+    refs = [
+        f"{f}"
+        for f in git("grep", "-l", "deletion-log.md").splitlines()
+        if SERVER_LOG not in Path(f).read_text(encoding="utf-8")
+        and f != "tests/unit/repo/test_no_data_in_git.py"
+    ]
     assert refs == [], f"still point at the old log in git: {refs}"

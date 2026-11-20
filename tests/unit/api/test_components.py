@@ -43,30 +43,36 @@ def test_a_chip_on_navy_says_so():
 
 def test_a_button_is_a_link_when_it_goes_somewhere_and_a_button_when_it_submits():
     assert str(call("button", "Continue", href="/budget")) == (
-        '<a class="btn btn--primary" href="/budget">Continue</a>')
+        '<a class="btn btn--primary" href="/budget">Continue</a>'
+    )
     assert str(call("button", "Sign in", block=True)) == (
-        '<button class="btn btn--primary btn--block" type="submit">Sign in</button>')
+        '<button class="btn btn--primary btn--block" type="submit">Sign in</button>'
+    )
 
 
 def test_a_button_takes_the_kits_kinds_and_can_be_disabled():
     html = str(call("button", "Delete everything", disabled=True))
     assert html.endswith(" disabled>Delete everything</button>")
-    assert 'class="btn btn--on-navy"' in str(call("button", "Show me those days",
-                                                   href="/x", kind="on-navy"))
+    assert 'class="btn btn--on-navy"' in str(
+        call("button", "Show me those days", href="/x", kind="on-navy")
+    )
 
 
 def test_money_is_written_by_the_filters_and_coloured_by_its_sign():
     assert str(call("money", Decimal("-12345.6"))) == (
-        f'<span class="num num--loss">{MINUS}₹12,345</span>')
+        f'<span class="num num--loss">{MINUS}₹12,345</span>'
+    )
     assert str(call("money", Decimal(4500), size="medium")) == (
-        '<span class="num num--medium num--gain">+₹4,500</span>')
+        '<span class="num num--medium num--gain">+₹4,500</span>'
+    )
     assert 'num--plain">₹0<' in str(call("money", 0))
 
 
 def test_an_amount_is_never_red_or_green():
     """Red and green belong to signed results only (handoff section 7)."""
     assert str(call("money", 1500000, signed=False)) == (
-        '<span class="num num--plain">₹15,00,000</span>')
+        '<span class="num num--plain">₹15,00,000</span>'
+    )
 
 
 def test_the_gross_line_is_the_mirrors_own_sentence():
@@ -103,8 +109,9 @@ def test_the_two_states_differ_by_shape_not_colour_alone():
 
 
 def test_a_field_has_its_label_and_its_error_is_announced():
-    html = str(call("field", "Login id", "login_id", value="fx", autocomplete="username",
-                    error=True))
+    html = str(
+        call("field", "Login id", "login_id", value="fx", autocomplete="username", error=True)
+    )
     assert '<span class="field__label">Login id</span>' in html
     assert 'class="field field--error"' in html and 'aria-invalid="true"' in html
     assert 'name="login_id"' in html and 'value="fx"' in html
@@ -117,9 +124,16 @@ def test_a_password_is_never_written_back_into_the_page():
 
 
 def test_a_field_shows_its_hint_and_its_own_error_sentence():
-    html = str(call("field", "Password", "password", type="password",
-                    error="A password needs at least 12 characters.",
-                    hint="At least 12 characters."))
+    html = str(
+        call(
+            "field",
+            "Password",
+            "password",
+            type="password",
+            error="A password needs at least 12 characters.",
+            hint="At least 12 characters.",
+        )
+    )
     assert '<span class="field__error">A password needs at least 12 characters.</span>' in html
     assert '<span class="field__hint">At least 12 characters.</span>' in html
 
@@ -130,5 +144,6 @@ def test_what_a_trader_types_is_escaped():
 
 def test_a_field_can_be_required():
     assert 'autocomplete="username" required>' in str(
-        call("field", "Login id", "login_id", autocomplete="username", required=True))
+        call("field", "Login id", "login_id", autocomplete="username", required=True)
+    )
     assert " required" not in str(call("field", "Login id", "login_id"))

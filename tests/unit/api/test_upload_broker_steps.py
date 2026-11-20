@@ -15,8 +15,15 @@ from tests.unit.api.templating import template_env
 
 
 def page() -> str:
-    return template_env().get_template("upload.html").render(
-        title="Upload your tradebook", csrf_token="x", error=None, today="2026-09-08",
+    return (
+        template_env()
+        .get_template("upload.html")
+        .render(
+            title="Upload your tradebook",
+            csrf_token="x",
+            error=None,
+            today="2026-09-08",
+        )
     )
 
 
@@ -64,8 +71,9 @@ def test_the_reading_state_does_not_repeat_the_steps():
 
 
 def groww_steps() -> list[str]:
-    listed = re.search(r'<ol class="upload__steps upload__steps--groww[^"]*">(.*?)</ol>',
-                       idle_part(), re.DOTALL)
+    listed = re.search(
+        r'<ol class="upload__steps upload__steps--groww[^"]*">(.*?)</ol>', idle_part(), re.DOTALL
+    )
     assert listed, "the page has no Groww steps"
     items = re.findall(r"<li>(.*?)</li>", listed[1], re.DOTALL)
     return [html.unescape(" ".join(re.sub(r"<[^>]+>", " ", i).split())) for i in items]

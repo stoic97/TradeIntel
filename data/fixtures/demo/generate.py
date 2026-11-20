@@ -37,8 +37,9 @@ HERE = Path(__file__).resolve().parent
 HISTORY = HERE.parents[2] / "tests/fixtures/mirror_contract/main.json"
 OUT = HERE / "demo_tradebook.csv"
 
-HEADER = ("Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,"
-          "Trade Price,Trade Value,Status")
+HEADER = (
+    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+)
 BASE_PRICE = Decimal(5200)
 """The value of one lot at entry. The file carries the price of one unit."""
 LOT = 100
@@ -62,11 +63,26 @@ def rows() -> list[tuple[datetime, str]]:
         ):
             ts = datetime.fromisoformat(trip[ts_key])
             price = (value / units).quantize(Decimal("0.01"))
-            out.append((ts, ",".join([
-                ts.date().isoformat(), ts.strftime("%H:%M:%S"), name, side,
-                "INTRADAY", trip["exchange"], "Commodity", str(units),
-                f"{price:.2f}", f"{value:.2f}", "Traded",
-            ])))
+            out.append(
+                (
+                    ts,
+                    ",".join(
+                        [
+                            ts.date().isoformat(),
+                            ts.strftime("%H:%M:%S"),
+                            name,
+                            side,
+                            "INTRADAY",
+                            trip["exchange"],
+                            "Commodity",
+                            str(units),
+                            f"{price:.2f}",
+                            f"{value:.2f}",
+                            "Traded",
+                        ]
+                    ),
+                )
+            )
     return out
 
 
@@ -76,10 +92,12 @@ def main() -> None:
 
     # The file is only useful if it reproduces the history it was built from.
     from services.production.ctr.intake import pipeline as pl
+
     plan = pl.plan_import(
         OUT.read_text(),
-        context=pl.ImportContext(trader_id="1", source_account="A",
-                                 code_version="demo-generate", existing_days={}),
+        context=pl.ImportContext(
+            trader_id="1", source_account="A", code_version="demo-generate", existing_days={}
+        ),
     )
     history = json.loads(HISTORY.read_text())
     expected = sorted(Decimal(t["gross"]) for t in history)
@@ -89,8 +107,10 @@ def main() -> None:
         f"{plan.rows_excluded} rows excluded, outcome {plan.outcome}"
     )
     assert got == expected, "reconstructed results differ from the history"
-    print(f"wrote {OUT.relative_to(HERE.parents[2])}: "
-          f"{len(body)} rows, {len(plan.trips)} trips, outcome {plan.outcome.value}")
+    print(
+        f"wrote {OUT.relative_to(HERE.parents[2])}: "
+        f"{len(body)} rows, {len(plan.trips)} trips, outcome {plan.outcome.value}"
+    )
 
 
 if __name__ == "__main__":

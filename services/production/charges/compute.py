@@ -91,9 +91,18 @@ trades is one order, billed once, so each trade carries its part of that order's
 """
 
 
-def order_charges(seg: R.Segment, side: str, value: Decimal, on: date, *, broker: str,
-                  own: Decimal | None = None, as_of: date | None = None,
-                  table: tuple | None = None, orders: Orders | None = None) -> dict[str, Decimal]:
+def order_charges(
+    seg: R.Segment,
+    side: str,
+    value: Decimal,
+    on: date,
+    *,
+    broker: str,
+    own: Decimal | None = None,
+    as_of: date | None = None,
+    table: tuple | None = None,
+    orders: Orders | None = None,
+) -> dict[str, Decimal]:
     """Every charge on one side of a trade, by component, unrounded. Raises
     :class:`rates.NotCovered` or :class:`brokerage.UnknownBroker` when it can't be said.
 
@@ -104,20 +113,33 @@ def order_charges(seg: R.Segment, side: str, value: Decimal, on: date, *, broker
     out = {component.value: amount for component, amount in statutory.items()}
     kind = _plan_kind(seg)
     billed = orders if orders is not None else ((Decimal(1), value),)
-    fee = sum((share * B.per_order(broker, kind, order_value, own=own)
-               for share, order_value in billed), ZERO)
+    fee = sum(
+        (share * B.per_order(broker, kind, order_value, own=own) for share, order_value in billed),
+        ZERO,
+    )
     gst = R.rate(seg, R.Component.GST, side, on, as_of=as_of, table=table).rate
     out["BROKERAGE"] = fee
     out[R.Component.GST.value] = out.get(R.Component.GST.value, ZERO) + gst * fee
     return out
 
 
-def trip_charges(*, broker: str, exchange: str, segment: str, direction: str,
-                 entry_ts: datetime, exit_ts: datetime, quantity: int,
-                 entry_price: Decimal, exit_price: Decimal, own: Decimal | None = None,
-                 as_of: date | None = None, table: tuple | None = None,
-                 entry_orders: Orders | None = None,
-                 exit_orders: Orders | None = None) -> TripCharges:
+def trip_charges(
+    *,
+    broker: str,
+    exchange: str,
+    segment: str,
+    direction: str,
+    entry_ts: datetime,
+    exit_ts: datetime,
+    quantity: int,
+    entry_price: Decimal,
+    exit_price: Decimal,
+    own: Decimal | None = None,
+    as_of: date | None = None,
+    table: tuple | None = None,
+    entry_orders: Orders | None = None,
+    exit_orders: Orders | None = None,
+) -> TripCharges:
     """The charges on one trade: its opening side and its closing side, each on its own date.
 
     Without ``entry_orders`` / ``exit_orders`` each side is one executed order (Dhan's
@@ -128,14 +150,24 @@ def trip_charges(*, broker: str, exchange: str, segment: str, direction: str,
     if seg is None:
         return _uncovered(f"the rate table has no rows for {exchange} {segment}")
     long = str(getattr(direction, "value", direction)).upper() == "LONG"
-    sides = (("buy" if long else "sell", entry_price * quantity, opened, entry_orders),
-             ("sell" if long else "buy", exit_price * quantity, closed, exit_orders))
+    sides = (
+        ("buy" if long else "sell", entry_price * quantity, opened, entry_orders),
+        ("sell" if long else "buy", exit_price * quantity, closed, exit_orders),
+    )
     total: dict[str, Decimal] = {}
     try:
         for side, value, on, orders in sides:
-            for component, amount in order_charges(seg, side, value, on, broker=broker, own=own,
-                                                   as_of=as_of, table=table,
-                                                   orders=orders).items():
+            for component, amount in order_charges(
+                seg,
+                side,
+                value,
+                on,
+                broker=broker,
+                own=own,
+                as_of=as_of,
+                table=table,
+                orders=orders,
+            ).items():
                 total[component] = total.get(component, ZERO) + amount
     except R.NotCovered as exc:
         return _uncovered(str(exc))

@@ -44,27 +44,28 @@ class NotAnAnswer(Exception):
 
 
 def _journals_opened(sess: Session, trader: m.Trader) -> int:
-    return int(sess.scalar(
-        select(func.count())
-        .select_from(m.Journal)
-        .where(m.Journal.trader_id == trader.id,
-               m.Journal.opened_at.is_not(None))
-    ) or 0)
+    return int(
+        sess.scalar(
+            select(func.count())
+            .select_from(m.Journal)
+            .where(m.Journal.trader_id == trader.id, m.Journal.opened_at.is_not(None))
+        )
+        or 0
+    )
 
 
 def _upload_count(sess: Session, trader: m.Trader) -> int:
-    return int(sess.scalar(
-        select(func.count())
-        .select_from(m.Import)
-        .where(m.Import.trader_id == trader.id)
-    ) or 0)
+    return int(
+        sess.scalar(
+            select(func.count()).select_from(m.Import).where(m.Import.trader_id == trader.id)
+        )
+        or 0
+    )
 
 
 def _days_since_first_upload(sess: Session, trader: m.Trader) -> int:
     first = sess.scalars(
-        select(m.Import)
-        .where(m.Import.trader_id == trader.id)
-        .order_by(m.Import.created_at)
+        select(m.Import).where(m.Import.trader_id == trader.id).order_by(m.Import.created_at)
     ).first()
     if first is None:
         return 0
@@ -72,9 +73,10 @@ def _days_since_first_upload(sess: Session, trader: m.Trader) -> int:
 
 
 def _already_answered(sess: Session, trader: m.Trader) -> bool:
-    return sess.scalars(
-        select(m.WtpAnswer).where(m.WtpAnswer.trader_id == trader.id)
-    ).first() is not None
+    return (
+        sess.scalars(select(m.WtpAnswer).where(m.WtpAnswer.trader_id == trader.id)).first()
+        is not None
+    )
 
 
 def should_ask(sess: Session, *, trader: m.Trader) -> bool:
@@ -104,8 +106,7 @@ def ask_here(sess: Session, *, trader: m.Trader, journal: m.Journal) -> bool:
         return False
     asked = _asked_on(sess, trader)
     if asked is None:
-        sess.add(m.WtpAsked(trader_id=trader.id, journal_id=journal.id,
-                            asked_at=datetime.now(UTC)))
+        sess.add(m.WtpAsked(trader_id=trader.id, journal_id=journal.id, asked_at=datetime.now(UTC)))
         try:
             sess.flush()
         except IntegrityError:  # two tabs raced: the other one asked

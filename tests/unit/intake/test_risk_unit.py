@@ -30,6 +30,7 @@ DUPES = Path("data/fixtures/duplicates")
 @pytest.fixture()
 def session():
     import os
+
     engine = make_engine(os.environ["SCOPE_DB"])
     run_migrations(engine)
     with make_session(engine) as sess:
@@ -37,29 +38,42 @@ def session():
 
 
 def a_trader(session) -> m.Trader:
-    trader = m.Trader(display_name="F", login_id="f", password_hash="x",
-                      created_at=datetime.now(UTC))
+    trader = m.Trader(
+        display_name="F", login_id="f", password_hash="x", created_at=datetime.now(UTC)
+    )
     session.add(trader)
     session.flush()
     return trader
 
 
 def declare(session, trader, value: str, effective_from: str) -> None:
-    session.add(m.RiskBudgetDeclaration(
-        trader_id=trader.id, value=Decimal(value), unit="INR",
-        effective_from=effective_from, declared_at=datetime.now(UTC),
-        retrospective=True))
+    session.add(
+        m.RiskBudgetDeclaration(
+            trader_id=trader.id,
+            value=Decimal(value),
+            unit="INR",
+            effective_from=effective_from,
+            declared_at=datetime.now(UTC),
+            retrospective=True,
+        )
+    )
     session.flush()
 
 
 def an_import(session, trader) -> m.Import:
     plan = pl.plan_import(
         (DUPES / "clean.csv").read_text(),
-        context=pl.ImportContext(trader_id=str(trader.id), source_account="A",
-                                 code_version="risk"))
-    return persist.write_plan(session, trader=trader, plan=plan,
-                              raw_sha256="a" * 64, original_name="c.csv",
-                              stored_path="/tmp/c", size=1)
+        context=pl.ImportContext(trader_id=str(trader.id), source_account="A", code_version="risk"),
+    )
+    return persist.write_plan(
+        session,
+        trader=trader,
+        plan=plan,
+        raw_sha256="a" * 64,
+        original_name="c.csv",
+        stored_path="/tmp/c",
+        size=1,
+    )
 
 
 def trips(session) -> list[m.Trip]:
@@ -70,8 +84,7 @@ def test_without_a_declaration_a_long_option_falls_back_to_the_premium(session):
     trader = a_trader(session)
     an_import(session, trader)
     session.commit()
-    assert all(t.risk_unit_source is s.RiskUnitSourceV1.PREMIUM_PAID
-               for t in trips(session))
+    assert all(t.risk_unit_source is s.RiskUnitSourceV1.PREMIUM_PAID for t in trips(session))
 
 
 def test_a_declaration_in_force_becomes_the_denominator(session):
@@ -91,8 +104,7 @@ def test_a_declaration_taking_effect_later_does_not_reach_back(session):
     declare(session, trader, "5000", "2026-11-01")
     an_import(session, trader)
     session.commit()
-    assert all(t.risk_unit_source is not s.RiskUnitSourceV1.DECLARED_BUDGET
-               for t in trips(session))
+    assert all(t.risk_unit_source is not s.RiskUnitSourceV1.DECLARED_BUDGET for t in trips(session))
 
 
 def test_the_latest_declaration_in_force_wins(session):
@@ -147,14 +159,12 @@ def test_a_budget_declared_after_the_import_still_reaches_the_mirror(session):
 
     loaded, _ = loader.load_for(session, trader)
     assert loaded, "the fixture should produce trips"
-    assert {t.risk_unit_source for t in loaded} == {
-        s.RiskUnitSourceV1.DECLARED_BUDGET
-    }, "the declaration is in force for these days, so it is the denominator"
+    assert {t.risk_unit_source for t in loaded} == {s.RiskUnitSourceV1.DECLARED_BUDGET}, (
+        "the declaration is in force for these days, so it is the denominator"
+    )
 
     # Nothing was rewritten: the row still records what the file alone supported.
-    assert {t.risk_unit_source for t in trips(session)} == {
-        s.RiskUnitSourceV1.PREMIUM_PAID
-    }
+    assert {t.risk_unit_source for t in trips(session)} == {s.RiskUnitSourceV1.PREMIUM_PAID}
 
 
 def test_a_later_declaration_leaves_earlier_trades_on_what_was_in_force(session):
@@ -167,9 +177,9 @@ def test_a_later_declaration_leaves_earlier_trades_on_what_was_in_force(session)
     session.commit()
 
     loaded, _ = loader.load_for(session, trader)
-    assert {t.risk_unit_source for t in loaded} == {
-        s.RiskUnitSourceV1.PREMIUM_PAID
-    }, "a number that starts in 2030 was not what he risked in 2026"
+    assert {t.risk_unit_source for t in loaded} == {s.RiskUnitSourceV1.PREMIUM_PAID}, (
+        "a number that starts in 2030 was not what he risked in 2026"
+    )
 
 
 def test_a_percentage_with_no_capital_is_not_a_denominator(session):
@@ -181,10 +191,17 @@ def test_a_percentage_with_no_capital_is_not_a_denominator(session):
     from services.production.accounts import risk_budget as rb
 
     trader = a_trader(session)
-    session.add(m.RiskBudgetDeclaration(
-        trader_id=trader.id, value=Decimal(2), unit="PCT",
-        capital_amount=None, effective_from="2026-01-01",
-        declared_at=datetime.now(UTC), retrospective=True))
+    session.add(
+        m.RiskBudgetDeclaration(
+            trader_id=trader.id,
+            value=Decimal(2),
+            unit="PCT",
+            capital_amount=None,
+            effective_from="2026-01-01",
+            declared_at=datetime.now(UTC),
+            retrospective=True,
+        )
+    )
     session.flush()
 
     declarations = rb.for_trader(session, trader)

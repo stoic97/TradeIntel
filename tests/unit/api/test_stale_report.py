@@ -16,8 +16,13 @@ from services.production.ctr.intake import pipeline as pl
 from tests.helpers.read_again import A_LATER_FILE, imports, read_again, send, upload_older, words
 
 OFFER = "Read your file again"
-REPORT_PAGES = ("/", "/mirror", "/mirror/chapter/1", "/mirror/fact/worst-days",
-                "/mirror/fact/worst-days/trades")
+REPORT_PAGES = (
+    "/",
+    "/mirror",
+    "/mirror/chapter/1",
+    "/mirror/fact/worst-days",
+    "/mirror/fact/worst-days/trades",
+)
 ALARMS = ("wrong", "error", "incorrect", "mistake", "warning", "out of date", "outdated")
 
 
@@ -38,8 +43,11 @@ def test_the_offer_is_a_post_with_a_token(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     page = client.get("/mirror").text
     stale = imports(engine)[0].id
-    found = re.search(rf'<form[^>]*method="post"[^>]*action="/imports/{stale}/read-again"[^>]*>(.*?)</form>',
-                      page, re.DOTALL)
+    found = re.search(
+        rf'<form[^>]*method="post"[^>]*action="/imports/{stale}/read-again"[^>]*>(.*?)</form>',
+        page,
+        re.DOTALL,
+    )
     assert found and 'name="csrf_token"' in found[1]
 
 
@@ -77,7 +85,7 @@ def test_the_offer_does_not_alarm(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     page = client.get("/mirror").text
     start = page.index('stale-line" role="note"')
-    line = words(page[start:page.index("</form>", start)]).lower()
+    line = words(page[start : page.index("</form>", start)]).lower()
     assert not [w for w in ALARMS if w in line]
     assert "older reading" in line
     assert "nothing you told us is lost" in line

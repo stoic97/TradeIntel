@@ -20,8 +20,11 @@ from tests.helpers.read_again import send, words
 from tests.helpers.upload import CSRF
 
 BAR = "Sample trader, invented. These aren't your trades."
-PAGES = ("/sample", *(f"/sample/chapter/{c.number}" for c in SM.CHAPTERS),
-         *(f"/sample/fact/{key}" for key in SM.FACTS))
+PAGES = (
+    "/sample",
+    *(f"/sample/chapter/{c.number}" for c in SM.CHAPTERS),
+    *(f"/sample/fact/{key}" for key in SM.FACTS),
+)
 
 
 def visitor() -> TestClient:
@@ -30,8 +33,10 @@ def visitor() -> TestClient:
 
 def rows(engine) -> dict[str, int]:
     with make_session(engine) as sess:
-        return {t.name: sess.scalar(select(func.count()).select_from(t))
-                for t in m.Base.metadata.sorted_tables}
+        return {
+            t.name: sess.scalar(select(func.count()).select_from(t))
+            for t in m.Base.metadata.sorted_tables
+        }
 
 
 def see_all(page: str) -> list[str]:
@@ -60,8 +65,8 @@ def test_it_says_on_the_page_that_the_trader_is_invented(engine):
     v = visitor()
     for path in PAGES:
         page = v.get(path).text
-        main = page[page.index("<main"):]
-        assert BAR in words(main[:main.index("</main>")]), path
+        main = page[page.index("<main") :]
+        assert BAR in words(main[: main.index("</main>")]), path
         assert 'href="/"' in page and "Run this on my trades" in page, path
 
 
@@ -75,7 +80,10 @@ def test_its_forms_are_off_on_the_server(engine):
     v = visitor()
     for path in PAGES:
         assert 'method="post"' not in v.get(path).text.lower(), path
-    assert v.post("/sample/chapter/1/feedback", data={"answer": "accurate"}).status_code in (404, 405)
+    assert v.post("/sample/chapter/1/feedback", data={"answer": "accurate"}).status_code in (
+        404,
+        405,
+    )
 
 
 def test_it_carries_no_reading_beacon(engine):
@@ -92,8 +100,14 @@ def test_the_record_is_read_once_and_a_visit_stores_nothing(engine):
             v.get(path)
     assert rows(engine) == after_first
     with make_session(engine) as sess:
-        assert sess.scalar(select(func.count()).select_from(m.Trader)
-                           .where(m.Trader.login_id == routes_sample.LOGIN_ID)) == 1
+        assert (
+            sess.scalar(
+                select(func.count())
+                .select_from(m.Trader)
+                .where(m.Trader.login_id == routes_sample.LOGIN_ID)
+            )
+            == 1
+        )
 
 
 def test_a_signed_in_trader_sees_the_sample_not_his_own(client, engine):
@@ -119,22 +133,40 @@ def test_the_sample_account_cannot_be_signed_into(engine):
     v = visitor()
     v.get("/sample")
     csrf = CSRF.search(v.get("/login").text).group(1)
-    response = v.post("/login", data={"login_id": routes_sample.LOGIN_ID, "password": "a-long-enough-password",
-                                      "csrf_token": csrf}, follow_redirects=False)
+    response = v.post(
+        "/login",
+        data={
+            "login_id": routes_sample.LOGIN_ID,
+            "password": "a-long-enough-password",
+            "csrf_token": csrf,
+        },
+        follow_redirects=False,
+    )
     assert response.status_code != 303
     with make_session(engine) as sess:
-        sample = sess.scalars(select(m.Trader).where(m.Trader.login_id == routes_sample.LOGIN_ID)).one()
+        sample = sess.scalars(
+            select(m.Trader).where(m.Trader.login_id == routes_sample.LOGIN_ID)
+        ).one()
         assert sample.development_data  # never counted as a reader on /admin
 
 
 def test_no_one_can_sign_up_as_the_sample(engine):
     v = visitor()
     csrf = CSRF.search(v.get("/signup").text).group(1)
-    v.post("/signup", data={"login_id": routes_sample.LOGIN_ID, "display_name": "x",
-                            "password": "a-long-enough-password", "csrf_token": csrf})
+    v.post(
+        "/signup",
+        data={
+            "login_id": routes_sample.LOGIN_ID,
+            "display_name": "x",
+            "password": "a-long-enough-password",
+            "csrf_token": csrf,
+        },
+    )
     v.get("/sample")
     with make_session(engine) as sess:
-        held = sess.scalars(select(m.Trader).where(m.Trader.login_id == routes_sample.LOGIN_ID)).all()
+        held = sess.scalars(
+            select(m.Trader).where(m.Trader.login_id == routes_sample.LOGIN_ID)
+        ).all()
     assert [t.development_data for t in held] == [True]
 
 

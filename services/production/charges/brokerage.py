@@ -84,8 +84,9 @@ def load(path: Path = TABLE) -> dict[str, Preset]:
             if unknown or "flat" not in plan:
                 raise InvalidPresets(f"{where} {kind}: fields are {_FIELDS}, flat required")
             plans[kind] = Plan(**{k: _money(v, f"{where} {kind} {k}") for k, v in plan.items()})
-        out[broker] = Preset(broker, raw["name"].strip(), raw["read_on"].strip(),
-                             raw["source"].strip(), plans)
+        out[broker] = Preset(
+            broker, raw["name"].strip(), raw["read_on"].strip(), raw["source"].strip(), plans
+        )
     return out
 
 

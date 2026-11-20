@@ -53,8 +53,12 @@ def engine(scope_environment):
 def client(engine):
     signed_in = sign_up(TestClient(create_app()), engine, "WORTH", "worth")
     token = CSRF.search(signed_in.get("/upload").text).group(1)
-    sent = signed_in.post("/upload", files={"file": ("t.csv", FILE.encode(), "text/csv")},
-                          data={"csrf_token": token}, follow_redirects=False)
+    sent = signed_in.post(
+        "/upload",
+        files={"file": ("t.csv", FILE.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
     return signed_in
 
@@ -76,17 +80,36 @@ def _second_upload(engine) -> None:
     """The question's floor: a second upload. Nothing in it changes a Journal."""
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "worth")).one()
-        raw = m.RawFile(trader_id=trader.id, sha256="e" * 64, original_name="g.csv",
-                        size=1, stored_path="/tmp/g", uploaded_at=datetime.now(UTC))
+        raw = m.RawFile(
+            trader_id=trader.id,
+            sha256="e" * 64,
+            original_name="g.csv",
+            size=1,
+            stored_path="/tmp/g",
+            uploaded_at=datetime.now(UTC),
+        )
         sess.add(raw)
         sess.flush()
-        sess.add(m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                          adapter_id="dhan_tradebook_v1", adapter_version="1",
-                          filemap_version="1", code_version="fixturesha",
-                          outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-                          rows_in=0, rows_parsed=0, rows_excluded=0,
-                          fees_available=False, version_no=2, trips_reconstructed=0,
-                          density_default_unit="day", created_at=datetime.now(UTC)))
+        sess.add(
+            m.Import(
+                trader_id=trader.id,
+                raw_file_id=raw.id,
+                source_account="A",
+                adapter_id="dhan_tradebook_v1",
+                adapter_version="1",
+                filemap_version="1",
+                code_version="fixturesha",
+                outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+                rows_in=0,
+                rows_parsed=0,
+                rows_excluded=0,
+                fees_available=False,
+                version_no=2,
+                trips_reconstructed=0,
+                density_default_unit="day",
+                created_at=datetime.now(UTC),
+            )
+        )
         sess.commit()
 
 
@@ -101,7 +124,9 @@ def test_the_fixture_is_the_history_worked_above(engine, client):
 def test_the_list_leads_with_the_five_days(engine, client):
     html = client.get("/journals").text
     assert "Start with these 5 days" in _readable(html)
-    assert _listed_days(engine, html) == START_WITH, "run, busiest, then worst days in order, five in all"
+    assert _listed_days(engine, html) == START_WITH, (
+        "run, busiest, then worst days in order, five in all"
+    )
 
 
 def test_each_day_on_the_list_says_why_it_is_there(client):
@@ -130,7 +155,9 @@ def test_the_calendar_holds_every_day_each_with_one_state(engine, client):
     for day in START_WITH:
         cell = re.search(rf'<a\b[^>]*data-day="{day}"[^>]*>', html).group(0)
         assert 'data-state="worth"' in cell, day
-        assert f'href="/journals/{ids[day]}"' in cell and f'href="/journals/{ids[day]}"' in surface, day
+        assert (
+            f'href="/journals/{ids[day]}"' in cell and f'href="/journals/{ids[day]}"' in surface
+        ), day
 
 
 def test_earlier_no_longer_calls_itself_behind_the_most_recent(client):
@@ -153,15 +180,28 @@ def _trip(day, at, net):
     from services.production.mirror import metrics as mx
 
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
-    return mx.Trip(f"{day}-{at}", "WIDGETOIL", day, entry, entry + timedelta(minutes=5), 300,
-                   Decimal(net), 1, s.RiskUnitSourceV1.PREMIUM_PAID)
+    return mx.Trip(
+        f"{day}-{at}",
+        "WIDGETOIL",
+        day,
+        entry,
+        entry + timedelta(minutes=5),
+        300,
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+    )
 
 
 def test_a_run_across_two_days_is_named_on_both_but_only_its_first_leads():
     from services.production.api import days_worth_a_look as worth
 
-    trips = [_trip("2025-02-03", "10:00", -1), _trip("2025-02-03", "11:00", -1),
-             _trip("2025-02-04", "10:00", -1), _trip("2025-02-05", "10:00", 9)]
+    trips = [
+        _trip("2025-02-03", "10:00", -1),
+        _trip("2025-02-03", "11:00", -1),
+        _trip("2025-02-04", "10:00", -1),
+        _trip("2025-02-05", "10:00", 9),
+    ]
     flags = worth.flags_by_day(trips)
     assert next(iter(flags)) == "2025-02-03"
     labels = [f.label for f in flags["2025-02-04"]]
@@ -182,8 +222,11 @@ def test_a_run_of_one_and_a_tie_for_busiest_name_nothing():
     """One loss is not a run. Every day at the same count has no busiest day."""
     from services.production.api import days_worth_a_look as worth
 
-    trips = [_trip("2025-02-03", "10:00", 9), _trip("2025-02-04", "10:00", -9),
-             _trip("2025-02-05", "10:00", 9)]
+    trips = [
+        _trip("2025-02-03", "10:00", 9),
+        _trip("2025-02-04", "10:00", -9),
+        _trip("2025-02-05", "10:00", 9),
+    ]
     labels = [f.label for day in worth.flags_by_day(trips).values() for f in day]
     assert labels == ["This was one of your five worst days"]
 
@@ -191,12 +234,15 @@ def test_a_run_of_one_and_a_tie_for_busiest_name_nothing():
 # ---------- What a day says ----------
 
 
-@pytest.mark.parametrize(("day", "label", "href"), [
-    ("2025-02-10", "This was one of your five worst days", "/mirror/fact/worst-days"),
-    ("2025-02-04", "This was one of your five worst days", "/mirror/fact/worst-days"),
-    ("2025-02-11", "Your longest losing run: 4 losses in a row", "/mirror/fact/run"),
-    ("2025-02-12", "Your busiest day: 6 trades", "/mirror/fact/busiest"),
-])
+@pytest.mark.parametrize(
+    ("day", "label", "href"),
+    [
+        ("2025-02-10", "This was one of your five worst days", "/mirror/fact/worst-days"),
+        ("2025-02-04", "This was one of your five worst days", "/mirror/fact/worst-days"),
+        ("2025-02-11", "Your longest losing run: 4 losses in a row", "/mirror/fact/run"),
+        ("2025-02-12", "Your busiest day: 6 trades", "/mirror/fact/busiest"),
+    ],
+)
 def test_a_flagged_day_links_the_finding(engine, client, day, label, href):
     html = client.get(f"/journals/{_journal_ids(engine)[day]}").text
     assert label in _readable(html)
@@ -210,8 +256,10 @@ def test_an_unflagged_day_claims_nothing(engine, client):
 
 def test_the_size_line_stays_on_the_day(engine, client):
     html = client.get(f"/journals/{_journal_ids(engine)['2025-02-11']}").text
-    assert ("On 11 Feb 2025 you went from 1 lot to 3 after 3 losses. Your usual is about 1.1 lots."
-            in _readable(html))
+    assert (
+        "On 11 Feb 2025 you went from 1 lot to 3 after 3 losses. Your usual is about 1.1 lots."
+        in _readable(html)
+    )
 
 
 def test_a_day_whose_size_never_rose_has_no_size_line(engine, client):
@@ -246,8 +294,10 @@ def test_a_day_of_two_trades_asks_both_and_hides_nothing(engine, client):
     # TICKET-906: an old day the report doesn't name asks "Do you remember this day?"
     # before its questions. He says yes; what it asks then is what this test holds.
     first = client.get(f"/journals/{journal_id}").text
-    client.post(f"/journals/{journal_id}/remember",
-                data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)})
+    client.post(
+        f"/journals/{journal_id}/remember",
+        data={"answer": "yes", "csrf_token": CSRF.search(first).group(1)},
+    )
     html = client.get(f"/journals/{journal_id}").text
     assert _trade_heads(_outside_the_rest(html)) == ["Trade 1", "Trade 2"]
     assert "<details" not in html
@@ -267,10 +317,14 @@ def test_an_answer_on_a_trade_not_asked_about_stays_in_view(engine, client):
     with make_session(engine) as sess:
         rows = sess.scalars(select(m.Trip).order_by(m.Trip.entry_ts)).all()
         second_trade = [r for r in rows if r.trading_day == "2025-02-11"][1].trip_id
-    client.post(f"/journals/{journal_id}/field", data={
-        "trip_id": second_trade, "rationale": "Saw a level.",
-        "csrf_token": CSRF.search(html).group(1),
-    })
+    client.post(
+        f"/journals/{journal_id}/field",
+        data={
+            "trip_id": second_trade,
+            "rationale": "Saw a level.",
+            "csrf_token": CSRF.search(html).group(1),
+        },
+    )
 
     html = client.get(f"/journals/{journal_id}").text
     assert re.search(r"<details[^>]*\bopen\b", html)
@@ -300,9 +354,13 @@ def test_the_question_stays_on_that_journal_until_answered(engine, client):
     first = client.get(f"/journals/{ids[3]}").text
     assert 'id="one-question"' in client.get(f"/journals/{ids[3]}").text
 
-    client.post(f"/journals/{ids[3]}/wtp", data={
-        "answer": "maybe", "csrf_token": CSRF.search(first).group(1),
-    })
+    client.post(
+        f"/journals/{ids[3]}/wtp",
+        data={
+            "answer": "maybe",
+            "csrf_token": CSRF.search(first).group(1),
+        },
+    )
     assert 'id="one-question"' not in client.get(f"/journals/{ids[3]}").text
 
 
@@ -330,13 +388,15 @@ def test_no_trades_asks_nothing():
 
 def test_the_biggest_loss_is_the_second_trade_asked():
     assert _asked([_t(5), _t(-9), _t(-20), _t(5)]) == [
-        (0, "your first trade"), (2, "the biggest loss of the day"),
+        (0, "your first trade"),
+        (2, "the biggest loss of the day"),
     ]
 
 
 def test_a_tied_biggest_loss_is_the_earlier_one():
     assert _asked([_t(5), _t(-9), _t(-9)]) == [
-        (0, "your first trade"), (1, "the biggest loss of the day"),
+        (0, "your first trade"),
+        (1, "the biggest loss of the day"),
     ]
 
 
@@ -350,7 +410,8 @@ def test_the_size_up_trade_is_the_first_to_reach_the_days_largest_size():
 
 def test_a_day_with_no_loss_and_a_rise_asks_the_size_up_trade():
     assert _asked([_t(5), _t(5), _t(5, 2)]) == [
-        (0, "your first trade"), (2, "the trade where you went to 2 lots"),
+        (0, "your first trade"),
+        (2, "the trade where you went to 2 lots"),
     ]
 
 
@@ -377,13 +438,15 @@ def _line(trades, usual="1.074"):
 def test_the_size_line_counts_the_losses_before_the_first_rise():
     """1 lot, two losses, then 2, then 4: the rise starts after two."""
     trades = [_t(-1), _t(-1), _t(-1, 2), _t(-1, 4), _t(5, 4)]
-    assert _line(trades) == ("On 11 Feb 2025 you went from 1 lot to 4 after 2 losses. "
-                             "Your usual is about 1.1 lots.")
+    assert _line(trades) == (
+        "On 11 Feb 2025 you went from 1 lot to 4 after 2 losses. Your usual is about 1.1 lots."
+    )
 
 
 def test_one_loss_reads_in_the_singular():
     assert _line([_t(-1), _t(-1, 2), _t(5)]) == (
-        "On 11 Feb 2025 you went from 1 lot to 2 after 1 loss. Your usual is about 1.1 lots.")
+        "On 11 Feb 2025 you went from 1 lot to 2 after 1 loss. Your usual is about 1.1 lots."
+    )
 
 
 def test_a_size_that_fell_back_on_the_way_up_says_nothing():

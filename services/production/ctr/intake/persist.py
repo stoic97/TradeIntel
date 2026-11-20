@@ -86,8 +86,7 @@ def _risk_unit_for(
     return s.RiskUnitSourceV1.UNAVAILABLE, None, None
 
 
-def _next_version(sess: Session, trader: m.Trader,
-                  source_account: str) -> tuple[int, int | None]:
+def _next_version(sess: Session, trader: m.Trader, source_account: str) -> tuple[int, int | None]:
     """The next version of this source account's export, and the import it supersedes.
 
     Per source account, as day versions are (``existing_days``): a version of one
@@ -132,28 +131,38 @@ def write_plan(
     )
     sess.add(raw)
     sess.flush()
-    return write_reading(sess, trader=trader, plan=plan, raw=raw, source_account=source_account,
-                         reads=(*also_reads, raw) if also_reads else ())
+    return write_reading(
+        sess,
+        trader=trader,
+        plan=plan,
+        raw=raw,
+        source_account=source_account,
+        reads=(*also_reads, raw) if also_reads else (),
+    )
 
 
 def confirmed_groups(sess: Session, imp: m.Import) -> set[str]:
     """The duplicate groups the trader confirmed on this import."""
-    return set(sess.scalars(
-        select(m.ImportRow.dup_group).where(
-            m.ImportRow.import_id == imp.id,
-            m.ImportRow.flag == s.RowFlag.TRADER_CONFIRMED_DUPLICATE,
+    return set(
+        sess.scalars(
+            select(m.ImportRow.dup_group).where(
+                m.ImportRow.import_id == imp.id,
+                m.ImportRow.flag == s.RowFlag.TRADER_CONFIRMED_DUPLICATE,
+            )
         )
-    ))
+    )
 
 
 def still_suspected(sess: Session, imp: m.Import) -> set[str]:
     """The duplicate groups on this import he has not yet confirmed."""
-    return set(sess.scalars(
-        select(m.ImportRow.dup_group).where(
-            m.ImportRow.import_id == imp.id,
-            m.ImportRow.flag == s.RowFlag.SUSPECTED_DUPLICATE,
+    return set(
+        sess.scalars(
+            select(m.ImportRow.dup_group).where(
+                m.ImportRow.import_id == imp.id,
+                m.ImportRow.flag == s.RowFlag.SUSPECTED_DUPLICATE,
+            )
         )
-    ))
+    )
 
 
 def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
@@ -161,9 +170,11 @@ def earlier_reading(sess: Session, imp: m.Import) -> m.Import | None:
     return sess.scalars(
         select(m.Import)
         .join(m.Trip, m.Trip.import_id == m.Import.id)
-        .where(m.Import.trader_id == imp.trader_id,
-               m.Import.source_account == imp.source_account,
-               m.Import.id < imp.id)
+        .where(
+            m.Import.trader_id == imp.trader_id,
+            m.Import.source_account == imp.source_account,
+            m.Import.id < imp.id,
+        )
         .order_by(m.Import.id.desc())
         .limit(1)
     ).first()
@@ -189,8 +200,7 @@ def current_reading(sess: Session, trader: m.Trader, source_account: str) -> m.I
 
 def same_file(sess: Session, one: m.Import, other: m.Import) -> bool:
     """Whether two imports read the same bytes. Older confirmations each wrote a ``RawFile``."""
-    return ([f.sha256 for f in files_read(sess, one)]
-            == [f.sha256 for f in files_read(sess, other)])
+    return [f.sha256 for f in files_read(sess, one)] == [f.sha256 for f in files_read(sess, other)]
 
 
 def reads_same_file_as_before(sess: Session, imp: m.Import) -> bool:
@@ -202,20 +212,31 @@ def reads_same_file_as_before(sess: Session, imp: m.Import) -> bool:
 def set_aside_more(sess: Session, imp: m.Import) -> bool:
     """Whether this import read the file behind the one before it, with more confirmed."""
     earlier = earlier_reading(sess, imp)
-    return (earlier is not None and same_file(sess, imp, earlier)
-            and bool(confirmed_groups(sess, imp) - confirmed_groups(sess, earlier)))
+    return (
+        earlier is not None
+        and same_file(sess, imp, earlier)
+        and bool(confirmed_groups(sess, imp) - confirmed_groups(sess, earlier))
+    )
 
 
 def read_with_newer_code(sess: Session, imp: m.Import) -> bool:
     """Whether this import read the file behind the one before it, with code that moved."""
     earlier = earlier_reading(sess, imp)
-    return (earlier is not None and same_file(sess, imp, earlier)
-            and (earlier.reconstruction_version, earlier.adapter_version)
-            != (imp.reconstruction_version, imp.adapter_version))
+    return (
+        earlier is not None
+        and same_file(sess, imp, earlier)
+        and (earlier.reconstruction_version, earlier.adapter_version)
+        != (imp.reconstruction_version, imp.adapter_version)
+    )
 
 
 def write_reading(
-    sess: Session, *, trader: m.Trader, plan: ImportPlan, raw: m.RawFile, source_account: str,
+    sess: Session,
+    *,
+    trader: m.Trader,
+    plan: ImportPlan,
+    raw: m.RawFile,
+    source_account: str,
     reads: tuple[m.RawFile, ...] | list[m.RawFile] = (),
 ) -> m.Import:
     """Write the plan as a new version, reading ``raw``. Nothing earlier is touched.
@@ -272,11 +293,13 @@ def write_reading(
             )
         )
 
-    declarations = list(sess.scalars(
-        select(m.RiskBudgetDeclaration)
-        .where(m.RiskBudgetDeclaration.trader_id == trader.id)
-        .order_by(m.RiskBudgetDeclaration.effective_from)
-    ).all())
+    declarations = list(
+        sess.scalars(
+            select(m.RiskBudgetDeclaration)
+            .where(m.RiskBudgetDeclaration.trader_id == trader.id)
+            .order_by(m.RiskBudgetDeclaration.effective_from)
+        ).all()
+    )
 
     position_of = {id(leg): pos for pos in plan.positions for leg in pos.legs}
     seen_trip_ids: dict[str, int] = {}
@@ -314,12 +337,17 @@ def write_reading(
                 net=trip.net_pnl,
                 fees_available=plan.fees_available,
                 ctr_risk_source=trip.risk_unit_source.value,
-                **dict(zip(
-                    ("risk_unit_source", "risk_unit_value", "risk_budget_ref"),
-                    _risk_unit_for(position if multi_leg else trip,
-                                   trip.entry_ts.date().isoformat(), declarations),
-                    strict=True,
-                )),
+                **dict(
+                    zip(
+                        ("risk_unit_source", "risk_unit_value", "risk_budget_ref"),
+                        _risk_unit_for(
+                            position if multi_leg else trip,
+                            trip.entry_ts.date().isoformat(),
+                            declarations,
+                        ),
+                        strict=True,
+                    )
+                ),
             )
         )
 

@@ -31,7 +31,9 @@ from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
 from tests.helpers.upload import CSRF, sign_up
 
-HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+HEADER = (
+    "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
+)
 OPTION = "NIFTY 25 JAN 20000 CALL"
 
 
@@ -80,7 +82,8 @@ def _upload(client, body: str) -> None:
 def _first_day_journal(engine) -> m.Journal:
     with make_session(engine) as sess:
         journal = sess.scalars(
-            select(m.Journal).where(m.Journal.period_start == "2024-01-02")
+            select(m.Journal)
+            .where(m.Journal.period_start == "2024-01-02")
             .order_by(m.Journal.version_no.desc())
         ).first()
         sess.expunge(journal)
@@ -97,7 +100,7 @@ def _readable(page: str) -> str:
 
 def _home_row(client) -> str:
     text = _readable(client.get("/").text)
-    return text[text.index("Days worth a look"):text.index("Upload new trades")]
+    return text[text.index("Days worth a look") : text.index("Upload new trades")]
 
 
 def test_one_upload_shows_each_trade_once(engine, client):
@@ -150,22 +153,42 @@ def test_two_identical_trades_in_one_upload_both_stay(engine, client):
     _upload(client, FILE)
     written = _first_day_journal(engine)
     with make_session(engine) as sess:
-        first = sess.scalars(select(m.Trip).where(m.Trip.import_id == written.import_id)
-                             .order_by(m.Trip.entry_ts)).first()
+        first = sess.scalars(
+            select(m.Trip).where(m.Trip.import_id == written.import_id).order_by(m.Trip.entry_ts)
+        ).first()
         ids = json.loads(written.trip_ids)
-        sess.add(m.Trip(
-            import_id=first.import_id, trip_id=first.trip_id, occurrence=2,
-            trading_day=first.trading_day, exchange=first.exchange, symbol=first.symbol,
-            segment=first.segment, direction=first.direction, entry_ts=first.entry_ts,
-            exit_ts=first.exit_ts, quantity=first.quantity, entry_price=first.entry_price,
-            exit_price=first.exit_price, gross=first.gross, fees=first.fees, net=first.net,
-            fees_available=first.fees_available, risk_unit_source=first.risk_unit_source,
-        ))
+        sess.add(
+            m.Trip(
+                import_id=first.import_id,
+                trip_id=first.trip_id,
+                occurrence=2,
+                trading_day=first.trading_day,
+                exchange=first.exchange,
+                symbol=first.symbol,
+                segment=first.segment,
+                direction=first.direction,
+                entry_ts=first.entry_ts,
+                exit_ts=first.exit_ts,
+                quantity=first.quantity,
+                entry_price=first.entry_price,
+                exit_price=first.exit_price,
+                gross=first.gross,
+                fees=first.fees,
+                net=first.net,
+                fees_available=first.fees_available,
+                risk_unit_source=first.risk_unit_source,
+            )
+        )
         journal = m.Journal(
-            trader_id=written.trader_id, import_id=written.import_id, unit=written.unit,
-            period_start=written.period_start, period_end=written.period_end,
-            version_no=written.version_no + 1, supersedes=written.id,
-            generated_at=datetime.now(UTC), trip_ids=json.dumps([*ids, first.trip_id]),
+            trader_id=written.trader_id,
+            import_id=written.import_id,
+            unit=written.unit,
+            period_start=written.period_start,
+            period_end=written.period_end,
+            version_no=written.version_no + 1,
+            supersedes=written.id,
+            generated_at=datetime.now(UTC),
+            trip_ids=json.dumps([*ids, first.trip_id]),
             sections=written.sections,
         )
         sess.add(journal)
@@ -198,8 +221,12 @@ def test_fixture_figures_are_the_hand_worked_ones(engine, client):
     _upload(client, FILE)
     written = _first_day_journal(engine)
     with make_session(engine) as sess:
-        nets = [t.net for t in sess.scalars(
-            select(m.Trip).where(m.Trip.import_id == written.import_id,
-                                 m.Trip.trading_day == "2024-01-02")
-            .order_by(m.Trip.entry_ts))]
+        nets = [
+            t.net
+            for t in sess.scalars(
+                select(m.Trip)
+                .where(m.Trip.import_id == written.import_id, m.Trip.trading_day == "2024-01-02")
+                .order_by(m.Trip.entry_ts)
+            )
+        ]
     assert nets == [Decimal(-500), Decimal(-300)]

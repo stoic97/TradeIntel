@@ -69,8 +69,7 @@ def load(path: Path) -> FileMap:
     raw: Any = yaml.safe_load(Path(path).read_text())
     if not isinstance(raw, dict):
         raise InvalidFileMap(f"{path.name}: expected a mapping")
-    for field in ("broker", "adapter_id", "version", "verified",
-                  "quantity_unit", "exports"):
+    for field in ("broker", "adapter_id", "version", "verified", "quantity_unit", "exports"):
         if field not in raw:
             raise InvalidFileMap(f"{path.name}: missing {field}")
 

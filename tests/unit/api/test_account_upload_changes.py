@@ -31,18 +31,34 @@ def rows_of(page: str) -> list[str]:
 
 
 def line(change) -> str:
-    imp = NS(id=7, outcome=NS(value="accepted"), rows_in=10, trips_reconstructed=2,
-             created_at=datetime(2026, 9, 8, 6, 0, tzinfo=UTC), source_account="A")
-    page = template_env().get_template("account.html").render(
-        title="T", csrf_token="x", display_name="R", login_id="r", imports=[imp],
-        changes={7: change})
+    imp = NS(
+        id=7,
+        outcome=NS(value="accepted"),
+        rows_in=10,
+        trips_reconstructed=2,
+        created_at=datetime(2026, 9, 8, 6, 0, tzinfo=UTC),
+        source_account="A",
+    )
+    page = (
+        template_env()
+        .get_template("account.html")
+        .render(
+            title="T",
+            csrf_token="x",
+            display_name="R",
+            login_id="r",
+            imports=[imp],
+            changes={7: change},
+        )
+    )
     return rows_of(page)[0]
 
 
 def test_a_change_adds_up_rows_across_days_and_names_the_ones_that_moved():
     """By hand: one day 4 to 6 (+2), one 3 to 3 (not changed), one 5 to 4 (-1). Net +1."""
-    change = dv.upload_change([version("2026-09-03", 5, 4), version("2026-09-01", 4, 6),
-                               version("2026-09-02", 3, 3)])
+    change = dv.upload_change(
+        [version("2026-09-03", 5, 4), version("2026-09-01", 4, 6), version("2026-09-02", 3, 3)]
+    )
     assert change.rows == 1
     assert change.days == ("2026-09-01", "2026-09-03")
 

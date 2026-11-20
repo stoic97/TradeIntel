@@ -55,7 +55,9 @@ def test_a_closed_day_on_the_calendar_is_listed_with_its_reason():
 def test_an_evening_only_session_needs_its_own_reason():
     bars = full(MON) + evening(TUE)
     assert ms.check_sessions(bars, MON, TUE, cal()).unexplained == ((TUE, "evening only"),)
-    c = ms.check_sessions(bars, MON, TUE, cal((TUE, "evening_only", "morning closed for a holiday")))
+    c = ms.check_sessions(
+        bars, MON, TUE, cal((TUE, "evening_only", "morning closed for a holiday"))
+    )
     assert c.ok and c.listed == ((TUE, "evening only", "morning closed for a holiday"),)
 
 
@@ -98,13 +100,23 @@ def test_the_shipped_calendar_loads_and_every_entry_has_a_kind_and_a_reason():
 
 
 def _manifest(**over) -> ms.SeriesManifest:
-    base = {"underlying": "CRUDEOIL", "serves": ("CRUDEOIL", "CRUDEOILM"), "file": "crude_1m_current.csv",
-            "sha256": "ab" * 32, "rows": 10,
-            "first_bar": datetime(2026, 1, 5, 9, 0),  # noqa: DTZ001 - naive IST, as the series
-            "last_bar": datetime(2026, 3, 6, 23, 54),  # noqa: DTZ001
-            "as_of": date(2026, 3, 6), "source": "made up", "roll": ms.ROLL_CONVENTION, "clock": ms.CLOCK,
-            "interval": "1 minute", "built": date(2026, 3, 9), "extended_from": date(2026, 2, 1),
-            "sessions": ("2026-03-03 evening only: a reason",)}
+    base = {
+        "underlying": "CRUDEOIL",
+        "serves": ("CRUDEOIL", "CRUDEOILM"),
+        "file": "crude_1m_current.csv",
+        "sha256": "ab" * 32,
+        "rows": 10,
+        "first_bar": datetime(2026, 1, 5, 9, 0),  # noqa: DTZ001 - naive IST, as the series
+        "last_bar": datetime(2026, 3, 6, 23, 54),  # noqa: DTZ001
+        "as_of": date(2026, 3, 6),
+        "source": "made up",
+        "roll": ms.ROLL_CONVENTION,
+        "clock": ms.CLOCK,
+        "interval": "1 minute",
+        "built": date(2026, 3, 9),
+        "extended_from": date(2026, 2, 1),
+        "sessions": ("2026-03-03 evening only: a reason",),
+    }
     base.update(over)
     return ms.SeriesManifest(**base)
 

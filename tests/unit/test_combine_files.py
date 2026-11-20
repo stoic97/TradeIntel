@@ -47,5 +47,6 @@ def test_combined_files_read_as_the_whole_file_does():
     combined = pl.combine([STOCKS, FNO_TEXT])
     assert combined.splitlines()[0] == BOTH.splitlines()[0]
     assert without_order_ids(combined.splitlines()[1:]) == without_order_ids(
-        [line for line in BOTH.splitlines()[1:] if "NOT A CONTRACT" not in line])
+        [line for line in BOTH.splitlines()[1:] if "NOT A CONTRACT" not in line]
+    )
     assert pl.combine([STOCKS]) == STOCKS

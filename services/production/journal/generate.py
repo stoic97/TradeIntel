@@ -64,9 +64,11 @@ def _current_versions(sess: Session, trader: m.Trader) -> list[m.Journal]:
 def _existing(sess: Session, trader: m.Trader, period: pd.Period) -> m.Journal | None:
     rows = sess.scalars(
         select(m.Journal)
-        .where(m.Journal.trader_id == trader.id,
-               m.Journal.period_start == period.period_start,
-               m.Journal.period_end == period.period_end)
+        .where(
+            m.Journal.trader_id == trader.id,
+            m.Journal.period_start == period.period_start,
+            m.Journal.period_end == period.period_end,
+        )
         .order_by(m.Journal.version_no.desc())
     ).all()
     return rows[0] if rows else None
@@ -86,8 +88,7 @@ def generate(
     Returns what it wrote, which is empty when the upload changed nothing.
     """
     choice = pd.resolve_unit(trips, preference=preference, preference_n=preference_n)
-    periods = pd.periods_for(trips, unit=choice.unit, export_date=imp.export_date,
-                             n=choice.n)
+    periods = pd.periods_for(trips, unit=choice.unit, export_date=imp.export_date, n=choice.n)
 
     written: list[m.Journal] = []
     now = datetime.now(UTC)
@@ -100,10 +101,12 @@ def generate(
         previous_for_stops = _existing(sess, trader, period)
         with_a_stop = (
             fl.trips_with_a_planned_stop(sess, journal=previous_for_stops)
-            if previous_for_stops is not None else set()
+            if previous_for_stops is not None
+            else set()
         )
-        facts = sec.build(period, history=trips, fees_available=imp.fees_available,
-                          trips_with_a_stop=with_a_stop)
+        facts = sec.build(
+            period, history=trips, fees_available=imp.fees_available, trips_with_a_stop=with_a_stop
+        )
         serialised = json.dumps(facts, sort_keys=True)
 
         previous = _existing(sess, trader, period)
@@ -141,8 +144,9 @@ def changed_by_upload(sess: Session, *, trader: m.Trader) -> set[int]:
     change the upload page says did not happen.
     """
     rows = sess.execute(
-        select(m.Journal.id, m.Journal.supersedes, m.Journal.trip_ids)
-        .where(m.Journal.trader_id == trader.id)
+        select(m.Journal.id, m.Journal.supersedes, m.Journal.trip_ids).where(
+            m.Journal.trader_id == trader.id
+        )
     ).all()
     by_id = {row.id: row for row in rows}
     changed: set[int] = set()
@@ -174,10 +178,10 @@ def newest_first(sess: Session, *, trader: m.Trader) -> list[m.Journal]:
 def surface(sess: Session, *, trader: m.Trader, first: list[m.Journal] | None = None) -> Surface:
     """The Journals to show (``first``, or the latest five) and the count behind them."""
     current = newest_first(sess, trader=trader)
-    latest = first or current[:k.JOURNALS_ON_SURFACE]
-    return Surface(latest=latest,
-                   catch_up_count=max(0, len(current) - len(latest)),
-                   total=len(current))
+    latest = first or current[: k.JOURNALS_ON_SURFACE]
+    return Surface(
+        latest=latest, catch_up_count=max(0, len(current) - len(latest)), total=len(current)
+    )
 
 
 def catch_up(
@@ -185,7 +189,7 @@ def catch_up(
 ) -> list[m.Journal]:
     """Everything the surface doesn't show, newest first."""
     current = newest_first(sess, trader=trader)
-    shown = {j.id for j in (first or current[:k.JOURNALS_ON_SURFACE])}
+    shown = {j.id for j in (first or current[: k.JOURNALS_ON_SURFACE])}
     return [j for j in current if j.id not in shown]
 
 

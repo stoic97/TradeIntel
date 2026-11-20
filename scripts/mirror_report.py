@@ -21,6 +21,7 @@ repository (SR-006).
 
 Usage:  uv run python scripts/mirror_report.py <export.csv> [--name "First Name"]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -121,9 +122,7 @@ def build(path: Path, display_name: str) -> Path:
     after2, before2, skipped_pnl, skipped_n = [], [], 0.0, 0
     for v in by_day.values():
         for i, t in enumerate(v):
-            closed_losses = sum(
-                1 for e in v[:i] if e.exit_ts <= t.entry_ts and net[id(e)] < 0
-            )
+            closed_losses = sum(1 for e in v[:i] if e.exit_ts <= t.entry_ts and net[id(e)] < 0)
             (after2 if closed_losses >= 2 else before2).append(t)
             if closed_losses >= 2:
                 skipped_pnl += net[id(t)]
@@ -138,9 +137,12 @@ def build(path: Path, display_name: str) -> Path:
     r_after, r_before = rate(after2), rate(before2)
     lots_after, lots_before = avg_lots(after2), avg_lots(before2)
     days_with = sum(
-        1 for v in by_day.values()
-        if any(sum(1 for e in v[:i] if e.exit_ts <= t.entry_ts and net[id(e)] < 0) >= 2
-               for i, t in enumerate(v))
+        1
+        for v in by_day.values()
+        if any(
+            sum(1 for e in v[:i] if e.exit_ts <= t.entry_ts and net[id(e)] < 0) >= 2
+            for i, t in enumerate(v)
+        )
     )
 
     # The replay: his result had he stopped for the day after the second loss.
@@ -150,13 +152,15 @@ def build(path: Path, display_name: str) -> Path:
     hold_w = statistics.median([t.holding_seconds for t in wins]) if wins else 0
     hold_l = statistics.median([t.holding_seconds for t in losses]) if losses else 0
     with_r = [t for t in trips if t.r_multiple is not None]
-    sym_line = ", ".join(
-        f"{s} ({c:,})" for s, c in Counter(t.symbol for t in trips).most_common(4)
-    )
+    sym_line = ", ".join(f"{s} ({c:,})" for s, c in Counter(t.symbol for t in trips).most_common(4))
 
     obs = [
-        b2.Obs(day=t.entry_ts.date().toordinal(), entry_at=t.entry_ts.timestamp(),
-               exit_at=t.exit_ts.timestamp(), r=net[id(t)])
+        b2.Obs(
+            day=t.entry_ts.date().toordinal(),
+            entry_at=t.entry_ts.timestamp(),
+            exit_at=t.exit_ts.timestamp(),
+            r=net[id(t)],
+        )
         for t in trips
     ]
     in_pop, cond = b2.population_and_condition(sorted(obs, key=lambda o: (o.day, o.entry_at)))
@@ -217,10 +221,15 @@ def build(path: Path, display_name: str) -> Path:
 <h2>Most of what happened to you happened on five days</h2>
 <p class=big>{money(sum(p for _, p in worst_days))}</p>
 <p>Your five worst days account for {abs(worst_share):.0%} of your entire result. Here they are.</p>
-<table><tr><th>Day</th><th>Result</th><th>Trades</th><th>vs your normal day</th></tr>{worst_rows}</table>
+<table><tr><th>Day</th><th>Result</th><th>Trades</th><th>vs your normal day</th></tr>{
+        worst_rows
+    }</table>
 <p>On a day you trade, you normally take {int(median_count)} trades.
-{"On " + str(busy_on_worst) + " of these five days you took at least double that."
-  if busy_on_worst else "Your trade count on these days was not unusual."}</p>
+{
+        "On " + str(busy_on_worst) + " of these five days you took at least double that."
+        if busy_on_worst
+        else "Your trade count on these days was not unusual."
+    }</p>
 
 <h2>Your worst hours of the day</h2>
 <table><tr><th>Hour you entered</th><th>Trades</th><th>Result</th></tr>{hour_rows}</table>
@@ -233,26 +242,39 @@ the difference is more than chance.</p>
 kept going. Those {len(after2):,} trades are compared below with the {len(before2):,} you
 took before that point.</p>
 <div class=grid>
-  <div class=stat><b>{r_before:.0%} &rarr; {r_after:.0%}</b><span>share of trades that made money</span></div>
-  <div class=stat><b>{lots_before:.1f} &rarr; {lots_after:.1f}</b><span>average lots per trade</span></div>
+  <div class=stat><b>{r_before:.0%} &rarr; {
+        r_after:.0%}</b><span>share of trades that made money</span></div>
+  <div class=stat><b>{lots_before:.1f} &rarr; {
+        lots_after:.1f}</b><span>average lots per trade</span></div>
   <div class=stat><b>{len(after2):,}</b><span>trades taken while already down two</span></div>
 </div>
-<p>{"You size up after two losses." if lots_after > lots_before * 1.1
-   else "You size down after two losses." if lots_after < lots_before * 0.9
-   else "Your position size barely changes after two losses."}
-{"Your strike rate falls." if r_after < r_before - 0.02
-   else "Your strike rate actually improves." if r_after > r_before + 0.02
-   else "Your strike rate is essentially unchanged."}</p>
+<p>{
+        "You size up after two losses."
+        if lots_after > lots_before * 1.1
+        else "You size down after two losses."
+        if lots_after < lots_before * 0.9
+        else "Your position size barely changes after two losses."
+    }
+{
+        "Your strike rate falls."
+        if r_after < r_before - 0.02
+        else "Your strike rate actually improves."
+        if r_after > r_before + 0.02
+        else "Your strike rate is essentially unchanged."
+    }</p>
 
 <h2>One rule, replayed over your own trades</h2>
 <p class=lede>Suppose you had stopped trading for the day the moment your second loss closed.
 Everything else identical — same trades, same sizes, same exits, just nothing new opened
 after that point.</p>
-<p class="big {'good' if helped else 'bad'}">{money(-skipped_pnl)}</p>
+<p class="big {"good" if helped else "bad"}">{money(-skipped_pnl)}</p>
 <p>That rule would have removed {skipped_n:,} trades and changed your result by
 <b>{money(-skipped_pnl)}</b> — from {money(total)} to {money(stopped_total)}.
-{"Stopping would have saved you money." if helped
-   else "Stopping would have <b>cost</b> you money. The trades you took while already down were, in total, profitable."}</p>
+{
+        "Stopping would have saved you money."
+        if helped
+        else "Stopping would have <b>cost</b> you money. The trades you took while already down were, in total, profitable."
+    }</p>
 <div class=note>This is a replay, not a prediction. It removes trades you actually took and
 adds up what they actually made. It does not claim you would trade the same way under a rule,
 and it is not evidence that the rule works — one history cannot establish that.</div>
@@ -261,14 +283,18 @@ and it is not evidence that the rule works — one history cannot establish that
 <div class=grid>
   <div class=stat><b>{hhmm(hold_w)}</b><span>median hold, winners</span></div>
   <div class=stat><b>{hhmm(hold_l)}</b><span>median hold, losers</span></div>
-  <div class=stat><b>{(hold_l / hold_w if hold_w else 0):.2f}x</b><span>losers held longer</span></div>
+  <div class=stat><b>{
+        (hold_l / hold_w if hold_w else 0):.2f}x</b><span>losers held longer</span></div>
 </div>
 
 <h2>What we could not read</h2>
 <table><tr><th>Stage</th><th>Kept</th><th>Set aside</th></tr>
-<tr><td>Rows in your file</td><td class=n>{len(res.fills):,}</td><td class=n>{len(res.rejected):,}</td></tr>
-<tr><td>Trades reconstructed</td><td class=n>{len(trips):,}</td><td class=n>{len(recon.skipped):,}</td></tr>
-<tr><td>Trades with a risk figure</td><td class=n>{len(with_r):,}</td><td class=n>{len(trips) - len(with_r):,}</td></tr>
+<tr><td>Rows in your file</td><td class=n>{len(res.fills):,}</td><td class=n>{
+        len(res.rejected):,}</td></tr>
+<tr><td>Trades reconstructed</td><td class=n>{len(trips):,}</td><td class=n>{
+        len(recon.skipped):,}</td></tr>
+<tr><td>Trades with a risk figure</td><td class=n>{len(with_r):,}</td><td class=n>{
+        len(trips) - len(with_r):,}</td></tr>
 </table>
 <p class=lede>Your export carries no stop-loss orders, so for options we treat the premium you
 paid as the risk. That is the most you could have lost, which is correct but conservative —

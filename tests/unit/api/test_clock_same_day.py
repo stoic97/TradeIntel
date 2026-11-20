@@ -34,7 +34,8 @@ NOTE = (
 def test_each_hour_counts_same_day_trades_only():
     hours = SF.record_context(HELD)["hours"]
     assert [(h.hour, h.net, h.trips) for h in hours] == [
-        (9, Decimal(1550), 5), (10, Decimal(-1350), 5),
+        (9, Decimal(1550), 5),
+        (10, Decimal(-1350), 5),
     ]
 
 

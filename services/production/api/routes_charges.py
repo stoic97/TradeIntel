@@ -42,9 +42,17 @@ def _early(request: Request, sess, import_id: int):
 def _step(request: Request, sess, trader: m.Trader, imp: m.Import, status_code=200, error=None):
     if imp.fees_available or not imp.trips_reconstructed:
         return RedirectResponse(f"/imports/{imp.id}", status_code=303)
-    return page(request, "charges.html", status_code=status_code, title="Add charges", imp=imp,
-                gross=record.gross_of(sess, imp), charges=record.build(sess, trader, imp),
-                file_open=charges_open(request), error=error)
+    return page(
+        request,
+        "charges.html",
+        status_code=status_code,
+        title="Add charges",
+        imp=imp,
+        gross=record.gross_of(sess, imp),
+        charges=record.build(sess, trader, imp),
+        file_open=charges_open(request),
+        error=error,
+    )
 
 
 @router.get("/imports/{import_id}/charges", response_class=HTMLResponse)
@@ -57,9 +65,12 @@ def add_charges(request: Request, import_id: int):
 
 
 @router.post("/imports/{import_id}/charges")
-async def add_file(request: Request, import_id: int,
-                   file: UploadFile = File(...),  # noqa: B008 - FastAPI declares uploads this way
-                   csrf_token: str = Form(None)):
+async def add_file(
+    request: Request,
+    import_id: int,
+    file: UploadFile = File(...),  # noqa: B008 - FastAPI declares uploads this way
+    csrf_token: str = Form(None),
+):
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
     with make_session(request.app.state.engine) as sess:
@@ -69,8 +80,9 @@ async def add_file(request: Request, import_id: int,
         trader, imp = found
         if not charges_open(request):
             limits.count_refusal(request, limits.UNVERIFIED_MAP)
-            return page(request, "upload_closed.html", status_code=503,
-                        title="Not open for your broker yet")
+            return page(
+                request, "upload_closed.html", status_code=503, title="Not open for your broker yet"
+            )
 
         def refuse(error: str):
             return _step(request, sess, trader, imp, status_code=400, error=error)
@@ -78,8 +90,14 @@ async def add_file(request: Request, import_id: int,
         refusal = limits.upload_refusal(request, sess, trader)
         if refusal is not None:
             return limits.with_retry_after(
-                _step(request, sess, trader, imp, status_code=refusal.status_code,
-                      error=refusal.sentence),
+                _step(
+                    request,
+                    sess,
+                    trader,
+                    imp,
+                    status_code=refusal.status_code,
+                    error=refusal.sentence,
+                ),
                 refusal.retry_after,
             )
 
@@ -94,15 +112,21 @@ async def add_file(request: Request, import_id: int,
         if not days.keys() & record.trading_days(sess, imp):
             return refuse("None of the days in that file are in your upload. Nothing was added.")
         digest = hashlib.sha256(content).hexdigest()
-        if sess.scalars(select(m.RawFile).where(m.RawFile.trader_id == trader.id,
-                                                m.RawFile.sha256 == digest)).first():
+        if sess.scalars(
+            select(m.RawFile).where(m.RawFile.trader_id == trader.id, m.RawFile.sha256 == digest)
+        ).first():
             limits.count_refusal(request, limits.SAME_FILE)
             return refuse("You have already uploaded this exact file. Nothing was added.")
 
         stored = _store(request).put(content)
-        raw = m.RawFile(trader_id=trader.id, sha256=stored.sha256,
-                        original_name=file.filename or "charges.csv", size=stored.size,
-                        stored_path=str(stored.path), uploaded_at=datetime.now(UTC))
+        raw = m.RawFile(
+            trader_id=trader.id,
+            sha256=stored.sha256,
+            original_name=file.filename or "charges.csv",
+            size=stored.size,
+            stored_path=str(stored.path),
+            uploaded_at=datetime.now(UTC),
+        )
         sess.add(raw)
         sess.flush()
         record.record_statement(sess, trader, raw, statement.READER_ID, days)

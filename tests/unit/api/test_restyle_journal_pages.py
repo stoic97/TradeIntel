@@ -50,8 +50,10 @@ SAID = {
 
 def render(case: str) -> str:
     name = case.split("#")[0]
-    return template_env().get_template(name).render(
-        title="T", csrf_token="x", changed_ids={3}, earlier_id=2, **CONTEXT[case]
+    return (
+        template_env()
+        .get_template(name)
+        .render(title="T", csrf_token="x", changed_ids={3}, earlier_id=2, **CONTEXT[case])
     )
 
 
@@ -86,8 +88,12 @@ def test_the_import_check_is_the_kits_ledger():
     page = render("import_review.html#first")
     assert '<dl class="facts-list">' in page and "<dd>1,240 rows</dd>" in page
     assert '<a class="link import__next" href="/guess">' in page
-    assert '<div class="screen__actions"><a class="btn btn--primary btn--block" href="/guess">' in page
-    assert 'action="/imports/7/confirm-duplicates"' in page and 'name="dup_group" value="g1"' in page
+    assert (
+        '<div class="screen__actions"><a class="btn btn--primary btn--block" href="/guess">' in page
+    )
+    assert (
+        'action="/imports/7/confirm-duplicates"' in page and 'name="dup_group" value="g1"' in page
+    )
 
 
 def test_a_journals_trade_result_is_written_by_the_rupees_filter():
@@ -106,5 +112,8 @@ def test_a_journal_keeps_its_field_names():
     page = render("journal.html")
     for name, _ in PROMPTS:
         assert f'name="{name}"' in page
-    assert '<textarea class="field__input field__textarea" name="value" rows="3">tired</textarea>' in page
+    assert (
+        '<textarea class="field__input field__textarea" name="value" rows="3">tired</textarea>'
+        in page
+    )
     assert 'name="free_text"' in page and 'action="/journals/3/wtp"' in page

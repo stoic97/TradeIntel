@@ -33,9 +33,15 @@ def _changed_day(engine) -> tuple[int, int]:
         fl.record(sess, journal=v1, field="rationale", value="KEPT-TRADE", trip_id="t01")
         fl.record(sess, journal=v1, field="rationale", value="GONE-TRADE", trip_id="t03")
         v2 = m.Journal(
-            trader_id=v1.trader_id, import_id=v1.import_id, unit=v1.unit,
-            period_start=v1.period_start, period_end=v1.period_end, version_no=2,
-            supersedes=v1.id, generated_at=v1.generated_at, sections=v1.sections,
+            trader_id=v1.trader_id,
+            import_id=v1.import_id,
+            unit=v1.unit,
+            period_start=v1.period_start,
+            period_end=v1.period_end,
+            version_no=2,
+            supersedes=v1.id,
+            generated_at=v1.generated_at,
+            sections=v1.sections,
             trip_ids=json.dumps(["t01", "t02"]),
         )
         sess.add(v2)

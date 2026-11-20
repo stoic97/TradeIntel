@@ -47,13 +47,33 @@ def test_every_design_table_exists():
     run_migrations(engine)
     tables = set(inspect(engine).get_table_names())
     expected = {
-        "trader", "consent_event", "risk_budget_declaration",
-        "raw_file", "import", "import_row", "trading_day_version", "trip",
-        "open_position", "skipped_trip", "journal", "journal_field_entry",
-        "wtp_answer", "dwell_event", "rule_declaration", "adherence_event",
-        "deletion_record", "admin_action", "chapter_feedback", "chapter_feedback_reason",
-        "guess_answer", "leaving_card_shown", "leaving_card_answer", "charge_statement",
-        "report_feedback", "wtp_asked", "journal_remember_answer",
+        "trader",
+        "consent_event",
+        "risk_budget_declaration",
+        "raw_file",
+        "import",
+        "import_row",
+        "trading_day_version",
+        "trip",
+        "open_position",
+        "skipped_trip",
+        "journal",
+        "journal_field_entry",
+        "wtp_answer",
+        "dwell_event",
+        "rule_declaration",
+        "adherence_event",
+        "deletion_record",
+        "admin_action",
+        "chapter_feedback",
+        "chapter_feedback_reason",
+        "guess_answer",
+        "leaving_card_shown",
+        "leaving_card_answer",
+        "charge_statement",
+        "report_feedback",
+        "wtp_asked",
+        "journal_remember_answer",
     }
     assert expected <= tables, f"missing: {sorted(expected - tables)}"
 
@@ -69,23 +89,46 @@ def test_no_column_anywhere_is_named_archetype():
 
 def test_money_round_trips_exactly_including_sub_paise(session):
     trader = _trader(session)
-    raw = m.RawFile(trader_id=trader.id, sha256="a" * 64, original_name="x.csv",
-                    size=1, stored_path="/tmp/x", uploaded_at=datetime.now(UTC))
+    raw = m.RawFile(
+        trader_id=trader.id,
+        sha256="a" * 64,
+        original_name="x.csv",
+        size=1,
+        stored_path="/tmp/x",
+        uploaded_at=datetime.now(UTC),
+    )
     session.add(raw)
     session.flush()
-    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                   adapter_id="dhan_tradebook_v1", adapter_version="1",
-                   filemap_version="1", code_version="deadbeef",
-                   outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
-                   rows_in=1, rows_parsed=1, rows_excluded=0, fees_available=False,
-                   version_no=1, created_at=datetime.now(UTC))
+    imp = m.Import(
+        trader_id=trader.id,
+        raw_file_id=raw.id,
+        source_account="A",
+        adapter_id="dhan_tradebook_v1",
+        adapter_version="1",
+        filemap_version="1",
+        code_version="deadbeef",
+        outcome=s.ImportOutcome.ACCEPTED_WITH_EXCLUSIONS,
+        rows_in=1,
+        rows_parsed=1,
+        rows_excluded=0,
+        fees_available=False,
+        version_no=1,
+        created_at=datetime.now(UTC),
+    )
     session.add(imp)
     session.flush()
 
     awkward = Decimal("1531.8333333333333333")
-    trip = m.Trip(import_id=imp.id, trip_id="t1", trading_day="2026-10-16",
-                  gross=awkward, fees=Decimal(0), net=awkward,
-                  fees_available=False, risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE)
+    trip = m.Trip(
+        import_id=imp.id,
+        trip_id="t1",
+        trading_day="2026-10-16",
+        gross=awkward,
+        fees=Decimal(0),
+        net=awkward,
+        fees_available=False,
+        risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE,
+    )
     session.add(trip)
     session.commit()
 
@@ -98,8 +141,7 @@ def test_money_round_trips_exactly_including_sub_paise(session):
 def test_timestamps_keep_their_timezone(session):
     trader = _trader(session)
     when = datetime.now(UTC) - timedelta(days=3)
-    session.add(m.AdminAction(actor="cli", action="create_trader",
-                              target=str(trader.id), at=when))
+    session.add(m.AdminAction(actor="cli", action="create_trader", target=str(trader.id), at=when))
     session.commit()
     loaded = session.scalars(select(m.AdminAction)).one()
     assert loaded.at.tzinfo is not None
@@ -111,30 +153,47 @@ def test_a_naive_timestamp_is_refused(session):
     trader = _trader(session)
     with pytest.raises((ValueError, StatementError)):
         # A naive datetime on purpose: this test exists to prove it is refused.
-        session.add(m.AdminAction(actor="cli", action="x", target=str(trader.id),
-                                  at=datetime.now()))  # noqa: DTZ005
+        naive = datetime.now()  # noqa: DTZ005 - naive on purpose, the refusal is the point
+        session.add(m.AdminAction(actor="cli", action="x", target=str(trader.id), at=naive))
         session.flush()
 
 
 def test_enum_columns_store_their_string_value(session):
     trader = _trader(session)
-    session.add(m.ConsentEvent(trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS,
-                               scope="v1", terms_version="1", granted=True,
-                               at=datetime.now(UTC), method="web",
-                               wording_shown="..."))
+    session.add(
+        m.ConsentEvent(
+            trader_id=trader.id,
+            purpose=s.ConsentPurpose.DIAGNOSIS,
+            scope="v1",
+            terms_version="1",
+            granted=True,
+            at=datetime.now(UTC),
+            method="web",
+            wording_shown="...",
+        )
+    )
     session.commit()
-    raw_value = session.connection().exec_driver_sql(
-        "select purpose from consent_event"
-    ).scalar_one()
+    raw_value = (
+        session.connection().exec_driver_sql("select purpose from consent_event").scalar_one()
+    )
     assert raw_value == "diagnosis"
     assert session.scalars(select(m.ConsentEvent)).one().purpose is s.ConsentPurpose.DIAGNOSIS
 
 
 def test_insert_only_tables_reject_an_update(session):
     trader = _trader(session)
-    session.add(m.ConsentEvent(trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS,
-                               scope="v1", terms_version="1", granted=True,
-                               at=datetime.now(UTC), method="web", wording_shown="..."))
+    session.add(
+        m.ConsentEvent(
+            trader_id=trader.id,
+            purpose=s.ConsentPurpose.DIAGNOSIS,
+            scope="v1",
+            terms_version="1",
+            granted=True,
+            at=datetime.now(UTC),
+            method="web",
+            wording_shown="...",
+        )
+    )
     session.commit()
     with pytest.raises(m.InsertOnlyViolation):
         session.execute(update(m.ConsentEvent).values(granted=False))
@@ -144,21 +203,36 @@ def test_insert_only_tables_reject_an_update(session):
 def test_two_versions_of_one_trading_day_coexist(session):
     trader = _trader(session)
     for version, rows in ((1, 10), (2, 7)):
-        session.add(m.TradingDayVersion(
-            trader_id=trader.id, source_account="A", trading_day="2026-10-15",
-            import_id=version, rows_before=10, rows_after=rows,
-            diff=s.DayDiff.SHRUNK if rows < 10 else s.DayDiff.IDENTICAL,
-            day_shrank=rows < 10))
+        session.add(
+            m.TradingDayVersion(
+                trader_id=trader.id,
+                source_account="A",
+                trading_day="2026-10-15",
+                import_id=version,
+                rows_before=10,
+                rows_after=rows,
+                diff=s.DayDiff.SHRUNK if rows < 10 else s.DayDiff.IDENTICAL,
+                day_shrank=rows < 10,
+            )
+        )
     session.commit()
     both = session.scalars(select(m.TradingDayVersion)).all()
     assert len(both) == 2
 
 
 def test_a_trip_without_an_import_is_refused(session):
-    session.add(m.Trip(import_id=999999, trip_id="orphan", trading_day="2026-10-16",
-                       gross=Decimal(1), fees=Decimal(0), net=Decimal(1),
-                       fees_available=False,
-                       risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE))
+    session.add(
+        m.Trip(
+            import_id=999999,
+            trip_id="orphan",
+            trading_day="2026-10-16",
+            gross=Decimal(1),
+            fees=Decimal(0),
+            net=Decimal(1),
+            fees_available=False,
+            risk_unit_source=s.RiskUnitSourceV1.UNAVAILABLE,
+        )
+    )
     with pytest.raises(IntegrityError):
         session.commit()
 
@@ -176,21 +250,45 @@ def test_the_migration_is_reversible(tmp_path):
 def test_a_chapter_takes_one_answer_per_trader(session):
     """B4: the database, not only the route, refuses a second answer to a chapter."""
     trader = _trader(session)
-    raw = m.RawFile(trader_id=trader.id, sha256="b" * 64, original_name="f.csv", size=1,
-                    stored_path="/tmp/f", uploaded_at=datetime.now(UTC))
+    raw = m.RawFile(
+        trader_id=trader.id,
+        sha256="b" * 64,
+        original_name="f.csv",
+        size=1,
+        stored_path="/tmp/f",
+        uploaded_at=datetime.now(UTC),
+    )
     session.add(raw)
     session.flush()
-    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                   adapter_id="a", adapter_version="1", filemap_version="1",
-                   code_version="t", outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-                   rows_in=1, rows_parsed=1, rows_excluded=0, fees_available=False,
-                   version_no=1, trips_reconstructed=1, density_default_unit="day",
-                   created_at=datetime.now(UTC))
+    imp = m.Import(
+        trader_id=trader.id,
+        raw_file_id=raw.id,
+        source_account="A",
+        adapter_id="a",
+        adapter_version="1",
+        filemap_version="1",
+        code_version="t",
+        outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+        rows_in=1,
+        rows_parsed=1,
+        rows_excluded=0,
+        fees_available=False,
+        version_no=1,
+        trips_reconstructed=1,
+        density_default_unit="day",
+        created_at=datetime.now(UTC),
+    )
     session.add(imp)
     session.flush()
     for answer in ("accurate", "wrong"):
-        session.add(m.ChapterFeedback(trader_id=trader.id, chapter=1, answer=answer,
-                                      import_id=imp.id, answered_at=datetime.now(UTC)))
+        session.add(
+            m.ChapterFeedback(
+                trader_id=trader.id,
+                chapter=1,
+                answer=answer,
+                import_id=imp.id,
+                answered_at=datetime.now(UTC),
+            )
+        )
     with pytest.raises(IntegrityError):
         session.flush()
-

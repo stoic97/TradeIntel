@@ -23,7 +23,16 @@ from tests.helpers.figures import KIT_SHA
 from tests.unit.api import figure_pages
 
 TEMPLATE_ROOT = Path("services/production/api/templates")
-FORMATS = {"count", "rupees", "rupees_on_a_trade", "minutes", "hold", "price", "lots", "signed_percent"}
+FORMATS = {
+    "count",
+    "rupees",
+    "rupees_on_a_trade",
+    "minutes",
+    "hold",
+    "price",
+    "lots",
+    "signed_percent",
+}
 LOOKS_LIKE_A_NUMBER = re.compile(r"[+−-]?₹?\d[\d,]*(\.\d+)?[%×]?")
 
 
@@ -65,19 +74,22 @@ def test_a_figure_cannot_be_changed_once_made():
         Figure(3, "trades").noun = ""
 
 
-@pytest.mark.parametrize(("source", "plain"), [
-    ("{{ Figure(1234567, 'rows')|count }}", "{{ 1234567|count }}"),
-    ("{{ Figure(-1500, 'rupees')|rupees }}", "{{ -1500|rupees }}"),
-    ("{{ Figure(1500, 'rupees')|rupees(signed=false) }}", "{{ 1500|rupees(signed=false) }}"),
-    ("{{ Figure(-1500, 'rupees')|rupees_on_a_trade }}", "{{ -1500|rupees_on_a_trade }}"),
-    ("{{ Figure(600, 'seconds')|minutes }}", "{{ 600|minutes }}"),
-    ("{{ Figure(90000, 'seconds')|hold }}", "{{ 90000|hold }}"),
-    ("{{ Figure(2345.5, 'rupees')|price }}", "{{ 2345.5|price }}"),
-    ("{{ Figure(1.67, 'lots')|lots }}", "{{ 1.67|lots }}"),
-    ("{{ Figure(-4.5, 'percent')|signed_percent }}", "{{ -4.5|signed_percent }}"),
-    ("{{ Figure(8, 'trades') }}", "{{ 8 }}"),
-    ("{{ Figure(xs|length, 'trades') }}", "{{ xs|length }}"),
-])
+@pytest.mark.parametrize(
+    ("source", "plain"),
+    [
+        ("{{ Figure(1234567, 'rows')|count }}", "{{ 1234567|count }}"),
+        ("{{ Figure(-1500, 'rupees')|rupees }}", "{{ -1500|rupees }}"),
+        ("{{ Figure(1500, 'rupees')|rupees(signed=false) }}", "{{ 1500|rupees(signed=false) }}"),
+        ("{{ Figure(-1500, 'rupees')|rupees_on_a_trade }}", "{{ -1500|rupees_on_a_trade }}"),
+        ("{{ Figure(600, 'seconds')|minutes }}", "{{ 600|minutes }}"),
+        ("{{ Figure(90000, 'seconds')|hold }}", "{{ 90000|hold }}"),
+        ("{{ Figure(2345.5, 'rupees')|price }}", "{{ 2345.5|price }}"),
+        ("{{ Figure(1.67, 'lots')|lots }}", "{{ 1.67|lots }}"),
+        ("{{ Figure(-4.5, 'percent')|signed_percent }}", "{{ -4.5|signed_percent }}"),
+        ("{{ Figure(8, 'trades') }}", "{{ 8 }}"),
+        ("{{ Figure(xs|length, 'trades') }}", "{{ xs|length }}"),
+    ],
+)
 def test_a_figure_writes_exactly_what_its_plain_value_writes(source, plain):
     env = TEMPLATES.env
     assert env.from_string(source).render(xs=[1, 2]) == env.from_string(plain).render(xs=[1, 2])
@@ -92,7 +104,9 @@ def _figures_in(call: nodes.Call) -> bool:
     if len(call.args) < 2:
         return False
     noun = call.args[1]  # a noun worked out on the page is checked by the type when it is made
-    return not isinstance(noun, nodes.Const) or (isinstance(noun.value, str) and bool(noun.value.strip()))
+    return not isinstance(noun, nodes.Const) or (
+        isinstance(noun.value, str) and bool(noun.value.strip())
+    )
 
 
 def _unwrapped(tree) -> list[str]:
@@ -108,7 +122,11 @@ def _unwrapped(tree) -> list[str]:
             if isinstance(child, nodes.Const) and isinstance(child.value, int | float):
                 found.append(f"line {child.lineno}: literal {child.value}")
     for call in tree.find_all(nodes.Call):
-        if isinstance(call.node, nodes.Name) and call.node.name == "Figure" and not _figures_in(call):
+        if (
+            isinstance(call.node, nodes.Name)
+            and call.node.name == "Figure"
+            and not _figures_in(call)
+        ):
             found.append(f"line {call.lineno}: a Figure with no noun")
     return found
 
@@ -119,10 +137,18 @@ def test_no_trader_facing_template_writes_a_number_outside_a_figure(path):
     assert _unwrapped(tree) == []
 
 
-@pytest.mark.parametrize("source", [
-    "{{ n|count }}", "{{ n|rupees(signed=false) }}", "{{ xs|length }}", "{{ 3 }}",
-    '{{ Figure(n)|count }}', '{{ Figure(n, "")|count }}', '{{ Figure(n, " ")|count }}',
-])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "{{ n|count }}",
+        "{{ n|rupees(signed=false) }}",
+        "{{ xs|length }}",
+        "{{ 3 }}",
+        "{{ Figure(n)|count }}",
+        '{{ Figure(n, "")|count }}',
+        '{{ Figure(n, " ")|count }}',
+    ],
+)
 def test_that_reading_catches_each_way_of_getting_it_wrong(source):
     assert _unwrapped(TEMPLATES.env.parse(source))
 
@@ -173,8 +199,10 @@ def bare_in_text(html: str) -> list[str]:
     text = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.DOTALL)
     text = re.sub(r"<[^>]*>", " ", text)
     text = re.sub(r"\s+", " ", text)
-    return [text[max(0, m.start() - 40):m.end() + 30]
-            for m in re.finditer(f"{OPEN}[^{CLOSE}]*{CLOSE}", text)]
+    return [
+        text[max(0, m.start() - 40) : m.end() + 30]
+        for m in re.finditer(f"{OPEN}[^{CLOSE}]*{CLOSE}", text)
+    ]
 
 
 def test_no_bare_number_reaches_a_page_in_any_scene(marking):
@@ -229,5 +257,9 @@ def test_that_rendering_check_passes_a_figure(marking):
 
 def test_the_kit_stylesheet_is_untouched():
     """Its digest on main before this work: a figure changes nothing about how a page is drawn."""
-    css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
+    css = (
+        Path("services/production/api/static/css/components.css")
+        .read_bytes()
+        .replace(b"\r\n", b"\n")
+    )
     assert hashlib.sha256(css).hexdigest() == KIT_SHA

@@ -12,7 +12,11 @@ from services.production.api.app import create_app
 
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 MONTHS = "January|February|March|April|June|July|August|September|October|November|December"
-OTHER_FORMATS = (r"\b\d{4}-\d{2}-\d{2}\b", rf"\b\d{{1,2}} (?:{MONTHS})\b", r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
+OTHER_FORMATS = (
+    r"\b\d{4}-\d{2}-\d{2}\b",
+    rf"\b\d{{1,2}} (?:{MONTHS})\b",
+    r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",
+)
 
 
 def token(client, path: str) -> str:
@@ -27,14 +31,29 @@ def text(html: str) -> str:
 @pytest.fixture()
 def client():
     client = TestClient(create_app(), follow_redirects=False)
-    client.post("/signup", data={"login_id": "visitor", "display_name": "Visitor",
-                                 "password": "a-long-enough-password",
-                                 "csrf_token": token(client, "/signup")})
-    client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                  "csrf_token": token(client, "/consent")})
+    client.post(
+        "/signup",
+        data={
+            "login_id": "visitor",
+            "display_name": "Visitor",
+            "password": "a-long-enough-password",
+            "csrf_token": token(client, "/signup"),
+        },
+    )
+    client.post(
+        "/consent",
+        data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": token(client, "/consent")},
+    )
     client.post("/upload/demo", data={"csrf_token": token(client, "/upload")})
-    client.post("/budget", data={"csrf_token": token(client, "/budget"), "value": "2000",
-                                 "unit": "INR", "effective_from": "2024-01-01"})
+    client.post(
+        "/budget",
+        data={
+            "csrf_token": token(client, "/budget"),
+            "value": "2000",
+            "unit": "INR",
+            "effective_from": "2024-01-01",
+        },
+    )
     return client
 
 
@@ -43,8 +62,18 @@ def journal_links(client) -> list[str]:
 
 
 def test_no_page_writes_a_date_a_second_way(client):
-    paths = ["/", "/mirror", "/journals", "/journals/catch-up", "/budget", "/account", "/imports/1",
-             "/mirror/fact/worst-days", "/mirror/fact/not-told", *journal_links(client)]
+    paths = [
+        "/",
+        "/mirror",
+        "/journals",
+        "/journals/catch-up",
+        "/budget",
+        "/account",
+        "/imports/1",
+        "/mirror/fact/worst-days",
+        "/mirror/fact/not-told",
+        *journal_links(client),
+    ]
     assert len(paths) > 9
     for path in paths:
         page = text(client.get(path).text)

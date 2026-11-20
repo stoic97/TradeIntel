@@ -52,8 +52,10 @@ def plain(page: str) -> str:
 
 def rows(engine) -> dict[str, int]:
     with make_session(engine) as sess:
-        return {t.name: sess.scalar(select(func.count()).select_from(t))
-                for t in m.Base.metadata.sorted_tables}
+        return {
+            t.name: sess.scalar(select(func.count()).select_from(t))
+            for t in m.Base.metadata.sorted_tables
+        }
 
 
 def test_it_is_closed_whenever_the_rule_for_its_count_is_unsigned(client, monkeypatch):
@@ -65,6 +67,7 @@ def test_it_is_closed_whenever_the_rule_for_its_count_is_unsigned(client, monkey
 
 def test_the_pre_registration_is_signed_before_anyone_real_plays():
     from pathlib import Path
+
     doc = Path("docs/phase0/blind-replay-prereg.md").read_text(encoding="utf-8")
     assert B.PREREG_SIGNED is True
     assert "| Research | Rikk | 13 November 2026 |" in doc
@@ -74,7 +77,8 @@ def test_it_is_closed_without_bars(client, monkeypatch):
     send(client)
     monkeypatch.setattr(B, "PREREG_SIGNED", True)
     assert "one-minute prices for your trades' dates, and those aren't here yet" in words(
-        client.get("/replay").text)
+        client.get("/replay").text
+    )
 
 
 def test_it_states_the_age_cutoff(client, bars):
@@ -101,14 +105,18 @@ def test_the_page_before_the_reveal_does_not_move_when_the_future_does(client, b
         dealt = real_deal(*args, **kwargs)
         calls_seen.append(dealt)
         return dealt
+
     real_deal = B.deal
     monkeypatch.setattr(B, "deal", deal_spy)
     client.get("/replay/card")
     moment = calls_seen[-1][0].card.moment
-    future = {t: (Bar(open=b.open, close=b.close + 500.0) if t >= moment else b)
-              for t, b in bars.bars.items()}
-    monkeypatch.setattr(sources, "series_for",
-                        lambda wanted: {"NIFTY": dataclasses.replace(bars, bars=future)})
+    future = {
+        t: (Bar(open=b.open, close=b.close + 500.0) if t >= moment else b)
+        for t, b in bars.bars.items()
+    }
+    monkeypatch.setattr(
+        sources, "series_for", lambda wanted: {"NIFTY": dataclasses.replace(bars, bars=future)}
+    )
     assert plain(client.get("/replay/card").text) == plain(first)
 
 
@@ -135,7 +143,12 @@ def test_the_count_comes_first_against_a_coin_and_with_no_rupee_or_percent(clien
 def test_playing_stores_nothing(client, bars, engine):
     send(client)
     before = rows(engine)
-    for path in ("/replay", "/replay/card", "/replay/reveal?calls=T", "/replay/card?calls=T",
-                 "/replay/score?calls=TS"):
+    for path in (
+        "/replay",
+        "/replay/card",
+        "/replay/reveal?calls=T",
+        "/replay/card?calls=T",
+        "/replay/score?calls=TS",
+    ):
         client.get(path)
     assert rows(engine) == before

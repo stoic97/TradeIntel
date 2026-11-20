@@ -39,22 +39,35 @@ def app(monkeypatch):
 def engine(app):
     return admin_page_engine(app)
 
+
 NOW = datetime(2026, 3, 20, 4, 30, tzinfo=UTC)
 LONG_AGO = NOW - timedelta(days=30)
 RECENT = NOW - timedelta(days=2)
-LINES = ("Signed up", "Agreed to consent", "Tried the demo", "Uploaded a real file",
-         "Read at least one fact", "Read all the facts", "Opened a journal",
-         "Came back on a later day", "Asked would they pay", "Answered would they pay")
+LINES = (
+    "Signed up",
+    "Agreed to consent",
+    "Tried the demo",
+    "Uploaded a real file",
+    "Read at least one fact",
+    "Read all the facts",
+    "Opened a journal",
+    "Came back on a later day",
+    "Asked would they pay",
+    "Answered would they pay",
+)
 
 
 def built(engine, last_looked=None) -> dict:
     with make_session(engine) as sess:
-        return admin_view.build(sess, running_version="x", production=False, now=NOW,
-                                last_looked=last_looked)
+        return admin_view.build(
+            sess, running_version="x", production=False, now=NOW, last_looked=last_looked
+        )
 
 
 def ladder(engine) -> dict[str, tuple[int, int]]:
-    return {line["label"]: (line["all_time"], line["last_7_days"]) for line in built(engine)["ladder"]}
+    return {
+        line["label"]: (line["all_time"], line["last_7_days"]) for line in built(engine)["ladder"]
+    }
 
 
 def add_person(engine, login, joined=LONG_AGO):
@@ -90,7 +103,9 @@ def test_the_demo_and_a_real_file_are_separate_lines(engine):
         sess.commit()
     lines = ladder(engine)
     assert lines["Tried the demo"] == (1, 1)
-    assert lines["Uploaded a real file"] == (2, 1), "a refused file was brought, as the File note says"
+    assert lines["Uploaded a real file"] == (2, 1), (
+        "a refused file was brought, as the File note says"
+    )
 
 
 def test_reading_one_fact_and_all_of_them(engine):
@@ -126,9 +141,13 @@ def test_coming_back_means_a_later_day_in_india(engine):
     same_day = add_person(engine, "same-day")
     late = add_person(engine, "came-back")
     # 23:00 and 01:00 UTC are two days there, and both the morning of 2 Feb in India.
-    same_in_india = add_person(engine, "same-in-india", joined=datetime(2026, 2, 1, 23, 0, tzinfo=UTC))
+    same_in_india = add_person(
+        engine, "same-in-india", joined=datetime(2026, 2, 1, 23, 0, tzinfo=UTC)
+    )
     # 18:00 and 19:00 UTC are one day there, and either side of midnight in India.
-    next_in_india = add_person(engine, "next-in-india", joined=datetime(2026, 2, 1, 18, 0, tzinfo=UTC))
+    next_in_india = add_person(
+        engine, "next-in-india", joined=datetime(2026, 2, 1, 18, 0, tzinfo=UTC)
+    )
     with make_session(engine) as sess:
         add_consent(sess, same_day, at=LONG_AGO + timedelta(hours=1))
         add_consent(sess, late, at=RECENT)
@@ -143,8 +162,16 @@ def test_asked_and_answered_would_they_pay(engine):
     with make_session(engine) as sess:
         journal = add_journal(sess, trader, add_import(sess, trader, at=LONG_AGO).id)
         sess.add(m.WtpAsked(trader_id=trader, journal_id=journal.id, asked_at=RECENT))
-        sess.add(m.WtpAnswer(trader_id=trader, journal_id=journal.id, answer="no", uploads_so_far=1,
-                             days_since_first_upload=1, asked_at=LONG_AGO))
+        sess.add(
+            m.WtpAnswer(
+                trader_id=trader,
+                journal_id=journal.id,
+                answer="no",
+                uploads_so_far=1,
+                days_since_first_upload=1,
+                asked_at=LONG_AGO,
+            )
+        )
         sess.commit()
     lines = ladder(engine)
     assert lines["Asked would they pay"] == (1, 1)
@@ -160,7 +187,9 @@ def test_a_development_account_moves_no_line(engine):
 
 
 def since(engine, last_looked) -> dict[str, int]:
-    return {line["label"]: line["count"] for line in built(engine, last_looked)["new_since"]["lines"]}
+    return {
+        line["label"]: line["count"] for line in built(engine, last_looked)["new_since"]["lines"]
+    }
 
 
 def test_new_since_counts_only_what_came_after_the_last_look(engine):
@@ -170,13 +199,24 @@ def test_new_since_counts_only_what_came_after_the_last_look(engine):
         real = add_import(sess, newer, at=RECENT)
         add_import(sess, newer, source=demo.ACCOUNT, at=RECENT)
         add_import(sess, newer, outcome=s.ImportOutcome.REJECTED, rows=(1, 0, 0), at=RECENT)
-        sess.add(m.ChapterFeedback(trader_id=newer, chapter=1, answer="wrong", import_id=real.id,
-                                   answered_at=RECENT))
-        sess.add(m.ReportFeedback(trader_id=newer, import_id=real.id, answer="accurate",
-                                  answered_at=RECENT))
+        sess.add(
+            m.ChapterFeedback(
+                trader_id=newer, chapter=1, answer="wrong", import_id=real.id, answered_at=RECENT
+            )
+        )
+        sess.add(
+            m.ReportFeedback(
+                trader_id=newer, import_id=real.id, answer="accurate", answered_at=RECENT
+            )
+        )
         sess.commit()
     assert since(engine, NOW - timedelta(days=7)) == {
-        "Sign-ups": 1, "Demo loads": 1, "Real uploads": 1, "Refused files": 1, "Answers": 2}
+        "Sign-ups": 1,
+        "Demo loads": 1,
+        "Real uploads": 1,
+        "Refused files": 1,
+        "Answers": 2,
+    }
 
 
 def test_reading_a_file_again_is_not_a_new_upload(engine):
@@ -232,7 +272,7 @@ def test_the_cards_are_gone_and_nothing_unknowable_is_shown(app, engine):
 
 def test_counts_only_no_percent_and_no_chart_in_the_ladder(app, engine):
     page = admin_client(app, engine).get("/admin").text
-    section = page[page.index("Who came and how far"):page.index("Traders</h2>")]
+    section = page[page.index("Who came and how far") : page.index("Traders</h2>")]
     assert "%" not in section.split("System health")[0]
     assert "<svg" not in section
 

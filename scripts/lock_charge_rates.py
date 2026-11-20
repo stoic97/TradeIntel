@@ -22,7 +22,9 @@ def main() -> int:
     pinned = R.read_lock()
     for row in raw:
         if row["id"] in pinned and pinned[row["id"]] != R.digest(row):
-            print(f"row {row['id']} has changed since it was pinned. Put it back and add a new row.")
+            print(
+                f"row {row['id']} has changed since it was pinned. Put it back and add a new row."
+            )
             return 1
     new = [row for row in raw if row["id"] not in pinned]
     if new:

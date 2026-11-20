@@ -112,7 +112,7 @@ def _from_header(rows: list[list[str]], headers: Iterable[tuple[str, ...]]) -> l
         while cells and not cells[-1]:
             cells.pop()
         if tuple(cells) in known:
-            return [cells, *rows[at + 1:]]
+            return [cells, *rows[at + 1 :]]
     return rows
 
 
@@ -126,7 +126,7 @@ def _csv_from_header(text: str, known: set[tuple[str, ...]]) -> str:
     lines = text.splitlines(keepends=True)
     for at, line in enumerate(lines[:PREAMBLE_LIMIT]):
         try:
-            cells = next(csv.reader([line.rstrip('\r\n')]), [])
+            cells = next(csv.reader([line.rstrip("\r\n")]), [])
         except csv.Error:
             continue
         cells = [c.strip().lstrip("\ufeff") for c in cells]

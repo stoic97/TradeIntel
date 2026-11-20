@@ -285,7 +285,8 @@ def _flat_intraday_days(fills: list[Fill]) -> list[list[Fill]]:
         if f.product == "INTRADAY":
             days[f.ts.date()].append(f)
     return [
-        day for day in days.values()
+        day
+        for day in days.values()
         if sum(f.quantity if f.side is Side.BUY else -f.quantity for f in day) == 0
     ]
 

@@ -36,7 +36,9 @@ CLOSED = "No difference we can stand behind."
 OPEN = "After two straight losses, your next trades averaged"
 
 
-def synthetic(seed: int, days: int = 200, per_day: int = 6, effect: float = 0.0, noise: str = "normal") -> list[Obs]:
+def synthetic(
+    seed: int, days: int = 200, per_day: int = 6, effect: float = 0.0, noise: str = "normal"
+) -> list[Obs]:
     """Trades one after another each day. effect shifts a trade that follows two losses."""
     rng = np.random.default_rng(seed)
     out = []
@@ -44,8 +46,18 @@ def synthetic(seed: int, days: int = 200, per_day: int = 6, effect: float = 0.0,
         recent: list[float] = []
         for k in range(per_day):
             draw = rng.standard_t(3) if noise == "fat" else rng.normal()
-            r = float(draw * 1000 + (effect if len(recent) >= 2 and recent[-1] < 0 and recent[-2] < 0 else 0))
-            out.append(Obs(day=day, entry_at=float(day * 1000 + k * 10), exit_at=float(day * 1000 + k * 10 + 5), r=r))
+            r = float(
+                draw * 1000
+                + (effect if len(recent) >= 2 and recent[-1] < 0 and recent[-2] < 0 else 0)
+            )
+            out.append(
+                Obs(
+                    day=day,
+                    entry_at=float(day * 1000 + k * 10),
+                    exit_at=float(day * 1000 + k * 10 + 5),
+                    r=r,
+                )
+            )
             recent.append(r)
     return out
 
@@ -56,9 +68,20 @@ def trips_from(obs: list[Obs]) -> list[mx.Trip]:
     for i, o in enumerate(obs):
         entry = start + timedelta(days=o.day, seconds=(o.entry_at - o.day * 1000) * 60)
         leave = entry + timedelta(seconds=(o.exit_at - o.entry_at) * 60)
-        out.append(mx.Trip(f"T-{i}", "WIDGET", entry.date().isoformat(), entry, leave,
-                           int((leave - entry).total_seconds()), Decimal(str(round(o.r, 2))), 1,
-                           s.RiskUnitSourceV1.DECLARED_BUDGET, is_option=True))
+        out.append(
+            mx.Trip(
+                f"T-{i}",
+                "WIDGET",
+                entry.date().isoformat(),
+                entry,
+                leave,
+                int((leave - entry).total_seconds()),
+                Decimal(str(round(o.r, 2))),
+                1,
+                s.RiskUnitSourceV1.DECLARED_BUDGET,
+                is_option=True,
+            )
+        )
     return out
 
 
@@ -75,7 +98,9 @@ def test_the_draws_and_minimums_are_the_frameworks_own():
 
 
 def gate_in_the_framework() -> dict:
-    framework = yaml.safe_load(Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8"))
+    framework = yaml.safe_load(
+        Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8")
+    )
     found = []
 
     def walk(node):
@@ -112,7 +137,9 @@ def test_the_gates_direction_is_b2s_own():
 def test_production_can_run_it_without_the_research_packages():
     tree = ast.parse(Path(T.__file__).read_text(encoding="utf-8"))
     imported = {n.names[0].name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import)}
-    imported |= {(n.module or "").split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
+    imported |= {
+        (n.module or "").split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+    }
     assert imported <= {"__future__", "collections", "dataclasses", "numpy", "services"}
     assert "services.research" not in Path(T.__file__).read_text(encoding="utf-8")
 
@@ -127,8 +154,14 @@ def test_the_groups_are_exactly_the_shared_definitions(seed):
     for day in range(40):
         for k in range(int(rng.integers(1, 9))):
             entry = float(rng.uniform(0, 100))
-            obs.append(Obs(day=day, entry_at=entry, exit_at=entry + float(rng.uniform(0, 30)),
-                           r=float(rng.choice([-5.0, 0.0, 5.0]))))
+            obs.append(
+                Obs(
+                    day=day,
+                    entry_at=entry,
+                    exit_at=entry + float(rng.uniform(0, 30)),
+                    r=float(rng.choice([-5.0, 0.0, 5.0])),
+                )
+            )
     in_pop, cond = population_and_condition(obs)
     pop, first, second = T.last_two_resolved(obs)
     r = np.array([o.r for o in obs])
@@ -216,7 +249,11 @@ def test_the_gate_on_the_page_stays_closed_the_other_way():
 
 
 def test_a_level_result_keeps_it_closed():
-    obs = [Obs(day=d, entry_at=float(k), exit_at=k + 0.5, r=-1.0 if k < 2 else 1.0) for d in range(40) for k in range(5)]
+    obs = [
+        Obs(day=d, entry_at=float(k), exit_at=k + 0.5, r=-1.0 if k < 2 else 1.0)
+        for d in range(40)
+        for k in range(5)
+    ]
     got = T.shuffle_test(obs)
     assert not got.passes
 
@@ -228,7 +265,10 @@ def test_a_clean_trader_keeps_it_closed():
 @pytest.mark.parametrize("noise", ["normal", "fat"])
 def test_on_noise_it_opens_about_as_often_as_the_framework_allows(noise):
     """validation_fp_band [0.02, 0.08], on both noise classes. Seeds are fixed, so not flaky."""
-    runs = [T.shuffle_test(synthetic(seed, days=80, per_day=6, noise=noise), draws=400).passes for seed in range(200)]
+    runs = [
+        T.shuffle_test(synthetic(seed, days=80, per_day=6, noise=noise), draws=400).passes
+        for seed in range(200)
+    ]
     assert 0.02 <= sum(runs) / len(runs) <= 0.08
 
 
@@ -240,7 +280,9 @@ def test_too_few_condition_trades_keep_it_closed_whatever_the_means_say():
 
 
 def test_too_few_comparison_trades_keep_it_closed():
-    obs = [Obs(day=d, entry_at=float(k), exit_at=k + 0.5, r=-1.0) for d in range(20) for k in range(6)]
+    obs = [
+        Obs(day=d, entry_at=float(k), exit_at=k + 0.5, r=-1.0) for d in range(20) for k in range(6)
+    ]
     got = T.shuffle_test(obs)
     assert got.n_comparison < T.MIN_COMPARISON
     assert not got.passes
@@ -304,7 +346,9 @@ def test_a_closed_gate_is_not_said_to_be_a_finding_about_the_trader():
 
 
 def test_the_finding_bar_is_written_in_the_framework_as_the_code_runs_it():
-    framework = yaml.safe_load(Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8"))
+    framework = yaml.safe_load(
+        Path("services/research/prereg/framework_v1.yaml").read_text(encoding="utf-8")
+    )
     bar = framework["evidence"]["multiplicity"]["finding_bar"] if "evidence" in framework else None
     if bar is None:
         found = []
@@ -315,10 +359,12 @@ def test_the_finding_bar_is_written_in_the_framework_as_the_code_runs_it():
                     found.append(node["finding_bar"])
                 for value in node.values():
                     walk(value)
+
         walk(framework)
         assert len(found) == 1
         bar = found[0]
     from services.shared.conditions import multiplicity
+
     assert bar["method"] == "westfall_young_step_down_min_p"
     assert bar["m"] == len(multiplicity.family()) == 18
     assert bar["alpha"] == T.ALPHA and bar["draws"] == T.DRAWS
@@ -335,8 +381,10 @@ def test_a_strong_effect_in_both_halves_is_a_finding_corrected_for_the_family():
 
 
 def shifted(obs: list[Obs], by: int) -> list[Obs]:
-    return [Obs(day=o.day + by, entry_at=o.entry_at + by * 1000, exit_at=o.exit_at + by * 1000, r=o.r)
-            for o in obs]
+    return [
+        Obs(day=o.day + by, entry_at=o.entry_at + by * 1000, exit_at=o.exit_at + by * 1000, r=o.r)
+        for o in obs
+    ]
 
 
 def test_a_gap_that_reverses_between_halves_is_only_worth_watching():
@@ -358,10 +406,13 @@ def test_with_more_checks_in_play_the_same_file_meets_a_stricter_bar():
     """The correction is real once other checks share the shuffle: B2 alone keeps about its own
     p; with the family's other checks able to fire on the same draws it can only rise."""
     from services.shared.conditions import multiplicity
+
     rng = np.random.default_rng(4)
     null_b2 = rng.normal(size=4000)
     others = {c: rng.normal(size=4000) for c in ("B1", "S1", "B5")}
     alone = multiplicity.step_down_min_p({"B2": -2.4}, {"B2": null_b2}, multiplicity.family())["B2"]
     observed = {"B2": -2.4, **{c: 0.0 for c in others}}
-    together = multiplicity.step_down_min_p(observed, {"B2": null_b2, **others}, multiplicity.family())["B2"]
+    together = multiplicity.step_down_min_p(
+        observed, {"B2": null_b2, **others}, multiplicity.family()
+    )["B2"]
     assert together > alone

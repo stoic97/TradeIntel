@@ -10,6 +10,7 @@ is to read the diff. So this script prints the diff and refuses to write unless
 
 Each broker has its own golden; ``--groww`` regenerates Groww's (TICKET-895).
 """
+
 from __future__ import annotations
 
 import difflib

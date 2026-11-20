@@ -55,11 +55,15 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _READING_AGAIN = threading.Lock()
-COULD_NOT_OPEN = ("We could not open your stored file, so it was not read again. Nothing "
-                  "changed: your figures are still the ones from the last reading. The "
-                  "fault is ours, not your file's.")
-COULD_NOT_READ = ("The newer code could not read your stored file, so it was not read again. "
-                  "Nothing changed: your figures are still the ones from the last reading.")
+COULD_NOT_OPEN = (
+    "We could not open your stored file, so it was not read again. Nothing "
+    "changed: your figures are still the ones from the last reading. The "
+    "fault is ours, not your file's."
+)
+COULD_NOT_READ = (
+    "The newer code could not read your stored file, so it was not read again. "
+    "Nothing changed: your figures are still the ones from the last reading."
+)
 
 
 def _store(request: Request) -> FileStore:
@@ -86,7 +90,8 @@ def _owned_import(sess, trader: m.Trader, import_id: int) -> m.Import | None:
 def _first_upload(sess, trader: m.Trader, digest: str) -> m.RawFile | None:
     """The first time he sent these bytes. Older confirmations wrote another row for them."""
     return sess.scalars(
-        select(m.RawFile).where(m.RawFile.trader_id == trader.id, m.RawFile.sha256 == digest)
+        select(m.RawFile)
+        .where(m.RawFile.trader_id == trader.id, m.RawFile.sha256 == digest)
         .order_by(m.RawFile.id)
     ).first()
 
@@ -105,7 +110,8 @@ def _same_file_again(sess, trader: m.Trader, digest: str) -> tuple[str, int | No
     first = _first_upload(sess, trader, digest)
     named = f"You have already uploaded this exact file: {first.original_name}, on {_when(first)}"
     reading = sess.scalars(
-        select(m.Import).join(m.RawFile, m.Import.raw_file_id == m.RawFile.id)
+        select(m.Import)
+        .join(m.RawFile, m.Import.raw_file_id == m.RawFile.id)
         .where(m.Import.trader_id == trader.id, m.RawFile.sha256 == digest)
         .order_by(m.Import.id.desc())
     ).first()
@@ -157,9 +163,11 @@ async def upload_file(
             except ValueError:
                 return upload_page(request, status_code=400, error="That is not a date.")
             if downloaded > trader_today():
-                return upload_page(request, status_code=400,
-                                   error="That date is in the future. Put the day you "
-                                         "downloaded this file.")
+                return upload_page(
+                    request,
+                    status_code=400,
+                    error="That date is in the future. Put the day you downloaded this file.",
+                )
 
         content = await file.read(k.MAX_UPLOAD_BYTES + 1)
         if len(content) > k.MAX_UPLOAD_BYTES:
@@ -171,14 +179,20 @@ async def upload_file(
             limits.count_refusal(request, limits.SAME_FILE)
             sentence, offered = _same_file_again(sess, trader, digest)
             return upload_page(request, status_code=400, error=sentence, read_again_id=offered)
-        return _ingest(request, sess, trader, content=content,
-                       file_name=file.filename or "tradebook.csv",
-                       export_date=export_date or None, source_account="A")
+        return _ingest(
+            request,
+            sess,
+            trader,
+            content=content,
+            file_name=file.filename or "tradebook.csv",
+            export_date=export_date or None,
+            source_account="A",
+        )
 
 
 @router.post("/upload/demo")
 def upload_demo(request: Request, csrf_token: str = Form(None)):
-    """"Try it with a demo file" (TICKET-842): the synthetic tradebook, as an upload.
+    """ "Try it with a demo file" (TICKET-842): the synthetic tradebook, as an upload.
 
     The ordinary path from here on (``_ingest``), under the demo's own source account.
     A second click opens the demo he already has, and once he has a real record the demo
@@ -198,19 +212,27 @@ def upload_demo(request: Request, csrf_token: str = Form(None)):
         loaded = demo.demo_import(sess, trader)
         if loaded is not None:
             return RedirectResponse(f"/imports/{loaded.id}", status_code=303)
-        return _ingest(request, sess, trader, content=demo.FILE.read_bytes(),
-                       file_name=demo.FILE_NAME, export_date=demo.EXPORT_DATE,
-                       source_account=demo.ACCOUNT)
+        return _ingest(
+            request,
+            sess,
+            trader,
+            content=demo.FILE.read_bytes(),
+            file_name=demo.FILE_NAME,
+            export_date=demo.EXPORT_DATE,
+            source_account=demo.ACCOUNT,
+        )
 
 
 def _texts_of(request: Request, sess, imp: m.Import) -> list[tuple[m.RawFile, str]]:
     """Every file a reading read, with its text, oldest first."""
-    return [(raw, pl.text_of(_store(request).get(raw.sha256)))
-            for raw in persist.files_read(sess, imp)]
+    return [
+        (raw, pl.text_of(_store(request).get(raw.sha256))) for raw in persist.files_read(sess, imp)
+    ]
 
 
-def _read_with(request: Request, sess, trader: m.Trader, text: str,
-               source_account: str) -> list[tuple[m.RawFile, str]]:
+def _read_with(
+    request: Request, sess, trader: m.Trader, text: str, source_account: str
+) -> list[tuple[m.RawFile, str]]:
     """The record's files this upload is read together with (TICKET-926).
 
     A Groww trader's stocks and F&O come as two files with one header: the second is
@@ -230,8 +252,16 @@ def _read_with(request: Request, sess, trader: m.Trader, text: str,
     return [record[at] for at in pl.files_kept([t for _, t in record], text)]
 
 
-def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_name: str,
-            export_date: str | None, source_account: str):
+def _ingest(
+    request: Request,
+    sess,
+    trader: m.Trader,
+    *,
+    content: bytes,
+    file_name: str,
+    export_date: str | None,
+    source_account: str,
+):
     """Store the file, plan it, write it and its Journals: one path for every upload.
 
     A real upload that rebuilt trades replaces the demo, if he loaded one, before it is
@@ -266,14 +296,21 @@ def _ingest(request: Request, sess, trader: m.Trader, *, content: bytes, file_na
         )
     except filemap.UnverifiedFileMap:
         limits.count_refusal(request, limits.UNVERIFIED_MAP)
-        return page(request, "upload_closed.html", status_code=503,
-                    title="Not open for your broker yet")
+        return page(
+            request, "upload_closed.html", status_code=503, title="Not open for your broker yet"
+        )
     if source_account != demo.ACCOUNT and plan.positions:
         deletion.remove_demo(sess, _store(request), trader=trader)
     imp = persist.write_plan(
-        sess, trader=trader, plan=plan, raw_sha256=stored.sha256,
-        original_name=file_name, stored_path=str(stored.path), size=stored.size,
-        source_account=source_account, also_reads=tuple(raw for raw, _ in read_with),
+        sess,
+        trader=trader,
+        plan=plan,
+        raw_sha256=stored.sha256,
+        original_name=file_name,
+        stored_path=str(stored.path),
+        size=stored.size,
+        source_account=source_account,
+        also_reads=tuple(raw for raw, _ in read_with),
     )
     sess.commit()
     gen.for_import(sess, trader=trader)
@@ -296,8 +333,14 @@ def _read(request: Request, sess, imp: m.Import):
     if latest is None:
         return Response(status_code=200, headers={"HX-Redirect": f"/imports/{imp.id}"})
     raw = sess.get(m.RawFile, imp.raw_file_id)
-    return page(request, "calculating.html", title="Your file is read", imp=imp,
-                file_name=raw.original_name, latest=latest)
+    return page(
+        request,
+        "calculating.html",
+        title="Your file is read",
+        imp=imp,
+        file_name=raw.original_name,
+        latest=latest,
+    )
 
 
 @router.get("/imports/{import_id}", response_class=HTMLResponse)
@@ -311,8 +354,7 @@ def import_review(request: Request, import_id: int):
             return page(request, "404.html", status_code=404, title="Not found")
 
         rows = sess.scalars(
-            select(m.ImportRow).where(m.ImportRow.import_id == imp.id)
-            .order_by(m.ImportRow.row_no)
+            select(m.ImportRow).where(m.ImportRow.import_id == imp.id).order_by(m.ImportRow.row_no)
         ).all()
         days = sess.scalars(
             select(m.TradingDayVersion)
@@ -330,24 +372,37 @@ def import_review(request: Request, import_id: int):
         # A first upload has nothing to compare against: every day is new, so the page
         # lists them plainly. Decided here rather than summed in the template (T7).
         first_upload = sum(d.rows_before for d in days) == 0
-        changed_days = [] if first_upload else [
-            d.trading_day for d in days if d.diff is not s.DayDiff.IDENTICAL
-        ]
+        changed_days = (
+            []
+            if first_upload
+            else [d.trading_day for d in days if d.diff is not s.DayDiff.IDENTICAL]
+        )
         shrunk_days = [d.trading_day for d in days if d.day_shrank]
         read_again = persist.read_with_newer_code(sess, imp)
         earlier = persist.earlier_reading(sess, imp) if read_again else None
         confirmed = [r for r in rows if r.flag is s.RowFlag.TRADER_CONFIRMED_DUPLICATE]
-        return page(request, "import_review.html", title="What we read",
-                    imp=imp, groups=groups, excluded=excluded, rejected=rejected,
-                    files=persist.files_read(sess, imp),
-                    days=days, first_upload=first_upload, changed_days=changed_days,
-                    shrunk_days=shrunk_days, read_again=read_again,
-                    same_file=persist.reads_same_file_as_before(sess, imp),
-                    rows_confirmed=len(confirmed) if pl.rebuilt_without_confirmed(imp) else 0,
-                    trades_before=earlier.trips_reconstructed if earlier else None,
-                    moved=_what_moved(sess, trader, earlier, imp) if earlier else [],
-                    charges_offered=(charges_open(request) and not imp.fees_available
-                                     and imp.trips_reconstructed > 0))
+        return page(
+            request,
+            "import_review.html",
+            title="What we read",
+            imp=imp,
+            groups=groups,
+            excluded=excluded,
+            rejected=rejected,
+            files=persist.files_read(sess, imp),
+            days=days,
+            first_upload=first_upload,
+            changed_days=changed_days,
+            shrunk_days=shrunk_days,
+            read_again=read_again,
+            same_file=persist.reads_same_file_as_before(sess, imp),
+            rows_confirmed=len(confirmed) if pl.rebuilt_without_confirmed(imp) else 0,
+            trades_before=earlier.trips_reconstructed if earlier else None,
+            moved=_what_moved(sess, trader, earlier, imp) if earlier else [],
+            charges_offered=(
+                charges_open(request) and not imp.fees_available and imp.trips_reconstructed > 0
+            ),
+        )
 
 
 def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list[dict]:
@@ -357,6 +412,7 @@ def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list
     by book (``metrics.verdict``) and the five worst days. Only rows that moved are listed;
     a figure that stayed the same is not news.
     """
+
     def figures(imp: m.Import) -> dict[str, Decimal]:
         trips, _ = loader.load_for(sess, trader, imp)
         verdict = mx.verdict(trips)
@@ -372,13 +428,17 @@ def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list
 
     was, now_ = figures(before), figures(now)
     labels = list(now_) + [label for label in was if label not in now_]
-    return [{"label": label, "was": was.get(label), "now": now_.get(label)}
-            for label in labels if was.get(label) != now_.get(label)]
+    return [
+        {"label": label, "was": was.get(label), "now": now_.get(label)}
+        for label in labels
+        if was.get(label) != now_.get(label)
+    ]
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")
-def confirm_duplicates(request: Request, import_id: int,
-                       dup_group: str = Form(...), csrf_token: str = Form(None)):
+def confirm_duplicates(
+    request: Request, import_id: int, dup_group: str = Form(...), csrf_token: str = Form(None)
+):
     """The trader says a flagged group is one trade recorded twice.
 
     The file is read again as a new version without those rows, so every figure is
@@ -415,12 +475,18 @@ def confirm_duplicates(request: Request, import_id: int,
             return _not_read_again(request, 503, COULD_NOT_OPEN)
         except filemap.UnverifiedFileMap:
             limits.count_refusal(request, limits.UNVERIFIED_MAP)
-            return page(request, "upload_closed.html", status_code=503,
-                        title="Not open for your broker yet")
+            return page(
+                request, "upload_closed.html", status_code=503, title="Not open for your broker yet"
+            )
 
-        new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
-                                           reads=persist.files_read(sess, current),
-                                           source_account=current.source_account)
+        new_import = persist.write_reading(
+            sess,
+            trader=trader,
+            plan=plan,
+            raw=raw,
+            reads=persist.files_read(sess, current),
+            source_account=current.source_account,
+        )
         gen.for_import(sess, trader=trader)
         sess.commit()
         return RedirectResponse(f"/imports/{new_import.id}", status_code=303)
@@ -462,8 +528,9 @@ def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
             return _not_read_again(request, 503, COULD_NOT_OPEN)
         except filemap.UnverifiedFileMap:
             limits.count_refusal(request, limits.UNVERIFIED_MAP)
-            return page(request, "upload_closed.html", status_code=503,
-                        title="Not open for your broker yet")
+            return page(
+                request, "upload_closed.html", status_code=503, title="Not open for your broker yet"
+            )
         except Exception:  # an unforeseen failure must still leave his record as it was
             logger.exception("import %s: the stored file could not be planned", current.id)
             return _not_read_again(request, 422, COULD_NOT_READ)
@@ -471,9 +538,14 @@ def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
             return _not_read_again(request, 422, COULD_NOT_READ)
 
         try:
-            new_import = persist.write_reading(sess, trader=trader, plan=plan, raw=raw,
-                                               reads=persist.files_read(sess, current),
-                                               source_account=current.source_account)
+            new_import = persist.write_reading(
+                sess,
+                trader=trader,
+                plan=plan,
+                raw=raw,
+                reads=persist.files_read(sess, current),
+                source_account=current.source_account,
+            )
             gen.for_import(sess, trader=trader)
             sess.commit()
         except Exception:  # as above: nothing has been committed
@@ -484,12 +556,23 @@ def read_again(request: Request, import_id: int, csrf_token: str = Form(None)):
 
 
 def _not_read_again(request: Request, status_code: int, sentence: str):
-    return page(request, "read_again_failed.html", status_code=status_code,
-                title="Your file was not read again", sentence=sentence)
+    return page(
+        request,
+        "read_again_failed.html",
+        status_code=status_code,
+        title="Your file was not read again",
+        sentence=sentence,
+    )
 
 
-def _read_stored(request: Request, sess, trader: m.Trader, imp: m.Import, raw: m.RawFile,
-                 also_confirm: tuple[str, ...] = ()) -> pl.ImportPlan:
+def _read_stored(
+    request: Request,
+    sess,
+    trader: m.Trader,
+    imp: m.Import,
+    raw: m.RawFile,
+    also_confirm: tuple[str, ...] = (),
+) -> pl.ImportPlan:
     """A new plan of an import's stored files, keeping what was stated and confirmed on it.
 
     Every file the reading read, together, as when they were uploaded (TICKET-926).
@@ -498,10 +581,12 @@ def _read_stored(request: Request, sess, trader: m.Trader, imp: m.Import, raw: m
     return pl.plan_import(
         text,
         context=pl.ImportContext(
-            trader_id=str(trader.id), source_account=imp.source_account,
+            trader_id=str(trader.id),
+            source_account=imp.source_account,
             code_version=_code_version(request),
-            existing_days=persist.existing_days(sess, trader=trader,
-                                                source_account=imp.source_account),
+            existing_days=persist.existing_days(
+                sess, trader=trader, source_account=imp.source_account
+            ),
             export_date=imp.export_date,
             export_date_source=imp.export_date_source,
         ),

@@ -74,5 +74,6 @@ def test_the_key_comes_from_settings_and_has_no_default(monkeypatch):
     monkeypatch.delenv("SCOPE_FILE_KEY", raising=False)
     monkeypatch.setenv("SCOPE_SECRET_KEY", "x" * 32)
     from services.production.api import settings as st
+
     with pytest.raises(RuntimeError, match="SCOPE_FILE_KEY"):
         st.Settings.from_env()

@@ -5,6 +5,7 @@ the corpus build (cycle 6b); here the structure is pinned: 153 cells exactly as
 §12.2 lists them, deterministic histories, twins without behaviour, honest
 ``reached`` marks, and nulls with no behaviour and no edge.
 """
+
 import math
 from collections import Counter
 

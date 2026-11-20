@@ -1,4 +1,4 @@
-""""Where the money came from" says what its lists found (TICKET-818).
+""" "Where the money came from" says what its lists found (TICKET-818).
 
 Two ranked lists instead of days in date order; a headline and a hook that are computed,
 and said only when they are true of this file; hold times over a day in days and months;
@@ -46,10 +46,13 @@ from tests.helpers.trade_rows import articles, text, trade_rows_uploaded
 def uploaded(client, engine):
     return trade_rows_uploaded(client, engine)
 
+
 HEADLINE = "Your best trades weren't trades."
 HOOK = "Your best and worst trades are in the same place."
-CUT = ("This describes what happened, not advice to hold longer.",
-       "A trade can lose fast simply by being wrong from the start.")
+CUT = (
+    "This describes what happened, not advice to hold longer.",
+    "A trade can lose fast simply by being wrong from the start.",
+)
 DAY = "2026-09-01"
 
 
@@ -90,7 +93,9 @@ def trip(
     )
 
 
-def share(tid: str, net: int, days: int, symbol: str = "WIDGETCO", day: str = "2025-05-05") -> mx.Trip:
+def share(
+    tid: str, net: int, days: int, symbol: str = "WIDGETCO", day: str = "2025-05-05"
+) -> mx.Trip:
     return trip(tid, net, minutes=0, days=days, symbol=symbol, segment="EQ", day=day)
 
 
@@ -277,10 +282,18 @@ def test_there_are_two_lists_with_their_names():
 def test_each_list_is_in_rank_order_not_date_order():
     best, worst = (articles(x) for x in lists(fact_page("money", WHOLE)))
     assert [re.search(r"[+−]₹[\d,]+", a)[0] for a in best] == [
-        "+₹900", "+₹800", "+₹700", "+₹600", "+₹500",
+        "+₹900",
+        "+₹800",
+        "+₹700",
+        "+₹600",
+        "+₹500",
     ]
     assert [re.search(r"[+−]₹[\d,]+", a)[0] for a in worst] == [
-        "−₹3,100", "−₹2,900", "−₹2,700", "−₹2,300", "−₹2,100",
+        "−₹3,100",
+        "−₹2,900",
+        "−₹2,700",
+        "−₹2,300",
+        "−₹2,100",
     ]
 
 
@@ -335,7 +348,7 @@ def test_a_long_list_of_holdings_goes_behind_the_link_and_the_ranks_stay():
 def test_the_lists_sit_side_by_side_on_a_wide_screen_and_stack_on_a_phone():
     css = Path("services/production/api/static/css/app.css").read_text()
     wide = re.search(
-        r"@media \(min-width: (\d+)px\) \{(.*?)\n\}", css[css.index(".ranked-lists"):], re.DOTALL
+        r"@media \(min-width: (\d+)px\) \{(.*?)\n\}", css[css.index(".ranked-lists") :], re.DOTALL
     )
     assert wide, "no wide rule after .ranked-lists"
     assert int(wide[1]) > 430  # the phone column
@@ -437,7 +450,9 @@ def test_the_title_is_read_from_the_map(monkeypatch):
         for c in S.CHAPTERS
     )
     monkeypatch.setattr(S, "CHAPTERS", renamed)
-    assert "A title the map decided" not in next_chapter(fact_page("money", WHOLE))  # TICKET-903: the spine names it
+    assert "A title the map decided" not in next_chapter(
+        fact_page("money", WHOLE)
+    )  # TICKET-903: the spine names it
 
 
 def test_the_page_ends_with_the_button():

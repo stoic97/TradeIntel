@@ -138,8 +138,9 @@ def test_reading_again_reads_every_file(client, engine, monkeypatch):
     first = latest(engine)
     monkeypatch.setattr(routes_upload.pl, "out_of_date", lambda imp: True)
     csrf = CSRF.search(client.get("/upload").text).group(1)
-    done = client.post(f"/imports/{first.id}/read-again", data={"csrf_token": csrf},
-                       follow_redirects=False)
+    done = client.post(
+        f"/imports/{first.id}/read-again", data={"csrf_token": csrf}, follow_redirects=False
+    )
     assert done.status_code == 303, done.text[:300]
     again = latest(engine)
     assert again.id != first.id

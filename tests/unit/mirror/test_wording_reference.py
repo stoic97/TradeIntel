@@ -28,12 +28,10 @@ from tests.unit.mirror.wording import (
 )
 
 RETIRED = {
-    "vs your normal day": "said which it compared: now \"your normal day's trades\" on each block",
+    "vs your normal day": 'said which it compared: now "your normal day\'s trades" on each block',
     "Your record": "the long page's title; Scope home's title is the kit's new one (D9)",
-    "That is [N] of your result for the whole period, which was [N].":
-        "a share of the net result, which has no floor or ceiling (TICKET-812)",
-    "That is a ratio of [N].":
-        "a bare ratio with nothing beside it; the minutes now sit next to the rupees (TICKET-819)",
+    "That is [N] of your result for the whole period, which was [N].": "a share of the net result, which has no floor or ceiling (TICKET-812)",
+    "That is a ratio of [N].": "a bare ratio with nothing beside it; the minutes now sit next to the rupees (TICKET-819)",
 }
 """Mirror lines the Scope does not say, each with why. Nothing else may go."""
 
@@ -57,14 +55,18 @@ def test_a_figure_is_read_the_same_however_it_is_formatted():
 
 
 def test_words_and_line_breaks_inside_a_sentence_are_kept_as_words():
-    assert (figures_out("open a median of\n   12 minutes, your losers")
-            == "open a median of [N] minutes, your losers")
+    assert (
+        figures_out("open a median of\n   12 minutes, your losers")
+        == "open a median of [N] minutes, your losers"
+    )
 
 
 def test_a_hyphen_inside_a_date_or_an_identifier_is_not_a_minus_sign():
     assert figures_out("2026-03-04") == "[N]-[N]-[N]"
-    assert (figures_out("reading 40 rows with dhan_tradebook_v1.")
-            == "reading [N] rows with dhan_tradebook_v1.")
+    assert (
+        figures_out("reading 40 rows with dhan_tradebook_v1.")
+        == "reading [N] rows with dhan_tradebook_v1."
+    )
 
 
 def test_a_cell_holding_only_figures_is_data_not_wording():
@@ -82,16 +84,24 @@ def test_wording_keeps_headings_labels_and_sentences_and_drops_controls():
         '<p class="drawer-link"><button class="link">Show me those trades</button></p>'
         "</section>"
     )
-    assert wording(html) == [{
-        "key": "section-0",
-        "blocks": ["Your worst trading days", "Day", "Net (gross)",
-                   "Those five days came to [N]."],
-    }]
+    assert wording(html) == [
+        {
+            "key": "section-0",
+            "blocks": [
+                "Your worst trading days",
+                "Day",
+                "Net (gross)",
+                "Those five days came to [N].",
+            ],
+        }
+    ]
 
 
 def test_page_text_joins_inline_figures_and_reads_a_date_as_a_date():
-    html = ('<p>Those five days came to <span class="num">−₹24,000</span>.</p>'
-            "<td>2026-09-07</td><p>Your busiest was <span>07 Sep</span>, at</p>")
+    html = (
+        '<p>Those five days came to <span class="num">−₹24,000</span>.</p>'
+        "<td>2026-09-07</td><p>Your busiest was <span>07 Sep</span>, at</p>"
+    )
     assert page_text(html) == "Those five days came to [N]. [DATE] Your busiest was [DATE], at"
 
 
@@ -107,9 +117,13 @@ def test_every_mirror_sentence_is_said_somewhere_in_the_scope(client):
     but one covers those two sentences."""
     second_state = set(sentences(SHARE_NOT_A_PERCENTAGE)) - {"Those five days came to [N]."}
     everything = " || ".join(scope_pages(client).values())
-    unsaid = [line for line in mirror_sentences()
-              if line not in RETIRED and line not in second_state
-              and said_as_written(line) not in everything]
+    unsaid = [
+        line
+        for line in mirror_sentences()
+        if line not in RETIRED
+        and line not in second_state
+        and said_as_written(line) not in everything
+    ]
     assert unsaid == []
 
 

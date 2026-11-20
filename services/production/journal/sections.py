@@ -48,10 +48,12 @@ def own_facts(facts: dict[str, Any]) -> dict[str, Any]:
     return {
         name: (
             {k: v for k, v in body.items() if k not in NOT_THIS_PERIOD[name]}
-            if name in NOT_THIS_PERIOD else body
+            if name in NOT_THIS_PERIOD
+            else body
         )
         for name, body in facts.items()
     }
+
 
 def _days_held(trip: Trip) -> int:
     """Calendar days from the date it opened to the date it closed."""
@@ -80,9 +82,7 @@ def build(
     today_condition = mx.two_straight_losses(trips)
     history_condition = mx.two_straight_losses(history)
     condition_ids = set(history_condition.condition_trip_ids)
-    days_with_it = len({
-        t.trading_day for t in history if t.trip_id in condition_ids
-    })
+    days_with_it = len({t.trading_day for t in history if t.trip_id in condition_ids})
 
     hours = sorted({t.entry_ts.hour for t in trips})
 
@@ -104,9 +104,9 @@ def build(
             "last_hour": hours[-1] if hours else None,
             # Exits count too: entry hours alone called a month-long position a morning
             # trade (TICKET-800).
-            "all_before_noon": bool(trips) and all(
-                t.closed_same_day and t.entry_ts.hour < 12 and t.exit_ts.hour < 12
-                for t in trips
+            "all_before_noon": bool(trips)
+            and all(
+                t.closed_same_day and t.entry_ts.hour < 12 and t.exit_ts.hour < 12 for t in trips
             ),
         },
         "against_your_normal": {
@@ -126,8 +126,7 @@ def build(
             # trader who diligently recorded each one that he recorded none -- and
             # the line is meant to show him a gap, not invent one.
             "losing_trades_without_one": sum(
-                1 for t in trips
-                if t.is_loss and t.trip_id not in (trips_with_a_stop or set())
+                1 for t in trips if t.is_loss and t.trip_id not in (trips_with_a_stop or set())
             ),
             "said_before": planned_sl_said_before,
         },

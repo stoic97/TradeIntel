@@ -39,8 +39,17 @@ from tests.helpers import journals_worth_writing as w
 from tests.helpers.upload import CSRF, sign_up
 
 REMEMBER = "Do you remember this day?"
-FEB = ["2025-02-03", "2025-02-04", "2025-02-05", "2025-02-06", "2025-02-07",
-       "2025-02-10", "2025-02-11", "2025-02-12", "2025-02-13"]
+FEB = [
+    "2025-02-03",
+    "2025-02-04",
+    "2025-02-05",
+    "2025-02-06",
+    "2025-02-07",
+    "2025-02-10",
+    "2025-02-11",
+    "2025-02-12",
+    "2025-02-13",
+]
 OLD_PLAIN = "2025-02-03"
 NEW_PLAIN = "2025-02-13"
 WORTH = "2025-02-11"
@@ -67,8 +76,12 @@ def engine(scope_environment):
 def client(engine):
     signed_in = sign_up(TestClient(create_app()), engine, "WORTH", "worth")
     token = CSRF.search(signed_in.get("/upload").text).group(1)
-    sent = signed_in.post("/upload", files={"file": ("t.csv", w.FILE.encode(), "text/csv")},
-                          data={"csrf_token": token}, follow_redirects=False)
+    sent = signed_in.post(
+        "/upload",
+        files={"file": ("t.csv", w.FILE.encode(), "text/csv")},
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert sent.status_code == 303, sent.text
     return signed_in
 
@@ -106,9 +119,15 @@ def _remember(engine, client, journal_id: int, answer: str, token: str | None = 
 
 def _write_note(engine, client, day: str) -> int:
     journal_id = _ids(engine)[day]
-    client.post(f"/journals/{journal_id}/field", data={
-        "field": "note", "value": "Slow open.", "trip_id": "", "csrf_token": _token(engine, client),
-    })
+    client.post(
+        f"/journals/{journal_id}/field",
+        data={
+            "field": "note",
+            "value": "Slow open.",
+            "trip_id": "",
+            "csrf_token": _token(engine, client),
+        },
+    )
     return journal_id
 
 
@@ -122,10 +141,18 @@ def _week_journal(engine) -> int:
     """A week Journal over 03-09 Feb, beside the day Journals (a trader's own setting)."""
     with make_session(engine) as sess:
         day = sess.get(m.Journal, _ids(engine)[OLD_PLAIN])
-        week = m.Journal(trader_id=day.trader_id, import_id=day.import_id,
-                         unit=s.JournalUnit.WEEK, period_start="2025-02-03",
-                         period_end="2025-02-09", version_no=1, supersedes=None,
-                         generated_at=datetime.now(UTC), trip_ids="[]", sections=day.sections)
+        week = m.Journal(
+            trader_id=day.trader_id,
+            import_id=day.import_id,
+            unit=s.JournalUnit.WEEK,
+            period_start="2025-02-03",
+            period_end="2025-02-09",
+            version_no=1,
+            supersedes=None,
+            generated_at=datetime.now(UTC),
+            trip_ids="[]",
+            sections=day.sections,
+        )
         sess.add(week)
         sess.commit()
         return week.id
@@ -287,7 +314,9 @@ def test_a_day_is_new_within_seven_calendar_days_of_today():
     assert k.NEW_DAY_WITHIN_DAYS == 7
     assert "arbitrary" in k.ARGUMENTS["NEW_DAY_WITHIN_DAYS"].lower()
     assert recency.new_days(["2025-02-12", "2025-02-13", "2025-02-20"], TODAY) == {
-        "2025-02-13", "2025-02-20"}
+        "2025-02-13",
+        "2025-02-20",
+    }
     assert recency.day_age("2025-02-03", TODAY) == 17
 
 
@@ -321,7 +350,9 @@ def test_the_question_is_a_form_with_yes_and_no(engine, client):
     journal_id = _ids(engine)[OLD_PLAIN]
     html = client.get(f"/journals/{journal_id}").text
     assert f'action="/journals/{journal_id}/remember"' in html
-    assert re.search(r'name="answer"\s+value="yes"', html) and re.search(r'name="answer"\s+value="no"', html)
+    assert re.search(r'name="answer"\s+value="yes"', html) and re.search(
+        r'name="answer"\s+value="no"', html
+    )
     assert "?remember=" not in html, "a link anyone could send must not store an answer"
 
 
@@ -387,7 +418,9 @@ def test_a_day_links_the_trading_day_before_and_after(engine, client):
     ids = _ids(engine)
     html = client.get(f"/journals/{ids['2025-02-07']}").text
     assert (_rel(html, "prev"), _rel(html, "next")) == (
-        f"/journals/{ids['2025-02-06']}", f"/journals/{ids['2025-02-10']}"), "over the weekend"
+        f"/journals/{ids['2025-02-06']}",
+        f"/journals/{ids['2025-02-10']}",
+    ), "over the weekend"
 
 
 def test_the_first_and_last_days_link_one_way(engine, client):
@@ -400,22 +433,52 @@ def test_the_first_and_last_days_link_one_way(engine, client):
 
 
 def test_the_journal_and_its_answers_keep_their_shape(engine):
-    shape = {t: {c["name"] for c in inspect(engine).get_columns(t)}
-             for t in ("journal", "journal_field_entry")}
+    shape = {
+        t: {c["name"] for c in inspect(engine).get_columns(t)}
+        for t in ("journal", "journal_field_entry")
+    }
     assert shape == {
-        "journal": {"id", "trader_id", "import_id", "unit", "period_start", "period_end",
-                    "version_no", "supersedes", "generated_at", "opened_at", "trip_ids",
-                    "sections"},
-        "journal_field_entry": {"id", "journal_id", "trip_id", "field", "value", "entered_at",
-                                "capture_phase", "previous_entry_id"},
+        "journal": {
+            "id",
+            "trader_id",
+            "import_id",
+            "unit",
+            "period_start",
+            "period_end",
+            "version_no",
+            "supersedes",
+            "generated_at",
+            "opened_at",
+            "trip_ids",
+            "sections",
+        },
+        "journal_field_entry": {
+            "id",
+            "journal_id",
+            "trip_id",
+            "field",
+            "value",
+            "entered_at",
+            "capture_phase",
+            "previous_entry_id",
+        },
     }
 
 
 def test_answers_are_counted_not_typed(engine):
     """No typed word: consent v1 stays as it is."""
-    columns = {c["name"]: str(c["type"]) for c in inspect(engine).get_columns("journal_remember_answer")}
-    assert set(columns) == {"id", "trader_id", "journal_id", "trading_day", "answer",
-                            "day_age_days", "answered_at"}
+    columns = {
+        c["name"]: str(c["type"]) for c in inspect(engine).get_columns("journal_remember_answer")
+    }
+    assert set(columns) == {
+        "id",
+        "trader_id",
+        "journal_id",
+        "trading_day",
+        "answer",
+        "day_age_days",
+        "answered_at",
+    }
     assert "TEXT" not in columns["answer"].upper()
     with make_session(engine) as sess:
         assert sess.scalar(select(func.count()).select_from(m.JournalRememberAnswer)) == 0

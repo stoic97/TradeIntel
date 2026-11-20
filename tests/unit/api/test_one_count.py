@@ -75,7 +75,8 @@ def test_one_closing_fill_across_two_lots_is_one_trade():
     Bought 1 at 100, bought 1 at 110, sold 2 at 120: +30. Counting one round trip per lot
     gives two. Scope's unit is one per closing fill, so it gives one, with the same money.
     """
-    result = reconstruct([fill(Side.BUY, 1, 100, 0), fill(Side.BUY, 1, 110, 1),
-                          fill(Side.SELL, 2, 120, 2)])
+    result = reconstruct(
+        [fill(Side.BUY, 1, 100, 0), fill(Side.BUY, 1, 110, 1), fill(Side.SELL, 2, 120, 2)]
+    )
     assert len(result.round_trips) == 1
     assert result.round_trips[0].gross_pnl == Decimal(30)

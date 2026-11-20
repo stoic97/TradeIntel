@@ -81,9 +81,7 @@ def _find_fill_id_column(fieldnames: list[str] | None) -> str | None:
     return None
 
 
-def classify_rows(
-    raw_rows: list[str], fill_ids: list[str | None] | None = None
-) -> Classification:
+def classify_rows(raw_rows: list[str], fill_ids: list[str | None] | None = None) -> Classification:
     """Apply the tiers to rows already read, in the order given."""
     if fill_ids is not None and any(fid for fid in fill_ids):
         seen: dict[str, int] = {}
@@ -124,9 +122,7 @@ def classify_file(path: Path, *, has_fill_id: bool) -> Classification:
 
     reader = csv.DictReader(Path(path).read_text().splitlines())
     column = _find_fill_id_column(reader.fieldnames)
-    ids: list[str | None] = [
-        (record.get(column) if column else None) for record in reader
-    ]
+    ids: list[str | None] = [(record.get(column) if column else None) for record in reader]
     return classify_rows(body, ids)
 
 

@@ -302,8 +302,7 @@ def simulate_trader(
     _validate(cfg, seed, n_trades)
     _validate_behaviours(behaviours)
     entries_rng, direction_rng, hold_rng, behaviour_rng, reentry_rng = (
-        np.random.Generator(np.random.PCG64(s))
-        for s in np.random.SeedSequence(seed).spawn(5)
+        np.random.Generator(np.random.PCG64(s)) for s in np.random.SeedSequence(seed).spawn(5)
     )
     starts, ends = _day_bounds(bars)
     n_days = len(starts)
@@ -468,9 +467,11 @@ def _one_trip(
             j_stop = j_tgt = j_gb = None
             last = i + e
 
-    candidates = [(j, rank, why) for j, rank, why in (
-        (j_stop, 0, "STOP"), (j_gb, 1, "GIVEBACK"), (j_tgt, 2, "TARGET")
-    ) if j is not None]
+    candidates = [
+        (j, rank, why)
+        for j, rank, why in ((j_stop, 0, "STOP"), (j_gb, 1, "GIVEBACK"), (j_tgt, 2, "TARGET"))
+        if j is not None
+    ]
     ambiguous = False
     if candidates:
         jj, _, reason = min(candidates)
@@ -500,9 +501,7 @@ def _one_trip(
     # R per unit of the original position, plus what the added units made or lost,
     # in the same unit. Written so a trip with no adds is bit-identical to the base.
     r = direction * (exit_price - entry) / risk
-    r += sum(direction * (exit_price - price) * units for _, price, units in adds) / (
-        risk * m.size
-    )
+    r += sum(direction * (exit_price - price) * units for _, price, units in adds) / (risk * m.size)
     stop_hit_first = _first(direction * (adverse[: j - i + 1] - stop) <= 0) is not None
     return Trip(
         entry_idx=i,

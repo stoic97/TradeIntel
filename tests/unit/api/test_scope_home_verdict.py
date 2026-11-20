@@ -56,9 +56,17 @@ def stocks() -> list[mx.Trip]:
 def page(trips=None, imp=IMP, opened=frozenset()) -> str:
     trips = options() + stocks() if trips is None else trips
     ctx = SF.record_context(trips)
-    return template_env().get_template("scope/home.html").render(
-        title="Scope", imp=imp, trade_count=len(trips),
-        trading_day_count=len(ctx["days"].counts), **SF.home_context(ctx, imp, opened))
+    return (
+        template_env()
+        .get_template("scope/home.html")
+        .render(
+            title="Scope",
+            imp=imp,
+            trade_count=len(trips),
+            trading_day_count=len(ctx["days"].counts),
+            **SF.home_context(ctx, imp, opened),
+        )
+    )
 
 
 def text(**kw) -> str:
@@ -85,7 +93,9 @@ def test_each_book_has_its_result_and_its_trades():
 
 def test_the_rows_add_up_to_the_whole_result():
     trips = options() + stocks()
-    assert sum(b.net for b in mx.verdict(trips).books) == sum(t.net for t in trips) == Decimal(-1420)
+    assert (
+        sum(b.net for b in mx.verdict(trips).books) == sum(t.net for t in trips) == Decimal(-1420)
+    )
 
 
 def test_a_book_under_twenty_trades_goes_in_other_options():
@@ -116,13 +126,19 @@ def test_the_one_holding_that_made_most_of_it_is_named():
 
 
 def test_no_holding_is_named_when_none_made_half_of_it():
-    even = [t("2026-06-01", 100, "INFY", is_option=False), t("2026-06-02", 100, "TCS", is_option=False),
-            t("2026-06-03", 100, "ITC", is_option=False)]
+    even = [
+        t("2026-06-01", 100, "INFY", is_option=False),
+        t("2026-06-02", 100, "TCS", is_option=False),
+        t("2026-06-03", 100, "ITC", is_option=False),
+    ]
     assert mx.verdict(options() + even).standout is None
 
 
 def test_no_holding_is_named_when_the_group_lost():
-    lost = [t("2026-06-01", 50, "INFY", is_option=False), t("2026-06-02", -500, "TCS", is_option=False)]
+    lost = [
+        t("2026-06-01", 50, "INFY", is_option=False),
+        t("2026-06-02", -500, "TCS", is_option=False),
+    ]
     assert mx.verdict(options() + lost).standout is None
 
 
@@ -131,13 +147,14 @@ def test_no_holding_is_named_when_the_group_lost():
 
 def verdict_line(trips) -> str:
     html = page(trips=trips)
-    h1 = html[html.index('<h1 class="title fact__title">'):]
+    h1 = html[html.index('<h1 class="title fact__title">') :]
     return readable(h1[: h1.index("</h1>")])
 
 
 def test_the_page_opens_on_the_result():
     assert verdict_line(options() + stocks()) == (
-        "Your option trades lost ₹2,520. Shree Cement, held up to 300 days, made back ₹1,300 of it.")
+        "Your option trades lost ₹2,520. Shree Cement, held up to 300 days, made back ₹1,300 of it."
+    )
 
 
 def test_counts_alone_no_longer_lead():
@@ -151,17 +168,29 @@ def test_a_holding_closed_the_same_day_is_not_called_held():
 
 def test_one_day_reads_in_the_singular():
     trips = options() + [t("2026-06-01", 700, "INFY", is_option=False, held_days=1)]
-    assert verdict_line(trips) == "Your option trades lost ₹2,520. INFY, held up to 1 day, made back ₹700 of it."
+    assert (
+        verdict_line(trips)
+        == "Your option trades lost ₹2,520. INFY, held up to 1 day, made back ₹700 of it."
+    )
 
 
 def test_made_back_is_only_said_of_less_than_was_lost():
     trips = options() + [t("2026-06-01", 9000, "INFY", is_option=False, held_days=30)]
-    assert verdict_line(trips) == "Your option trades lost ₹2,520. Your stock, ETF and futures trades made ₹9,000."
+    assert (
+        verdict_line(trips)
+        == "Your option trades lost ₹2,520. Your stock, ETF and futures trades made ₹9,000."
+    )
 
 
 def test_without_a_standout_the_group_is_told():
-    lost = [t("2026-06-01", 50, "INFY", is_option=False), t("2026-06-02", -500, "TCS", is_option=False)]
-    assert verdict_line(options() + lost) == "Your option trades lost ₹2,520. Your stock, ETF and futures trades lost ₹450."
+    lost = [
+        t("2026-06-01", 50, "INFY", is_option=False),
+        t("2026-06-02", -500, "TCS", is_option=False),
+    ]
+    assert (
+        verdict_line(options() + lost)
+        == "Your option trades lost ₹2,520. Your stock, ETF and futures trades lost ₹450."
+    )
 
 
 def test_options_alone():
@@ -174,7 +203,10 @@ def test_stocks_alone():
 
 def test_options_that_made_money_are_not_said_to_be_made_back():
     trips = [t("2026-01-05", 500), t("2026-06-01", 700, "INFY", is_option=False, held_days=30)]
-    assert verdict_line(trips) == "Your option trades made ₹500. Your stock, ETF and futures trades made ₹700."
+    assert (
+        verdict_line(trips)
+        == "Your option trades made ₹500. Your stock, ETF and futures trades made ₹700."
+    )
 
 
 def test_a_level_result_reads_as_level():
@@ -190,18 +222,28 @@ def test_each_book_has_a_row_with_one_line():
     assert "Crude options −₹2,400 20 trades. Worst day: 05 Jan 2026, −₹500." in body
     assert "NIFTY options −₹100 20 trades. Worst day: 02 Feb 2026, −₹150." in body
     assert "Other options −₹20 5 trades. Worst day: 01 May 2026, −₹10." in body
-    assert "Stocks and ETFs +₹1,100 3 trades. Shree Cement made ₹1,300, held up to 300 days." in body
+    assert (
+        "Stocks and ETFs +₹1,100 3 trades. Shree Cement made ₹1,300, held up to 300 days." in body
+    )
 
 
 def test_a_single_trade_reads_in_the_singular():
-    assert "Other options −₹500 1 trade. Worst day: 05 Jan 2026, −₹500." in text(trips=[t("2026-01-05", -500)])
+    assert "Other options −₹500 1 trade. Worst day: 05 Jan 2026, −₹500." in text(
+        trips=[t("2026-01-05", -500)]
+    )
 
 
 def test_the_books_say_no_more_than_the_record():
     # About the books, so it stops before the chapters: "trades made money" is an agreed count.
     body = readable(re.sub(r"<svg\b.*?</svg>", " ", page(), flags=re.DOTALL)).lower()
     body = body.split("four chapters")[0]
-    for word in ("your worst hour", "almost half", "made money", "every other price", "held about a year"):
+    for word in (
+        "your worst hour",
+        "almost half",
+        "made money",
+        "every other price",
+        "held about a year",
+    ):
         assert word not in body, word
 
 
@@ -224,7 +266,11 @@ def test_a_file_with_charges_does_not_say_before_charges():
 
 def test_the_charges_line_comes_right_after_the_verdict_not_in_the_footer():
     html = page()
-    assert html.index("</h1>") < html.index("every rupee figure below is gross") < html.index("Your books")
+    assert (
+        html.index("</h1>")
+        < html.index("every rupee figure below is gross")
+        < html.index("Your books")
+    )
 
 
 def test_the_charges_line_promises_nothing_scope_cannot_do_yet():
@@ -250,7 +296,9 @@ def test_every_chapter_is_listed_with_a_way_in():
 
 def test_a_chapter_with_too_few_trades_says_so():
     body = text(trips=[t("2026-01-05", 100), t("2026-01-06", 200)])
-    assert body.count("Not enough trades yet.") == 2  # fewer than five days; no losers. Zero occasions is a count, so chapter 3 says it
+    assert (
+        body.count("Not enough trades yet.") == 2
+    )  # fewer than five days; no losers. Zero occasions is a count, so chapter 3 says it
 
 
 def test_a_chapter_opened_shows_as_read_in_the_list():
@@ -263,8 +311,8 @@ def test_a_chapter_opened_shows_as_read_in_the_list():
 
 
 def start_button(html: str) -> str:
-    stage = html[html.index('<header class="stage'): html.index("</header>")]
-    return readable(stage[stage.index('<a class="btn'):]) if '<a class="btn' in stage else ""
+    stage = html[html.index('<header class="stage') : html.index("</header>")]
+    return readable(stage[stage.index('<a class="btn') :]) if '<a class="btn' in stage else ""
 
 
 def test_there_is_a_way_to_start():
@@ -291,9 +339,19 @@ def test_no_buy_or_sell_calls_stays():
 
 def _future(net):
     entry = datetime.fromisoformat("2026-06-01T10:00:00+05:30")
-    return mx.Trip("f1", "NIFTY FUT", "2026-06-01", entry, entry + timedelta(minutes=5), 300,
-                   Decimal(net), 1, sc.RiskUnitSourceV1.UNAVAILABLE, is_option=False,
-                   lines=(mx.TradeLine("NIFTY FUT", "FUT", "Buy", 1, None, None, Decimal(net)),))
+    return mx.Trip(
+        "f1",
+        "NIFTY FUT",
+        "2026-06-01",
+        entry,
+        entry + timedelta(minutes=5),
+        300,
+        Decimal(net),
+        1,
+        sc.RiskUnitSourceV1.UNAVAILABLE,
+        is_option=False,
+        lines=(mx.TradeLine("NIFTY FUT", "FUT", "Buy", 1, None, None, Decimal(net)),),
+    )
 
 
 def test_the_books_are_the_ones_every_other_page_calls_them():
@@ -305,8 +363,11 @@ def test_the_books_are_the_ones_every_other_page_calls_them():
 
 
 def test_a_standout_sits_on_the_row_that_holds_it():
-    trips = [*options(), t("2025-01-01", 900, "Shree Cement", is_option=False, held_days=30),
-             _future(10)]
+    trips = [
+        *options(),
+        t("2025-01-01", 900, "Shree Cement", is_option=False, held_days=30),
+        _future(10),
+    ]
     rows = {row.label: row for row in mx.verdict(trips).books}
     assert rows["Stocks and ETFs"].standout.symbol == "Shree Cement"
     assert rows["Futures"].standout is None

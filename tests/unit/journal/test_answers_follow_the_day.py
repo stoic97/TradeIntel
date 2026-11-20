@@ -75,7 +75,8 @@ def test_an_edit_on_the_new_version_points_at_the_old_answer(session, trader):  
     assert (new.journal_id, new.previous_entry_id) == (v2.id, old.id)
     assert fl.current(session, journal=v2, field="note", trip_id=None).value == "second"
     assert [e.value for e in fl.history(session, journal=v2, field="note", trip_id=None)] == [
-        "first", "second",
+        "first",
+        "second",
     ]
 
 
@@ -98,7 +99,8 @@ def test_a_recorded_stop_is_still_counted_two_versions_later(session, trader):  
     """It carried one version and was lost on the next, so the line told him he recorded none."""
     trips = load_trips()
     target = next(
-        d for d in sorted({t.trading_day for t in trips})
+        d
+        for d in sorted({t.trading_day for t in trips})
         if sum(t.trading_day == d for t in trips) >= 3
         and any(t.is_loss for t in trips if t.trading_day == d)
     )

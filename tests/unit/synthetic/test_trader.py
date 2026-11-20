@@ -5,6 +5,7 @@ on a gapless path loses exactly 1R, a target exit makes exactly target_r, a
 zero-skill trader has zero expectancy, and the stop distance may not depend on
 any bar at or after entry.
 """
+
 from dataclasses import replace
 from itertools import pairwise
 
@@ -73,8 +74,12 @@ def test_stop_gapped_through_fills_at_the_open_and_loses_more_than_1r():
     )
     # skill 1 with horizon 0 on a flat path always goes long; a long hold reaches the gap
     cfg = TraderConfig(
-        trades_per_day=200, skill=1.0, skill_horizon=0, no_entry_last_min=1,
-        hold_median_min=1000, hold_sigma=0.0,
+        trades_per_day=200,
+        skill=1.0,
+        skill_horizon=0,
+        no_entry_last_min=1,
+        hold_median_min=1000,
+        hold_sigma=0.0,
     )
     (t,) = simulate_trader(bars, seed=3, n_trades=1, config=cfg)
     assert t.direction == LONG and t.entry_idx < 35

@@ -29,12 +29,16 @@ ON_THE_SERVER = "05 Nov 2026"
 
 # ---------- one helper, and the boundary it sits on ----------
 
-@pytest.mark.parametrize(("utc", "expected"), [
-    (datetime(2026, 11, 5, 18, 29, tzinfo=UTC), "05 Nov 2026"),  # 23:59 IST
-    (datetime(2026, 11, 5, 18, 30, tzinfo=UTC), "06 Nov 2026"),  # 00:00 IST
-    (LATE_IN_UTC, IN_INDIA),
-    (datetime(2026, 12, 31, 20, 0, tzinfo=UTC), "01 Jan 2027"),   # a new year, too
-])
+
+@pytest.mark.parametrize(
+    ("utc", "expected"),
+    [
+        (datetime(2026, 11, 5, 18, 29, tzinfo=UTC), "05 Nov 2026"),  # 23:59 IST
+        (datetime(2026, 11, 5, 18, 30, tzinfo=UTC), "06 Nov 2026"),  # 00:00 IST
+        (LATE_IN_UTC, IN_INDIA),
+        (datetime(2026, 12, 31, 20, 0, tzinfo=UTC), "01 Jan 2027"),  # a new year, too
+    ],
+)
 def test_an_instant_is_dated_by_the_day_in_india(utc, expected):
     assert formatting.local_day(utc) == expected
 
@@ -47,14 +51,21 @@ def test_a_naive_timestamp_is_refused_not_guessed():
 
 # ---------- every page that dates a row by its own timestamp ----------
 
+
 def render(name: str, **context) -> str:
     return template_env().get_template(name).render(title="T", csrf_token="x", **context)
 
 
 def test_the_account_page_dates_a_late_read_by_the_day_in_india():
     """The defect as reported: an upload (or a read again) after 18:30 UTC."""
-    imp = NS(id=7, outcome=NS(value="accepted"), rows_in=10, trips_reconstructed=2,
-             source_account="A", created_at=LATE_IN_UTC)
+    imp = NS(
+        id=7,
+        outcome=NS(value="accepted"),
+        rows_in=10,
+        trips_reconstructed=2,
+        source_account="A",
+        created_at=LATE_IN_UTC,
+    )
     page = render("account.html", display_name="R", login_id="r", imports=[imp], changes={})
     rows = page.split("Your uploads", 1)[1]
     assert IN_INDIA in rows and ON_THE_SERVER not in rows
@@ -68,10 +79,22 @@ def test_the_consent_ledger_dates_an_event_by_the_day_in_india():
 
 
 def test_the_budget_page_dates_a_declaration_by_the_day_in_india():
-    d = NS(effective_from="2026-11-06", unit="INR", value=5000, capital_amount=None,
-           declared_at=LATE_IN_UTC, retrospective=False)
-    page = render("budget.html", declarations=[d], today="2026-11-06",
-                  default_from="2026-11-06", error=None, past_number=None)
+    d = NS(
+        effective_from="2026-11-06",
+        unit="INR",
+        value=5000,
+        capital_amount=None,
+        declared_at=LATE_IN_UTC,
+        retrospective=False,
+    )
+    page = render(
+        "budget.html",
+        declarations=[d],
+        today="2026-11-06",
+        default_from="2026-11-06",
+        error=None,
+        past_number=None,
+    )
     recorded = page.split("What you have told us", 1)[1]
     assert IN_INDIA in recorded and ON_THE_SERVER not in recorded
 
@@ -84,8 +107,11 @@ def test_home_dates_its_import_by_the_day_in_india():
 
 # ---------- the whole product, for the same mistake ----------
 
-CODE = [p for d in ("api", "journal", "mirror", "accounts", "eligibility", "charges")
-        for p in Path("services/production", d).rglob("*.py")]
+CODE = [
+    p
+    for d in ("api", "journal", "mirror", "accounts", "eligibility", "charges")
+    for p in Path("services/production", d).rglob("*.py")
+]
 TEMPLATES = sorted(Path("services/production/api/templates").rglob("*.html"))
 # A row's own timestamp (created_at, declared_at, uploaded_at, event.at ...) turned straight
 # into a date or a string, with no conversion to India in between.
@@ -100,9 +126,12 @@ def test_no_template_formats_a_timestamp_itself():
 
 
 def test_no_code_dates_a_stored_instant_without_converting_it():
-    found = [f"{p}:{n}: {line.strip()}"
-             for p in CODE for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
-             if RAW_INSTANT.search(line) and "astimezone" not in line]
+    found = [
+        f"{p}:{n}: {line.strip()}"
+        for p in CODE
+        for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+        if RAW_INSTANT.search(line) and "astimezone" not in line
+    ]
     assert found == []
 
 

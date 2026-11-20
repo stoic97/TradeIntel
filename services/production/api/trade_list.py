@@ -159,25 +159,25 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
         wanted = query.get(f.name, "")
         if wanted not in {value for _, value, _ in offered}:
             wanted = ""
-        drawn.append({
-            "name": f.name,
-            "label": f.label,
-            "choices": [
-                {"value": value, "label": label, "selected": value == wanted}
-                for _, value, label in offered
-            ],
-        })
+        drawn.append(
+            {
+                "name": f.name,
+                "label": f.label,
+                "choices": [
+                    {"value": value, "label": label, "selected": value == wanted}
+                    for _, value, label in offered
+                ],
+            }
+        )
         if wanted:
             kept = {id(t) for t, choice in read if choice is not None and choice[1] == wanted}
             shown = [t for t in shown if id(t) in kept]
     return {
         "filters": drawn,
-        "filtered": len(shown) != len(behind) or any(
-            c["selected"] for f in drawn for c in f["choices"]
-        ),
+        "filtered": len(shown) != len(behind)
+        or any(c["selected"] for f in drawn for c in f["choices"]),
         "shown": len(shown),
         "total": len(behind),
         "groups": S.groups(key, ctx, only=shown),
         "clear_href": S.see_all_href(key),
     }
-

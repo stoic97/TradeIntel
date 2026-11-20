@@ -61,9 +61,16 @@ def manifest_path(series: str | Path) -> Path:
 
 
 def _history(client, symbol: str, start: datetime, end: datetime) -> dict:
-    return client.history({"symbol": symbol, "resolution": "1", "date_format": "0",
-                           "range_from": str(int(start.timestamp())), "range_to": str(int(end.timestamp())),
-                           "cont_flag": "1"})
+    return client.history(
+        {
+            "symbol": symbol,
+            "resolution": "1",
+            "date_format": "0",
+            "range_from": str(int(start.timestamp())),
+            "range_to": str(int(end.timestamp())),
+            "cont_flag": "1",
+        }
+    )
 
 
 def near_month_symbol(client, today: date) -> str:
@@ -85,7 +92,9 @@ def fetch(client, symbol: str, start: date, end: date) -> dict[datetime, list[st
         e = min(s + timedelta(days=CHUNK_DAYS), stop)
         r = _history(client, symbol, s, e)
         if r.get("s") != "ok":
-            raise Refused(f"the broker refused {symbol} {s:%Y-%m-%d} to {e:%Y-%m-%d}: {r.get('message', r)}")
+            raise Refused(
+                f"the broker refused {symbol} {s:%Y-%m-%d} to {e:%Y-%m-%d}: {r.get('message', r)}"
+            )
         for c in r.get("candles") or []:
             t = datetime.fromtimestamp(c[0], IST).replace(tzinfo=None)
             out[t] = [f"{float(v):g}" for v in c[1:5]] + [str(int(c[5]))]
@@ -115,19 +124,30 @@ def _held(data: bytes) -> tuple[dict[datetime, list[str]], datetime, datetime, i
 def _seam(held: dict[datetime, list[str]], got: dict[datetime, list[str]]) -> None:
     both = sorted(held.keys() & got.keys())
     if not both:
-        raise Refused(f"seam: the broker returned none of the bars held over the last {OVERLAP_DAYS} days")
+        raise Refused(
+            f"seam: the broker returned none of the bars held over the last {OVERLAP_DAYS} days"
+        )
     close = [t for t in both if Decimal(held[t][3]) != Decimal(got[t][3])]
     if close:
-        raise Refused(f"seam: {len(close)} of {len(both)} held closes differ from the broker's, first at "
-                      f"{close[0]:%Y-%m-%d %H:%M}; its continuous series is not the one this file was built with")
+        raise Refused(
+            f"seam: {len(close)} of {len(both)} held closes differ from the broker's, first at "
+            f"{close[0]:%Y-%m-%d %H:%M}; its continuous series is not the one this file was built with"
+        )
     ohl = [t for t in both if any(Decimal(held[t][i]) != Decimal(got[t][i]) for i in range(3))]
     if len(ohl) > MAX_OHLC_MISMATCH * len(both):
         raise Refused(f"seam: {len(ohl)} of {len(both)} held bars differ in open, high or low")
 
 
-def extend(base: str | Path, out: str | Path, client, *, today: date,
-           calendar: dict[date, ms.SessionException], built: date,
-           base_source: str | None = None) -> ms.SeriesManifest:
+def extend(
+    base: str | Path,
+    out: str | Path,
+    client,
+    *,
+    today: date,
+    calendar: dict[date, ms.SessionException],
+    built: date,
+    base_source: str | None = None,
+) -> ms.SeriesManifest:
     base, out = Path(base), Path(out)
     data = base.read_bytes()
     held, first, last, n_held = _held(data)
@@ -137,27 +157,47 @@ def extend(base: str | Path, out: str | Path, client, *, today: date,
 
     new = {t: v for t, v in got.items() if last.date() < t.date() < today}
     if not new:
-        raise Refused(f"nothing new: the series already runs to {last:%Y-%m-%d}, and today's session is unfinished")
+        raise Refused(
+            f"nothing new: the series already runs to {last:%Y-%m-%d}, and today's session is unfinished"
+        )
     added_from, as_of = min(new).date(), max(new).date()
     check = ms.check_sessions(new, last.date() + timedelta(days=1), as_of, calendar)
     if not check.ok:
-        raise Refused("sessions without a reason in mcx_sessions.yaml: "
-                      + "; ".join(f"{d} {seen}" for d, seen in check.unexplained))
+        raise Refused(
+            "sessions without a reason in mcx_sessions.yaml: "
+            + "; ".join(f"{d} {seen}" for d, seen in check.unexplained)
+        )
 
     newline = b"\r\n" if data.split(b"\n", 1)[0].endswith(b"\r") else b"\n"
     body = data if data.endswith(b"\n") else data + newline
-    body += b"".join((t.strftime(FMT) + "," + ",".join(new[t])).encode() + newline for t in sorted(new))
+    body += b"".join(
+        (t.strftime(FMT) + "," + ",".join(new[t])).encode() + newline for t in sorted(new)
+    )
 
     prior = manifest_path(base)
-    before = (ms.read_manifest(prior).source if prior.exists()
-              else base_source or f"{base.name}, {first:%Y-%m-%d} to {last:%Y-%m-%d}")
+    before = (
+        ms.read_manifest(prior).source
+        if prior.exists()
+        else base_source or f"{base.name}, {first:%Y-%m-%d} to {last:%Y-%m-%d}"
+    )
     m = ms.SeriesManifest(
-        underlying="CRUDEOIL", serves=ms.CRUDE_SERVES, file=out.name,
-        sha256=hashlib.sha256(body).hexdigest(), rows=n_held + len(new),
-        first_bar=first, last_bar=max(new), as_of=as_of,
-        source=(f"{before}; then the Fyers history API, {symbol} with cont_flag=1 (near-month continuous), "
-                f"{added_from:%Y-%m-%d} to {as_of:%Y-%m-%d}, pulled {built:%Y-%m-%d}"),
-        roll=ms.ROLL_CONVENTION, clock=ms.CLOCK, interval="1 minute", built=built, extended_from=added_from,
+        underlying="CRUDEOIL",
+        serves=ms.CRUDE_SERVES,
+        file=out.name,
+        sha256=hashlib.sha256(body).hexdigest(),
+        rows=n_held + len(new),
+        first_bar=first,
+        last_bar=max(new),
+        as_of=as_of,
+        source=(
+            f"{before}; then the Fyers history API, {symbol} with cont_flag=1 (near-month continuous), "
+            f"{added_from:%Y-%m-%d} to {as_of:%Y-%m-%d}, pulled {built:%Y-%m-%d}"
+        ),
+        roll=ms.ROLL_CONVENTION,
+        clock=ms.CLOCK,
+        interval="1 minute",
+        built=built,
+        extended_from=added_from,
         sessions=tuple(f"{d:%Y-%m-%d} {seen}: {reason}" for d, seen, reason in check.listed),
     )
     tmp = out.with_name(out.name + ".part")
@@ -173,16 +213,30 @@ def _client(token_file: Path):
     from fyers_apiv3 import fyersModel  # only the refresh needs the broker's library
 
     tok = json.loads(token_file.read_text(encoding="utf-8"))
-    logs = tempfile.mkdtemp(prefix="fyers-")  # the library writes request logs; keep them out of the repo
-    return fyersModel.FyersModel(client_id=tok["client_id"], token=tok["access_token"], is_async=False,
-                                 log_path=logs + "/")
+    logs = tempfile.mkdtemp(
+        prefix="fyers-"
+    )  # the library writes request logs; keep them out of the repo
+    return fyersModel.FyersModel(
+        client_id=tok["client_id"], token=tok["access_token"], is_async=False, log_path=logs + "/"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("--token-file", type=Path, required=True, help="a Fyers token file, outside the repository")
-    p.add_argument("--series", type=Path, default=DEFAULT_SERIES, help="the series to extend (default: %(default)s)")
-    p.add_argument("--base", type=Path, help="first run only: the file to start from, when --series does not exist")
+    p.add_argument(
+        "--token-file", type=Path, required=True, help="a Fyers token file, outside the repository"
+    )
+    p.add_argument(
+        "--series",
+        type=Path,
+        default=DEFAULT_SERIES,
+        help="the series to extend (default: %(default)s)",
+    )
+    p.add_argument(
+        "--base",
+        type=Path,
+        help="first run only: the file to start from, when --series does not exist",
+    )
     p.add_argument("--base-source", help="first run only: where --base came from, for the manifest")
     a = p.parse_args(argv)
     base = a.series if a.series.exists() else a.base
@@ -190,18 +244,29 @@ def main(argv: list[str] | None = None) -> int:
         p.error(f"{a.series} does not exist yet: pass --base, the file it starts from")
     today = datetime.now(IST).date()
     try:
-        m = extend(base, a.series, _client(a.token_file), today=today, calendar=ms.load_calendar(), built=today,
-                   base_source=a.base_source)
+        m = extend(
+            base,
+            a.series,
+            _client(a.token_file),
+            today=today,
+            calendar=ms.load_calendar(),
+            built=today,
+            base_source=a.base_source,
+        )
     except Refused as e:
         print(f"refused, nothing written: {e}", file=sys.stderr)
         return 2
-    print(f"{m.file}: {m.rows:,} bars, {m.first_bar:%Y-%m-%d} to {m.as_of:%Y-%m-%d}, sha256 {m.sha256}")
+    print(
+        f"{m.file}: {m.rows:,} bars, {m.first_bar:%Y-%m-%d} to {m.as_of:%Y-%m-%d}, sha256 {m.sha256}"
+    )
     for s in m.sessions:
         print("  ", s)
     print("\nAdd to data/market/CROSSINGS.md:")
-    print(f"| {m.built:%Y-%m-%d} | `data/market/{m.file}` | Fyers history API, near-month continuous, "
-          f"through the fund's connection | - | `{m.sha256}` | MCX crude 1-min OHLCV, added "
-          f"{m.extended_from:%Y-%m-%d} to {m.as_of:%Y-%m-%d}. Prices only. |")
+    print(
+        f"| {m.built:%Y-%m-%d} | `data/market/{m.file}` | Fyers history API, near-month continuous, "
+        f"through the fund's connection | - | `{m.sha256}` | MCX crude 1-min OHLCV, added "
+        f"{m.extended_from:%Y-%m-%d} to {m.as_of:%Y-%m-%d}. Prices only. |"
+    )
     return 0
 
 

@@ -98,7 +98,13 @@ def test_a_book_is_lower_cased_inside_the_sentence():
 
 def test_the_line_names_no_lever():
     text = readable(chapter_page(2, losing_book("WIDGET"))).lower()
-    for said in ("something changed in your entries", "you should", "try ", "cut your", "hold your"):
+    for said in (
+        "something changed in your entries",
+        "you should",
+        "try ",
+        "cut your",
+        "hold your",
+    ):
         assert said not in text
 
 
@@ -126,19 +132,35 @@ def pages(tmp_path_factory):
     healthy = shutil._ntuple_diskusage(total=100, used=50, free=50)  # conftest's patch comes later
     patch = pytest.MonkeyPatch()
     patch.setattr(limits.shutil, "disk_usage", lambda _path: healthy)
-    saved = {k: os.environ.get(k) for k in ("SCOPE_DB", "SCOPE_FILES", "SCOPE_SECRET_KEY", "SCOPE_FILE_KEY")}
+    saved = {
+        k: os.environ.get(k)
+        for k in ("SCOPE_DB", "SCOPE_FILES", "SCOPE_SECRET_KEY", "SCOPE_FILE_KEY")
+    }
     from services.production.accounts.file_store import generate_key
 
-    os.environ.update(SCOPE_DB=f"sqlite:///{(root / 'd.db').as_posix()}", SCOPE_FILES=str(root / "files"),
-                      SCOPE_SECRET_KEY="x" * 40, SCOPE_FILE_KEY=generate_key())
+    os.environ.update(
+        SCOPE_DB=f"sqlite:///{(root / 'd.db').as_posix()}",
+        SCOPE_FILES=str(root / "files"),
+        SCOPE_SECRET_KEY="x" * 40,
+        SCOPE_FILE_KEY=generate_key(),
+    )
     try:
         engine = make_engine(os.environ["SCOPE_DB"])
         run_migrations(engine)
         client = sign_up(TestClient(create_app()), engine, "U", "demo")
         assert upload(client, path=DEMO).status_code == 303
-        got = {path: client.get(path).text for path in (
-            "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4",
-            S.fact_href("math"), S.fact_href("run"), S.fact_href("clock"))}
+        got = {
+            path: client.get(path).text
+            for path in (
+                "/mirror/chapter/1",
+                "/mirror/chapter/2",
+                "/mirror/chapter/3",
+                "/mirror/chapter/4",
+                S.fact_href("math"),
+                S.fact_href("run"),
+                S.fact_href("clock"),
+            )
+        }
         engine.dispose()
     finally:
         patch.undo()
@@ -157,7 +179,9 @@ def links(html: str) -> list[tuple[str, str]]:
 
 def test_the_overview_goes_on_to_its_first_page(pages):
     """TICKET-903: a chapter goes on to its own first page, from scope_map."""
-    assert (S.fact_href("math"), f"Next: {S.FACTS['math'].title}") in links(pages["/mirror/chapter/2"])
+    assert (S.fact_href("math"), f"Next: {S.FACTS['math'].title}") in links(
+        pages["/mirror/chapter/2"]
+    )
 
 
 def test_the_button_comes_after_the_feedback_question(pages):
@@ -178,12 +202,17 @@ def test_the_other_chapters_get_no_new_button(pages):
 
 def test_the_math_page_goes_to_the_next_fact(pages):
     """TICKET-903: the spine's Next, named for where it goes."""
-    assert f'href="{S.fact_href("run")}" aria-label="Next: Longest losing run"' in pages[S.fact_href("math")]
+    assert (
+        f'href="{S.fact_href("run")}" aria-label="Next: Longest losing run"'
+        in pages[S.fact_href("math")]
+    )
 
 
 def test_the_run_page_goes_to_the_next_fact(pages):
     """TICKET-903: the spine's Next."""
-    assert f'href="{S.fact_href("clock")}" aria-label="Next: The clock"' in pages[S.fact_href("run")]
+    assert (
+        f'href="{S.fact_href("clock")}" aria-label="Next: The clock"' in pages[S.fact_href("run")]
+    )
 
 
 def test_the_last_fact_goes_on_into_chapter_three(pages):
@@ -196,7 +225,9 @@ def test_a_run_with_no_story_still_has_a_way_on():
     figs = SF.facts(SF.record_context(make([100, 100, 100] * 12, symbol="WIDGET")), IMP)
     assert "next" not in figs["run"]  # TICKET-903: scope_map decides the way on, for every page
     assert S.next_step("run")["href"] == S.fact_href("clock")
-    template = Path("services/production/api/templates/scope/facts/run.html").read_text(encoding="utf-8")
+    template = Path("services/production/api/templates/scope/facts/run.html").read_text(
+        encoding="utf-8"
+    )
     assert "next_fact(f.next)" not in template
 
 

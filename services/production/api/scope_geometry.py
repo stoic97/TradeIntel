@@ -631,8 +631,10 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 f'aria-label="{_esc(s["name"] + ".")}">'
             )
         else:
-            o.append(f'<a class="scope__slice scope__slice--plain{state_class}" '
-                     f'aria-label="{_esc(s["name"] + ".")}">')
+            o.append(
+                f'<a class="scope__slice scope__slice--plain{state_class}" '
+                f'aria-label="{_esc(s["name"] + ".")}">'
+            )
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
             f'<path class="scope__focus" d="{s["focusRing"]}"/>'
@@ -1046,7 +1048,13 @@ def chart_call_put(trades: list, w: float, h: float) -> dict:
     gap, bw = 8, w / len(trades)
     top = (h - gap) / 2
     tall, biggest = top - 4, max([abs(net) for _, net in trades] + [1])
-    m = {"axis": f"M0 {fmt(top)}H{js_str(w)}M0 {fmt(h)}H{js_str(w)}", "light": "", "call": "", "put": "", "won": ""}
+    m = {
+        "axis": f"M0 {fmt(top)}H{js_str(w)}M0 {fmt(h)}H{js_str(w)}",
+        "light": "",
+        "call": "",
+        "put": "",
+        "won": "",
+    }
     for i, (side, net) in enumerate(trades):
         bh = max(3, abs(net) / biggest * tall)
         x = i * bw + bw * 0.15

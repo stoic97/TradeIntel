@@ -30,21 +30,27 @@ FIXTURE = Path("tests/fixtures/mirror_contract/main.json")
 
 def load() -> list[Trip]:
     return [
-        Trip(trip_id=r["trip_id"], trading_day=r["trading_day"],
-             entry_ts=datetime.fromisoformat(r["entry_ts"]),
-             exit_ts=datetime.fromisoformat(r["exit_ts"]),
-             holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
-             lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
-             symbol=r["symbol"])
+        Trip(
+            trip_id=r["trip_id"],
+            trading_day=r["trading_day"],
+            entry_ts=datetime.fromisoformat(r["entry_ts"]),
+            exit_ts=datetime.fromisoformat(r["exit_ts"]),
+            holding_seconds=r["holding_seconds"],
+            net=Decimal(r["net"]),
+            lots=r["lots"],
+            risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+            symbol=r["symbol"],
+        )
         for r in json.loads(FIXTURE.read_text())
     ]
 
 
 def day(trips, which: str) -> pd.Period:
-    return next(p for p in pd.periods_for(trips, unit=s.JournalUnit.DAY,
-                                          export_date="2026-09-30")
-                if p.period_start == which)
+    return next(
+        p
+        for p in pd.periods_for(trips, unit=s.JournalUnit.DAY, export_date="2026-09-30")
+        if p.period_start == which
+    )
 
 
 def facts_for(which: str) -> dict:
@@ -77,11 +83,12 @@ def test_two_straight_losses_uses_the_shared_definition_and_his_whole_history():
     was understood not to be resolved. Restating a figure in a test is how a stale
     number survives a correction, so this reads expected.json.
     """
-    expected = json.loads(
-        Path("tests/fixtures/mirror_contract/expected.json").read_text()
-    )["two_straight_losses"]
-    on_02_sep = [i for i in expected["condition_trip_ids"]
-                 if i in {"t04", "t05", "t06", "t07", "t08", "t09"}]
+    expected = json.loads(Path("tests/fixtures/mirror_contract/expected.json").read_text())[
+        "two_straight_losses"
+    ]
+    on_02_sep = [
+        i for i in expected["condition_trip_ids"] if i in {"t04", "t05", "t06", "t07", "t08", "t09"}
+    ]
 
     facts = facts_for("2026-09-02")
     after = facts["after_two_straight_losses"]
@@ -131,6 +138,5 @@ def test_a_blank_planned_sl_on_a_losing_day_is_noted_once():
 def test_a_recorded_stop_is_not_counted_as_missing():
     trips = load()
     period = day(trips, "2026-09-02")
-    facts = sec.build(period, history=trips, fees_available=False,
-                      trips_with_a_stop={"t04", "t05"})
+    facts = sec.build(period, history=trips, fees_available=False, trips_with_a_stop={"t04", "t05"})
     assert facts["planned_sl"]["losing_trades_without_one"] == 3

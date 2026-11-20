@@ -25,33 +25,50 @@ from tests.helpers.read_again import HEADER, send, words
 
 def _nifty(day: str, time: str, side: str, value: int, expiry: str, units: int) -> str:
     """One NIFTY lot: 50 units in January 2024, 75 in January 2025 (profile lot_sizes)."""
-    return (f"{day},{time},NIFTY {expiry} 20000 CALL,{side},INTRADAY,NSE,Derivative,{units},"
-            f"{value / units:.2f},{value:.2f},Traded")
+    return (
+        f"{day},{time},NIFTY {expiry} 20000 CALL,{side},INTRADAY,NSE,Derivative,{units},"
+        f"{value / units:.2f},{value:.2f},Traded"
+    )
 
 
 def _widget(day: str, time: str, side: str, price: str) -> str:
-    return (f"{day},{time},WIDGETOIL 19 NOV 5000 CALL,{side},INTRADAY,MCX,Commodity,100,{price},"
-            f"{Decimal(price) * 100:.2f},Traded")
+    return (
+        f"{day},{time},WIDGETOIL 19 NOV 5000 CALL,{side},INTRADAY,MCX,Commodity,100,{price},"
+        f"{Decimal(price) * 100:.2f},Traded"
+    )
 
 
-FIRST = "\n".join([
-    HEADER,
-    _nifty("2024-01-02", "09:30:00", "BUY", 5000, "25 JAN", 50),
-    _nifty("2024-01-02", "09:40:00", "SELL", 4500, "25 JAN", 50),
-    _nifty("2025-01-07", "09:30:00", "BUY", 7500, "30 JAN", 75),
-    _nifty("2025-01-07", "09:40:00", "SELL", 7800, "30 JAN", 75),
-    _widget("2025-11-03", "11:00:00", "BUY", "10.00"),
-    _widget("2025-11-03", "11:30:00", "SELL", "12.00"),
-]).encode() + b"\n"
-LATER = FIRST + "\n".join([
-    _widget("2025-11-04", "11:00:00", "BUY", "10.00"),
-    _widget("2025-11-04", "11:30:00", "SELL", "9.00"),
-]).encode() + b"\n"
+FIRST = (
+    "\n".join(
+        [
+            HEADER,
+            _nifty("2024-01-02", "09:30:00", "BUY", 5000, "25 JAN", 50),
+            _nifty("2024-01-02", "09:40:00", "SELL", 4500, "25 JAN", 50),
+            _nifty("2025-01-07", "09:30:00", "BUY", 7500, "30 JAN", 75),
+            _nifty("2025-01-07", "09:40:00", "SELL", 7800, "30 JAN", 75),
+            _widget("2025-11-03", "11:00:00", "BUY", "10.00"),
+            _widget("2025-11-03", "11:30:00", "SELL", "12.00"),
+        ]
+    ).encode()
+    + b"\n"
+)
+LATER = (
+    FIRST
+    + "\n".join(
+        [
+            _widget("2025-11-04", "11:00:00", "BUY", "10.00"),
+            _widget("2025-11-04", "11:30:00", "SELL", "9.00"),
+        ]
+    ).encode()
+    + b"\n"
+)
 
 
 def choose(client, period: str = RF.ALL, book: str = "", next_: str = "/mirror"):
-    return client.get("/mirror/filter?" + urlencode({"period": period, "book": book, "next": next_}),
-                      follow_redirects=False)
+    return client.get(
+        "/mirror/filter?" + urlencode({"period": period, "book": book, "next": next_}),
+        follow_redirects=False,
+    )
 
 
 def test_the_bar_offers_each_year_and_book_and_all(client):
@@ -87,7 +104,10 @@ def test_a_book_row_is_a_link_that_filters_to_that_book(client, monkeypatch):
     monkeypatch.setattr(mx, "NAMED_BOOK_MINIMUM", 1)
     send(client, FIRST)
     page = client.get("/mirror").text
-    link = re.search(r'<a class="link" href="(/mirror/filter\?[^"]*book=NIFTY\+options[^"]*)">NIFTY options</a>', page)
+    link = re.search(
+        r'<a class="link" href="(/mirror/filter\?[^"]*book=NIFTY\+options[^"]*)">NIFTY options</a>',
+        page,
+    )
     assert link
     client.get(link.group(1).replace("&amp;", "&"))
     assert "Showing NIFTY options only." in words(client.get("/mirror/chapter/1").text)
@@ -144,4 +164,7 @@ def test_the_sample_is_never_filtered(engine):
     visitor = TestClient(create_app())
     visitor.cookies.set(RF.COOKIE, "2026|")
     page = visitor.get("/sample").text
-    assert "report-filter" not in page and "Showing" not in words(page).split("Counted from your file")[0]
+    assert (
+        "report-filter" not in page
+        and "Showing" not in words(page).split("Counted from your file")[0]
+    )

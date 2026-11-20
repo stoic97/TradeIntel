@@ -1,5 +1,4 @@
-"""Moved out of tests/unit/api/test_scope_facts.py by TICKET-945, so that no test file imports another.
-"""
+"""Moved out of tests/unit/api/test_scope_facts.py by TICKET-945, so that no test file imports another."""
 
 from __future__ import annotations
 
@@ -12,7 +11,13 @@ from tests.unit.api.templating import template_env
 UNREAD = {"excluded": [(3, "A header row repeated mid-file")], "rejected": [], "refused": []}
 
 
-ENDING = {"journal_href": "/journals", "changed": None, "answered": False, "answers": {}, "note_limit": 2000}
+ENDING = {
+    "journal_href": "/journals",
+    "changed": None,
+    "answered": False,
+    "answers": {},
+    "note_limit": 2000,
+}
 
 
 def fact_page(key: str, trips=TRIPS, imp=IMP, unread=UNREAD) -> str:

@@ -8,6 +8,7 @@ What must hold, from the spec rather than from a run:
   recomputed here from resolved trips only; ``applied`` is a subset of ``flags``.
 * Each mechanism does what it says, and only on the trips it applied to.
 """
+
 import numpy as np
 import pytest
 

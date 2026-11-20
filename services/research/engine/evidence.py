@@ -200,9 +200,7 @@ def assess(
             failed_gate=f"n_condition {n_condition} below half the minimum {n_min[0]}",
             **common,
         )
-    exploratory = (
-        core.p_train >= P_TRAIN["Exploratory"] and core.p_hold >= P_HOLD["Exploratory"]
-    )
+    exploratory = core.p_train >= P_TRAIN["Exploratory"] and core.p_hold >= P_HOLD["Exploratory"]
     if n_condition < n_min[0] or n_comparison < n_min[1]:
         return Finding(
             "Exploratory" if exploratory else "Not enough evidence yet",
@@ -215,4 +213,6 @@ def assess(
         )
     if exploratory:
         return Finding("Exploratory", **common)
-    return Finding("Not enough evidence yet", failed_gate="P_train or P_hold below Exploratory", **common)
+    return Finding(
+        "Not enough evidence yet", failed_gate="P_train or P_hold below Exploratory", **common
+    )

@@ -44,6 +44,7 @@ Usage:
 ``--quick`` writes to its own path. A smoke result must never sit where the
 gate result belongs.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -174,8 +175,14 @@ def one(task: tuple[str, int, int]) -> Row:
     except (ValueError, BadDiagnostics) as e:
         # Too short to split, or too few days to fit. Anything else must crash the
         # sweep rather than be absorbed into the denominator as "not evaluable".
-        return Row(**blank, **extra, evaluable=False, fired=False,
-                   reason=f"{type(e).__name__}: {e}", seconds=time.time() - t0)
+        return Row(
+            **blank,
+            **extra,
+            evaluable=False,
+            fired=False,
+            reason=f"{type(e).__name__}: {e}",
+            seconds=time.time() - t0,
+        )
 
     n_min_c, n_min_comp = b2.N_MIN
     evaluable = r.n_condition >= n_min_c and r.n_comparison >= n_min_comp
@@ -190,19 +197,27 @@ def one(task: tuple[str, int, int]) -> Row:
     # so counting it as recall flatters the engine -- which is precisely what
     # happened on 12 Oct: 5 of 8 counted at k=2 where the truth was zero.
     fired = bool(
-        not r.finding.failed_gate
-        and r.core.real
-        and r.core.big_enough
-        and not r.core.killed
+        not r.finding.failed_gate and r.core.real and r.core.big_enough and not r.core.killed
     )
     return Row(
-        history_id=hid, kind=h.kind, n_trips=len(h.trips), median_day=median_day,
-        n_condition=r.n_condition, n_comparison=r.n_comparison,
+        history_id=hid,
+        kind=h.kind,
+        n_trips=len(h.trips),
+        median_day=median_day,
+        n_condition=r.n_condition,
+        n_comparison=r.n_comparison,
         n_condition_isolation=r.n_condition_isolation,
-        evaluable=evaluable, fired=fired and evaluable, reason=reason,
-        tier=r.finding.tier, failed_gate=r.finding.failed_gate,
-        p_train=r.core.p_train, m_train=r.core.m_train, p_hold=r.core.p_hold,
-        mde=r.finding.mde, seconds=time.time() - t0, **extra,
+        evaluable=evaluable,
+        fired=fired and evaluable,
+        reason=reason,
+        tier=r.finding.tier,
+        failed_gate=r.finding.failed_gate,
+        p_train=r.core.p_train,
+        m_train=r.core.m_train,
+        p_hold=r.core.p_hold,
+        mde=r.finding.mde,
+        seconds=time.time() - t0,
+        **extra,
     )
 
 
@@ -261,8 +276,11 @@ def outcomes_for(rows: list[Row], kind: str) -> list[nr.NullOutcome]:
         clusters = {r.history_id: i for i, r in enumerate(mine)}
     return [
         nr.NullOutcome(
-            history_id=r.history_id, cluster=clusters[r.history_id],
-            evaluable=r.evaluable, fired=r.fired, reason=r.reason,
+            history_id=r.history_id,
+            cluster=clusters[r.history_id],
+            evaluable=r.evaluable,
+            fired=r.fired,
+            reason=r.reason,
         )
         for r in mine
     ]
@@ -274,8 +292,14 @@ UNIT = {
 }
 
 
-def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int,
-                 seconds: float, recomputed_by: str | None = None) -> None:
+def write_report(
+    rows: list[Row],
+    meta: dict[str, object],
+    out: Path,
+    total: int,
+    seconds: float,
+    recomputed_by: str | None = None,
+) -> None:
     source: dict[str, object] = {
         "code_commit": meta["code_commit"],
         "code_dirty": meta["code_dirty"],
@@ -291,11 +315,18 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
     report: dict[str, object] = {
         "test_id": b2.TEST_ID,
         "grid_version": cp.GRID_VERSION,
-        "config": {"draws": CONFIG.draws, "warmup": CONFIG.warmup, "chains": CONFIG.chains,
-                   "seed": SEED, "window_days": WINDOW_DAYS, "n_min": list(b2.N_MIN),
-                   "theta_min": b2.THETA_MIN, "direction": b2.DIRECTION},
+        "config": {
+            "draws": CONFIG.draws,
+            "warmup": CONFIG.warmup,
+            "chains": CONFIG.chains,
+            "seed": SEED,
+            "window_days": WINDOW_DAYS,
+            "n_min": list(b2.N_MIN),
+            "theta_min": b2.THETA_MIN,
+            "direction": b2.DIRECTION,
+        },
         "fired_definition": "evaluable, no failed gate, and core.real and "
-                            "core.big_enough and not core.killed",
+        "core.big_enough and not core.killed",
         "scope": "nulls regenerated in process from null_seed; the export is not read back",
         "source": source,
         "n_rows": len(rows),
@@ -312,14 +343,22 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
         rate = nr.assess(o, clustering_unit=UNIT[kind], seed=SEED)
         report[kind] = rate.record()
         print(f"\n{kind}")
-        print(f"  {rate.n_fired} fired / {rate.n_evaluable} evaluable "
-              f"({rate.n_starved} starved) = {rate.rate:.2%}")
-        print(f"  authority [{rate.lo:.2%}, {rate.hi:.2%}] by {rate.interval_source}"
-              f"{'  (bootstrap degenerate)' if rate.bootstrap_degenerate else ''}")
-        print(f"  envelope  [{rate.envelope_lo:.2%}, {rate.envelope_hi:.2%}]  over "
-              f"{rate.n_clusters} windows, {rate.n_clusters_fired} with a fire")
-        print(f"  point_inside={rate.point_inside}  interval_inside={rate.interval_inside}  "
-              f"envelope_inside={rate.envelope_inside}")
+        print(
+            f"  {rate.n_fired} fired / {rate.n_evaluable} evaluable "
+            f"({rate.n_starved} starved) = {rate.rate:.2%}"
+        )
+        print(
+            f"  authority [{rate.lo:.2%}, {rate.hi:.2%}] by {rate.interval_source}"
+            f"{'  (bootstrap degenerate)' if rate.bootstrap_degenerate else ''}"
+        )
+        print(
+            f"  envelope  [{rate.envelope_lo:.2%}, {rate.envelope_hi:.2%}]  over "
+            f"{rate.n_clusters} windows, {rate.n_clusters_fired} with a fire"
+        )
+        print(
+            f"  point_inside={rate.point_inside}  interval_inside={rate.interval_inside}  "
+            f"envelope_inside={rate.envelope_inside}"
+        )
         print(f"  {rate.verdict}")
 
     trips: dict[str, dict[str, int]] = {}
@@ -336,12 +375,21 @@ def write_report(rows: list[Row], meta: dict[str, object], out: Path, total: int
     report["histories"] = [vars(r) for r in rows]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True, default=float) + "\n")
-    print(f"\nwrote {out.relative_to(ROOT)}  ({len(rows)}/{total} histories, "
-          f"complete={len(rows) == total})", flush=True)
+    print(
+        f"\nwrote {out.relative_to(ROOT)}  ({len(rows)}/{total} histories, "
+        f"complete={len(rows) == total})",
+        flush=True,
+    )
 
 
-def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, total: int,
-                        seconds: float, recomputed_by: str | None = None) -> None:
+def write_recall_report(
+    rows: list[Row],
+    meta: dict[str, object],
+    out: Path,
+    total: int,
+    seconds: float,
+    recomputed_by: str | None = None,
+) -> None:
     """Recall: of the histories where B2 was planted and could be tested, how many fired?
 
     Reported per effect size and history length, never pooled across effect
@@ -352,8 +400,10 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
     and the true intervals are wider still.
     """
     source: dict[str, object] = {
-        "code_commit": meta["code_commit"], "code_dirty": meta["code_dirty"],
-        "python": meta.get("python"), "numpy": meta.get("numpy"),
+        "code_commit": meta["code_commit"],
+        "code_dirty": meta["code_dirty"],
+        "python": meta.get("python"),
+        "numpy": meta.get("numpy"),
     }
     if recomputed_by:
         source["recomputed_by"] = recomputed_by
@@ -362,10 +412,18 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
 
     cells: dict[tuple[int, int], dict[str, object]] = {}
     for r in planted:
-        c = cells.setdefault((r.multiple, r.n_trips), {
-            "multiple": r.multiple, "n_trades": r.n_trips, "nominal": r.nominal,
-            "reached": r.reached, "n": 0, "evaluable": 0, "fired": 0,
-        })
+        c = cells.setdefault(
+            (r.multiple, r.n_trips),
+            {
+                "multiple": r.multiple,
+                "n_trades": r.n_trips,
+                "nominal": r.nominal,
+                "reached": r.reached,
+                "n": 0,
+                "evaluable": 0,
+                "fired": 0,
+            },
+        )
         c["n"] = int(c["n"]) + 1
         c["evaluable"] = int(c["evaluable"]) + int(r.evaluable)
         c["fired"] = int(c["fired"]) + int(r.fired)
@@ -376,8 +434,10 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
 
     by_k: dict[int, dict[str, object]] = {}
     for (k, _), c in cells.items():
-        a = by_k.setdefault(k, {"nominal": c["nominal"], "reached": c["reached"],
-                                "n": 0, "evaluable": 0, "fired": 0})
+        a = by_k.setdefault(
+            k,
+            {"nominal": c["nominal"], "reached": c["reached"], "n": 0, "evaluable": 0, "fired": 0},
+        )
         for key in ("n", "evaluable", "fired"):
             a[key] = int(a[key]) + int(c[key])
     for a in by_k.values():
@@ -391,12 +451,20 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
         "measure": "recall on planted histories",
         "fired_definition": "core.real and core.big_enough and not core.killed",
         "clustering": "8 seeds per cell share the one crude series; intervals are "
-                      "Wilson over seeds and so are narrower than the truth",
-        "config": {"draws": CONFIG.draws, "warmup": CONFIG.warmup, "chains": CONFIG.chains,
-                   "seed": SEED, "n_min": list(b2.N_MIN), "theta_min": b2.THETA_MIN,
-                   "direction": b2.DIRECTION},
+        "Wilson over seeds and so are narrower than the truth",
+        "config": {
+            "draws": CONFIG.draws,
+            "warmup": CONFIG.warmup,
+            "chains": CONFIG.chains,
+            "seed": SEED,
+            "n_min": list(b2.N_MIN),
+            "theta_min": b2.THETA_MIN,
+            "direction": b2.DIRECTION,
+        },
         "source": source,
-        "n_rows": len(rows), "n_expected": total, "complete": len(rows) == total,
+        "n_rows": len(rows),
+        "n_expected": total,
+        "complete": len(rows) == total,
         "seconds": round(seconds, 1),
         "wrong_direction_fires": wrong_direction,
         "by_effect_size": {str(k): by_k[k] for k in sorted(by_k)},
@@ -404,51 +472,73 @@ def write_recall_report(rows: list[Row], meta: dict[str, object], out: Path, tot
         "histories": [vars(r) for r in rows],
     }
 
-    print(f"\n{'k':>2} {'planted':>9} {'trades':>7} {'evaluable':>10} {'fired':>6} "
-          f"{'recall':>8}  95% interval")
+    print(
+        f"\n{'k':>2} {'planted':>9} {'trades':>7} {'evaluable':>10} {'fired':>6} "
+        f"{'recall':>8}  95% interval"
+    )
     for key in sorted(cells):
         c = cells[key]
         ev = int(c["evaluable"])
         rec = f"{c['recall']:.0%}" if c["recall"] is not None else "   -"
-        iv = (f"[{c['interval'][0]:.0%}, {c['interval'][1]:.0%}]"
-              if c["interval"] else "not testable")
+        iv = (
+            f"[{c['interval'][0]:.0%}, {c['interval'][1]:.0%}]" if c["interval"] else "not testable"
+        )
         star = "" if c["reached"] else "  (saturated)"
-        print(f"{c['multiple']:>2} {float(c['nominal']):>8.2f}R {c['n_trades']:>7} "
-              f"{ev:>7}/{c['n']:<2} {int(c['fired']):>6} {rec:>8}  {iv}{star}")
+        print(
+            f"{c['multiple']:>2} {float(c['nominal']):>8.2f}R {c['n_trades']:>7} "
+            f"{ev:>7}/{c['n']:<2} {int(c['fired']):>6} {rec:>8}  {iv}{star}"
+        )
     print("\nby effect size, lengths pooled:")
     for k in sorted(by_k):
         a = by_k[k]
         rec = f"{a['recall']:.0%}" if a["recall"] is not None else "-"
         iv = f"[{a['interval'][0]:.0%}, {a['interval'][1]:.0%}]" if a["interval"] else ""
-        print(f"  k={k}  {float(a['nominal']):.2f}R  {int(a['fired'])}/{int(a['evaluable'])} "
-              f"= {rec}  {iv}{'' if a['reached'] else '  (saturated)'}")
+        print(
+            f"  k={k}  {float(a['nominal']):.2f}R  {int(a['fired'])}/{int(a['evaluable'])} "
+            f"= {rec}  {iv}{'' if a['reached'] else '  (saturated)'}"
+        )
     print(f"\nfires in the wrong direction: {len(wrong_direction)}")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=True, default=float) + "\n")
-    print(f"wrote {out.relative_to(ROOT)}  ({len(rows)}/{total}, "
-          f"complete={len(rows) == total})", flush=True)
+    print(
+        f"wrote {out.relative_to(ROOT)}  ({len(rows)}/{total}, complete={len(rows) == total})",
+        flush=True,
+    )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--planted", action="store_true",
-                    help="sweep B2's planted cells and report recall instead of the null rate")
+    ap.add_argument(
+        "--planted",
+        action="store_true",
+        help="sweep B2's planted cells and report recall instead of the null rate",
+    )
     ap.add_argument("--quick", action="store_true", help="40 adversarial + 20 clean")
     ap.add_argument("--n-adversarial", type=int, default=None)
     ap.add_argument("--n-clean", type=int, default=None)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 4) // 2))
-    ap.add_argument("--report-only", action="store_true",
-                    help="assemble the report from the checkpoint without running fits")
-    ap.add_argument("--rebuild-from", type=Path, default=None,
-                    help="recompute a finished report's intervals from its own saved rows")
+    ap.add_argument(
+        "--report-only",
+        action="store_true",
+        help="assemble the report from the checkpoint without running fits",
+    )
+    ap.add_argument(
+        "--rebuild-from",
+        type=Path,
+        default=None,
+        help="recompute a finished report's intervals from its own saved rows",
+    )
     ap.add_argument("--restart", action="store_true", help="discard any checkpoint")
     ap.add_argument("--allow-dirty", action="store_true")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
 
-    n_adv = args.n_adversarial if args.n_adversarial is not None else (
-        40 if args.quick else cp.N_ADVERSARIAL)
+    n_adv = (
+        args.n_adversarial
+        if args.n_adversarial is not None
+        else (40 if args.quick else cp.N_ADVERSARIAL)
+    )
     n_clean = args.n_clean if args.n_clean is not None else (20 if args.quick else cp.N_CLEAN)
     planted = planted_tasks() if args.planted else []
     if args.planted:
@@ -463,8 +553,9 @@ def main() -> int:
         previous = json.loads(args.rebuild_from.read_text())
         rows = [Row(**h) for h in previous["histories"]]
         print(f"rebuilding from {len(rows)} saved rows, no fits run", flush=True)
-        writer(rows, previous["source"], out, len(rows), 0.0,
-               recomputed_by=_git("rev-parse", "HEAD"))
+        writer(
+            rows, previous["source"], out, len(rows), 0.0, recomputed_by=_git("rev-parse", "HEAD")
+        )
         return 0
 
     if args.report_only:
@@ -481,8 +572,12 @@ def main() -> int:
     if dirty and not args.allow_dirty:
         print("refusing: tracked files have uncommitted changes (commit, or --allow-dirty)")
         return 1
-    meta = run_meta(_git("rev-parse", "HEAD"), dirty,
-                    0 if args.planted else n_adv, 0 if args.planted else n_clean)
+    meta = run_meta(
+        _git("rev-parse", "HEAD"),
+        dirty,
+        0 if args.planted else n_adv,
+        0 if args.planted else n_clean,
+    )
     meta["planted"] = bool(args.planted)
     rows_path, rows = open_checkpoint(out, meta, args.restart)
     done_ids = {r.history_id for r in rows}
@@ -501,10 +596,16 @@ def main() -> int:
 
     if rows:
         print(f"resuming: {len(rows)} of {total} already done", flush=True)
-    what = (f"{len(b2_cells())} planted cells x {cp.SEEDS_PER_CELL} seeds" if args.planted
-            else f"{n_adv} adversarial first, then {n_clean} clean")
-    print(f"{len(tasks)} to run on {args.workers} workers ({what}); checkpoint "
-          f"{rows_path.relative_to(ROOT)}", flush=True)
+    what = (
+        f"{len(b2_cells())} planted cells x {cp.SEEDS_PER_CELL} seeds"
+        if args.planted
+        else f"{n_adv} adversarial first, then {n_clean} clean"
+    )
+    print(
+        f"{len(tasks)} to run on {args.workers} workers ({what}); checkpoint "
+        f"{rows_path.relative_to(ROOT)}",
+        flush=True,
+    )
 
     start = time.time()
     if tasks:
@@ -519,8 +620,11 @@ def main() -> int:
                     fired = sum(1 for r in rows if r.fired)
                     ev = sum(1 for r in rows if r.evaluable)
                     eta = el / max(n_new, 1) * (len(tasks) - n_new)
-                    print(f"  {len(rows):5d}/{total}  evaluable {ev:5d}  fired {fired:4d}  "
-                          f"{el / 60:5.1f} min elapsed, ~{eta / 60:4.1f} min left", flush=True)
+                    print(
+                        f"  {len(rows):5d}/{total}  evaluable {ev:5d}  fired {fired:4d}  "
+                        f"{el / 60:5.1f} min elapsed, ~{eta / 60:4.1f} min left",
+                        flush=True,
+                    )
             print("  all fits done; shutting the pool down (this can take minutes)", flush=True)
 
     writer(rows, meta, out, total, time.time() - start)

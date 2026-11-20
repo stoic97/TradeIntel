@@ -30,8 +30,12 @@ def session(tmp_path, name="e2e"):
 
 
 def trader(sess) -> m.Trader:
-    t = m.Trader(display_name="Design partner", login_id="dp", password_hash="x",
-                 created_at=datetime.now(UTC))
+    t = m.Trader(
+        display_name="Design partner",
+        login_id="dp",
+        password_hash="x",
+        created_at=datetime.now(UTC),
+    )
     sess.add(t)
     sess.flush()
     return t
@@ -41,14 +45,22 @@ def upload(sess, who: m.Trader, path: Path, existing: dict[str, int] | None = No
     plan = pl.plan_import(
         path.read_text(),
         context=pl.ImportContext(
-            trader_id=str(who.id), source_account="A", code_version="e2e",
-            existing_days=existing or {}, export_date="2026-10-18",
+            trader_id=str(who.id),
+            source_account="A",
+            code_version="e2e",
+            existing_days=existing or {},
+            export_date="2026-10-18",
             export_date_source="trader",
         ),
     )
     return persist.write_plan(
-        sess, trader=who, plan=plan, raw_sha256="a" * 64,
-        original_name=path.name, stored_path=f"/tmp/{path.name}", size=path.stat().st_size,
+        sess,
+        trader=who,
+        plan=plan,
+        raw_sha256="a" * 64,
+        original_name=path.name,
+        stored_path=f"/tmp/{path.name}",
+        size=path.stat().st_size,
     )
 
 

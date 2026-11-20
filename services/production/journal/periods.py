@@ -63,13 +63,11 @@ def default_unit(trips: list[Trip]) -> UnitChoice:
     """The density rule. Nothing about the trader, only about this upload."""
     days = _by_day(trips)
     if not days:
-        return UnitChoice(s.JournalUnit.PER_N_TRIPS, k.DEFAULT_TRIPS_PER_JOURNAL,
-                          False, 0.0)
+        return UnitChoice(s.JournalUnit.PER_N_TRIPS, k.DEFAULT_TRIPS_PER_JOURNAL, False, 0.0)
     per_day = median(len(day_trips) for day_trips in days.values())
     if per_day >= k.DENSITY_THRESHOLD_TRIPS_PER_DAY:
         return UnitChoice(s.JournalUnit.DAY, None, False, float(per_day))
-    return UnitChoice(s.JournalUnit.PER_N_TRIPS, k.DEFAULT_TRIPS_PER_JOURNAL,
-                      False, float(per_day))
+    return UnitChoice(s.JournalUnit.PER_N_TRIPS, k.DEFAULT_TRIPS_PER_JOURNAL, False, float(per_day))
 
 
 def resolve_unit(
@@ -84,8 +82,8 @@ def resolve_unit(
         return rule
     return UnitChoice(
         unit=preference,
-        n=preference_n or (k.DEFAULT_TRIPS_PER_JOURNAL
-                           if preference is s.JournalUnit.PER_N_TRIPS else None),
+        n=preference_n
+        or (k.DEFAULT_TRIPS_PER_JOURNAL if preference is s.JournalUnit.PER_N_TRIPS else None),
         from_preference=True,
         median_trips_per_day=rule.median_trips_per_day,
     )
@@ -123,7 +121,7 @@ def _day_periods(trips: list[Trip], export_date: str | None) -> list[Period]:
             period_start=day,
             period_end=day,
             trips=tuple(days[day]),
-            complete=_day_is_complete(day, ordered[i + 1:], export_date),
+            complete=_day_is_complete(day, ordered[i + 1 :], export_date),
         )
         for i, day in enumerate(ordered)
     ]
@@ -141,10 +139,11 @@ def _week_periods(trips: list[Trip], export_date: str | None) -> list[Period]:
     ordered = sorted(weeks)
     out = []
     for i, (monday, sunday) in enumerate(ordered):
-        later = bool(ordered[i + 1:])
+        later = bool(ordered[i + 1 :])
         complete = later or (export_date is not None and export_date > sunday)
-        out.append(Period(s.JournalUnit.WEEK, monday, sunday,
-                          tuple(weeks[(monday, sunday)]), complete))
+        out.append(
+            Period(s.JournalUnit.WEEK, monday, sunday, tuple(weeks[(monday, sunday)]), complete)
+        )
     return out
 
 
@@ -153,12 +152,14 @@ def _trip_group_periods(trips: list[Trip], n: int) -> list[Period]:
     ordered = sorted(trips, key=lambda t: (t.entry_ts, t.trip_id))
     out = []
     for start in range(0, len(ordered), n):
-        group = ordered[start:start + n]
-        out.append(Period(
-            unit=s.JournalUnit.PER_N_TRIPS,
-            period_start=group[0].trading_day,
-            period_end=group[-1].trading_day,
-            trips=tuple(group),
-            complete=len(group) == n,
-        ))
+        group = ordered[start : start + n]
+        out.append(
+            Period(
+                unit=s.JournalUnit.PER_N_TRIPS,
+                period_start=group[0].trading_day,
+                period_end=group[-1].trading_day,
+                trips=tuple(group),
+                complete=len(group) == n,
+            )
+        )
     return out

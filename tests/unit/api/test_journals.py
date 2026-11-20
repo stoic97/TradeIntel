@@ -69,8 +69,10 @@ def test_the_list_shows_five_at_most_and_counts_the_rest(engine, client):
 def _every_month(client) -> str:
     page = client.get("/journals/catch-up").text
     html = page
-    while (prev := re.search(r'<a\b[^>]*\brel="prev"[^>]*>', page)):
-        page = client.get(re.search(r'href="([^"]+)"', prev.group(0)).group(1).replace("&amp;", "&")).text
+    while prev := re.search(r'<a\b[^>]*\brel="prev"[^>]*>', page):
+        page = client.get(
+            re.search(r'href="([^"]+)"', prev.group(0)).group(1).replace("&amp;", "&")
+        ).text
         html += page
     return html
 
@@ -114,9 +116,15 @@ def test_a_field_answer_is_stored_with_a_derived_phase(engine, client):
     with make_session(engine) as sess:
         trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
     page = client.get(f"/journals/{journal.id}").text
-    client.post(f"/journals/{journal.id}/field",
-                data={"field": "planned_sl", "trip_id": trip_id, "value": "250",
-                      "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        f"/journals/{journal.id}/field",
+        data={
+            "field": "planned_sl",
+            "trip_id": trip_id,
+            "value": "250",
+            "csrf_token": CSRF.search(page).group(1),
+        },
+    )
     with make_session(engine) as sess:
         entry = sess.scalars(select(m.JournalFieldEntry)).one()
     assert entry.value == "250"
@@ -131,21 +139,29 @@ def test_a_second_answer_is_a_version_not_an_edit(engine, client):
         trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
     for value in ("250", "300"):
         page = client.get(f"/journals/{journal.id}").text
-        client.post(f"/journals/{journal.id}/field",
-                    data={"field": "planned_sl", "trip_id": trip_id, "value": value,
-                          "csrf_token": CSRF.search(page).group(1)})
+        client.post(
+            f"/journals/{journal.id}/field",
+            data={
+                "field": "planned_sl",
+                "trip_id": trip_id,
+                "value": value,
+                "csrf_token": CSRF.search(page).group(1),
+            },
+        )
     with make_session(engine) as sess:
-        rows = list(sess.scalars(
-            select(m.JournalFieldEntry).order_by(m.JournalFieldEntry.id)).all())
+        rows = list(
+            sess.scalars(select(m.JournalFieldEntry).order_by(m.JournalFieldEntry.id)).all()
+        )
     assert [r.value for r in rows] == ["250", "300"]
     assert rows[1].previous_entry_id == rows[0].id, "the earlier answer is still there"
 
 
 def test_a_field_answer_needs_its_csrf_token(engine, client):
     journal = _journals(engine)[0]
-    response = client.post(f"/journals/{journal.id}/field",
-                           data={"field": "planned_sl", "trip_id": "t01",
-                                 "value": "250", "csrf_token": "forged"})
+    response = client.post(
+        f"/journals/{journal.id}/field",
+        data={"field": "planned_sl", "trip_id": "t01", "value": "250", "csrf_token": "forged"},
+    )
     assert response.status_code == 403
     with make_session(engine) as sess:
         assert sess.scalars(select(m.JournalFieldEntry)).all() == []
@@ -166,17 +182,36 @@ def test_the_question_arrives_after_a_second_upload(engine, client):
         client.get(f"/journals/{journal.id}")
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
-        raw = m.RawFile(trader_id=trader.id, sha256="e" * 64, original_name="g.csv",
-                        size=1, stored_path="/tmp/g", uploaded_at=datetime.now(UTC))
+        raw = m.RawFile(
+            trader_id=trader.id,
+            sha256="e" * 64,
+            original_name="g.csv",
+            size=1,
+            stored_path="/tmp/g",
+            uploaded_at=datetime.now(UTC),
+        )
         sess.add(raw)
         sess.flush()
-        sess.add(m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                          adapter_id="dhan_tradebook_v1", adapter_version="1",
-                          filemap_version="1", code_version="fixturesha",
-                          outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-                          rows_in=0, rows_parsed=0, rows_excluded=0,
-                          fees_available=False, version_no=2, trips_reconstructed=0,
-                          density_default_unit="day", created_at=datetime.now(UTC)))
+        sess.add(
+            m.Import(
+                trader_id=trader.id,
+                raw_file_id=raw.id,
+                source_account="A",
+                adapter_id="dhan_tradebook_v1",
+                adapter_version="1",
+                filemap_version="1",
+                code_version="fixturesha",
+                outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+                rows_in=0,
+                rows_parsed=0,
+                rows_excluded=0,
+                fees_available=False,
+                version_no=2,
+                trips_reconstructed=0,
+                density_default_unit="day",
+                created_at=datetime.now(UTC),
+            )
+        )
         sess.commit()
     body = client.get(f"/journals/{_journals(engine)[0].id}").text
     assert "month" in body.lower() and "500" in body, "the question should be asked"
@@ -186,11 +221,15 @@ def test_a_journal_belongs_to_its_owner_only(engine, client):
     with make_session(engine) as sess:
         _seed(sess, "other")
         mine = sess.scalars(
-            select(m.Journal).join(m.Trader, m.Journal.trader_id == m.Trader.id)
-            .where(m.Trader.login_id == "fx")).first()
+            select(m.Journal)
+            .join(m.Trader, m.Journal.trader_id == m.Trader.id)
+            .where(m.Trader.login_id == "fx")
+        ).first()
         theirs = sess.scalars(
-            select(m.Journal).join(m.Trader, m.Journal.trader_id == m.Trader.id)
-            .where(m.Trader.login_id == "other")).first()
+            select(m.Journal)
+            .join(m.Trader, m.Journal.trader_id == m.Trader.id)
+            .where(m.Trader.login_id == "other")
+        ).first()
         mine_id, theirs_id = mine.id, theirs.id
     assert client.get(f"/journals/{mine_id}").status_code == 200
     assert client.get(f"/journals/{theirs_id}").status_code == 404
@@ -214,15 +253,23 @@ def test_one_save_records_every_answer_for_that_trade(engine, client):
     with make_session(engine) as sess:
         trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
     page = client.get(f"/journals/{journal.id}").text
-    client.post(f"/journals/{journal.id}/field",
-                data={"trip_id": trip_id, "planned_sl": "250",
-                      "rationale": "range break", "stop_existed_at_entry": "yes",
-                      "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        f"/journals/{journal.id}/field",
+        data={
+            "trip_id": trip_id,
+            "planned_sl": "250",
+            "rationale": "range break",
+            "stop_existed_at_entry": "yes",
+            "csrf_token": CSRF.search(page).group(1),
+        },
+    )
     with make_session(engine) as sess:
-        stored = {e.field: e.value for e in sess.scalars(
-            select(m.JournalFieldEntry)).all()}
-    assert stored == {"planned_sl": "250", "rationale": "range break",
-                      "stop_existed_at_entry": "yes"}
+        stored = {e.field: e.value for e in sess.scalars(select(m.JournalFieldEntry)).all()}
+    assert stored == {
+        "planned_sl": "250",
+        "rationale": "range break",
+        "stop_existed_at_entry": "yes",
+    }
 
 
 def test_resaving_the_same_answers_adds_no_versions(engine, client):
@@ -235,24 +282,32 @@ def test_resaving_the_same_answers_adds_no_versions(engine, client):
     journal = _journals(engine)[0]
     with make_session(engine) as sess:
         trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
-    answers = {"trip_id": trip_id, "planned_sl": "250", "rationale": "range break",
-               "stop_existed_at_entry": "yes"}
+    answers = {
+        "trip_id": trip_id,
+        "planned_sl": "250",
+        "rationale": "range break",
+        "stop_existed_at_entry": "yes",
+    }
     for _ in range(3):
         page = client.get(f"/journals/{journal.id}").text
-        client.post(f"/journals/{journal.id}/field",
-                    data={**answers, "csrf_token": CSRF.search(page).group(1)})
+        client.post(
+            f"/journals/{journal.id}/field",
+            data={**answers, "csrf_token": CSRF.search(page).group(1)},
+        )
     with make_session(engine) as sess:
         rows = list(sess.scalars(select(m.JournalFieldEntry)).all())
     assert len(rows) == 3, [(r.field, r.value) for r in rows]
 
     # Changing one of them is still a version, and only that one.
     page = client.get(f"/journals/{journal.id}").text
-    client.post(f"/journals/{journal.id}/field",
-                data={**answers, "planned_sl": "300",
-                      "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        f"/journals/{journal.id}/field",
+        data={**answers, "planned_sl": "300", "csrf_token": CSRF.search(page).group(1)},
+    )
     with make_session(engine) as sess:
-        rows = list(sess.scalars(
-            select(m.JournalFieldEntry).order_by(m.JournalFieldEntry.id)).all())
+        rows = list(
+            sess.scalars(select(m.JournalFieldEntry).order_by(m.JournalFieldEntry.id)).all()
+        )
     assert len(rows) == 4
     assert rows[-1].field == "planned_sl" and rows[-1].value == "300"
 
@@ -263,10 +318,16 @@ def test_an_empty_answer_left_alone_is_not_recorded(engine, client):
     with make_session(engine) as sess:
         trip_id = json.loads(sess.get(m.Journal, journal.id).trip_ids)[0]
     page = client.get(f"/journals/{journal.id}").text
-    client.post(f"/journals/{journal.id}/field",
-                data={"trip_id": trip_id, "planned_sl": "", "rationale": "",
-                      "stop_existed_at_entry": "",
-                      "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        f"/journals/{journal.id}/field",
+        data={
+            "trip_id": trip_id,
+            "planned_sl": "",
+            "rationale": "",
+            "stop_existed_at_entry": "",
+            "csrf_token": CSRF.search(page).group(1),
+        },
+    )
     with make_session(engine) as sess:
         assert sess.scalars(select(m.JournalFieldEntry)).all() == []
 

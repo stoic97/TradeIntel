@@ -30,24 +30,50 @@ def client(engine):
 def engine():
     return eligibility_page_engine()
 
+
 NS = types.SimpleNamespace
 
 
 def result(enough=0, short=0, undetermined=0, **waiting) -> NS:
     def verdicts(state, n):
-        return [NS(test=NS(id=f"X{i}"), state=NS(value=state), reason="r", need=1,
-                   unit=NS(value="trips")) for i in range(n)]
+        return [
+            NS(
+                test=NS(id=f"X{i}"),
+                state=NS(value=state),
+                reason="r",
+                need=1,
+                unit=NS(value="trips"),
+            )
+            for i in range(n)
+        ]
+
     short_ = verdicts("insufficient_sample", short)
     waiting_ = verdicts("required_data_missing", sum(waiting.values()))
-    return NS(total=19, enough=verdicts("enough", enough), short=short_, waiting=waiting_,
-              undetermined=verdicts("undetermined", undetermined),
-              blocked=short_ + waiting_, waiting_counts=dict(waiting))
+    return NS(
+        total=19,
+        enough=verdicts("enough", enough),
+        short=short_,
+        waiting=waiting_,
+        undetermined=verdicts("undetermined", undetermined),
+        blocked=short_ + waiting_,
+        waiting_counts=dict(waiting),
+    )
 
 
 def render(res: NS, draft: bool = True) -> str:
-    return template_env().get_template("eligibility.html").render(
-        title="What we can check", result=res, trips=40, days=8, csrf_token="x",
-        framework=NS(version="9.9.9"), draft=draft)
+    return (
+        template_env()
+        .get_template("eligibility.html")
+        .render(
+            title="What we can check",
+            result=res,
+            trips=40,
+            days=8,
+            csrf_token="x",
+            framework=NS(version="9.9.9"),
+            draft=draft,
+        )
+    )
 
 
 def column(page: str) -> str:
@@ -74,7 +100,10 @@ def test_the_library_sorts_into_what_each_check_waits_on():
     """Read by hand from framework_v1.yaml: R8 and S5 on regimes, R7 on stops, E2 and
     E4p on ticks, S10 on events. The trades do not matter to any of them."""
     assert el.assess([]).waiting_counts == {
-        "market_context": 2, "stop": 1, "finer_prices": 2, "release_calendar": 1,
+        "market_context": 2,
+        "stop": 1,
+        "finer_prices": 2,
+        "release_calendar": 1,
     }
 
 
@@ -89,17 +118,26 @@ def test_each_verdict_keeps_the_reason_it_had():
 def test_a_group_nothing_waits_on_is_not_counted():
     framework = reader.load()
     only_b1 = dataclasses.replace(
-        framework, tests=tuple(t for t in framework.tests if t.id == "B1"))
+        framework, tests=tuple(t for t in framework.tests if t.id == "B1")
+    )
     assert el.assess([], only_b1).waiting_counts == {}
 
 
-@pytest.mark.parametrize(("on", "line"), [
-    ("market_context", "Waiting on market context (2 checks)."),
-    ("stop", ("Waiting on the stop you used (2 checks): you can help: answer "
-              "'Where was your stop?' in your journals.")),
-    ("finer_prices", "Waiting on finer prices (2 checks)."),
-    ("release_calendar", "Waiting on a calendar of news releases (2 checks)."),
-])
+@pytest.mark.parametrize(
+    ("on", "line"),
+    [
+        ("market_context", "Waiting on market context (2 checks)."),
+        (
+            "stop",
+            (
+                "Waiting on the stop you used (2 checks): you can help: answer "
+                "'Where was your stop?' in your journals."
+            ),
+        ),
+        ("finer_prices", "Waiting on finer prices (2 checks)."),
+        ("release_calendar", "Waiting on a calendar of news releases (2 checks)."),
+    ],
+)
 def test_each_thing_a_check_waits_on_has_its_line(on, line):
     assert line in text(main_part(render(result(**{on: 2}))))
 

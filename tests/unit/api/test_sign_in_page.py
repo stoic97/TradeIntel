@@ -40,8 +40,9 @@ def words(html: str) -> str:
 
 def failed_attempt(client, login_id="nobody-at-all", password="wrong-but-long-enough"):
     csrf = CSRF.search(client.get("/login").text).group(1)
-    return client.post("/login", data={"login_id": login_id, "password": password,
-                                       "csrf_token": csrf})
+    return client.post(
+        "/login", data={"login_id": login_id, "password": password, "csrf_token": csrf}
+    )
 
 
 def test_sign_in_stands_on_the_design_kits_layout(client):
@@ -54,7 +55,8 @@ def test_sign_in_stands_on_the_design_kits_layout(client):
 def test_it_says_what_it_said_before_and_nothing_more(client):
     assert words(client.get("/login").text) == (
         "Sign in Login id Password Sign in Forgot your password? Your account has no email, "
-        "so a reset goes through us: team@plusev.in Create an account if you don't have one.")
+        "so a reset goes through us: team@plusev.in Create an account if you don't have one."
+    )
 
 
 def test_the_fields_are_the_kits_and_keep_what_the_browser_needs(client):

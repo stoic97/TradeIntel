@@ -31,8 +31,19 @@ from tests.helpers.eligibility_page import (
 # two of its own checks overall_edge and edge_persistence, so rendering their
 # names would walk this straight onto a trader's screen.
 NEVER_USED = [
-    "tilt", "revenge", "emotional", "psychology", "disease", "cure",
-    "edge", "alpha", "expectancy", "discipline", "mistake", "signal", "tip",
+    "tilt",
+    "revenge",
+    "emotional",
+    "psychology",
+    "disease",
+    "cure",
+    "edge",
+    "alpha",
+    "expectancy",
+    "discipline",
+    "mistake",
+    "signal",
+    "tip",
 ]
 
 
@@ -84,33 +95,46 @@ def test_a_check_that_cannot_run_says_what_is_missing(client):
 
 def test_nothing_on_the_page_reads_as_a_verdict(client):
     body = client.get("/eligibility").text.lower()
-    for claim in ("you should", "we recommend", "your score", "you tend to",
-                  "caused by", "due to"):
+    for claim in ("you should", "we recommend", "your score", "you tend to", "caused by", "due to"):
         assert claim not in body, claim
 
 
 def test_a_trader_with_no_import_is_sent_to_upload(engine):
     from services.production.accounts import auth
+
     with make_session(engine) as sess:
-        trader = m.Trader(display_name="N", login_id="nothing",
-                          password_hash=auth.hash_password(PASSWORD),
-                          created_at=datetime.now(UTC), development_data=True)
+        trader = m.Trader(
+            display_name="N",
+            login_id="nothing",
+            password_hash=auth.hash_password(PASSWORD),
+            created_at=datetime.now(UTC),
+            development_data=True,
+        )
         sess.add(trader)
         sess.flush()
-        sess.add(m.ConsentEvent(trader_id=trader.id,
-                                purpose=s.ConsentPurpose.DIAGNOSIS, scope="v1",
-                                terms_version=CONSENT_TEXT.version, granted=True,
-                                at=datetime.now(UTC), method="web",
-                                wording_shown="x" * 100))
+        sess.add(
+            m.ConsentEvent(
+                trader_id=trader.id,
+                purpose=s.ConsentPurpose.DIAGNOSIS,
+                scope="v1",
+                terms_version=CONSENT_TEXT.version,
+                granted=True,
+                at=datetime.now(UTC),
+                method="web",
+                wording_shown="x" * 100,
+            )
+        )
         sess.commit()
     client = TestClient(create_app())
     csrf = CSRF.search(client.get("/login").text).group(1)
-    client.post("/login", data={"login_id": "nothing", "password": PASSWORD,
-                                "csrf_token": csrf}, follow_redirects=False)
+    client.post(
+        "/login",
+        data={"login_id": "nothing", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert client.get("/eligibility", follow_redirects=False).status_code in (302, 303)
 
 
 def test_it_needs_signing_in(engine):
     anonymous = TestClient(create_app())
-    assert anonymous.get("/eligibility",
-                         follow_redirects=False).status_code in (302, 303)
+    assert anonymous.get("/eligibility", follow_redirects=False).status_code in (302, 303)

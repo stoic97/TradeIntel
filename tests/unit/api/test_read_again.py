@@ -71,8 +71,11 @@ OFFER_BUTTON = "Read this file again"
 
 def trips_of(engine, import_id: int) -> list[m.Trip]:
     with make_session(engine) as sess:
-        return list(sess.scalars(select(m.Trip).where(m.Trip.import_id == import_id)
-                                 .order_by(m.Trip.id)).all())
+        return list(
+            sess.scalars(
+                select(m.Trip).where(m.Trip.import_id == import_id).order_by(m.Trip.id)
+            ).all()
+        )
 
 
 def total(engine, import_id: int) -> Decimal:
@@ -104,8 +107,13 @@ def assert_nothing_written(before, engine):
 
 
 def imp_like(**over):
-    fields = {"reconstruction_version": rc.RECONSTRUCTION_VERSION, "adapter_id": "dhan_tradebook_v1",
-              "adapter_version": "1", "code_version": "abc", "profile_versions": "{}"}
+    fields = {
+        "reconstruction_version": rc.RECONSTRUCTION_VERSION,
+        "adapter_id": "dhan_tradebook_v1",
+        "adapter_version": "1",
+        "code_version": "abc",
+        "profile_versions": "{}",
+    }
     return m.Import(**{**fields, **over})
 
 
@@ -193,7 +201,7 @@ def test_the_refusal_offers_a_read_when_the_import_is_out_of_date(client, engine
 
 def test_the_offer_is_a_post_with_a_token(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
-    form = re.search(r'<form[^>]*read-again.*?</form>', send(client).text, re.DOTALL).group(0)
+    form = re.search(r"<form[^>]*read-again.*?</form>", send(client).text, re.DOTALL).group(0)
     assert 'method="post"' in form
     assert 'name="csrf_token"' in form
 
@@ -278,9 +286,16 @@ def test_a_charges_file_sent_as_a_tradebook_names_it_with_no_rows(client, engine
     bytes_ = b"Date,Total Charges\n2024-01-02,10.00\n"
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
-        sess.add(m.RawFile(trader_id=trader.id, sha256=hashlib.sha256(bytes_).hexdigest(),
-                           original_name="charges.csv", size=len(bytes_), stored_path="/tmp/c",
-                           uploaded_at=datetime.now(UTC)))
+        sess.add(
+            m.RawFile(
+                trader_id=trader.id,
+                sha256=hashlib.sha256(bytes_).hexdigest(),
+                original_name="charges.csv",
+                size=len(bytes_),
+                stored_path="/tmp/c",
+                uploaded_at=datetime.now(UTC),
+            )
+        )
         sess.commit()
     response = send(client, bytes_, "charges.csv")
     assert response.status_code == 400
@@ -298,8 +313,10 @@ def test_a_reread_shows_the_new_figures_and_leaves_the_old_import(client, engine
     assert total(engine, old.id) == Decimal(-600)
     old_trips = [(t.id, t.trip_id, t.net) for t in trips_of(engine, old.id)]
     with make_session(engine) as sess:
-        old_rows = [(r.id, r.status, r.flag) for r in sess.scalars(
-            select(m.ImportRow).where(m.ImportRow.import_id == old.id))]
+        old_rows = [
+            (r.id, r.status, r.flag)
+            for r in sess.scalars(select(m.ImportRow).where(m.ImportRow.import_id == old.id))
+        ]
 
     assert read_again(client, old.id).status_code == 303
 
@@ -315,8 +332,10 @@ def test_a_reread_shows_the_new_figures_and_leaves_the_old_import(client, engine
     assert first.reconstruction_version is None
     assert [(t.id, t.trip_id, t.net) for t in trips_of(engine, first.id)] == old_trips
     with make_session(engine) as sess:
-        assert old_rows == [(r.id, r.status, r.flag) for r in sess.scalars(
-            select(m.ImportRow).where(m.ImportRow.import_id == old.id))]
+        assert old_rows == [
+            (r.id, r.status, r.flag)
+            for r in sess.scalars(select(m.ImportRow).where(m.ImportRow.import_id == old.id))
+        ]
 
 
 def test_a_reread_writes_no_new_raw_file(client, engine, monkeypatch):
@@ -348,10 +367,14 @@ def dup_groups(page: str) -> list[str]:
 
 def excluded_rows(engine, import_id: int) -> list[tuple[int, str, s.RowFlag | None]]:
     with make_session(engine) as sess:
-        return [(r.row_no, r.status, r.flag) for r in sess.scalars(
-            select(m.ImportRow).where(m.ImportRow.import_id == import_id,
-                                      m.ImportRow.status == "EXCLUDED")
-            .order_by(m.ImportRow.row_no))]
+        return [
+            (r.row_no, r.status, r.flag)
+            for r in sess.scalars(
+                select(m.ImportRow)
+                .where(m.ImportRow.import_id == import_id, m.ImportRow.status == "EXCLUDED")
+                .order_by(m.ImportRow.row_no)
+            )
+        ]
 
 
 def test_a_reread_keeps_what_he_confirmed(client, engine, monkeypatch):
@@ -368,8 +391,10 @@ def test_a_reread_keeps_what_he_confirmed(client, engine, monkeypatch):
         confirm(client, first, groups[0])
         confirm(client, imports(engine)[-1].id, groups[1])
     confirmed = imports(engine)[-1]
-    expected = [(4, "EXCLUDED", s.RowFlag.TRADER_CONFIRMED_DUPLICATE),
-                (5, "EXCLUDED", s.RowFlag.TRADER_CONFIRMED_DUPLICATE)]
+    expected = [
+        (4, "EXCLUDED", s.RowFlag.TRADER_CONFIRMED_DUPLICATE),
+        (5, "EXCLUDED", s.RowFlag.TRADER_CONFIRMED_DUPLICATE),
+    ]
     assert excluded_rows(engine, confirmed.id) == expected
 
     assert read_again(client, confirmed.id).status_code == 303
@@ -425,8 +450,11 @@ def test_a_reread_with_no_real_change_writes_no_journal(client, engine, monkeypa
 
 def journal_id(engine, day: str, version: int) -> int:
     with make_session(engine) as sess:
-        return sess.scalars(select(m.Journal.id).where(
-            m.Journal.period_start == day, m.Journal.version_no == version)).one()
+        return sess.scalars(
+            select(m.Journal.id).where(
+                m.Journal.period_start == day, m.Journal.version_no == version
+            )
+        ).one()
 
 
 def test_answers_stay_with_their_day(client, engine, monkeypatch):
@@ -449,8 +477,13 @@ def test_a_trade_answer_follows_a_trade_that_did_not_change(client, engine, monk
     upload_older(client, monkeypatch)
     old = imports(engine)[0]
     kept = next(t for t in trips_of(engine, old.id) if t.trading_day == "2024-01-03")
-    answer(client, engine, journal_id(engine, "2024-01-03", 1), trip_id=kept.trip_id,
-           rationale="Why I took the kept trade")
+    answer(
+        client,
+        engine,
+        journal_id(engine, "2024-01-03", 1),
+        trip_id=kept.trip_id,
+        rationale="Why I took the kept trade",
+    )
     read_again(client, old.id)
     new_page = client.get(f"/journals/{journal_id(engine, '2024-01-03', 2)}").text
     assert "Why I took the kept trade" in new_page  # it is the value of a form's field
@@ -483,8 +516,9 @@ def test_net_still_shows_after_a_reread(client, engine, monkeypatch):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         raw = sess.scalars(select(m.RawFile)).one()
-        charges.record_statement(sess, trader, raw, "fixture", {
-            "2024-01-02": Decimal(110), "2024-01-03": Decimal(60)})
+        charges.record_statement(
+            sess, trader, raw, "fixture", {"2024-01-02": Decimal(110), "2024-01-03": Decimal(60)}
+        )
         sess.commit()
     read_again(client, imports(engine)[0].id)
     with make_session(engine) as sess:
@@ -576,8 +610,12 @@ def load_demo(client, monkeypatch):
     with monkeypatch.context() as older:
         older.setattr(rc, "RECONSTRUCTION_VERSION", None, raising=False)
         csrf = CSRF.search(client.get("/upload").text).group(1)
-        assert client.post("/upload/demo", data={"csrf_token": csrf},
-                           follow_redirects=False).status_code == 303
+        assert (
+            client.post(
+                "/upload/demo", data={"csrf_token": csrf}, follow_redirects=False
+            ).status_code
+            == 303
+        )
 
 
 def test_a_demo_read_again_stays_a_demo(client, engine, monkeypatch):
@@ -649,14 +687,25 @@ def test_consent_is_still_needed(client, engine, monkeypatch):
     token = CSRF.search(client.get("/upload").text).group(1)
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
-        sess.add(m.ConsentEvent(
-            trader_id=trader.id, purpose=s.ConsentPurpose.DIAGNOSIS, scope="fixture",
-            terms_version="fixture", granted=False, method="fixture", wording_shown="fixture",
-            at=datetime.now(UTC)))
+        sess.add(
+            m.ConsentEvent(
+                trader_id=trader.id,
+                purpose=s.ConsentPurpose.DIAGNOSIS,
+                scope="fixture",
+                terms_version="fixture",
+                granted=False,
+                method="fixture",
+                wording_shown="fixture",
+                at=datetime.now(UTC),
+            )
+        )
         sess.commit()
     before = counts(engine)
-    response = client.post(f"/imports/{imports(engine)[0].id}/read-again",
-                           data={"csrf_token": token}, follow_redirects=False)
+    response = client.post(
+        f"/imports/{imports(engine)[0].id}/read-again",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     assert response.headers["location"] == "/consent"
     assert_nothing_written(before, engine)
@@ -709,9 +758,11 @@ def test_two_clicks_at_the_same_moment_read_once(client, engine, monkeypatch):
     def click():
         same_browser = TestClient(client.app, cookies=dict(client.cookies))
         at_once.wait()
-        answers.append(same_browser.post(f"/imports/{first}/read-again",
-                                         data={"csrf_token": token},
-                                         follow_redirects=False).status_code)
+        answers.append(
+            same_browser.post(
+                f"/imports/{first}/read-again", data={"csrf_token": token}, follow_redirects=False
+            ).status_code
+        )
 
     clicks = [threading.Thread(target=click) for _ in range(2)]
     for t in clicks:
@@ -759,8 +810,9 @@ def test_a_file_that_now_rejects_leaves_the_old_import(client, engine, monkeypat
 def test_a_file_that_now_rebuilds_no_trade_leaves_the_old_import(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     before = counts(engine)
-    store_instead(engine, "\n".join(
-        [HEADER, _row("2024-01-02", "09:30:00", "BUY", 5000)]).encode() + b"\n")
+    store_instead(
+        engine, "\n".join([HEADER, _row("2024-01-02", "09:30:00", "BUY", 5000)]).encode() + b"\n"
+    )
     assert_refused_in_words(read_again(client, imports(engine)[0].id), before, engine, 422)
 
 

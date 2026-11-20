@@ -29,11 +29,19 @@ def app():
 @pytest.fixture()
 def client(app):
     client = TestClient(app, follow_redirects=False)
-    client.post("/signup", data={"login_id": "visitor", "display_name": "Visitor",
-                                 "password": "a-long-enough-password",
-                                 "csrf_token": token(client, "/signup")})
-    client.post("/consent", data={"diagnosis": "yes", "engine_testing": "yes",
-                                  "csrf_token": token(client, "/consent")})
+    client.post(
+        "/signup",
+        data={
+            "login_id": "visitor",
+            "display_name": "Visitor",
+            "password": "a-long-enough-password",
+            "csrf_token": token(client, "/signup"),
+        },
+    )
+    client.post(
+        "/consent",
+        data={"diagnosis": "yes", "engine_testing": "yes", "csrf_token": token(client, "/consent")},
+    )
     client.post("/upload/demo", data={"csrf_token": token(client, "/upload")})
     return client
 
@@ -51,15 +59,25 @@ def test_each_page_has_one_link_home_above_its_title(app, client):
 
 
 def test_a_refused_upload_keeps_it(client):
-    refused = client.post("/upload", data={"csrf_token": token(client, "/upload")},
-                          files={"file": ("a.csv", b"x" * (k.MAX_UPLOAD_BYTES + 1), "text/csv")})
+    refused = client.post(
+        "/upload",
+        data={"csrf_token": token(client, "/upload")},
+        files={"file": ("a.csv", b"x" * (k.MAX_UPLOAD_BYTES + 1), "text/csv")},
+    )
     assert refused.status_code == 400
     assert LINK in refused.text
 
 
 def test_a_refused_number_keeps_it(client):
-    refused = client.post("/budget", data={"csrf_token": token(client, "/budget"), "value": "no",
-                                           "unit": "INR", "effective_from": "2024-01-01"})
+    refused = client.post(
+        "/budget",
+        data={
+            "csrf_token": token(client, "/budget"),
+            "value": "no",
+            "unit": "INR",
+            "effective_from": "2024-01-01",
+        },
+    )
     assert refused.status_code == 400
     assert LINK in refused.text
 

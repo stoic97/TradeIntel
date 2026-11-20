@@ -21,6 +21,7 @@ def client(engine):
 def engine():
     return journals_engine()
 
+
 LABEL = "A later upload changed this period."
 
 
@@ -29,9 +30,14 @@ def _add_version(engine, trip_ids=None) -> int:
     with make_session(engine) as sess:
         first = sess.scalars(select(m.Journal).order_by(m.Journal.period_start.desc())).first()
         version = m.Journal(
-            trader_id=first.trader_id, import_id=first.import_id, unit=first.unit,
-            period_start=first.period_start, period_end=first.period_end,
-            version_no=2, supersedes=first.id, generated_at=first.generated_at,
+            trader_id=first.trader_id,
+            import_id=first.import_id,
+            unit=first.unit,
+            period_start=first.period_start,
+            period_end=first.period_end,
+            version_no=2,
+            supersedes=first.id,
+            generated_at=first.generated_at,
             sections=first.sections,
             trip_ids=first.trip_ids if trip_ids is None else json.dumps(trip_ids),
         )

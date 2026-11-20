@@ -33,7 +33,9 @@ def parse(content: bytes) -> dict[str, Decimal]:
         raise Unreadable("That is not a text file we can read.") from exc
     rows = [row for row in csv.reader(lines) if any(cell.strip() for cell in row)]
     if not rows or tuple(cell.strip() for cell in rows[0]) != HEADER:
-        raise Unreadable(f"We read files with the columns {', '.join(HEADER)}. This one has others.")
+        raise Unreadable(
+            f"We read files with the columns {', '.join(HEADER)}. This one has others."
+        )
     days: dict[str, Decimal] = {}
     for row in rows[1:]:
         if len(row) != len(HEADER):

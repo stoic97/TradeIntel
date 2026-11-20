@@ -85,7 +85,8 @@ def test_his_answer_is_kept_once_in_his_words(client, engine):
     send(client, answer="a second answer")
     kept = rows(engine, m.LeavingCardAnswer)
     assert [(a.outcome, a.answer) for a in kept] == [
-        ("answered", "The worst-days page was the one that landed.")]
+        ("answered", "The worst-days page was the one that landed.")
+    ]
 
 
 def test_not_now_is_an_answer_with_no_words(client, engine):
@@ -93,7 +94,8 @@ def test_not_now_is_an_answer_with_no_words(client, engine):
     client.get("/journals")
     send(client, "/leaving-card/dismiss")
     assert [(a.outcome, a.answer) for a in rows(engine, m.LeavingCardAnswer)] == [
-        ("dismissed", None)]
+        ("dismissed", None)
+    ]
 
 
 def test_an_answer_is_cut_to_a_card_not_a_letter(client, engine):

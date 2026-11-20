@@ -117,9 +117,7 @@ def test_every_test_in_the_real_library_has_a_minimum_we_understand():
     If someone adds a test with a shape the reader cannot read, this fails here
     rather than quietly showing a trader one fewer check than he has.
     """
-    unreadable = [
-        (t.id, t.n_min.raw) for t in reader.load().tests if not t.n_min.understood
-    ]
+    unreadable = [(t.id, t.n_min.raw) for t in reader.load().tests if not t.n_min.understood]
     assert unreadable == []
 
 

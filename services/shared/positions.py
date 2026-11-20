@@ -89,7 +89,7 @@ def _components(trips: list[RoundTrip], window_seconds: int) -> list[list[RoundT
 
     for indices in markets.values():  # already in entry order, as trips is
         for at, i in enumerate(indices):
-            for j in indices[at + 1:]:
+            for j in indices[at + 1 :]:
                 if (trips[j].entry_ts - trips[i].entry_ts).total_seconds() > window_seconds:
                     break
                 if _links(trips[i], trips[j]):

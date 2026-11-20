@@ -26,18 +26,33 @@ def t(day, at, net, symbol="CRUDEOIL", is_option=True):
     entry = datetime.fromisoformat(f"{day}T{at}:00+05:30")
     lines = () if is_option else (mx.TradeLine(symbol, "EQ", "Buy", 1, None, None, Decimal(net)),)
     return mx.Trip(
-        f"{day}-{at}", symbol, day, entry, entry + timedelta(minutes=10), 600, Decimal(net), 1,
-        s.RiskUnitSourceV1.PREMIUM_PAID, is_option=is_option, lines=lines,
+        f"{day}-{at}",
+        symbol,
+        day,
+        entry,
+        entry + timedelta(minutes=10),
+        600,
+        Decimal(net),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+        is_option=is_option,
+        lines=lines,
     )
 
 
 TRIPS = [
-    t("2026-01-05", "09:15", 100, "NIFTY"), t("2026-01-05", "10:00", -600), t("2026-01-05", "11:00", -400),
-    t("2025-02-06", "18:00", -200), t("2025-02-06", "21:30", -300),
+    t("2026-01-05", "09:15", 100, "NIFTY"),
+    t("2026-01-05", "10:00", -600),
+    t("2026-01-05", "11:00", -400),
+    t("2025-02-06", "18:00", -200),
+    t("2025-02-06", "21:30", -300),
     t("2024-04-08", "19:00", -400),
-    t("2024-05-09", "18:00", -150), t("2024-05-09", "21:05", -150, "Shree Cement", is_option=False),
-    t("2025-03-07", "18:00", -100), t("2025-03-07", "19:00", 50, "NIFTY"),
-    t("2025-06-02", "10:00", 900), t("2025-06-03", "10:00", 700),
+    t("2024-05-09", "18:00", -150),
+    t("2024-05-09", "21:05", -150, "Shree Cement", is_option=False),
+    t("2025-03-07", "18:00", -100),
+    t("2025-03-07", "19:00", 50, "NIFTY"),
+    t("2025-06-02", "10:00", 900),
+    t("2025-06-03", "10:00", 700),
 ]
 
 
@@ -64,7 +79,9 @@ def test_it_names_a_book_every_day_holds():
 
 
 def test_it_names_no_book_when_a_day_lacks_it():
-    without = [x for x in TRIPS if x.trading_day != "2024-04-08"] + [t("2024-04-08", "19:00", -400, "NIFTY")]
+    without = [x for x in TRIPS if x.trading_day != "2024-04-08"] + [
+        t("2024-04-08", "19:00", -400, "NIFTY")
+    ]
     assert mx.five_days_read(without).shared_book is None
 
 
@@ -75,7 +92,10 @@ def test_it_counts_the_days_with_a_trade_opened_after_nine():
 def test_the_worst_day_is_told_from_its_first_trade():
     story = read().story
     assert (story.trading_day, story.first_net, story.later, story.net) == (
-        "2026-01-05", Decimal(100), 2, Decimal(-900),
+        "2026-01-05",
+        Decimal(100),
+        2,
+        Decimal(-900),
     )
 
 
@@ -85,7 +105,10 @@ def test_a_single_trade_day_has_no_story():
 
 def test_a_day_that_finished_up_has_no_story():
     """Five worst days can still be winning days on a short history."""
-    assert mx.five_days_read([t("2026-01-05", "10:00", 500), t("2026-01-05", "11:00", 100)]).story is None
+    assert (
+        mx.five_days_read([t("2026-01-05", "10:00", 500), t("2026-01-05", "11:00", 100)]).story
+        is None
+    )
 
 
 def test_no_history_has_no_read():
@@ -117,11 +140,16 @@ def test_the_page_tells_the_worst_day():
 
 def test_a_first_trade_that_lost_reads_that_way():
     trips = [t("2026-01-05", "10:00", -100), t("2026-01-05", "11:00", -200)]
-    assert "your first trade lost ₹100. 1 trade later you were down ₹300." in readable(reveal(trips))
+    assert "your first trade lost ₹100. 1 trade later you were down ₹300." in readable(
+        reveal(trips)
+    )
 
 
 def test_the_page_says_what_they_share():
-    assert "On 2 of these days your first trade lost and you kept going: ₹450 more was lost after it." in page()
+    assert (
+        "On 2 of these days your first trade lost and you kept going: ₹450 more was lost after it."
+        in page()
+    )
     assert "Every one of the five includes crude options, and 2 of them ran past 9 pm." in page()
 
 

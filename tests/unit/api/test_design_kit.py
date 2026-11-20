@@ -62,7 +62,7 @@ def test_the_kit_icons_are_served_unchanged():
 def test_the_tokens_are_the_kits_below_its_font_block():
     app = (APP / "css" / "tokens.css").read_text()
     kit = (KIT / "css" / "tokens.css").read_text()
-    assert app[app.index(":root {"):] == kit[kit.index(":root {"):]
+    assert app[app.index(":root {") :] == kit[kit.index(":root {") :]
 
 
 def test_fonts_are_declared_in_one_place():

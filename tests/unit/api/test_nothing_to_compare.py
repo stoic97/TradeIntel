@@ -19,12 +19,22 @@ NO_QUICK_CLOSES = make([100] * 15 + [-50] * 15, [10] * 30)  # 30 same-day trades
 ONLY_WINNERS = make([100] * 30, [10] * 30)  # no loser to hold a share of
 ONLY_LOSERS = make([-100] * 30, [10] * 30)
 LEVEL = make([0] * 30, [10] * 30)
-ALL_CLEARS = ("nothing wrong", "all clear", "no problem", "no issue", "looks good", "well done",
-              "clean record")
+ALL_CLEARS = (
+    "nothing wrong",
+    "all clear",
+    "no problem",
+    "no issue",
+    "looks good",
+    "well done",
+    "clean record",
+)
 
 
-@pytest.mark.parametrize("trips", [NO_QUICK_CLOSES, ONLY_WINNERS, ONLY_LOSERS],
-                         ids=["none quick", "only winners", "only losers"])
+@pytest.mark.parametrize(
+    "trips",
+    [NO_QUICK_CLOSES, ONLY_WINNERS, ONLY_LOSERS],
+    ids=["none quick", "only winners", "only losers"],
+)
 def test_a_comparison_of_two_zeros_is_not_drawn(trips):
     text = readable(fact_page("math", trips))
     assert LINE not in text
@@ -36,11 +46,26 @@ def test_the_note_that_explained_the_line_goes_with_it():
     assert "It says nothing about the entries." not in readable(fact_page("math", NO_QUICK_CLOSES))
 
 
-@pytest.mark.parametrize(("nets", "minutes", "said"), [
-    ([100] * 15 + [-50] * 15, [10] * 15 + [2] * 15, "100% of losers closed within 5 minutes, against 0% of winners."),
-    ([100] * 15 + [-50] * 15, [2] * 15 + [10] * 15, "0% of losers closed within 5 minutes, against 100% of winners."),
-    ([100] * 15 + [-50] * 15, [2] * 30, "100% of losers closed within 5 minutes, against 100% of winners."),
-])
+@pytest.mark.parametrize(
+    ("nets", "minutes", "said"),
+    [
+        (
+            [100] * 15 + [-50] * 15,
+            [10] * 15 + [2] * 15,
+            "100% of losers closed within 5 minutes, against 0% of winners.",
+        ),
+        (
+            [100] * 15 + [-50] * 15,
+            [2] * 15 + [10] * 15,
+            "0% of losers closed within 5 minutes, against 100% of winners.",
+        ),
+        (
+            [100] * 15 + [-50] * 15,
+            [2] * 30,
+            "100% of losers closed within 5 minutes, against 100% of winners.",
+        ),
+    ],
+)
 def test_a_comparison_with_a_side_that_isnt_zero_still_is(nets, minutes, said):
     assert said in readable(fact_page("math", make(nets, minutes)))
 
@@ -58,8 +83,9 @@ def test_hiding_it_implies_no_all_clear(trips):
         assert words not in text, words
 
 
-@pytest.mark.parametrize("nets", [[100, -50], [100], [-50], [0, 0]],
-                         ids=["a pair", "one winner", "one loser", "level"])
+@pytest.mark.parametrize(
+    "nets", [[100, -50], [100], [-50], [0, 0]], ids=["a pair", "one winner", "one loser", "level"]
+)
 def test_a_page_too_thin_to_compare_keeps_its_not_enough_state(nets):
     text = readable(fact_page("math", make(nets)))
     assert LINE not in text

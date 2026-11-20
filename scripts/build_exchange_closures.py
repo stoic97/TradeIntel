@@ -34,9 +34,16 @@ def trading_days(client, symbol: str, start: date, end: date) -> set[date]:
     while at <= end:
         to = min(at + timedelta(days=364), end)
         time.sleep(1.3)  # under the 50-a-minute limit
-        got = client.history({"symbol": symbol, "resolution": "D", "date_format": "1",
-                              "range_from": at.isoformat(), "range_to": to.isoformat(),
-                              "cont_flag": "1"})
+        got = client.history(
+            {
+                "symbol": symbol,
+                "resolution": "D",
+                "date_format": "1",
+                "range_from": at.isoformat(),
+                "range_to": to.isoformat(),
+                "cont_flag": "1",
+            }
+        )
         if got.get("s") != "ok":
             raise SystemExit(f"{symbol} {at}..{to}: {got.get('code')} {got.get('message')}")
         days |= {datetime.fromtimestamp(c[0], IST).date() for c in got.get("candles") or []}
@@ -81,20 +88,25 @@ def render(through: date, found: dict[str, tuple[list[date], list[date]]]) -> st
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--token-file", type=Path, required=True)
-    p.add_argument("--through", type=date.fromisoformat,
-                   default=datetime.now(IST).date() - timedelta(days=1))
+    p.add_argument(
+        "--through", type=date.fromisoformat, default=datetime.now(IST).date() - timedelta(days=1)
+    )
     a = p.parse_args(argv)
     from fyers_apiv3 import fyersModel  # only the build needs the broker's library
 
     tok = json.loads(a.token_file.read_text(encoding="utf-8"))
-    client = fyersModel.FyersModel(client_id=tok["client_id"], token=tok["access_token"],
-                                   is_async=False, log_path="")
+    client = fyersModel.FyersModel(
+        client_id=tok["client_id"], token=tok["access_token"], is_async=False, log_path=""
+    )
     found = {}
     for exchange, symbols in INDICES.items():
         days = [trading_days(client, s, START, a.through) for s in symbols]
         found[exchange] = closures(days, START, a.through)
-        print(f"{exchange}: {len(found[exchange][0])} weekday closures, "
-              f"{len(found[exchange][1])} weekend sessions", file=sys.stderr)
+        print(
+            f"{exchange}: {len(found[exchange][0])} weekday closures, "
+            f"{len(found[exchange][1])} weekend sessions",
+            file=sys.stderr,
+        )
     OUT.write_text(render(a.through, found), encoding="utf-8")
     print(f"written: {OUT}", file=sys.stderr)
     return 0

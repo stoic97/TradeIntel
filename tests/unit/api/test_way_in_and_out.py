@@ -65,8 +65,11 @@ def test_the_same_trades_have_one_name_on_the_two_screens_after_an_upload(client
 def test_the_screen_a_file_lands_on_counts_its_rows_and_trades(signed_up):
     path = P.CLEAN
     response = signed_up.post(
-        "/upload", files={"file": (path.name, path.read_bytes(), "text/csv")},
-        data={"csrf_token": P._token(signed_up, "/upload")}, headers={"HX-Request": "true"})
+        "/upload",
+        files={"file": (path.name, path.read_bytes(), "text/csv")},
+        data={"csrf_token": P._token(signed_up, "/upload")},
+        headers={"HX-Request": "true"},
+    )
     text = words(response.text)
     assert re.search(r"Rows read [\d,]+ of [\d,]+ rows\b", text), text[:300]
     assert re.search(r"Trades rebuilt [\d,]+ trades?\b", text)
@@ -91,11 +94,14 @@ def test_home_names_an_upload_and_retires_import_from_its_card(client):
     assert GL.HOME_CARD in {e.where for e in GL.GLOSSARY if e.word == "Import"}
 
 
-@pytest.mark.parametrize("says", [
-    r"(\d+ checks? (has|have) enough to work with|None of them has enough to work with yet)\.",
-    r"\d+ checks? needs? more history than you have given us so far",
-    r"\d+ checks? (is|are) waiting on something that is not your trades at all",
-])
+@pytest.mark.parametrize(
+    "says",
+    [
+        r"(\d+ checks? (has|have) enough to work with|None of them has enough to work with yet)\.",
+        r"\d+ checks? needs? more history than you have given us so far",
+        r"\d+ checks? (is|are) waiting on something that is not your trades at all",
+    ],
+)
 def test_each_count_on_what_we_can_check_names_the_checks(client, says):
     assert re.search(says, words(client.get("/eligibility").text))
 

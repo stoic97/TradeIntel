@@ -121,9 +121,7 @@ class RiskUnitSourceV1(_Vocabulary):
     UNCAPPED = "uncapped"  # net short in an option type: the money counts, no R
 
 
-SHOWABLE_DENOMINATORS = frozenset(
-    {RiskUnitSourceV1.DECLARED_BUDGET, RiskUnitSourceV1.DEFINED_STOP}
-)
+SHOWABLE_DENOMINATORS = frozenset({RiskUnitSourceV1.DECLARED_BUDGET, RiskUnitSourceV1.DEFINED_STOP})
 """The only two that may be a denominator on a v1 screen, labelled in words.
 
 "x your declared budget" and "x your stop". The unqualified symbol R never appears

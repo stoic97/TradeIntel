@@ -62,7 +62,9 @@ def kinds_in(text: str) -> frozenset[str]:
     adapter = oc.select_adapter(text)
     if adapter is None:
         return frozenset()
-    parsed = adapter.parse(text.splitlines(), trader_id="kinds", raw_hash="0" * 64)  # read, not kept
+    parsed = adapter.parse(
+        text.splitlines(), trader_id="kinds", raw_hash="0" * 64
+    )  # read, not kept
     return frozenset(SHARES if f.segment is Segment.EQ else DERIVATIVES for f in parsed.fills)
 
 
@@ -218,8 +220,7 @@ class ImportPlan:
             f"{t.trip_id}|{t.gross_pnl}|{t.fees}|{t.net_pnl}|{t.quantity}" for t in self.trips
         )
         parts.extend(
-            f"{d.trading_day}|{d.rows_before}|{d.rows_after}|{d.diff.value}"
-            for d in self.day_diffs
+            f"{d.trading_day}|{d.rows_before}|{d.rows_after}|{d.diff.value}" for d in self.day_diffs
         )
         return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
 
@@ -258,9 +259,7 @@ def _density_default(trips: list[RoundTrip], days: list[str]) -> str:
         per_day[day] = per_day.get(day, 0) + 1
     counts = sorted(per_day.values())
     median = counts[len(counts) // 2]
-    return (
-        s.JournalUnit.DAY.value if median >= 2 else s.JournalUnit.PER_N_TRIPS.value
-    )
+    return s.JournalUnit.DAY.value if median >= 2 else s.JournalUnit.PER_N_TRIPS.value
 
 
 def out_of_date(imp) -> bool:
@@ -282,8 +281,9 @@ def rebuilt_without_confirmed(imp) -> bool:
     return imp.reconstruction_version not in rc.BEFORE_CONFIRMED_ROWS_LEFT
 
 
-def _orders(trip: RoundTrip, fills_by_id: dict[str, Fill],
-            trips_per_fill: dict[str, int]) -> tuple[charges.Orders | None, charges.Orders | None]:
+def _orders(
+    trip: RoundTrip, fills_by_id: dict[str, Fill], trips_per_fill: dict[str, int]
+) -> tuple[charges.Orders | None, charges.Orders | None]:
     """The executed orders behind each side of a trip, where the file can say.
 
     Groww's export is one row per exchange order (``groww_orders``), so each side counts
@@ -306,10 +306,16 @@ def _orders(trip: RoundTrip, fills_by_id: dict[str, Fill],
     return entry, exit_
 
 
-def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
-           fees_in_file: bool, given: ChargesInput | None,
-           ) -> tuple[list[RoundTrip], tuple[str, ...], int, str | None,
-                      tuple[tuple[str, str | None, str], ...]]:
+def _price(
+    trips: list[RoundTrip],
+    fills: list[Fill],
+    days: list[str],
+    *,
+    fees_in_file: bool,
+    given: ChargesInput | None,
+) -> tuple[
+    list[RoundTrip], tuple[str, ...], int, str | None, tuple[tuple[str, str | None, str], ...]
+]:
     """Each trip's charges (TICKET-912). Returns the trips, each one's source, how many the
     rate table doesn't reach, the provenance and his day totals against ours."""
     if fees_in_file:
@@ -327,11 +333,20 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
     for t in trips:
         entry_orders, exit_orders = _orders(t, fills_by_id, trips_per_fill)
         got = charges.trip_charges(
-            broker=t.broker, exchange=t.exchange, segment=t.segment.value,
-            direction=t.direction.value, entry_ts=t.entry_ts, exit_ts=t.exit_ts,
-            quantity=t.quantity, entry_price=t.entry_price, exit_price=t.exit_price,
-            own=given.own_per_order, as_of=given.as_of,
-            entry_orders=entry_orders, exit_orders=exit_orders)
+            broker=t.broker,
+            exchange=t.exchange,
+            segment=t.segment.value,
+            direction=t.direction.value,
+            entry_ts=t.entry_ts,
+            exit_ts=t.exit_ts,
+            quantity=t.quantity,
+            entry_price=t.entry_price,
+            exit_price=t.exit_price,
+            own=given.own_per_order,
+            as_of=given.as_of,
+            entry_orders=entry_orders,
+            exit_orders=exit_orders,
+        )
         if got.covered:
             priced.append(t.model_copy(update={"fees": got.total}))
             sources.append("calculated")
@@ -357,18 +372,26 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
     start, table_rows, _raw = rates.load()
     as_of = max(r.added for r in table_rows if given.as_of is None or r.added <= given.as_of)
     brokers = sorted({t.broker for t in trips})
-    provenance = json.dumps({
-        "rate_table_as_of": as_of.isoformat(),
-        "rate_table_starts": start.isoformat(),
-        "brokerage": {
-            b: ({"plan": p.name, "read_on": p.read_on} if (p := brokerage_presets.presets().get(b))
-                else None)
-            for b in brokers
+    provenance = json.dumps(
+        {
+            "rate_table_as_of": as_of.isoformat(),
+            "rate_table_starts": start.isoformat(),
+            "brokerage": {
+                b: (
+                    {"plan": p.name, "read_on": p.read_on}
+                    if (p := brokerage_presets.presets().get(b))
+                    else None
+                )
+                for b in brokers
+            },
+            "own_per_order": None if given.own_per_order is None else str(given.own_per_order),
+            "orders_counted": {
+                b: ("order id" if b == "groww" else "one per entry and one per exit")
+                for b in brokers
+            },
         },
-        "own_per_order": None if given.own_per_order is None else str(given.own_per_order),
-        "orders_counted": {b: ("order id" if b == "groww" else "one per entry and one per exit")
-                           for b in brokers},
-    }, sort_keys=True)
+        sort_keys=True,
+    )
     return (priced, tuple(sources), sources.count("not_priced"), provenance, tuple(scales))
 
 
@@ -425,9 +448,7 @@ def plan_import(
             status = "REJECTED"
         else:
             status = "PARSED"
-        rows.append(
-            PlannedRow(row.row_no, row.raw_text, status, reason, row.flag, row.dup_group)
-        )
+        rows.append(PlannedRow(row.row_no, row.raw_text, status, reason, row.flag, row.dup_group))
 
     # The whole file above says what each row is; only what remains is read into fills.
     fills: list[Fill] = parsed.fills
@@ -457,11 +478,19 @@ def plan_import(
     )
     days = [_trading_day(t, profile_map) for t in result.round_trips]
     trips, trip_sources, not_priced, provenance, day_scales = _price(
-        list(result.round_trips), fills, days,
-        fees_in_file=parsed.fees_available, given=context.charges)
-    fees_source = ("tradebook" if parsed.fees_available
-                   else "calculated" if any(x in ("calculated", "statement") for x in trip_sources)
-                   else "none")
+        list(result.round_trips),
+        fills,
+        days,
+        fees_in_file=parsed.fees_available,
+        given=context.charges,
+    )
+    fees_source = (
+        "tradebook"
+        if parsed.fees_available
+        else "calculated"
+        if any(x in ("calculated", "statement") for x in trip_sources)
+        else "none"
+    )
 
     # A day's size is its ROWS, not its trips. The trader can reconcile a row count
     # against his own file, and -- the reason this matters more -- a day whose rows

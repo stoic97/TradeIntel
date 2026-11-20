@@ -4,6 +4,7 @@ The real file is gitignored (data/market/, logged in CROSSINGS.md), so the unit
 tests run on small CSVs written to a temp folder in the file's exact format. One
 integration test reads the real file and is skipped where it is absent.
 """
+
 from datetime import date
 from pathlib import Path
 

@@ -32,6 +32,7 @@ def engine():
 def store():
     return deletion_page_store()
 
+
 NOTHING = trips_from([100, -50, 30], s.RiskUnitSourceV1.UNAVAILABLE)
 STOP = trips_from([100, -50, 30], s.RiskUnitSourceV1.DEFINED_STOP)
 BUDGET = trips_from([100, -50, 30], s.RiskUnitSourceV1.DECLARED_BUDGET)

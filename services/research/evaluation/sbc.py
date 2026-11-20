@@ -95,9 +95,7 @@ def uniformity(
     if values.size == 0:
         raise ValueError("no ranks to test")
     if values.min() < 0 or values.max() > n_draws:
-        raise ValueError(
-            f"a rank must lie in [0, {n_draws}]; got [{values.min()}, {values.max()}]"
-        )
+        raise ValueError(f"a rank must lie in [0, {n_draws}]; got [{values.min()}, {values.max()}]")
     if (n_draws + 1) % n_bins:
         raise ValueError(
             f"{n_draws + 1} rank values do not divide into {n_bins} bins; the bins "

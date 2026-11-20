@@ -94,13 +94,14 @@ def test_a_refused_file_still_shows_the_date(client):
 
 def test_confirming_duplicates_keeps_the_date_he_stated(client, engine):
     """A confirmation is a new reading of the same file, downloaded when it was."""
-    response = send(client, (DUPES / "duplicated_block.csv").read_bytes(),
-                    export_date="2026-10-20")
+    response = send(client, (DUPES / "duplicated_block.csv").read_bytes(), export_date="2026-10-20")
     location = response.headers["location"]
     page = client.get(location).text
     group = re.search(r'name="dup_group" value="([^"]+)"', page).group(1)
-    client.post(f"{location}/confirm-duplicates",
-                data={"dup_group": group, "csrf_token": CSRF.search(page).group(1)})
+    client.post(
+        f"{location}/confirm-duplicates",
+        data={"dup_group": group, "csrf_token": CSRF.search(page).group(1)},
+    )
     imp = the_import(engine)
     assert imp.version_no == 2
     assert (imp.export_date, imp.export_date_source) == ("2026-10-20", "trader")

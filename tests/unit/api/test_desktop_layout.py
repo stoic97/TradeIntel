@@ -23,7 +23,7 @@ def desktop_rules() -> str:
     while depth:
         depth += {"{": 1, "}": -1}.get(text[i], 0)
         i += 1
-    return text[start:i - 1]
+    return text[start : i - 1]
 
 
 def rule(selector: str) -> str:
@@ -77,6 +77,7 @@ def test_the_next_button_is_not_shown_twice_in_a_row():
 
 
 # ---------- TICKET-857: the door is not a report page ----------
+
 
 def test_the_beside_the_story_grid_does_not_catch_the_door():
     """TICKET-845's grid was keyed on any page with a stage, and the signed-out door has

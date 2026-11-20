@@ -7,6 +7,7 @@ account details). The rules each test locks were established by inspecting
 Header, verbatim:
     Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status
 """
+
 from datetime import date, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -22,7 +23,9 @@ RAW = "b" * 64
 NIFTY_SELL = "2026-09-17,09:48:11,NIFTY 22 SEP 23300 PUT,SELL,INTRADAY,NSE,Derivative,65,140.45,9129.25,Traded"
 NIFTY_BUY = "2026-09-17,09:39:08,NIFTY 22 SEP 23300 PUT,BUY,INTRADAY,NSE,Derivative,65,135.20,8788.00,Traded"
 CRUDE_SELL = "2026-05-13,18:03:52,CRUDEOILM 14 MAY 9700 CALL,SELL,INTRADAY,MCX,Commodity,10,204.20,2042.00,Traded"
-EQUITY = "2026-02-06,13:41:22,Jio Financial Services,SELL,DELIVERY,NSE,Equity,10,267.60,2676.00,Traded"
+EQUITY = (
+    "2026-02-06,13:41:22,Jio Financial Services,SELL,DELIVERY,NSE,Equity,10,267.60,2676.00,Traded"
+)
 # Aggregated fills: 30 x 153.18 = 4595.40, but the broker's exact total is 4595.50.
 AGGREGATED = "2026-11-10,14:02:00,CRUDEOILM 17 NOV 5300 PUT,BUY,INTRADAY,MCX,Commodity,30,153.18,4595.50,Traded"
 # 16201.50 / 60 = 270.025 exactly -> rounds half-up to the quoted 270.03.
@@ -44,6 +47,7 @@ def only(*lines):
 
 # ---------------------------------------------------------------- the format
 
+
 def test_header_must_match_exactly():
     with pytest.raises(ValueError, match="header"):
         parse(["Date,Time,Name,WRONG", NIFTY_BUY], trader_id="T01", raw_hash=RAW)
@@ -51,7 +55,9 @@ def test_header_must_match_exactly():
 
 def test_every_row_is_accounted_for():
     """raw = mapped + rejected, always (Methodology s2 Rule 1)."""
-    r = run(NIFTY_BUY, EQUITY, "2026-01-01,10:00:00,GARBAGE,BUY,INTRADAY,NSE,Derivative,1,1,1,Traded")
+    r = run(
+        NIFTY_BUY, EQUITY, "2026-01-01,10:00:00,GARBAGE,BUY,INTRADAY,NSE,Derivative,1,1,1,Traded"
+    )
     assert len(r.fills) + len(r.rejected) == 3
 
 
@@ -62,6 +68,7 @@ def test_rejection_carries_row_number_and_reason():
 
 
 # ---------------------------------------------------------------- parsing
+
 
 def test_parses_a_nifty_option_row():
     f = only(NIFTY_BUY)
@@ -111,6 +118,7 @@ def test_rows_are_sorted_by_timestamp():
 
 # ---------------------------------------------------------------- expiry year
 
+
 def test_expiry_year_comes_from_the_trade_date():
     assert only(CRUDE_SELL).expiry == date(2026, 5, 14)
 
@@ -129,6 +137,7 @@ def test_expiry_more_than_120_days_out_is_rejected():
 
 
 # ---------------------------------------------------------------- price
+
 
 def test_price_comes_from_trade_value_not_the_quoted_price():
     """Trade Value is exact; the quoted price is a rounded average of aggregated fills."""
@@ -161,6 +170,7 @@ def test_fees_are_not_invented():
 
 
 # ---------------------------------------------------------------- status
+
 
 def test_non_traded_status_is_rejected():
     cancelled = NIFTY_BUY.replace(",Traded", ",Cancelled")

@@ -19,8 +19,20 @@ from markupsafe import Markup
 
 _MONTH = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 # Written out rather than read from the locale: the page is English whatever the server's.
-_NAMES = ("January", "February", "March", "April", "May", "June", "July", "August",
-          "September", "October", "November", "December")
+_NAMES = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
 
 
 def title(key: str) -> str:
@@ -31,11 +43,11 @@ def title(key: str) -> str:
 
 @dataclass(frozen=True)
 class Month:
-    key: str                       # "YYYY-MM"
-    title: str                     # "<Month> <year>"
+    key: str  # "YYYY-MM"
+    title: str  # "<Month> <year>"
     weeks: list[list[str | None]]  # Monday first; None is a date outside the month
-    prev: str | None               # the nearest earlier month with a Journal
-    next: str | None               # the nearest later month with a Journal
+    prev: str | None  # the nearest earlier month with a Journal
+    next: str | None  # the nearest later month with a Journal
 
     def number(self, day: str) -> Markup:
         """The day of the month, as the label on its cell. Markup because it names a place on the

@@ -151,8 +151,7 @@ class InstrumentProfile:
         if day is None:
             return False
         return any(
-            ls.in_force_on(day) and (ls.expiries_from or ls.expiries_until)
-            for ls in self.lot_sizes
+            ls.in_force_on(day) and (ls.expiries_from or ls.expiries_until) for ls in self.lot_sizes
         )
 
     @property
@@ -231,8 +230,15 @@ def _lot_sizes(raw: Any, multiplier: Decimal, where: str) -> tuple[LotSize, ...]
         expiries_until = _optional_date(entry, "expiries_until", f"lot_sizes[{i}]", where)
         if expiries_from and expiries_until and expiries_until < expiries_from:
             raise InvalidProfile(f"{where}: lot_sizes[{i}] covers no expiry")
-        out.append(LotSize(units=units, from_day=from_day, until_day=until_day,
-                           expiries_from=expiries_from, expiries_until=expiries_until))
+        out.append(
+            LotSize(
+                units=units,
+                from_day=from_day,
+                until_day=until_day,
+                expiries_from=expiries_from,
+                expiries_until=expiries_until,
+            )
+        )
     current = [ls for ls in out if ls.until_day is None]
     if len(current) != 1:
         raise InvalidProfile(f"{where}: exactly one lot_sizes entry may be open-ended (no until)")

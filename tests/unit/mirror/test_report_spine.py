@@ -39,9 +39,10 @@ TITLE = {f.key: f.title for c in S.CHAPTERS for f in c.facts}
 CHAPTER_OF = {f.key: c.number for c in S.CHAPTERS for f in c.facts}
 LAST = "You've read the report. Start with your days worth a look."
 TEMPLATES = Path("services/production/api/templates")
-REPORT_TEMPLATES = [*sorted((TEMPLATES / "scope").rglob("*.html")),
-                    *(TEMPLATES / n for n in ("reveal.html", "budget.html", "home_signed_in.html",
-                                              "journal.html"))]
+REPORT_TEMPLATES = [
+    *sorted((TEMPLATES / "scope").rglob("*.html")),
+    *(TEMPLATES / n for n in ("reveal.html", "budget.html", "home_signed_in.html", "journal.html")),
+]
 CSRF = re.compile(r'name="csrf_token"\s+value="([^"]+)"')
 
 TAG = re.compile(r"<[^>]+>")
@@ -51,10 +52,20 @@ MAIN_NAV = re.compile(r'<nav class="bottom-nav[^"]*" aria-label="Main">(.*?)</na
 TABS = [("/", "Home"), ("/mirror", "Scope"), ("/journals", "Journal"), ("/account", "Account")]
 
 SIGNED_IN = [
-    "/", "/mirror", *[f"/mirror/chapter/{c.number}" for c in S.CHAPTERS],
-    *[f"/mirror/fact/{k}" for k in ORDER], "/mirror/fact/math/trades", "/mirror/reveal",
-    "/journals", "/account", "/budget", "/upload", "/imports/1", "/imports/1/charges",
-    "/eligibility", "/settings/consent",
+    "/",
+    "/mirror",
+    *[f"/mirror/chapter/{c.number}" for c in S.CHAPTERS],
+    *[f"/mirror/fact/{k}" for k in ORDER],
+    "/mirror/fact/math/trades",
+    "/mirror/reveal",
+    "/journals",
+    "/account",
+    "/budget",
+    "/upload",
+    "/imports/1",
+    "/imports/1/charges",
+    "/eligibility",
+    "/settings/consent",
 ]
 
 
@@ -90,8 +101,16 @@ def read(engine, login_id: str, *keys: str) -> None:
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).one()
         for key in keys:
-            sess.add(m.DwellEvent(trader_id=trader.id, surface="mirror_line", key=key,
-                                  event="view", at=datetime.now(UTC), duration_ms=1500))
+            sess.add(
+                m.DwellEvent(
+                    trader_id=trader.id,
+                    surface="mirror_line",
+                    key=key,
+                    event="view",
+                    at=datetime.now(UTC),
+                    duration_ms=1500,
+                )
+            )
         sess.commit()
 
 
@@ -105,11 +124,17 @@ def expected_next(i: int) -> tuple[str, str]:
 
 
 def labelled(links: list[dict], rel: str) -> list[tuple[str, str]]:
-    return [(path(a.get("href", "")), a.get("aria-label", "")) for a in links if a.get("rel") == rel]
+    return [
+        (path(a.get("href", "")), a.get("aria-label", "")) for a in links if a.get("rel") == rel
+    ]
 
 
 def continues(html: str) -> list[tuple[str, str]]:
-    return [(path(a.get("href", "")), a["text"]) for a in anchors(html) if a["text"].startswith("Continue:")]
+    return [
+        (path(a.get("href", "")), a["text"])
+        for a in anchors(html)
+        if a["text"].startswith("Continue:")
+    ]
 
 
 def backs(html: str) -> list[tuple[str, str]]:
@@ -139,8 +164,10 @@ def test_the_rail_runs_in_that_order_marks_this_page_and_counts_it(client, key):
     assert [a["data-page"] for a in segs if a.get("aria-current") == "page"] == [key]
     words = " ".join(unescape(TAG.sub(" ", rail)).split())
     assert f"{ORDER.index(key) + 1} of {len(ORDER)}" in words
-    assert any(a.get("href", "") == "#all-pages" and a["text"] == f"All {len(ORDER)} pages"
-               for a in anchors(rail))
+    assert any(
+        a.get("href", "") == "#all-pages" and a["text"] == f"All {len(ORDER)} pages"
+        for a in anchors(rail)
+    )
     assert "path__crumbs--short" not in rail, "the full path, no cut-off names"
     assert S.chapter(CHAPTER_OF[key]).name in words and TITLE[key] in words
 
@@ -149,7 +176,9 @@ def test_the_rail_runs_in_that_order_marks_this_page_and_counts_it(client, key):
 def test_previous_and_next_name_their_page_from_the_same_order(client, key):
     i = ORDER.index(key)
     links = anchors(spine(page_of(client, key), "pn"))
-    want_prev = [] if i == 0 else [(f"/mirror/fact/{ORDER[i - 1]}", f"Previous: {TITLE[ORDER[i - 1]]}")]
+    want_prev = (
+        [] if i == 0 else [(f"/mirror/fact/{ORDER[i - 1]}", f"Previous: {TITLE[ORDER[i - 1]]}")]
+    )
     assert labelled(links, "prev") == want_prev
     assert labelled(links, "next") == [expected_next(i)]
 
@@ -190,8 +219,10 @@ def test_scope_facts_decides_no_step_of_its_own():
 def test_each_chapter_goes_on_to_its_first_page(client, n):
     first = S.chapter(n).facts[0].key
     html = client.get(f"/mirror/chapter/{n}").text
-    assert any(path(a.get("href", "")) == f"/mirror/fact/{first}" and a["text"] == f"Next: {TITLE[first]}"
-               for a in anchors(html))
+    assert any(
+        path(a.get("href", "")) == f"/mirror/fact/{first}" and a["text"] == f"Next: {TITLE[first]}"
+        for a in anchors(html)
+    )
 
 
 def test_what_we_read_and_the_last_page_have_a_way_on(client):
@@ -209,8 +240,11 @@ def test_every_signed_in_page_has_the_one_header(client, url):
     assert r.status_code == 200, (url, r.status_code)
     navs = MAIN_NAV.findall(r.text)
     assert len(navs) == 1, f"{url}: {len(navs)} main navs"
-    tabs = [(a.get("href", ""), a["text"]) for a in anchors(navs[0])
-            if "bottom-nav__item" in a.get("class", "")]
+    tabs = [
+        (a.get("href", ""), a["text"])
+        for a in anchors(navs[0])
+        if "bottom-nav__item" in a.get("class", "")
+    ]
     assert tabs == TABS, url
     assert "home-bar" not in r.text, f"{url}: the separate Home bar is retired"
 
@@ -224,7 +258,9 @@ def test_only_a_report_page_has_the_report_bar(client, url):
 def test_the_report_bar_on_a_phone(client):
     i = ORDER.index("run")
     links = anchors(spine(page_of(client, "run"), "rbar"))
-    assert labelled(links, "prev") == [(f"/mirror/fact/{ORDER[i - 1]}", f"Previous: {TITLE[ORDER[i - 1]]}")]
+    assert labelled(links, "prev") == [
+        (f"/mirror/fact/{ORDER[i - 1]}", f"Previous: {TITLE[ORDER[i - 1]]}")
+    ]
     assert labelled(links, "next") == [expected_next(i)]
     middle = [a for a in links if a.get("href", "") == "#all-pages"]
     assert len(middle) == 1
@@ -249,20 +285,23 @@ def test_the_handoff_says_what_903_changed():
 def test_continue_names_the_first_page_before_anything_is_read(client):
     for url in ("/", "/mirror"):
         assert continues(client.get(url).text) == [
-            (f"/mirror/fact/{ORDER[0]}", f"Continue: {TITLE[ORDER[0]]}")], url
+            (f"/mirror/fact/{ORDER[0]}", f"Continue: {TITLE[ORDER[0]]}")
+        ], url
 
 
 def test_continue_moves_to_the_first_page_not_yet_read(client, engine):
     read(engine, "fx", ORDER[0], ORDER[1], ORDER[3])
     for url in ("/", "/mirror"):
         assert continues(client.get(url).text) == [
-            (f"/mirror/fact/{ORDER[2]}", f"Continue: {TITLE[ORDER[2]]}")], url
+            (f"/mirror/fact/{ORDER[2]}", f"Continue: {TITLE[ORDER[2]]}")
+        ], url
 
 
 def test_a_view_kept_under_an_old_key_counts(client, engine):
     read(engine, "fx", "hidden", "worst-days", "best-worst-trades")  # the long page's key for money
     assert continues(client.get("/mirror").text) == [
-        ("/mirror/fact/math", f"Continue: {TITLE['math']}")]
+        ("/mirror/fact/math", f"Continue: {TITLE['math']}")
+    ]
 
 
 def test_with_every_page_read_continue_goes_away(client, engine):
@@ -287,24 +326,29 @@ def test_the_rail_and_all_pages_fill_the_pages_read(client, engine):
 def demo(engine):
     """A signed-in trader with the synthetic demo file, which has Journals (README rule 1)."""
     from tests.helpers.upload import sign_up
+
     c = sign_up(TestClient(create_app()), engine, "S-903", "spine903")
     token = CSRF.search(c.get("/upload").text).group(1)
-    assert c.post("/upload/demo", data={"csrf_token": token},
-                  follow_redirects=False).status_code == 303
+    assert (
+        c.post("/upload/demo", data={"csrf_token": token}, follow_redirects=False).status_code
+        == 303
+    )
     return c
 
 
 def _a_journal(engine) -> int:
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "spine903")).one()
-        return sess.scalars(select(m.Journal.id).where(m.Journal.trader_id == trader.id)
-                            .order_by(m.Journal.id)).first()
+        return sess.scalars(
+            select(m.Journal.id).where(m.Journal.trader_id == trader.id).order_by(m.Journal.id)
+        ).first()
 
 
 def test_a_journal_opened_from_a_report_page_offers_the_way_back(demo, engine):
     jid = _a_journal(engine)
     assert backs(demo.get(f"/journals/{jid}?from=run").text) == [
-        ("/mirror/fact/run", f"Back to {TITLE['run']}")]
+        ("/mirror/fact/run", f"Back to {TITLE['run']}")
+    ]
 
 
 def test_a_journal_from_anywhere_else_goes_back_home(demo, engine):
@@ -316,8 +360,11 @@ def test_a_journal_from_anywhere_else_goes_back_home(demo, engine):
 def test_report_pages_open_their_days_journal_with_the_way_back(demo):
     seen = 0
     for key in ("worst-days", "run", "busiest", "not-told"):
-        hrefs = [a.get("href", "") for a in anchors(demo.get(f"/mirror/fact/{key}").text)
-                 if re.match(r"/journals/\d+", a.get("href", ""))]
+        hrefs = [
+            a.get("href", "")
+            for a in anchors(demo.get(f"/mirror/fact/{key}").text)
+            if re.match(r"/journals/\d+", a.get("href", ""))
+        ]
         seen += len(hrefs)
         assert all(parse_qs(urlsplit(h).query).get("from") == [key] for h in hrefs), (key, hrefs)
     assert seen, "no report page linked a day's journal"
@@ -325,8 +372,11 @@ def test_report_pages_open_their_days_journal_with_the_way_back(demo):
 
 def test_the_busiest_day_offers_that_days_questions(demo):
     html = demo.get("/mirror/fact/busiest").text
-    assert any(a["text"] == "That day's questions"
-               and re.fullmatch(r"/journals/\d+\?from=busiest", a.get("href", "")) for a in anchors(html))
+    assert any(
+        a["text"] == "That day's questions"
+        and re.fullmatch(r"/journals/\d+\?from=busiest", a.get("href", ""))
+        for a in anchors(html)
+    )
 
 
 # ---------- Gate 6: upload, receipt, reveal, report ----------
@@ -339,16 +389,22 @@ def test_the_reveal_goes_on_to_the_report():
     assert 'href="/budget"' not in template and "/eligibility" not in template
     assert "worst_href" in template
     route = Path("services/production/api/routes_reveal.py").read_text(encoding="utf-8")
-    assert 'worst_href=SM.fact_href("worst-days")' in route  # by key, so a reorder cannot move it (TICKET-910)
+    assert (
+        'worst_href=SM.fact_href("worst-days")' in route
+    )  # by key, so a reorder cannot move it (TICKET-910)
 
 
 def test_limits_no_longer_send_on_to_the_checks_page(client):
-    assert "/eligibility" not in [path(a.get("href", "")) for a in anchors(client.get("/budget").text)]
+    assert "/eligibility" not in [
+        path(a.get("href", "")) for a in anchors(client.get("/budget").text)
+    ]
 
 
 def test_the_checks_page_is_reached_from_what_we_read(client):
-    assert any(path(a.get("href", "")) == "/eligibility" and a["text"] == "What we can check"
-               for a in anchors(page_of(client, "unread")))
+    assert any(
+        path(a.get("href", "")) == "/eligibility" and a["text"] == "What we can check"
+        for a in anchors(page_of(client, "unread"))
+    )
 
 
 def test_limits_stay_reachable_from_account(client):
@@ -366,6 +422,7 @@ def test_opening_a_report_page_counts_as_having_walked(client, engine):
     assert landing().startswith("/imports/"), "no guess, no number, nothing read: the walk"
     read(engine, "fx", ORDER[0])
     assert landing() == "/"
+
 
 def test_the_rail_sits_at_the_top_where_no_header_bar_is_above_it():
     """Page read, 13 Nov 2026: /sample has no header bar, and on desktop the rail

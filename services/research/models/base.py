@@ -77,8 +77,7 @@ def check_diagnostics(result: FitResult) -> None:
     starved = {p: round(e, 1) for p, e in result.ess.items() if e < MIN_BULK_ESS}
     if starved:
         raise BadDiagnostics(
-            f"{result.backend}: bulk ess below the framework minimum "
-            f"{MIN_BULK_ESS:.0f}: {starved}"
+            f"{result.backend}: bulk ess below the framework minimum {MIN_BULK_ESS:.0f}: {starved}"
         )
 
 

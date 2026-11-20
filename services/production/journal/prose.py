@@ -26,8 +26,19 @@ from typing import Any
 from services.production.api import formatting
 
 WORDS = {
-    0: "No", 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
-    7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
+    0: "No",
+    1: "One",
+    2: "Two",
+    3: "Three",
+    4: "Four",
+    5: "Five",
+    6: "Six",
+    7: "Seven",
+    8: "Eight",
+    9: "Nine",
+    10: "Ten",
+    11: "Eleven",
+    12: "Twelve",
 }
 
 
@@ -83,17 +94,21 @@ def _later(days: int) -> str:
 
 
 def _held_span(held: dict[str, Any]) -> str:
-    return (f"opened on {_date(held['opened'])}, closed on {_date(held['closed'])}, "
-            f"{_later(held['days'])}")
+    return (
+        f"opened on {_date(held['opened'])}, closed on {_date(held['closed'])}, "
+        f"{_later(held['days'])}"
+    )
 
 
 def _held_sentence(held: dict[str, Any]) -> str:
     """Held trades on a day with other trades. Facts stored before this have no held key."""
     if held["count"] == 1:
         return f" One was held past the day: {_held_span(held)}."
-    return (f" {_count(held['count'])} were held past the day. The longest opened on "
-            f"{_date(held['opened'])} and closed on {_date(held['closed'])}, "
-            f"{_later(held['days'])}.")
+    return (
+        f" {_count(held['count'])} were held past the day. The longest opened on "
+        f"{_date(held['opened'])} and closed on {_date(held['closed'])}, "
+        f"{_later(held['days'])}."
+    )
 
 
 def _what_happened(facts: dict[str, Any]) -> str:
@@ -126,8 +141,7 @@ def _what_happened(facts: dict[str, Any]) -> str:
             # Net -12,000. Eight closed down." Saying "All eight" makes the second
             # sentence a fact about the first rather than a repetition of it.
             phrase, n = present[0]
-            outcome = (f" It {phrase}." if n == 1
-                       else f" All {_count(n, capital=False)} {phrase}.")
+            outcome = f" It {phrase}." if n == 1 else f" All {_count(n, capital=False)} {phrase}."
         else:
             parts = [f"{_count(n, capital=False)} {phrase}" for phrase, n in present]
             outcome = " " + ", ".join(parts).capitalize() + "."
@@ -167,9 +181,7 @@ def _against_normal(facts: dict[str, Any]) -> str:
     # A median of 4.5 is a real figure but "4.5 trades" is not how anyone speaks.
     # A fractional normal day is read aloud as the two counts it sits between.
     floor = int(normal)
-    normal_text = (
-        f"{floor:g}" if normal == floor else f"{floor} or {floor + 1}"
-    )
+    normal_text = f"{floor:g}" if normal == floor else f"{floor} or {floor + 1}"
     # Only worth a sentence when the day was not a normal one. "Four trades against
     # your normal day of four and a half" tells him nothing, and eight Journals all
     # carrying it turns the comparison into wallpaper.
@@ -177,8 +189,7 @@ def _against_normal(facts: dict[str, Any]) -> str:
     if normal > 0 and abs(today - normal) / normal >= Decimal("0.4"):
         direction = "more than" if today > normal else "fewer than"
         sentence = (
-            f"That is {direction} your normal day of {normal_text} "
-            f"{_plural(normal, 'trade')}."
+            f"That is {direction} your normal day of {normal_text} {_plural(normal, 'trade')}."
         )
 
     # Size is only worth a sentence when it actually moved. Comparing 1.0 to 1.075

@@ -62,7 +62,9 @@ def test_both_cards_count_the_same_trades():
 def test_the_overview_draws_no_holding_in_either():
     page = readable(chapter_page(2, HELD))
     assert "525600" not in page and "5,25,600" not in page
-    assert page.count(NOTE) >= 2, "the math card and the clock card, and any other fact that says it"
+    assert page.count(NOTE) >= 2, (
+        "the math card and the clock card, and any other fact that says it"
+    )
 
 
 def test_the_fact_page_says_what_is_left_out():

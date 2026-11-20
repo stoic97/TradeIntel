@@ -80,10 +80,13 @@ def _latest(
 ) -> m.JournalFieldEntry | None:
     return sess.scalars(
         select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
-               m.JournalFieldEntry.field == field,
-               m.JournalFieldEntry.trip_id.is_(trip_id) if trip_id is None
-               else m.JournalFieldEntry.trip_id == trip_id)
+        .where(
+            m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
+            m.JournalFieldEntry.field == field,
+            m.JournalFieldEntry.trip_id.is_(trip_id)
+            if trip_id is None
+            else m.JournalFieldEntry.trip_id == trip_id,
+        )
         .order_by(m.JournalFieldEntry.id.desc())
     ).first()
 
@@ -134,14 +137,19 @@ def history(
     sess: Session, *, journal: m.Journal, field: str, trip_id: str | None
 ) -> list[m.JournalFieldEntry]:
     """Every answer he has given to this field, oldest first."""
-    return list(sess.scalars(
-        select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
-               m.JournalFieldEntry.field == field,
-               m.JournalFieldEntry.trip_id.is_(trip_id) if trip_id is None
-               else m.JournalFieldEntry.trip_id == trip_id)
-        .order_by(m.JournalFieldEntry.id)
-    ).all())
+    return list(
+        sess.scalars(
+            select(m.JournalFieldEntry)
+            .where(
+                m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
+                m.JournalFieldEntry.field == field,
+                m.JournalFieldEntry.trip_id.is_(trip_id)
+                if trip_id is None
+                else m.JournalFieldEntry.trip_id == trip_id,
+            )
+            .order_by(m.JournalFieldEntry.id)
+        ).all()
+    )
 
 
 def trips_with_a_planned_stop(sess: Session, *, journal: m.Journal) -> set[str]:
@@ -152,9 +160,10 @@ def trips_with_a_planned_stop(sess: Session, *, journal: m.Journal) -> set[str]:
     every stop that he recorded none.
     """
     rows = sess.scalars(
-        select(m.JournalFieldEntry)
-        .where(m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
-               m.JournalFieldEntry.field == "planned_sl",
-               m.JournalFieldEntry.trip_id.is_not(None))
+        select(m.JournalFieldEntry).where(
+            m.JournalFieldEntry.journal_id.in_(_lineage(sess, journal)),
+            m.JournalFieldEntry.field == "planned_sl",
+            m.JournalFieldEntry.trip_id.is_not(None),
+        )
     ).all()
     return {row.trip_id for row in rows if row.value}

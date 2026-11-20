@@ -100,17 +100,20 @@ def delete_trader(
 
     import_ids = _ids(sess, m.Import.id, m.Import.trader_id == trader_id)
     journal_ids = _ids(sess, m.Journal.id, m.Journal.trader_id == trader_id)
-    digests = list(sess.scalars(
-        select(m.RawFile.sha256).where(m.RawFile.trader_id == trader_id)).all())
+    digests = list(
+        sess.scalars(select(m.RawFile.sha256).where(m.RawFile.trader_id == trader_id)).all()
+    )
 
     if journal_ids:
-        _delete_where(sess, m.JournalFieldEntry,
-                      m.JournalFieldEntry.journal_id.in_(journal_ids), removed)
+        _delete_where(
+            sess, m.JournalFieldEntry, m.JournalFieldEntry.journal_id.in_(journal_ids), removed
+        )
     _delete_where(sess, m.WtpAnswer, m.WtpAnswer.trader_id == trader_id, removed)
     _delete_where(sess, m.WtpAsked, m.WtpAsked.trader_id == trader_id, removed)
     # Whether he remembered a day (TICKET-906). Before the Journals it points at.
-    _delete_where(sess, m.JournalRememberAnswer,
-                  m.JournalRememberAnswer.trader_id == trader_id, removed)
+    _delete_where(
+        sess, m.JournalRememberAnswer, m.JournalRememberAnswer.trader_id == trader_id, removed
+    )
     _delete_where(sess, m.Journal, m.Journal.trader_id == trader_id, removed)
 
     # What he said about a whole report (TICKET-825), in his own words.
@@ -119,8 +122,12 @@ def delete_trader(
     # imports, which each answer points at.
     feedback_ids = _ids(sess, m.ChapterFeedback.id, m.ChapterFeedback.trader_id == trader_id)
     if feedback_ids:
-        _delete_where(sess, m.ChapterFeedbackReason,
-                      m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
+        _delete_where(
+            sess,
+            m.ChapterFeedbackReason,
+            m.ChapterFeedbackReason.feedback_id.in_(feedback_ids),
+            removed,
+        )
     _delete_where(sess, m.ChapterFeedback, m.ChapterFeedback.trader_id == trader_id, removed)
     _delete_where(sess, m.GuessAnswer, m.GuessAnswer.trader_id == trader_id, removed)
     # The leaving card (B7): that it was shown, and his words.
@@ -132,9 +139,17 @@ def delete_trader(
             _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
-    for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ConsentEvent,
-                  m.ChargeStatement, m.RawFile):
+    for model in (
+        m.TradingDayVersion,
+        m.RiskBudgetDeclaration,
+        m.DwellEvent,
+        m.RuleDeclaration,
+        m.AdherenceEvent,
+        m.PreTradeNote,
+        m.ConsentEvent,
+        m.ChargeStatement,
+        m.RawFile,
+    ):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
     _delete_where(sess, m.Trader, m.Trader.id == trader_id, removed)
@@ -146,12 +161,16 @@ def delete_trader(
         trader_id=trader_id,
         requested_at=requested_at,
         completed_at=datetime.now(UTC),
-        what_removed=json.dumps({
-            "rows": removed.rows,
-            "files_deleted": len(removed.files_deleted),
-            "files_kept_because_another_account_has_the_same_bytes":
-                len(removed.files_kept_shared),
-        }, sort_keys=True),
+        what_removed=json.dumps(
+            {
+                "rows": removed.rows,
+                "files_deleted": len(removed.files_deleted),
+                "files_kept_because_another_account_has_the_same_bytes": len(
+                    removed.files_kept_shared
+                ),
+            },
+            sort_keys=True,
+        ),
         what_retained=RETAINED,
         locations_checked=json.dumps(list(LOCATIONS)),
     )
@@ -176,8 +195,11 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
     from services.production import demo  # one name for the demo account, kept with it
 
     removed = Removed()
-    import_ids = _ids(sess, m.Import.id, (m.Import.trader_id == trader.id)
-                      & (m.Import.source_account == demo.ACCOUNT))
+    import_ids = _ids(
+        sess,
+        m.Import.id,
+        (m.Import.trader_id == trader.id) & (m.Import.source_account == demo.ACCOUNT),
+    )
     if not import_ids:
         return removed
     raw_ids = _ids(sess, m.Import.raw_file_id, m.Import.id.in_(import_ids))
@@ -191,14 +213,29 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
 
     feedback_ids = _ids(sess, m.ChapterFeedback.id, m.ChapterFeedback.import_id.in_(import_ids))
     if feedback_ids:
-        _delete_where(sess, m.ChapterFeedbackReason,
-                      m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
-    for model in (m.ChapterFeedback, m.ReportFeedback, m.GuessAnswer, m.Trip,
-                  m.OpenPosition, m.SkippedTrip, m.ImportRow):
+        _delete_where(
+            sess,
+            m.ChapterFeedbackReason,
+            m.ChapterFeedbackReason.feedback_id.in_(feedback_ids),
+            removed,
+        )
+    for model in (
+        m.ChapterFeedback,
+        m.ReportFeedback,
+        m.GuessAnswer,
+        m.Trip,
+        m.OpenPosition,
+        m.SkippedTrip,
+        m.ImportRow,
+    ):
         _delete_where(sess, model, model.import_id.in_(import_ids), removed)
-    _delete_where(sess, m.TradingDayVersion,
-                  (m.TradingDayVersion.trader_id == trader.id)
-                  & (m.TradingDayVersion.source_account == demo.ACCOUNT), removed)
+    _delete_where(
+        sess,
+        m.TradingDayVersion,
+        (m.TradingDayVersion.trader_id == trader.id)
+        & (m.TradingDayVersion.source_account == demo.ACCOUNT),
+        removed,
+    )
     # Newest first: a demo version supersedes only an earlier demo version.
     for import_id in sorted(import_ids, reverse=True):
         _delete_where(sess, m.Import, m.Import.id == import_id, removed)
@@ -209,9 +246,7 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
     return removed
 
 
-def _remove_files(
-    sess: Session, store: FileStore, digests: list[str], removed: Removed
-) -> None:
+def _remove_files(sess: Session, store: FileStore, digests: list[str], removed: Removed) -> None:
     """Delete each stored file no other account still points at.
 
     The store is keyed by the hash of the plaintext, so identical exports from two
@@ -237,30 +272,49 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     so the drill checks the same list twice rather than two different ones.
     """
     found: list[str] = []
-    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
-                  m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
-                  m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
-                  m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer,
-                  m.JournalRememberAnswer):
-        if sess.scalars(select(model.id)
-                        .where(model.trader_id == trader_id).limit(1)).first():
+    for model in (
+        m.ConsentEvent,
+        m.RiskBudgetDeclaration,
+        m.ChargeStatement,
+        m.RawFile,
+        m.Import,
+        m.TradingDayVersion,
+        m.Journal,
+        m.WtpAnswer,
+        m.WtpAsked,
+        m.DwellEvent,
+        m.RuleDeclaration,
+        m.AdherenceEvent,
+        m.PreTradeNote,
+        m.ChapterFeedback,
+        m.ReportFeedback,
+        m.GuessAnswer,
+        m.LeavingCardShown,
+        m.LeavingCardAnswer,
+        m.JournalRememberAnswer,
+    ):
+        if sess.scalars(select(model.id).where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)
 
     if sess.get(m.Trader, trader_id) is not None:
         found.append("trader")
 
     journal_ids = _ids(sess, m.Journal.id, m.Journal.trader_id == trader_id)
-    if journal_ids and sess.scalars(
-        select(m.JournalFieldEntry.id)
-        .where(m.JournalFieldEntry.journal_id.in_(journal_ids)).limit(1)
-    ).first():
+    if (
+        journal_ids
+        and sess.scalars(
+            select(m.JournalFieldEntry.id)
+            .where(m.JournalFieldEntry.journal_id.in_(journal_ids))
+            .limit(1)
+        ).first()
+    ):
         found.append("journal_field_entry")
 
     import_ids = _ids(sess, m.Import.id, m.Import.trader_id == trader_id)
     if import_ids:
         for model in (m.Trip, m.OpenPosition, m.SkippedTrip, m.ImportRow):
-            if sess.scalars(select(model.id)
-                            .where(model.import_id.in_(import_ids))
-                            .limit(1)).first():
+            if sess.scalars(
+                select(model.id).where(model.import_id.in_(import_ids)).limit(1)
+            ).first():
                 found.append(model.__tablename__)
     return found

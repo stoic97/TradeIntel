@@ -94,9 +94,13 @@ def trips_of(sess, trader: m.Trader, journal: m.Journal) -> list[m.Trip]:
     if not ids:
         return []
     found = sess.scalars(
-        select(m.Trip).join(m.Import, m.Trip.import_id == m.Import.id)
-        .where(m.Import.trader_id == trader.id, m.Trip.import_id == journal.import_id,
-               or_(m.Trip.trip_id.in_(ids), m.Trip.position_id.in_(ids)))
+        select(m.Trip)
+        .join(m.Import, m.Trip.import_id == m.Import.id)
+        .where(
+            m.Import.trader_id == trader.id,
+            m.Trip.import_id == journal.import_id,
+            or_(m.Trip.trip_id.in_(ids), m.Trip.position_id.in_(ids)),
+        )
     ).all()
     return sorted(found, key=lambda t: t.entry_ts)
 
@@ -137,7 +141,8 @@ def _offered(journals: list[m.Journal], record: list[mx.Trip]) -> dict[int, str]
     """
     flags = worth.flags_by_day(record)
     new = recency.new_days(
-        [j.period_start for j in journals if j.period_start == j.period_end], recency.today())
+        [j.period_start for j in journals if j.period_start == j.period_end], recency.today()
+    )
     return {j.id: worth.offer(j, flags, new) for j in journals}
 
 
@@ -155,18 +160,22 @@ def journal_list(request: Request):
         if card:
             leaving.mark_shown(sess, trader)
             sess.commit()
-        return page(request, "journals.html", title="Your Journals",
-                    latest=surface.latest, catch_up_count=surface.catch_up_count,
-                    started=len(first),
-                    reasons={j.id: " · ".join(f.label for f in _flags_on(j, flags))
-                             for j in first},
-                    changed_ids=gen.changed_by_upload(sess, trader=trader),
-                    total=surface.total, leaving_card=leaving if card else None)
+        return page(
+            request,
+            "journals.html",
+            title="Your Journals",
+            latest=surface.latest,
+            catch_up_count=surface.catch_up_count,
+            started=len(first),
+            reasons={j.id: " · ".join(f.label for f in _flags_on(j, flags)) for j in first},
+            changed_ids=gen.changed_by_upload(sess, trader=trader),
+            total=surface.total,
+            leaving_card=leaving if card else None,
+        )
 
 
 @router.post("/leaving-card")
-def leaving_card_answer(request: Request, answer: str = Form(None),
-                        csrf_token: str = Form(None)):
+def leaving_card_answer(request: Request, answer: str = Form(None), csrf_token: str = Form(None)):
     return _leaving_card(request, answer, csrf_token)
 
 
@@ -208,21 +217,29 @@ def journal_catch_up(request: Request, month: str | None = None):
             shown = month_view.month(dated, month)
         except ValueError:
             raise HTTPException(status_code=404) from None
-        strip = sorted((p for p in periods
-                        if shown and p.period_start[:7] <= shown.key <= p.period_end[:7]),
-                       key=lambda p: p.period_start)
-        return page(request, "journals_catch_up.html", title="Earlier Journals",
-                    shown=shown, days=days, strip=strip,
-                    offered=_offered(current, _record(sess, trader)),
-                    answered=remember.answered_days(sess, trader),
-                    prev_title=month_view.title(shown.prev) if shown and shown.prev else None,
-                    next_title=month_view.title(shown.next) if shown and shown.next else None,
-                    changed_ids=gen.changed_by_upload(sess, trader=trader))
+        strip = sorted(
+            (p for p in periods if shown and p.period_start[:7] <= shown.key <= p.period_end[:7]),
+            key=lambda p: p.period_start,
+        )
+        return page(
+            request,
+            "journals_catch_up.html",
+            title="Earlier Journals",
+            shown=shown,
+            days=days,
+            strip=strip,
+            offered=_offered(current, _record(sess, trader)),
+            answered=remember.answered_days(sess, trader),
+            prev_title=month_view.title(shown.prev) if shown and shown.prev else None,
+            next_title=month_view.title(shown.next) if shown and shown.next else None,
+            changed_ids=gen.changed_by_upload(sess, trader=trader),
+        )
 
 
 @router.post("/journals/{journal_id}/remember")
-def journal_remember(request: Request, journal_id: int, answer: str = Form(None),
-                     csrf_token: str = Form(None)):
+def journal_remember(
+    request: Request, journal_id: int, answer: str = Form(None), csrf_token: str = Form(None)
+):
     """Yes or No to "Do you remember this day?", kept with the day's age (TICKET-906).
 
     A form, not a link: a link anyone could send must not store an answer. Yes opens the
@@ -237,8 +254,9 @@ def journal_remember(request: Request, journal_id: int, answer: str = Form(None)
         journal = _owned(sess, trader, journal_id)
         its_month = journal.period_start[:7]
         try:
-            remember.record(sess, trader=trader, journal=journal, answer=answer or "",
-                            on=recency.today())
+            remember.record(
+                sess, trader=trader, journal=journal, answer=answer or "", on=recency.today()
+            )
         except (remember.NotAnAnswer, remember.NotADay):
             raise HTTPException(status_code=400) from None
         sess.commit()
@@ -284,8 +302,7 @@ def journal_page(request: Request, journal_id: int):
 
         answers = {
             t["trip_id"]: {
-                name: fields.current(sess, journal=journal, field=name,
-                                     trip_id=t["trip_id"])
+                name: fields.current(sess, journal=journal, field=name, trip_id=t["trip_id"])
                 for name, _ in PER_TRIP_PROMPTS
             }
             for t in trades
@@ -293,48 +310,66 @@ def journal_page(request: Request, journal_id: int):
         ask_wtp = wtp.ask_here(sess, trader=trader, journal=journal)
         # TICKET-906: a day neither worth a look nor new asks "Do you remember this day?"
         # first - unless he has answered it, or written on it, already.
-        how = worth.offer(journal, worth.flags_by_day(record),
-                          recency.new_days([journal.period_start], recency.today()))
-        ask_first = (how == worth.REMEMBER
-                     and journal.period_start not in remember.answered_days(sess, trader))
+        how = worth.offer(
+            journal,
+            worth.flags_by_day(record),
+            recency.new_days([journal.period_start], recency.today()),
+        )
+        ask_first = how == worth.REMEMBER and journal.period_start not in remember.answered_days(
+            sess, trader
+        )
         # Previous and next across trading days: a day with no trades has no page.
-        day_list = sorted((j for j in gen.newest_first(sess, trader=trader)
-                           if j.period_start == j.period_end), key=lambda j: j.period_start)
+        day_list = sorted(
+            (j for j in gen.newest_first(sess, trader=trader) if j.period_start == j.period_end),
+            key=lambda j: j.period_start,
+        )
         at = None
         if one_day:
-            at = next((i for i, j in enumerate(day_list)
-                       if j.period_start == journal.period_start), None)
+            at = next(
+                (i for i, j in enumerate(day_list) if j.period_start == journal.period_start), None
+            )
         prev_day = day_list[at - 1] if at else None
         next_day = day_list[at + 1] if at is not None and at + 1 < len(day_list) else None
         sess.commit()
         return page(
-            request, "journal.html", title=f"Your Journal, {formatting.day(journal.period_start)}",
+            request,
+            "journal.html",
+            title=f"Your Journal, {formatting.day(journal.period_start)}",
             back=SM.back_from(request.query_params.get("from")),
-            journal=journal, paragraphs=paragraphs, rows=asked, answers=answers,
+            journal=journal,
+            paragraphs=paragraphs,
+            rows=asked,
+            answers=answers,
             rest_rows=rest,
             rest_answered=any(
                 answers[row["trip_id"]][name] for row in rest for name, _ in PER_TRIP_PROMPTS
             ),
             trades_heading=(
                 {1: "One trade worth a minute", 2: "Two trades worth a minute"}[len(asked)]
-                if rest else None
+                if rest
+                else None
             ),
             flags=_flags_on(journal, worth.flags_by_day(record)),
             size_line=(
                 asking.size_line(journal.period_start, trades, mx.average_lots(record).mean)
-                if one_day else None
+                if one_day
+                else None
             ),
             changed_ids=gen.changed_by_upload(sess, trader=trader),
             earlier_id=gen.earlier_with_other_trades(sess, journal),
-            prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
+            prompts=PER_TRIP_PROMPTS,
+            fees_available=bool(imp and imp.fees_available),
             # His record's count, not this Journal's upload: one left alone by a later
             # reading keeps its import, and that import's refusals may no longer be his.
             uncounted=current.trips_refused if current else 0,
             read_again=bool(imp and persist.read_with_newer_code(sess, imp)),
             set_aside=bool(imp and persist.set_aside_more(sess, imp)),
             note=fields.current(sess, journal=journal, field="note", trip_id=None),
-            ask_wtp=ask_wtp, wtp_question=wtp.QUESTION,
-            ask_first=ask_first, prev_day=prev_day, next_day=next_day,
+            ask_wtp=ask_wtp,
+            wtp_question=wtp.QUESTION,
+            ask_first=ask_first,
+            prev_day=prev_day,
+            next_day=next_day,
         )
 
 
@@ -363,15 +398,17 @@ def journal_field(
     differs from the one on record is written.
     """
     if not require_csrf(request, csrf_token):
-        return HTMLResponse("Form expired. Reload the page and try again.",
-                            status_code=403)
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
     submitted: dict[str, str] = {}
     if field is not None:
         submitted[field] = value
     else:
-        for name, given in (("planned_sl", planned_sl), ("rationale", rationale),
-                            ("stop_existed_at_entry", stop_existed_at_entry)):
+        for name, given in (
+            ("planned_sl", planned_sl),
+            ("rationale", rationale),
+            ("stop_existed_at_entry", stop_existed_at_entry),
+        ):
             if given is not None:
                 submitted[name] = given
     if not submitted:
@@ -387,9 +424,12 @@ def journal_field(
         trip_entry = trip_exit = None
         if trip_id is not None:
             trip = sess.scalars(
-                select(m.Trip).join(m.Import, m.Trip.import_id == m.Import.id)
-                .where(m.Import.trader_id == trader.id,
-                       or_(m.Trip.trip_id == trip_id, m.Trip.position_id == trip_id))
+                select(m.Trip)
+                .join(m.Import, m.Trip.import_id == m.Import.id)
+                .where(
+                    m.Import.trader_id == trader.id,
+                    or_(m.Trip.trip_id == trip_id, m.Trip.position_id == trip_id),
+                )
             ).first()
             if trip is None:
                 raise HTTPException(status_code=404)
@@ -397,15 +437,20 @@ def journal_field(
 
         try:
             for name, given in submitted.items():
-                on_record = fields.current(sess, journal=journal, field=name,
-                                           trip_id=trip_id)
+                on_record = fields.current(sess, journal=journal, field=name, trip_id=trip_id)
                 if on_record is not None and (on_record.value or "") == given:
                     continue
                 if on_record is None and not given.strip():
                     continue
-                fields.record(sess, journal=journal, field=name, value=given,
-                              trip_id=trip_id, trip_entry=trip_entry,
-                              trip_exit=trip_exit)
+                fields.record(
+                    sess,
+                    journal=journal,
+                    field=name,
+                    value=given,
+                    trip_id=trip_id,
+                    trip_entry=trip_entry,
+                    trip_exit=trip_exit,
+                )
         except fields.UnknownField:
             raise HTTPException(status_code=400) from None
         sess.commit()
@@ -421,8 +466,7 @@ def journal_wtp(
     csrf_token: str = Form(None),
 ):
     if not require_csrf(request, csrf_token):
-        return HTMLResponse("Form expired. Reload the page and try again.",
-                            status_code=403)
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
 
     with make_session(request.app.state.engine) as sess:
         trader, elsewhere = _gate(request, sess)
@@ -430,8 +474,7 @@ def journal_wtp(
             return elsewhere
         journal = _owned(sess, trader, journal_id)
         try:
-            wtp.record(sess, trader=trader, journal=journal, answer=answer,
-                       free_text=free_text)
+            wtp.record(sess, trader=trader, journal=journal, answer=answer, free_text=free_text)
         except wtp.NotAnAnswer:
             raise HTTPException(status_code=400) from None
         sess.commit()

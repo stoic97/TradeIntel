@@ -31,8 +31,7 @@ from typing import Any
 import yaml
 
 FRAMEWORK = (
-    Path(__file__).resolve().parents[3]
-    / "services" / "research" / "prereg" / "framework_v1.yaml"
+    Path(__file__).resolve().parents[3] / "services" / "research" / "prereg" / "framework_v1.yaml"
 )
 
 
@@ -138,8 +137,7 @@ def parse_n_min(raw: Any) -> NMin:
 
     match = _PAIR_SUFFIXED.match(text)
     if match:
-        return NMin(int(match[1]), int(match[2]), _SUFFIX_UNIT[match[3]], text,
-                    inferred=True)
+        return NMin(int(match[1]), int(match[2]), _SUFFIX_UNIT[match[3]], text, inferred=True)
 
     match = _PER.match(text)
     if match:
@@ -224,15 +222,18 @@ def load(path: Path | None = None) -> Framework:
             n_min=parse_n_min(entry.get("n_min")),
             needs=entry.get("needs"),
             requires_class=entry.get("class"),
-            extras=tuple(sorted(
-                str(key) for key in entry
-                # `null:` in the YAML is the null literal used as a key, so it
-                # parses to None, not to the string "null" -- and sorted() will
-                # not compare None against a string.
-                if key is not None
-                and key not in {"id", "q", "model", "n_min", "needs", "class",
-                                "theta_min", "move"}
-            )),
+            extras=tuple(
+                sorted(
+                    str(key)
+                    for key in entry
+                    # `null:` in the YAML is the null literal used as a key, so it
+                    # parses to None, not to the string "null" -- and sorted() will
+                    # not compare None against a string.
+                    if key is not None
+                    and key
+                    not in {"id", "q", "model", "n_min", "needs", "class", "theta_min", "move"}
+                )
+            ),
         )
         for entry in data["library"]
     )

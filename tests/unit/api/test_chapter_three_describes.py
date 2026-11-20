@@ -80,8 +80,11 @@ def test_closed_the_page_opens_with_no_difference_we_can_stand_behind(page, read
     assert read(page())[1] == CLOSED
 
 
-@pytest.mark.parametrize("page", [lambda: fact_page("down", DOWN), lambda: chapter_page(3, DOWN)],
-                         ids=["fact page", "card"])
+@pytest.mark.parametrize(
+    "page",
+    [lambda: fact_page("down", DOWN), lambda: chapter_page(3, DOWN)],
+    ids=["fact page", "card"],
+)
 def test_closed_the_numbers_are_still_shown_and_no_pattern_is_invented(page):
     text = readable(page())
     assert "+₹137.5" in text
@@ -144,8 +147,11 @@ def test_open_a_side_with_no_trades_has_no_average_so_the_closed_sentence_stands
 # ---------- The busiest day: not a post-loss sentence, so not gated ----------
 
 
-BUSY = (one_day([10, 10, 10, 10], "2026-09-01") + one_day([10], "2026-09-02")
-        + one_day([10, 10], "2026-09-03"))
+BUSY = (
+    one_day([10, 10, 10, 10], "2026-09-01")
+    + one_day([10], "2026-09-02")
+    + one_day([10, 10], "2026-09-03")
+)
 """Days of 4, 1 and 2 trades: the normal (median) day is 2, the busiest 4."""
 
 

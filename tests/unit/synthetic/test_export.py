@@ -4,6 +4,7 @@ The export is correct only if the engine's own import path turns the fills back
 into exactly the generator's trips, and if the same corpus is the same bytes every
 time it is written.
 """
+
 import gzip
 import json
 from dataclasses import replace

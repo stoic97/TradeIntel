@@ -181,9 +181,7 @@ class Fill(_Contract):
     @classmethod
     def _aware(cls, v: datetime) -> datetime:
         if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
-            raise ValueError(
-                "ts must carry a timezone — a naive timestamp is ambiguous (§4.3)"
-            )
+            raise ValueError("ts must carry a timezone — a naive timestamp is ambiguous (§4.3)")
         return v
 
     @field_validator("quantity")

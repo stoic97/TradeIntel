@@ -34,6 +34,7 @@ from services.shared.schemas import scope_v1 as s
 @pytest.fixture()
 def session():
     import os
+
     engine = make_engine(os.environ["SCOPE_DB"])
     run_migrations(engine)
     with make_session(engine) as sess:
@@ -41,8 +42,12 @@ def session():
 
 
 def a_trader(session, first_upload_days_ago: int = 0) -> m.Trader:
-    trader = m.Trader(display_name="F", login_id="f", password_hash="x",
-                      created_at=datetime.now(UTC) - timedelta(days=first_upload_days_ago))
+    trader = m.Trader(
+        display_name="F",
+        login_id="f",
+        password_hash="x",
+        created_at=datetime.now(UTC) - timedelta(days=first_upload_days_ago),
+    )
     session.add(trader)
     session.flush()
     return trader
@@ -50,15 +55,32 @@ def a_trader(session, first_upload_days_ago: int = 0) -> m.Trader:
 
 def an_upload(session, trader, days_ago: int = 0) -> m.Import:
     when = datetime.now(UTC) - timedelta(days=days_ago)
-    raw = m.RawFile(trader_id=trader.id, sha256=f"{trader.id}{days_ago}".ljust(64, "a"),
-                    original_name="f", size=1, stored_path="/tmp/f", uploaded_at=when)
+    raw = m.RawFile(
+        trader_id=trader.id,
+        sha256=f"{trader.id}{days_ago}".ljust(64, "a"),
+        original_name="f",
+        size=1,
+        stored_path="/tmp/f",
+        uploaded_at=when,
+    )
     session.add(raw)
     session.flush()
-    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                   adapter_id="d", adapter_version="1", filemap_version="1",
-                   code_version="c", outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-                   rows_in=1, rows_parsed=1, rows_excluded=0, fees_available=False,
-                   version_no=1, created_at=when)
+    imp = m.Import(
+        trader_id=trader.id,
+        raw_file_id=raw.id,
+        source_account="A",
+        adapter_id="d",
+        adapter_version="1",
+        filemap_version="1",
+        code_version="c",
+        outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+        rows_in=1,
+        rows_parsed=1,
+        rows_excluded=0,
+        fees_available=False,
+        version_no=1,
+        created_at=when,
+    )
     session.add(imp)
     session.flush()
     return imp
@@ -68,11 +90,17 @@ def journals(session, trader, imp, count: int, opened: int) -> list[m.Journal]:
     out = []
     for i in range(count):
         journal = m.Journal(
-            trader_id=trader.id, import_id=imp.id, unit=s.JournalUnit.DAY,
-            period_start=f"2026-09-{i + 1:02d}", period_end=f"2026-09-{i + 1:02d}",
-            version_no=1, generated_at=datetime.now(UTC),
+            trader_id=trader.id,
+            import_id=imp.id,
+            unit=s.JournalUnit.DAY,
+            period_start=f"2026-09-{i + 1:02d}",
+            period_end=f"2026-09-{i + 1:02d}",
+            version_no=1,
+            generated_at=datetime.now(UTC),
             opened_at=datetime.now(UTC) if i < opened else None,
-            trip_ids=json.dumps([]), sections="{}")
+            trip_ids=json.dumps([]),
+            sections="{}",
+        )
         session.add(journal)
         out.append(journal)
     session.flush()
@@ -136,8 +164,13 @@ def test_it_is_asked_once(session):
     written = journals(session, trader, imp, count=10, opened=3)
     session.commit()
     assert wtp.should_ask(session, trader=trader) is True
-    wtp.record(session, trader=trader, journal=written[0], answer="maybe",
-               free_text="Depends what else is in it.")
+    wtp.record(
+        session,
+        trader=trader,
+        journal=written[0],
+        answer="maybe",
+        free_text="Depends what else is in it.",
+    )
     session.commit()
     assert wtp.should_ask(session, trader=trader) is False
 
@@ -163,8 +196,7 @@ def test_an_answer_outside_the_three_is_refused(session):
     written = journals(session, trader, imp, count=3, opened=3)
     session.commit()
     with pytest.raises(wtp.NotAnAnswer):
-        wtp.record(session, trader=trader, journal=written[0], answer="probably",
-                   free_text="")
+        wtp.record(session, trader=trader, journal=written[0], answer="probably", free_text="")
 
 
 def test_the_question_names_the_placeholder_price(session):

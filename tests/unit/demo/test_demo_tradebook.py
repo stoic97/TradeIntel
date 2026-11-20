@@ -37,9 +37,13 @@ def generator():
 def plan():
     return pl.plan_import(
         FILE.read_text(encoding="utf-8"),
-        context=pl.ImportContext(trader_id="demo", source_account="DEMO",
-                                 code_version="test", export_date="2026-09-01",
-                                 export_date_source="trader"),
+        context=pl.ImportContext(
+            trader_id="demo",
+            source_account="DEMO",
+            code_version="test",
+            export_date="2026-09-01",
+            export_date_source="trader",
+        ),
         production=True,
     )
 
@@ -47,15 +51,23 @@ def plan():
 @pytest.fixture(scope="module")
 def trips(plan):
     """The plan's positions as the report's metrics read a trade: one per position."""
-    return mx.load_trips([
-        {"trip_id": p.position_id, "symbol": p.legs[0].symbol,
-         "trading_day": p.entry_ts.date().isoformat(),
-         "entry_ts": p.entry_ts.isoformat(), "exit_ts": p.exit_ts.isoformat(),
-         "holding_seconds": int((p.exit_ts - p.entry_ts).total_seconds()),
-         "net": str(p.net), "lots": 1, "risk_unit_source": "premium_paid",
-         "segment": "OPT"}
-        for p in plan.positions
-    ])
+    return mx.load_trips(
+        [
+            {
+                "trip_id": p.position_id,
+                "symbol": p.legs[0].symbol,
+                "trading_day": p.entry_ts.date().isoformat(),
+                "entry_ts": p.entry_ts.isoformat(),
+                "exit_ts": p.exit_ts.isoformat(),
+                "holding_seconds": int((p.exit_ts - p.entry_ts).total_seconds()),
+                "net": str(p.net),
+                "lots": 1,
+                "risk_unit_source": "premium_paid",
+                "segment": "OPT",
+            }
+            for p in plan.positions
+        ]
+    )
 
 
 def test_the_committed_file_is_what_the_seeded_generator_writes():
@@ -78,7 +90,11 @@ def test_the_production_pipeline_reads_every_row(plan):
 
 def test_it_names_no_one_and_trades_only_contracts_scope_reads(plan):
     """README rule 1: synthetic. Real instruments, chosen because a profile exists."""
-    assert {leg.symbol for p in plan.positions for leg in p.legs} == {"CRUDEOILM", "NIFTY", "NIFTYBEES"}
+    assert {leg.symbol for p in plan.positions for leg in p.legs} == {
+        "CRUDEOILM",
+        "NIFTY",
+        "NIFTYBEES",
+    }
 
 
 def test_it_has_one_of_each_thing_the_report_talks_about(plan, trips):
@@ -90,8 +106,10 @@ def test_it_has_one_of_each_thing_the_report_talks_about(plan, trips):
         if p.legs[0].segment.value == "OPT":
             books[p.legs[0].symbol] += 1
     assert set(books) == {"CRUDEOILM", "NIFTY"} and min(books.values()) >= mx.BOOK_ROW_MINIMUM
-    assert any(p.legs[0].segment.value == "EQ" and p.exit_ts.date() > p.entry_ts.date()
-               for p in plan.positions), "a share held, not traded"
+    assert any(
+        p.legs[0].segment.value == "EQ" and p.exit_ts.date() > p.entry_ts.date()
+        for p in plan.positions
+    ), "a share held, not traded"
     assert mx.longest_losing_run(trips).length >= 5, "a losing run"
     assert len({t.trading_day for t in trips}) >= 5 and len(mx.worst_five(trips)) == 5
 

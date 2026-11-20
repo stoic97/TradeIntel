@@ -56,28 +56,42 @@ def try_the_demo(client, follow=False):
 def imports(engine, login_id="visitor"):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == login_id)).one()
-        return list(sess.scalars(
-            select(m.Import).where(m.Import.trader_id == trader.id).order_by(m.Import.id)
-        ).all())
+        return list(
+            sess.scalars(
+                select(m.Import).where(m.Import.trader_id == trader.id).order_by(m.Import.id)
+            ).all()
+        )
 
 
 def journal_ids(engine, import_id: int) -> list[int]:
     with make_session(engine) as sess:
-        return list(sess.scalars(
-            select(m.Journal.id).where(m.Journal.import_id == import_id)
-        ).all())
+        return list(
+            sess.scalars(select(m.Journal.id).where(m.Journal.import_id == import_id)).all()
+        )
 
 
 def record_pages(engine, imp: m.Import) -> list[str]:
     """The pages a record is read on, and its first Journal if it has one: the demo has
     many; the two-trade real file may have none, and then there is no Journal page."""
-    journals = [f"/journals/{journal_ids(engine, imp.id)[0]}"] if journal_ids(engine, imp.id) else []
-    return ["/", "/mirror", "/mirror/chapter/1", "/mirror/chapter/3",
-            "/mirror/fact/worst-days", "/journals", *journals,
-            f"/imports/{imp.id}", "/eligibility", "/account"]
+    journals = (
+        [f"/journals/{journal_ids(engine, imp.id)[0]}"] if journal_ids(engine, imp.id) else []
+    )
+    return [
+        "/",
+        "/mirror",
+        "/mirror/chapter/1",
+        "/mirror/chapter/3",
+        "/mirror/fact/worst-days",
+        "/journals",
+        *journals,
+        f"/imports/{imp.id}",
+        "/eligibility",
+        "/account",
+    ]
 
 
 # ---------- 1. Offered beside the file picker; one click, the ordinary pipeline ----------
+
 
 def test_the_upload_page_offers_the_demo_beside_the_file_picker(client):
     page = client.get("/upload").text
@@ -115,6 +129,7 @@ def test_the_demo_needs_its_token_and_consent(client, engine):
 
 # ---------- 3. Every demo page says so; no real page does ----------
 
+
 def test_every_page_drawn_from_the_demo_says_so(client, engine):
     try_the_demo(client)
     (imp,) = imports(engine)
@@ -133,6 +148,7 @@ def test_no_page_drawn_from_a_real_upload_says_so(client, engine):
 
 
 # ---------- 4. An ordinary upload ----------
+
 
 def test_the_uploads_list_labels_it_demo(client):
     try_the_demo(client)
@@ -162,8 +178,14 @@ def test_a_real_upload_after_the_demo_is_as_if_it_had_never_been_there(client, e
     assert real.trips_reconstructed == alone.trips_reconstructed
     assert len(journal_ids(engine, real.id)) == len(journal_ids(engine, alone.id))
     with make_session(engine) as sess:
-        assert sess.scalars(select(m.TradingDayVersion).where(
-            m.TradingDayVersion.source_account == demo.ACCOUNT)).all() == []
+        assert (
+            sess.scalars(
+                select(m.TradingDayVersion).where(
+                    m.TradingDayVersion.source_account == demo.ACCOUNT
+                )
+            ).all()
+            == []
+        )
     for path in ("/", "/mirror", "/journals", "/account"):
         assert LINE not in client.get(path).text, path
 
@@ -186,6 +208,7 @@ def test_once_he_has_a_real_record_the_demo_is_not_offered_or_taken(client, engi
 
 
 # ---------- What /admin makes of it, through the real upload paths (TICKET-865) ----------
+
 
 def admin_row_and_cards(engine) -> tuple[dict, dict]:
     with make_session(engine) as sess:
@@ -213,6 +236,7 @@ def test_admin_reads_a_real_upload_after_the_demo_as_real(client, engine):
 
 # ---------- 5. Journals on demo days; nothing carried ----------
 
+
 def test_a_demo_journal_opens_and_nothing_written_on_it_reaches_a_real_upload(client, engine):
     try_the_demo(client)
     (imp,) = imports(engine)
@@ -220,9 +244,15 @@ def test_a_demo_journal_opens_and_nothing_written_on_it_reaches_a_real_upload(cl
     page = client.get(f"/journals/{first}")
     assert page.status_code == 200
     token = CSRF.search(page.text).group(1)
-    client.post(f"/journals/{first}/field",
-                data={"field": "note", "value": "written on a demo day", "trip_id": "",
-                      "csrf_token": token})
+    client.post(
+        f"/journals/{first}/field",
+        data={
+            "field": "note",
+            "value": "written on a demo day",
+            "trip_id": "",
+            "csrf_token": token,
+        },
+    )
     with make_session(engine) as sess:
         assert sess.scalars(select(m.JournalFieldEntry)).all(), "the note was kept"
 

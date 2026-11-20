@@ -73,7 +73,8 @@ def opened(figure: Figure, text: str):
     said = str(text) if str(text).endswith(figure.noun) else f"{text} {figure.noun}"
     label = f"{said}: open the trades behind it"
     return Markup('<a class="figure-link" href="{}" aria-label="{}">{}</a>').format(
-        figure.opens, label, text)
+        figure.opens, label, text
+    )
 
 
 def as_text(value) -> str:

@@ -30,6 +30,7 @@ recovered where the data cannot speak, and the structure behaves as section 6.2
 claims. Simulation-based calibration at 1,000 replications (cycle 9) does the
 rigorous work.
 """
+
 import sys
 from dataclasses import replace
 
@@ -94,6 +95,7 @@ def _stub(**kw):
 
 # --- pinned to the framework that is about to be hashed ------------------------
 
+
 def test_the_priors_are_the_frameworks_verbatim():
     """framework_v1.yaml section 6.3. If one of these moves here without moving
     there, the engine is not running the framework whose hash it carries."""
@@ -140,6 +142,7 @@ def test_a_condition_no_trade_ever_met_leaves_theta_at_its_prior():
 
 # --- the structure section 6.2 exists for, and where it stops working ----------
 
+
 def test_tau_day_is_larger_when_days_really_differ():
     flat = m1.fit(_data(day_sd=0.0, seed=7), PRIORS, FIT)
     lumpy = m1.fit(_data(day_sd=0.6, seed=7), PRIORS, FIT)
@@ -153,7 +156,9 @@ def test_tau_day_is_larger_when_days_really_differ():
 # diagnostics failure: any other failure is red everywhere, and strict means a clean fit on
 # Linux is red until ruled.
 @pytest.mark.xfail(
-    sys.platform == "linux", raises=BadDiagnostics, strict=True,
+    sys.platform == "linux",
+    raises=BadDiagnostics,
+    strict=True,
     reason="TD-034: one divergent transition on Linux under the lock; research seat to rule",
 )
 def test_day_structure_protects_theta_from_a_day_level_confound():
@@ -227,7 +232,9 @@ def test_a_condition_almost_determined_by_the_day_defeats_m1():
 # diagnostics failure: any other failure is red everywhere, and strict means a clean fit on
 # Linux is red until ruled.
 @pytest.mark.xfail(
-    sys.platform == "linux", raises=BadDiagnostics, strict=True,
+    sys.platform == "linux",
+    raises=BadDiagnostics,
+    strict=True,
     reason="TD-034: one divergent transition on Linux under the lock; research seat to rule",
 )
 def test_nu_falls_when_the_tails_are_heavy():
@@ -260,6 +267,7 @@ def test_a_history_on_one_day_is_refused_rather_than_fitted():
 
 # --- determinism and the framework's diagnostic thresholds --------------------
 
+
 def test_the_same_seed_gives_the_same_posterior_summary():
     data = _data(seed=19)
     assert m1.fit(data, PRIORS, FIT).summary_digest() == m1.fit(data, PRIORS, FIT).summary_digest()
@@ -277,6 +285,7 @@ def test_the_diagnostics_gate_is_the_frameworks_three_thresholds():
 
 
 # --- nu's prior, corrected after the SBC run of 10 Oct 2026 --------------------
+
 
 def test_a_nu_floor_holds_at_both_ends_when_set():
     """The floor mechanism is kept, defaulted off. It was proposed as the fix for 59
@@ -305,6 +314,7 @@ def test_the_nu_floor_is_part_of_the_spec_digest():
 
 
 # --- parameterisation: the same model, two geometries --------------------------
+
 
 def test_centred_and_non_centred_are_the_same_model():
     """The non-centred form was chosen for the funnel - weak per-day data. The SBC

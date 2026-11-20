@@ -143,7 +143,9 @@ def main() -> None:
             )
 
     fits = CORPUS_HISTORIES * LIBRARY_TESTS
-    print(f"\none full corpus pass = {CORPUS_HISTORIES} histories x {LIBRARY_TESTS} tests = {fits:,} fits")
+    print(
+        f"\none full corpus pass = {CORPUS_HISTORIES} histories x {LIBRARY_TESTS} tests = {fits:,} fits"
+    )
     print("corpus A is one third each of 100 / 300 / 1000 trips, so the mean of those is used\n")
     projection: dict[str, dict[str, float]] = {}
     for name in sorted(ce.BACKENDS):

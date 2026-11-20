@@ -20,6 +20,7 @@ computed over 4,000 correlated draws is not a rank over 4,000 independent ones, 
 the uniformity test would be reading noise it does not model. Thinning to a fixed,
 smaller count is the standard remedy and it is pre-registered here rather than tuned.
 """
+
 import numpy as np
 import pytest
 
@@ -31,6 +32,7 @@ FIT = FitConfig(draws=500, warmup=500, chains=4, seed=2)
 
 
 # --- draws have to reach the caller at all ------------------------------------
+
 
 def test_a_fit_can_return_its_draws_and_the_digest_ignores_them():
     """A rank, an 80% interval and P(theta < 0) all need the sample, not the summary.
@@ -52,6 +54,7 @@ def test_a_fit_can_return_its_draws_and_the_digest_ignores_them():
 
 # --- the rank, which is the whole measurement ---------------------------------
 
+
 def test_the_rank_is_zero_below_every_draw_and_the_count_above_every_draw():
     draws = np.array([0.0, 1.0, 2.0, 3.0])
     assert sbc.rank_of(draws, truth=-1.0) == 0
@@ -68,6 +71,7 @@ def test_thinning_takes_a_fixed_count_spread_across_the_chain():
 
 
 # --- the detector, and the controls that prove it can fail --------------------
+
 
 def test_uniform_ranks_pass_the_uniformity_test():
     rng = np.random.default_rng(1)
@@ -101,6 +105,7 @@ def test_the_uniformity_test_refuses_a_rank_outside_its_range():
 
 
 # --- SBC on M1, end to end at a small replication count ----------------------
+
 
 def test_sbc_accounts_for_every_replication_per_parameter():
     """The harness must lose nothing, and must not let one parameter's failure

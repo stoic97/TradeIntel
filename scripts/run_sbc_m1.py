@@ -117,8 +117,10 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
 
-    print(f"\n{result.seconds:.0f} s   diverged {result.diverged_replications}"
-          f"   refused {result.refused_replications}\n")
+    print(
+        f"\n{result.seconds:.0f} s   diverged {result.diverged_replications}"
+        f"   refused {result.refused_replications}\n"
+    )
     print(f"{'parameter':<10} {'completed':>10} {'chi2':>9} {'p':>9}   verdict")
     verdicts = result.verdicts()
     completion = result.completion()
@@ -144,9 +146,13 @@ def main() -> None:
 
     clean = [row for row in result.log if not row.get("failed") and not row.get("diverged")]
     print(f"\nwhere failures sit in prior space (median true value; {len(clean)} clean)")
-    print(f"{'group':<22} {'n':>4}  {'alpha':>7} {'theta':>7} {'sigma':>7} {'nu':>7} {'tau_day':>8}")
+    print(
+        f"{'group':<22} {'n':>4}  {'alpha':>7} {'theta':>7} {'sigma':>7} {'nu':>7} {'tau_day':>8}"
+    )
     groups = [("clean", clean), ("diverged", [r for r in result.log if r.get("diverged")])]
-    groups += [(f"{p} failed", [r for r in result.log if p in r.get("failed", [])]) for p in m1.PARAMS]
+    groups += [
+        (f"{p} failed", [r for r in result.log if p in r.get("failed", [])]) for p in m1.PARAMS
+    ]
     for name, rows in groups:
         if not rows:
             continue

@@ -31,21 +31,25 @@ from services.shared.schemas import scope_v1 as s
 
 def load_trips() -> list[Trip]:
     return [
-        Trip(trip_id=r["trip_id"], trading_day=r["trading_day"],
-             entry_ts=datetime.fromisoformat(r["entry_ts"]),
-             exit_ts=datetime.fromisoformat(r["exit_ts"]),
-             holding_seconds=r["holding_seconds"], net=Decimal(r["net"]),
-             lots=r["lots"],
-             risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
-             symbol=r["symbol"])
-        for r in json.loads(
-            Path("tests/fixtures/mirror_contract/main.json").read_text())
+        Trip(
+            trip_id=r["trip_id"],
+            trading_day=r["trading_day"],
+            entry_ts=datetime.fromisoformat(r["entry_ts"]),
+            exit_ts=datetime.fromisoformat(r["exit_ts"]),
+            holding_seconds=r["holding_seconds"],
+            net=Decimal(r["net"]),
+            lots=r["lots"],
+            risk_unit_source=s.RiskUnitSourceV1(r["risk_unit_source"]),
+            symbol=r["symbol"],
+        )
+        for r in json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text())
     ]
 
 
 @pytest.fixture()
 def session():
     import os
+
     engine = make_engine(os.environ["SCOPE_DB"])
     run_migrations(engine)
     with make_session(engine) as sess:
@@ -54,24 +58,44 @@ def session():
 
 @pytest.fixture()
 def trader(session):
-    t = m.Trader(display_name="Fixture", login_id="fx", password_hash="x",
-                 created_at=datetime.now(UTC))
+    t = m.Trader(
+        display_name="Fixture", login_id="fx", password_hash="x", created_at=datetime.now(UTC)
+    )
     session.add(t)
     session.flush()
     return t
 
 
 def an_import(session, trader, export_date="2026-09-30") -> m.Import:
-    raw = m.RawFile(trader_id=trader.id, sha256="a" * 64, original_name="f.csv",
-                    size=1, stored_path="/tmp/f", uploaded_at=datetime.now(UTC))
+    raw = m.RawFile(
+        trader_id=trader.id,
+        sha256="a" * 64,
+        original_name="f.csv",
+        size=1,
+        stored_path="/tmp/f",
+        uploaded_at=datetime.now(UTC),
+    )
     session.add(raw)
     session.flush()
-    imp = m.Import(trader_id=trader.id, raw_file_id=raw.id, source_account="A",
-                   adapter_id="dhan", adapter_version="1", filemap_version="1",
-                   code_version="gen", outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
-                   rows_in=40, rows_parsed=40, rows_excluded=0, fees_available=False,
-                   trips_reconstructed=40, version_no=1, export_date=export_date,
-                   density_default_unit="day", created_at=datetime.now(UTC))
+    imp = m.Import(
+        trader_id=trader.id,
+        raw_file_id=raw.id,
+        source_account="A",
+        adapter_id="dhan",
+        adapter_version="1",
+        filemap_version="1",
+        code_version="gen",
+        outcome=s.ImportOutcome.ACCEPTED_PARTIAL_FIELDS,
+        rows_in=40,
+        rows_parsed=40,
+        rows_excluded=0,
+        fees_available=False,
+        trips_reconstructed=40,
+        version_no=1,
+        export_date=export_date,
+        density_default_unit="day",
+        created_at=datetime.now(UTC),
+    )
     session.add(imp)
     session.flush()
     return imp
@@ -83,8 +107,15 @@ def test_one_journal_per_complete_period(session, trader):
     session.commit()
     assert len(written) == 8
     assert {j.period_start for j in written} == {
-        "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04",
-        "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10"}
+        "2026-09-01",
+        "2026-09-02",
+        "2026-09-03",
+        "2026-09-04",
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+    }
 
 
 def test_an_incomplete_period_is_not_written(session, trader):
@@ -98,8 +129,7 @@ def test_the_stored_journal_holds_facts_and_its_trips(session, trader):
     imp = an_import(session, trader)
     gen.generate(session, trader=trader, imp=imp, trips=load_trips())
     session.commit()
-    first = session.scalars(
-        select(m.Journal).order_by(m.Journal.period_start)).first()
+    first = session.scalars(select(m.Journal).order_by(m.Journal.period_start)).first()
     facts = json.loads(first.sections)
     assert facts["trades"]["count"] == 3
     assert json.loads(first.trip_ids) == ["t01", "t02", "t03"]
@@ -117,8 +147,10 @@ def test_regenerating_a_changed_day_writes_a_new_version(session, trader):
     session.commit()
 
     versions = session.scalars(
-        select(m.Journal).where(m.Journal.period_start == "2026-09-01")
-        .order_by(m.Journal.version_no)).all()
+        select(m.Journal)
+        .where(m.Journal.period_start == "2026-09-01")
+        .order_by(m.Journal.version_no)
+    ).all()
     assert len(versions) == 2, "the first version stays; a trader may have read it"
     assert versions[1].version_no == 2
     assert versions[1].supersedes == versions[0].id
@@ -148,8 +180,12 @@ def test_the_surface_shows_the_latest_five(session, trader):
 
 def test_a_short_history_has_no_catch_up_list(session, trader):
     imp = an_import(session, trader)
-    gen.generate(session, trader=trader, imp=imp,
-                 trips=[t for t in load_trips() if t.trading_day <= "2026-09-03"])
+    gen.generate(
+        session,
+        trader=trader,
+        imp=imp,
+        trips=[t for t in load_trips() if t.trading_day <= "2026-09-03"],
+    )
     session.commit()
     surface = gen.surface(session, trader=trader)
     assert surface.catch_up_count == 0
@@ -160,8 +196,9 @@ def test_only_the_current_version_is_surfaced(session, trader):
     gen.generate(session, trader=trader, imp=imp, trips=load_trips())
     session.commit()
     second = an_import(session, trader)
-    gen.generate(session, trader=trader, imp=second,
-                 trips=[t for t in load_trips() if t.trip_id != "t40"])
+    gen.generate(
+        session, trader=trader, imp=second, trips=[t for t in load_trips() if t.trip_id != "t40"]
+    )
     session.commit()
     surface = gen.surface(session, trader=trader)
     assert len({j.period_start for j in surface.latest}) == len(surface.latest)

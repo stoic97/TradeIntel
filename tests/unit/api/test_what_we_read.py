@@ -91,6 +91,5 @@ def test_nothing_refused_says_nothing():
 
 def test_the_list_of_set_aside_rows_keeps_its_own_words():
     """Guard: those rows really were not read, so this sentence stays true and stays."""
-    page = fact_page("unread", unread={"excluded": [], "rejected": [(9, "No date")],
-                                       "refused": []})
+    page = fact_page("unread", unread={"excluded": [], "rejected": [(9, "No date")], "refused": []})
     assert "Rows we could not read." in readable(page)

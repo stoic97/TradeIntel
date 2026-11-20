@@ -28,7 +28,10 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["worst-days"]["figure"] == formatting.rupees(CTX["worst_days"].sum)
     assert FIGS["share"]["figure"] == f"{share.share_percent}%"
     assert FIGS["money"]["figure"] == formatting.rupees(CTX["money_found"].same_day_net)
-    assert FIGS["math"]["figure"] == f'{formatting.out_of_a_hundred(CTX["strike"].rate_percent)} trades'
+    assert (
+        FIGS["math"]["figure"]
+        == f"{formatting.out_of_a_hundred(CTX['strike'].rate_percent)} trades"
+    )
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
     assert FIGS["clock"]["figure"] == "10:00 hour"
     assert FIGS["down"]["figure"] == f"{CTX['two_losses'].population} trades"

@@ -80,24 +80,42 @@ def _token(client: TestClient, path: str) -> str:
 
 def _sign_up(client: TestClient, engine, login_id: str) -> None:
     client.cookies.clear()
-    client.post("/signup", data={"login_id": login_id, "display_name": login_id.title(),
-                                 "password": PASSWORD, "csrf_token": _token(client, "/signup")},
-                follow_redirects=False)
+    client.post(
+        "/signup",
+        data={
+            "login_id": login_id,
+            "display_name": login_id.title(),
+            "password": PASSWORD,
+            "csrf_token": _token(client, "/signup"),
+        },
+        follow_redirects=False,
+    )
     with make_session(engine) as sess:
-        sess.execute(update(m.Trader).where(m.Trader.login_id == login_id).values(
-            development_data=False))
+        sess.execute(
+            update(m.Trader).where(m.Trader.login_id == login_id).values(development_data=False)
+        )
         sess.commit()
 
 
 def _consent(client: TestClient) -> None:
-    client.post("/consent", data={"csrf_token": _token(client, "/consent"), "diagnosis": "yes",
-                                  "engine_testing": "yes"},
-                follow_redirects=False)
+    client.post(
+        "/consent",
+        data={
+            "csrf_token": _token(client, "/consent"),
+            "diagnosis": "yes",
+            "engine_testing": "yes",
+        },
+        follow_redirects=False,
+    )
 
 
 def _upload(client: TestClient, path: Path) -> None:
-    client.post("/upload", files={"file": (path.name, path.read_bytes(), "text/csv")},
-                data={"csrf_token": _token(client, "/upload")}, follow_redirects=False)
+    client.post(
+        "/upload",
+        files={"file": (path.name, path.read_bytes(), "text/csv")},
+        data={"csrf_token": _token(client, "/upload")},
+        follow_redirects=False,
+    )
 
 
 def scenes(app, engine) -> dict[str, dict[str, tuple[int, str]]]:
@@ -108,25 +126,39 @@ def scenes(app, engine) -> dict[str, dict[str, tuple[int, str]]]:
     pages["signed up"] = crawl(client, ("/", "/consent", "/upload", "/account", "/mirror"))
 
     _consent(client)
-    pages["consented"] = crawl(client, ("/", "/upload", "/account", "/budget", "/mirror", "/journals"))
+    pages["consented"] = crawl(
+        client, ("/", "/upload", "/account", "/budget", "/mirror", "/journals")
+    )
 
     _sign_up(client, engine, "visitor")
     _consent(client)
-    client.post("/upload/demo", data={"csrf_token": _token(client, "/upload")},
-                follow_redirects=False)
-    pages["demo"] = crawl(client, ("/", "/mirror", "/mirror/reveal", "/account", "/budget",
-                                   "/journals", "/eligibility"))
+    client.post(
+        "/upload/demo", data={"csrf_token": _token(client, "/upload")}, follow_redirects=False
+    )
+    pages["demo"] = crawl(
+        client,
+        ("/", "/mirror", "/mirror/reveal", "/account", "/budget", "/journals", "/eligibility"),
+    )
 
-    client.post("/budget", data={"csrf_token": _token(client, "/budget"), "value": "2000",
-                                 "unit": "INR", "effective_from": "2024-01-01"},
-                follow_redirects=False)
+    client.post(
+        "/budget",
+        data={
+            "csrf_token": _token(client, "/budget"),
+            "value": "2000",
+            "unit": "INR",
+            "effective_from": "2024-01-01",
+        },
+        follow_redirects=False,
+    )
     pages["demo with a number"] = crawl(client, ("/mirror", "/mirror/chapter/4", "/budget"))
 
     _sign_up(client, engine, "smallfile")
     _consent(client)
     _upload(client, CLEAN)
-    pages["small file"] = crawl(client, ("/", "/mirror", "/mirror/reveal", "/account", "/budget",
-                                         "/journals", "/eligibility"))
+    pages["small file"] = crawl(
+        client,
+        ("/", "/mirror", "/mirror/reveal", "/account", "/budget", "/journals", "/eligibility"),
+    )
     return pages
 
 

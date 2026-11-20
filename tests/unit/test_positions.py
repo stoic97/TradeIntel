@@ -60,10 +60,21 @@ def test_an_exit_before_the_entry_is_still_refused():
 
 
 def fill(side, qty, price, seconds=0, strike=23000, kind=CE):
-    return Fill(trader_id="T01", broker="dhan", ts=T0 + timedelta(seconds=seconds), side=side,
-                quantity=qty, price=Decimal(price), raw_hash="c" * 64, exchange="NSE",
-                segment=Segment.OPT, symbol="NIFTY", expiry=EXPIRY, option_type=kind,
-                strike=Decimal(strike))
+    return Fill(
+        trader_id="T01",
+        broker="dhan",
+        ts=T0 + timedelta(seconds=seconds),
+        side=side,
+        quantity=qty,
+        price=Decimal(price),
+        raw_hash="c" * 64,
+        exchange="NSE",
+        segment=Segment.OPT,
+        symbol="NIFTY",
+        expiry=EXPIRY,
+        option_type=kind,
+        strike=Decimal(strike),
+    )
 
 
 SOLD = [fill(Side.SELL, 65, 30, 0), fill(Side.BUY, 65, 10, 3600)]
@@ -141,9 +152,19 @@ def test_the_same_contract_never_links_to_itself():
 
 def test_a_share_or_future_is_a_position_of_its_own():
     share = ctr_v2.RoundTrip(
-        trader_id="T01", broker="dhan", exchange="NSE", segment=Segment.EQ, symbol="NIFTY",
-        direction=LONG, entry_ts=T0, exit_ts=T0 + timedelta(hours=1), quantity=1,
-        entry_price=Decimal(10), exit_price=Decimal(11), gross_pnl=Decimal(1), fees=Decimal(0),
+        trader_id="T01",
+        broker="dhan",
+        exchange="NSE",
+        segment=Segment.EQ,
+        symbol="NIFTY",
+        direction=LONG,
+        entry_ts=T0,
+        exit_ts=T0 + timedelta(hours=1),
+        quantity=1,
+        entry_price=Decimal(10),
+        exit_price=Decimal(11),
+        gross_pnl=Decimal(1),
+        fees=Decimal(0),
         fill_ids=["x"],
     )
     positions = pos.group_positions([share, leg(SHORT, 23000, 30)])
@@ -211,21 +232,25 @@ def test_a_put_credit_vertical_works_the_same():
 
 def test_a_butterfly_is_the_lowest_point_at_a_strike():
     """Bought 23000 at 50 and 23200 at 20, sold two 23100 at 30. Debit 10 a unit."""
-    p = one([
-        leg(LONG, 23000, 50, qty=1),
-        leg(SHORT, 23100, 30, qty=2, seconds=1),
-        leg(LONG, 23200, 20, qty=1, seconds=2),
-    ])
+    p = one(
+        [
+            leg(LONG, 23000, 50, qty=1),
+            leg(SHORT, 23100, 30, qty=2, seconds=1),
+            leg(LONG, 23200, 20, qty=1, seconds=2),
+        ]
+    )
     assert p.risk_unit == Decimal(10)
 
 
 def test_a_leg_split_by_a_partial_close_classifies_the_same():
     """The 65 sold is two parcels. Same contract, so they add before the covered test."""
-    p = one([
-        leg(LONG, 23100, 10),
-        leg(SHORT, 23000, 30, qty=30, seconds=1),
-        leg(SHORT, 23000, 30, qty=35, seconds=1, held=7200),
-    ])
+    p = one(
+        [
+            leg(LONG, 23100, 10),
+            leg(SHORT, 23000, 30, qty=30, seconds=1),
+            leg(SHORT, 23000, 30, qty=35, seconds=1, held=7200),
+        ]
+    )
     assert p.risk_unit == Decimal(5200)
 
 

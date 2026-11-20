@@ -31,8 +31,10 @@ from tests.helpers.upload import CSRF, upload
 def counted(client, engine):
     assert upload(client, content=tradebook()).status_code == 303
     token = CSRF.search(client.get("/budget").text).group(1)
-    client.post("/budget", data={"value": "400", "unit": "INR", "effective_from": "2026-10-14",
-                                 "csrf_token": token})
+    client.post(
+        "/budget",
+        data={"value": "400", "unit": "INR", "effective_from": "2026-10-14", "csrf_token": token},
+    )
     return client
 
 

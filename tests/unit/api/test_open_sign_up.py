@@ -44,9 +44,17 @@ def client(app_env):
 
 def sign_up(client, login_id="newcomer", password=PASSWORD, display_name="New Comer", **extra):
     csrf = CSRF.search(client.get("/signup").text).group(1)
-    return client.post("/signup", data={"login_id": login_id, "display_name": display_name,
-                                        "password": password, "csrf_token": csrf, **extra},
-                       follow_redirects=False)
+    return client.post(
+        "/signup",
+        data={
+            "login_id": login_id,
+            "display_name": display_name,
+            "password": password,
+            "csrf_token": csrf,
+            **extra,
+        },
+        follow_redirects=False,
+    )
 
 
 def traders(engine) -> list[str]:
@@ -72,9 +80,11 @@ def test_opening_the_site_with_no_invite_offers_sign_up_on_the_page(client):
 def test_the_form_on_the_front_door_works_in_one_step(client, app_env):
     _, engine = app_env
     csrf = CSRF.search(client.get("/?said=unknown").text).group(1)
-    response = client.post("/signup", data={"login_id": "door",
-                                            "password": PASSWORD, "csrf_token": csrf},
-                           follow_redirects=False)
+    response = client.post(
+        "/signup",
+        data={"login_id": "door", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     assert traders(engine) == ["door"]
 
@@ -133,8 +143,11 @@ def test_a_new_account_can_sign_out_and_back_in(client):
     sign_up(client)
     client.cookies.clear()
     csrf = CSRF.search(client.get("/login").text).group(1)
-    response = client.post("/login", data={"login_id": "newcomer", "password": PASSWORD,
-                                           "csrf_token": csrf}, follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "newcomer", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
 
 
@@ -173,10 +186,14 @@ def test_a_short_password_is_refused_plainly(client, app_env):
     assert traders(engine) == []
 
 
-@pytest.mark.parametrize(("field", "value"), [
-    ("login_id", "   "),
-    ("login_id", "x" * 101), ("display_name", "x" * 201),
-])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("login_id", "   "),
+        ("login_id", "x" * 101),
+        ("display_name", "x" * 201),
+    ],
+)
 def test_a_name_that_is_blank_or_too_long_is_refused(client, app_env, field, value):
     _, engine = app_env
     response = sign_up(client, **{field: value})
@@ -199,8 +216,9 @@ def test_a_login_id_keeps_no_stray_spaces(client, app_env):
 
 def test_a_post_with_no_csrf_token_is_refused(client, app_env):
     _, engine = app_env
-    response = client.post("/signup", data={"login_id": "x", "display_name": "X",
-                                            "password": PASSWORD})
+    response = client.post(
+        "/signup", data={"login_id": "x", "display_name": "X", "password": PASSWORD}
+    )
     assert response.status_code == 403
     assert traders(engine) == []
 
@@ -230,10 +248,16 @@ def test_the_admin_command_is_gone(capsys):
 
 
 def test_no_production_code_mentions_the_gate():
-    pattern = re.compile(r"InviteCode|invite_code|/invite/|invite-only|invitation only|"
-                         r"redeem_invite|cmd_invite", re.IGNORECASE)
-    for path in [*Path("services/production").rglob("*.py"),
-                 *Path("services/production").rglob("*.html"), Path("Makefile")]:
+    pattern = re.compile(
+        r"InviteCode|invite_code|/invite/|invite-only|invitation only|"
+        r"redeem_invite|cmd_invite",
+        re.IGNORECASE,
+    )
+    for path in [
+        *Path("services/production").rglob("*.py"),
+        *Path("services/production").rglob("*.html"),
+        Path("Makefile"),
+    ]:
         found = pattern.search(path.read_text())
         assert found is None, f"{path} says {found.group(0)!r}"
     assert not Path("services/production/api/templates/invite.html").exists()
@@ -252,20 +276,30 @@ def test_an_account_made_through_an_invite_still_signs_in(tmp_path, monkeypatch)
     run_migrations(engine, "0007")
     now = datetime.now(UTC).isoformat()
     with engine.begin() as conn:
-        conn.execute(sa.text(
-            "insert into trader (id, display_name, login_id, password_hash, created_at, "
-            "development_data) values (7, 'Old', 'old_door', :h, :now, 0)"),
-            {"h": auth.hash_password(PASSWORD), "now": now})
-        conn.execute(sa.text(
-            "insert into invite_code (code, created_at, redeemed_by, redeemed_at) "
-            "values ('OLD-1', :now, 7, :now)"), {"now": now})
+        conn.execute(
+            sa.text(
+                "insert into trader (id, display_name, login_id, password_hash, created_at, "
+                "development_data) values (7, 'Old', 'old_door', :h, :now, 0)"
+            ),
+            {"h": auth.hash_password(PASSWORD), "now": now},
+        )
+        conn.execute(
+            sa.text(
+                "insert into invite_code (code, created_at, redeemed_by, redeemed_at) "
+                "values ('OLD-1', :now, 7, :now)"
+            ),
+            {"now": now},
+        )
     run_migrations(engine)
 
     assert "invite_code" not in inspect(engine).get_table_names()
     assert traders(engine) == ["old_door"]
     client = TestClient(create_app())
     csrf = CSRF.search(client.get("/login").text).group(1)
-    response = client.post("/login", data={"login_id": "old_door", "password": PASSWORD,
-                                           "csrf_token": csrf}, follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"login_id": "old_door", "password": PASSWORD, "csrf_token": csrf},
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     assert client.get("/account").status_code == 200

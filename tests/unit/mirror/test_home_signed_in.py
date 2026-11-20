@@ -70,7 +70,9 @@ def test_the_days_say_their_day_their_trades_and_their_net(client, engine):
         net = sum(t.net for t in trips)
         count = len(trips)
     body = client.get("/").text
-    assert '<h2 class="card-title">Latest Journals</h2>' in body, "this one day isn't one the report named"
+    assert '<h2 class="card-title">Latest Journals</h2>' in body, (
+        "this one day isn't one the report named"
+    )
     row = re.search(r'<a class="latest__row" href="/journals/\d+">(.*?)</a>', body).group(1)
     assert '<span class="body">01 Sep 2026</span>' in row
     assert f">{count} trades</span>" in row

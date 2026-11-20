@@ -37,10 +37,19 @@ def _journals(engine, *, top: int = 1, skip: set[str] = frozenset()) -> None:
         days = sorted(set(sess.scalars(select(m.Trip.trading_day))) - set(skip))
         for day in days:
             for version in range(1, top + 1):
-                sess.add(m.Journal(
-                    trader_id=imp.trader_id, import_id=imp.id, unit=s.JournalUnit.DAY,
-                    period_start=day, period_end=day, version_no=version,
-                    generated_at=datetime.now(UTC), trip_ids="[]", sections="{}"))
+                sess.add(
+                    m.Journal(
+                        trader_id=imp.trader_id,
+                        import_id=imp.id,
+                        unit=s.JournalUnit.DAY,
+                        period_start=day,
+                        period_end=day,
+                        version_no=version,
+                        generated_at=datetime.now(UTC),
+                        trip_ids="[]",
+                        sections="{}",
+                    )
+                )
         sess.commit()
 
 

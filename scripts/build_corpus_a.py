@@ -14,6 +14,7 @@ uncommitted changes to tracked files: a digest stamped with a commit that did no
 produce it would be a false record (Methodology §7). ``--allow-dirty`` overrides
 for experiments and marks the manifest ``code_dirty: true``.
 """
+
 from __future__ import annotations
 
 import argparse

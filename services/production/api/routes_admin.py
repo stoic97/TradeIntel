@@ -46,17 +46,33 @@ def admin(request: Request):
         if trader is None or trader.login_id not in config.admin_login_ids:
             raise HTTPException(status_code=404)
         last_looked = sess.scalar(
-            select(func.max(m.AdminAction.at))
-            .where(m.AdminAction.actor == f"trader:{trader.id}", m.AdminAction.action == "admin_view")
+            select(func.max(m.AdminAction.at)).where(
+                m.AdminAction.actor == f"trader:{trader.id}", m.AdminAction.action == "admin_view"
+            )
         )
-        sess.add(m.AdminAction(actor=f"trader:{trader.id}", action="admin_view", target=None,
-                               at=datetime.now(UTC)))
+        sess.add(
+            m.AdminAction(
+                actor=f"trader:{trader.id}", action="admin_view", target=None, at=datetime.now(UTC)
+            )
+        )
         sess.commit()
-        view = admin_view.build(sess, running_version=request.app.state.code_version,
-                                production=config.production, last_looked=last_looked,
-                                admin_ids=config.admin_login_ids)
-    return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
-                body_class="admin", health=admin_health.build(request.app), **view)
+        view = admin_view.build(
+            sess,
+            running_version=request.app.state.code_version,
+            production=config.production,
+            last_looked=last_looked,
+            admin_ids=config.admin_login_ids,
+        )
+    return page(
+        request,
+        "admin.html",
+        demo=None,
+        title="Admin",
+        screen_class="screen--admin",
+        body_class="admin",
+        health=admin_health.build(request.app),
+        **view,
+    )
 
 
 @router.get(f"{PATH}/", response_class=HTMLResponse, include_in_schema=False)
@@ -81,11 +97,24 @@ def admin_trader(request: Request, trader_id: str):
         view = trader_trail(sess, wanted) if wanted is not None else None
         if view is None:
             raise HTTPException(status_code=404)
-        sess.add(m.AdminAction(actor=f"trader:{admin.id}", action="admin_view_trader",
-                               target=f"trader:{wanted}", at=datetime.now(UTC)))
+        sess.add(
+            m.AdminAction(
+                actor=f"trader:{admin.id}",
+                action="admin_view_trader",
+                target=f"trader:{wanted}",
+                at=datetime.now(UTC),
+            )
+        )
         sess.commit()
-    return page(request, "admin_trader.html", demo=None, title="Admin", screen_class="screen--admin",
-                body_class="admin", **view)
+    return page(
+        request,
+        "admin_trader.html",
+        demo=None,
+        title="Admin",
+        screen_class="screen--admin",
+        body_class="admin",
+        **view,
+    )
 
 
 @router.get(f"{TRADERS}{{trader_id}}/", response_class=HTMLResponse, include_in_schema=False)

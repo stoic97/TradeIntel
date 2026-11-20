@@ -20,13 +20,22 @@ def at(hh: int, mm: int = 0, day: str = DAY) -> datetime:
 
 
 def trip(i: int, opened: datetime, net: int, minutes: int = 5, lots: int = 1, day: str = DAY):
-    return mx.Trip(trip_id=f"t{i}", symbol="NIFTY", trading_day=day, entry_ts=opened,
-                   exit_ts=opened + timedelta(minutes=minutes), holding_seconds=minutes * 60,
-                   net=Decimal(net), lots=lots, risk_unit_source=mx.s.RiskUnitSourceV1.PREMIUM_PAID)
+    return mx.Trip(
+        trip_id=f"t{i}",
+        symbol="NIFTY",
+        trading_day=day,
+        entry_ts=opened,
+        exit_ts=opened + timedelta(minutes=minutes),
+        holding_seconds=minutes * 60,
+        net=Decimal(net),
+        lots=lots,
+        risk_unit_source=mx.s.RiskUnitSourceV1.PREMIUM_PAID,
+    )
 
 
-def rule(factor: str, value: int, declared: datetime, rid: int = 1, frm: str = DAY,
-         to: str | None = DAY) -> A.Rule:
+def rule(
+    factor: str, value: int, declared: datetime, rid: int = 1, frm: str = DAY, to: str | None = DAY
+) -> A.Rule:
     return A.Rule(rid, factor, value, declared, frm, to, chips.FACTORS[factor].words(value))
 
 
@@ -40,9 +49,12 @@ def test_most_trades_breaks_on_the_trade_past_the_limit():
 
 
 def test_losses_in_a_row_reads_only_trades_closed_before_the_entry():
-    trips = [trip(0, at(10), -100), trip(1, at(10, 10), -100),
-             trip(2, at(10, 12), 50, minutes=1),   # opened before trade 1 closed (10:15)
-             trip(3, at(10, 30), 50)]              # after two closed losses... and a win
+    trips = [
+        trip(0, at(10), -100),
+        trip(1, at(10, 10), -100),
+        trip(2, at(10, 12), 50, minutes=1),  # opened before trade 1 closed (10:15)
+        trip(3, at(10, 30), 50),
+    ]  # after two closed losses... and a win
     # t2 opens at 10:12: only t0 has closed (10:05), one loss: kept.
     # t3 opens at 10:30: latest closes are t1 (10:15, loss) then t2 (10:13, win): run is 1: kept.
     assert kept(A.count([rule("losses_in_a_row", 2, at(9))], trips)) == [True, True, True, True]
@@ -103,8 +115,13 @@ def test_a_note_matches_the_first_trade_in_its_book_within_the_window():
     class Note:
         def __init__(self, i, book, when):
             self.id, self.book, self.entered_at = i, book, when
+
     trips = [trip(0, at(10, 5), 10), trip(1, at(10, 20), 10), trip(2, at(11, 30), 10)]
-    notes = [Note(1, "NIFTY options", at(10)), Note(2, "NIFTY options", at(10, 1)),
-             Note(3, "Crude options", at(10, 2)), Note(4, "NIFTY options", at(10, 40))]
+    notes = [
+        Note(1, "NIFTY options", at(10)),
+        Note(2, "NIFTY options", at(10, 1)),
+        Note(3, "Crude options", at(10, 2)),
+        Note(4, "NIFTY options", at(10, 40)),
+    ]
     matched = A.match_notes(notes, trips, book_of=lambda t: "NIFTY options")
     assert matched == {1: "t0", 2: "t1"}  # 3: wrong book; 4: nothing within 30 minutes

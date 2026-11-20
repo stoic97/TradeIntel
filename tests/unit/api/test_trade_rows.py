@@ -44,6 +44,7 @@ from tests.helpers.upload import DUPES, upload
 OPENED = datetime.fromisoformat("2026-11-19T09:30:00+05:30")
 CLOSED = datetime.fromisoformat("2026-11-19T09:40:00+05:30")
 
+
 @pytest.fixture()
 def uploaded(client, engine):
     return trade_rows_uploaded(client, engine)
@@ -125,21 +126,57 @@ def test_the_unexplained_bar_is_gone(uploaded):
 
 
 def test_a_share_is_named_by_its_symbol():
-    line = mx.TradeLine(symbol="Widget ETF", segment="EQ", side="Buy", quantity=10,
-                        entry_price=Decimal(100), exit_price=Decimal(110), net=Decimal(100))
+    line = mx.TradeLine(
+        symbol="Widget ETF",
+        segment="EQ",
+        side="Buy",
+        quantity=10,
+        entry_price=Decimal(100),
+        exit_price=Decimal(110),
+        net=Decimal(100),
+    )
     assert line.instrument == "Widget ETF"
 
 
 def test_the_percent_is_worked_from_the_premium():
-    line = mx.TradeLine(symbol="WIDGETOIL", segment="OPT", side="Buy", quantity=100,
-                        entry_price=Decimal("10.00"), exit_price=Decimal("12.50"),
-                        net=Decimal(250), strike=Decimal("5000.00"), option_type="CE")
+    line = mx.TradeLine(
+        symbol="WIDGETOIL",
+        segment="OPT",
+        side="Buy",
+        quantity=100,
+        entry_price=Decimal("10.00"),
+        exit_price=Decimal("12.50"),
+        net=Decimal(250),
+        strike=Decimal("5000.00"),
+        option_type="CE",
+    )
     assert line.instrument == "WIDGETOIL 5000 CE"
-    trip = mx.Trip("t", "WIDGETOIL", "2026-11-19", OPENED, CLOSED, 600, Decimal(250), 1,
-                   s.RiskUnitSourceV1.PREMIUM_PAID, lines=(line,), premium=Decimal(1000))
+    trip = mx.Trip(
+        "t",
+        "WIDGETOIL",
+        "2026-11-19",
+        OPENED,
+        CLOSED,
+        600,
+        Decimal(250),
+        1,
+        s.RiskUnitSourceV1.PREMIUM_PAID,
+        lines=(line,),
+        premium=Decimal(1000),
+    )
     assert trip.result_percent == Decimal("25.0")
-    bare = mx.Trip("t", "WIDGETOIL", "2026-11-19", OPENED, CLOSED, 600, Decimal(250), 1,
-                   s.RiskUnitSourceV1.UNAVAILABLE, lines=(line,))
+    bare = mx.Trip(
+        "t",
+        "WIDGETOIL",
+        "2026-11-19",
+        OPENED,
+        CLOSED,
+        600,
+        Decimal(250),
+        1,
+        s.RiskUnitSourceV1.UNAVAILABLE,
+        lines=(line,),
+    )
     assert bare.result_percent is None
 
 
@@ -164,8 +201,12 @@ def test_a_result_against_premium_carries_its_sign(value, want):
 
 @pytest.mark.parametrize(
     ("value", "want"),
-    [(Decimal("0.96"), "+₹0.96"), (Decimal("-0.40"), "−₹0.40"), (Decimal("250.75"), "+₹250"),
-     (Decimal(0), "₹0")],
+    [
+        (Decimal("0.96"), "+₹0.96"),
+        (Decimal("-0.40"), "−₹0.40"),
+        (Decimal("250.75"), "+₹250"),
+        (Decimal(0), "₹0"),
+    ],
 )
 def test_a_result_under_a_rupee_on_one_trade_keeps_its_paise(value, want):
     assert formatting.rupees_on_a_trade(value) == want
@@ -295,8 +336,9 @@ def test_a_sold_option_is_in_the_price_band_of_what_it_was_sold_at(uploaded):
 def test_a_share_is_in_no_entry_price_band(uploaded):
     """A share's price says nothing about an option's: the bands are for options."""
     for band in ("under-50", "50-100", "100-150"):  # the bands this history has
-        assert not any(n.startswith("Widget ETF") for n in
-                       articles(every_trade(uploaded, f"?price={band}")))
+        assert not any(
+            n.startswith("Widget ETF") for n in articles(every_trade(uploaded, f"?price={band}"))
+        )
 
 
 def test_a_spread_is_in_no_entry_price_band(uploaded):
@@ -380,11 +422,28 @@ def test_a_holding_is_reachable_where_the_fact_counts_it(uploaded):
     ],
 )
 def test_one_definition_of_a_book(symbol, segment, want):
-    line = mx.TradeLine(symbol=symbol, segment=segment, side="Buy", quantity=1,
-                        entry_price=Decimal(1), exit_price=Decimal(1), net=Decimal(0))
-    trip = mx.Trip("t", symbol, "2026-11-19", OPENED,
-                   CLOSED, 600, Decimal(0), 1,
-                   s.RiskUnitSourceV1.UNAVAILABLE, is_option=segment == "OPT", lines=(line,))
+    line = mx.TradeLine(
+        symbol=symbol,
+        segment=segment,
+        side="Buy",
+        quantity=1,
+        entry_price=Decimal(1),
+        exit_price=Decimal(1),
+        net=Decimal(0),
+    )
+    trip = mx.Trip(
+        "t",
+        symbol,
+        "2026-11-19",
+        OPENED,
+        CLOSED,
+        600,
+        Decimal(0),
+        1,
+        s.RiskUnitSourceV1.UNAVAILABLE,
+        is_option=segment == "OPT",
+        lines=(line,),
+    )
     assert mx.trade_book(trip) == want
 
 
