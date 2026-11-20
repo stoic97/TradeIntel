@@ -85,7 +85,7 @@ def test_the_research_fit_marker_is_registered():
 
 
 def test_no_test_is_excused_by_platform():
-    """Gate 4. TD-023 and TD-034 were carried as xfail(sys.platform == ...), which
+    """Gate 4. TD-023 and TD-034 were carried as xfail conditions on the platform, which
     wrote a fact into the suite that has since changed: B2 fails on Linux too, and
     the two M1 tests sometimes pass there, which a strict xfail turns red. A fit is
     either gated or it is not; which machine ran it is not the test's business."""
