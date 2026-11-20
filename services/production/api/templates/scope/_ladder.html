@@ -1,0 +1,9 @@
+{#- The ladder from a finding to a rule (TICKET-925). All its rungs are drawn, and the ones
+    the finding has not got to say so. Which are reached, and every word, come from
+    findings.ladder, read from the finding's own label; nothing is decided or worded here.
+    New copy (D9). -#}
+<ol class="ladder" data-ladder="{{ f.finding.key }}">
+{%- for step in f.finding|ladder %}
+  <li class="ladder__rung body-small" data-rung="{{ step.key }}" data-reached="{{ "yes" if step.reached else "no" }}"><strong>{{ step.name }}</strong> &mdash; {{ step.says }}{% if step.state %} <span class="ladder__state">{{ step.state }}.</span>{% endif %}</li>
+{%- endfor %}
+</ol>

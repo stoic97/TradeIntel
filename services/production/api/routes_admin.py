@@ -64,6 +64,8 @@ def admin(request: Request):
         sess.commit()
         view = admin_view.build(sess, running_version=request.app.state.code_version,
                                 production=config.production, last_looked=last_looked,
+                                sort=request.query_params.get("sort"),
+                                all_columns=request.query_params.get("columns") == "all",
                                 admin_ids=config.admin_login_ids)
     view["market"]["said"] = admin_view.MARKET_SAID.get(request.query_params.get("fyers", ""))
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
