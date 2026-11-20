@@ -50,15 +50,23 @@ jobs:
       - name: Set up Python (from .python-version)
         run: uv python install
 
-      # Default groups are dev + research (pyproject [tool.uv]), so this installs the
-      # research stack too: tests/unit/engine, evaluation, models and
+      # TICKET-943: uv's default group is dev only now, so CI asks for research by
+      # name - tests/unit/engine, evaluation, models and
       # test_sold_trades_accounted.py need scipy and pymc. The server still installs
       # with --no-group research; this is the test environment, not the server's.
-      - name: Install (uv sync --frozen)
-        run: uv sync --frozen
+      - name: Install (uv sync --frozen --group research)
+        run: uv sync --frozen --group research
 
       - name: Ruff
         run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      # services/shared is strict; services/production joins behind a relaxed
+      # override (TICKET-943). Both come from pyproject's [tool.mypy].
+      - name: Mypy
+        run: uv run mypy
 
       # The whole suite, no -x: a red run lists every failure, not the first. No -q either:
       # pyproject's addopts has it, and -qq would drop the line that counts the results.

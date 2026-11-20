@@ -100,7 +100,8 @@ def test_every_migration_step_reverses_to_the_schema_before_it(tmp_path):
             assert _version(path) == revision
             seen[revision] = _structure(path)
 
-        for below, revision in reversed(list(zip([None, *chain[:-1]], chain))):
+        pairs = zip([None, *chain[:-1]], chain, strict=True)
+        for below, revision in reversed(list(pairs)):
             command.downgrade(config, below or "base")
             got = _structure(path)
             if below is None:

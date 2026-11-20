@@ -31,7 +31,8 @@ and ISIN are read to check the row, and not kept: a Fill has no field for them.
 **A contract is read from Symbol**, the exchange's own trading symbol, the same in every
 broker's account (the share rows carry the exchange's symbol, and Groww's API uses it):
 ``NIFTY25N1826000CE`` (weekly: year, month code, day), ``BANKNIFTY25DEC27000PE`` and
-``NIFTY25DECFUT`` (monthly), or Groww's own ``NSE-NIFTY-18Nov25-26000-CE``. A monthly symbol has no day; it is taken from a date in
+``NIFTY25DECFUT`` (monthly), or Groww's own ``NSE-NIFTY-18Nov25-26000-CE``. A
+monthly symbol has no day; it is taken from a date in
 Stock name when there is one, else the month's last expiry weekday for that exchange
 (:data:`MONTHLY_EXPIRY_WEEKDAY`), moved to the trading day before when the exchange was
 shut. A row that is neither a contract nor a share with an ISIN is rejected with its
@@ -292,7 +293,8 @@ def parse(source: Iterable[str] | str | Path, *, trader_id: str, raw_hash: str) 
             )
             continue
         try:
-            fills.append(_parse_row(dict(zip(HEADER, values)), trader_id, raw_hash))
+            # the column-count guard above means the lengths match here
+            fills.append(_parse_row(dict(zip(HEADER, values, strict=True)), trader_id, raw_hash))
         except RowRejected as exc:
             rejected.append(Rejection(offset, str(exc), raw))
         # As Dhan's: an unforeseen failure becomes a recorded rejection, never a lost row.

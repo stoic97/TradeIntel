@@ -152,7 +152,7 @@ def test_the_groups_are_exactly_the_shared_definitions(seed):
     rng = np.random.default_rng(seed)
     obs = []
     for day in range(40):
-        for k in range(int(rng.integers(1, 9))):
+        for _ in range(int(rng.integers(1, 9))):
             entry = float(rng.uniform(0, 100))
             obs.append(
                 Obs(

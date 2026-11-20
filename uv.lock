@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.11.*"
 
 [[package]]
@@ -1424,7 +1424,6 @@ wheels = [
 name = "tradeintel"
 version = "0.1.0"
 source = { editable = "." }
-default-groups = ["dev", "research"]
 dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
@@ -1456,6 +1455,7 @@ research = [
     { name = "numpyro" },
     { name = "nutpie" },
     { name = "pymc" },
+    { name = "scipy" },
 ]
 
 [package.metadata]
@@ -1486,10 +1486,11 @@ dev = [
     { name = "ruff", specifier = ">=0.5,<1" },
 ]
 research = [
-    { name = "arviz", specifier = ">=0.23.4" },
-    { name = "numpyro", specifier = ">=0.22.0" },
-    { name = "nutpie", specifier = ">=0.16.8" },
-    { name = "pymc", specifier = ">=5.28.5" },
+    { name = "arviz", specifier = ">=0.23.4,<1" },
+    { name = "numpyro", specifier = ">=0.22.0,<1" },
+    { name = "nutpie", specifier = ">=0.16.8,<1" },
+    { name = "pymc", specifier = ">=5.28.5,<6" },
+    { name = "scipy", specifier = ">=1.17.1,<2" },
 ]
 
 [[package]]

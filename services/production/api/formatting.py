@@ -213,7 +213,8 @@ _FIGURE_FILTERS = {
 
 
 def day_link(iso_date: str):
-    """A trading day as day() writes it, opening that day: its trades and its journal (TICKET-905)."""
+    """A trading day as day() writes it, opening that day: its trades and its
+    journal (TICKET-905)."""
     from markupsafe import Markup
 
     return Markup('<a class="figure-link" href="/mirror/day/{}">{}</a>').format(
@@ -223,8 +224,9 @@ def day_link(iso_date: str):
 
 def identifier(value):
     """An identifier a trader may quote back - a version hash, an adapter name - written as text,
-    never as a figure. A short git hash is all digits about one time in 27 (6145022, noqa: figure), and as a
-    bare value it would read, and be checked, as a number (TICKET-952)."""
+    never as a figure. A short git hash is all digits about one time in 27
+    (6145022, noqa: figure), and as a bare value it would read, and be checked, as
+    a number (TICKET-952)."""
     from services.production.api.figures import Written
 
     return Written(value)

@@ -74,7 +74,10 @@ def test_ids_only_ever_grow_down_the_file(tmp_path):
 
 def test_the_row_in_force_on_the_day_is_chosen_either_side_of_a_change(tmp_path):
     t = table(tmp_path, row(1), row(2, rate='"0.001"', frm="2024-10-01"))
-    pick = lambda d: R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d, table=t).rate
+
+    def pick(d):
+        return R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d, table=t).rate
+
     assert pick(date(2024, 9, 30)) == Decimal("0.0005")
     assert pick(date(2024, 10, 1)) == Decimal("0.001")
     assert pick(date(2026, 11, 13)) == Decimal("0.001")
@@ -100,9 +103,10 @@ def test_a_correction_is_a_new_row_and_an_old_read_still_reproduces(tmp_path):
         row(2, rate='"0.001"', frm="2024-10-01", added="2026-01-10"),
         row(3, rate='"0.0005"', added="2026-03-01"),
     )
-    pick = lambda d, as_of=None: (
-        R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d, as_of=as_of, table=t).rate
-    )
+
+    def pick(d, as_of=None):
+        return R.rate(R.Segment.NSE_OPT, R.Component.STT, "sell", d, as_of=as_of, table=t).rate
+
     assert pick(date(2023, 5, 2)) == Decimal("0.0005")
     assert pick(date(2023, 5, 2), as_of=date(2026, 2, 1)) == Decimal("0.0004"), (
         "March's report reproduces"

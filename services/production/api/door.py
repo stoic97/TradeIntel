@@ -23,7 +23,8 @@ ROWS: tuple[tuple[str, str], ...] = (
     ("You give us", "The trade file your broker lets you download. Never your broker login."),
     (
         "You get",
-        "Your own trades, counted: where your results came from, with the trades behind every figure.",
+        "Your own trades, counted: where your results came from, with the trades "
+        "behind every figure.",
     ),
     ("You won't get", "Tips or courses. No buy or sell calls, ever."),
     ("Brokers", "Dhan today. Others are coming."),

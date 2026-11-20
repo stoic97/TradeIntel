@@ -121,7 +121,10 @@ def zerodha(fo_options="0.03553"):
         "0.003% or ₹300 / crore on buy side",
         "US Equity",
     ]
-    cell = lambda cs: "".join(f"<td>{c}</td>" for c in cs)
+
+    def cell(cs):
+        return "".join(f"<td>{c}</td>" for c in cs)
+
     return f"<table>{cell(cells)}{old}{cell(commodity)}</table>"
 
 

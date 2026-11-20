@@ -210,7 +210,8 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         )
     if key == "risk":
         return Figure(
-            f"{formatting.count(ctx['risk'].showable)} of {formatting.count(len(ctx['trips']))} trades",
+            f"{formatting.count(ctx['risk'].showable)} of "
+            f"{formatting.count(len(ctx['trips']))} trades",
             "trades",
         )
     return Figure(str(NOT_TOLD), "things we have not told you")
@@ -252,7 +253,9 @@ def _busiest_story(ctx: dict) -> dict | None:
         else None,
         "held_past_day": st.held_past_day,
         "strip": G.chart_call_put(drawn, PAGE_W, PAGE_H) if drawn else None,
-        "strip_caption": f"The {len(drawn)} {what}{'' if len(drawn) == 1 else 's'} that day, in order.",
+        "strip_caption": (
+            f"The {len(drawn)} {what}{'' if len(drawn) == 1 else 's'} that day, in order."
+        ),
         "strip_has_positions": any(t.side == "both" for t in st.strip),
     }
 
@@ -729,7 +732,8 @@ def _day_went(block: mx.DayBlock) -> str:
     if block.trades == 1:
         return f"One trade: {formatting.rupees(block.net)}."
     return (
-        f"First trade {formatting.rupees(block.first_net)}, then {block.later} more {'trade' if block.later == 1 else 'trades'}; "
+        f"First trade {formatting.rupees(block.first_net)}, then {block.later} more "
+        f"{'trade' if block.later == 1 else 'trades'}; "
         f"{block.later_lost} lost."
     )
 

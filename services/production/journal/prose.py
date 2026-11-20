@@ -215,7 +215,10 @@ def _the_blank_stop(facts: dict[str, Any]) -> str:
     if not missing or stop["said_before"]:
         return ""
     word = "trade that lost has" if missing == 1 else "trades that lost have"
-    return f"No planned stop is recorded on {_count(missing, capital=False)} {word.replace('trade that lost has', 'trade that lost').replace('trades that lost have', 'trades that lost')}."
+    phrase = word.replace("trade that lost has", "trade that lost").replace(
+        "trades that lost have", "trades that lost"
+    )
+    return f"No planned stop is recorded on {_count(missing, capital=False)} {phrase}."
 
 
 def render(facts: dict[str, Any]) -> str:
