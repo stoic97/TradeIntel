@@ -182,7 +182,7 @@ def test_each_phase0_result_file_names_the_script_and_commit_that_produced_it():
     for path in sorted(f for f in tracked()[0] if re.match(r"docs/phase0/[^/]+\.json$", f)):
         name = path.removeprefix("docs/")
         row = next((line for line in lines if f"`{name}`" in line), "")
-        script = re.search(r"`(scripts/[\w.]+\.py)`", row)
+        script = re.search(r"`((?:scripts|services)/[\w/]+\.py)`", row)
         assert script and exists(script.group(1)), f"{path}: the index names no script for it"
         commit = re.search(r'"code_commit": "([0-9a-f]{7})', read(path))
         if commit:
@@ -273,6 +273,24 @@ OTHER = {
     "subdirectory/": "methodology.md: a made-up name inside an example",
     "data/corpus/corpus_a_v1/": "corpus-a.md: gitignored, it regenerates from code and seeds",
     "docs/phase0/recall-b2.md": "deferrals.md TD-033: the write-up that row asks for",
+    "manifest.json": "ADR-005 (frozen): written at the first charged run, not built yet",
+    "crude_1m_current.csv": "ADR-008 (frozen): the gitignored crude series, see crude-series.md",
+    "data/market/crude_1m_current.csv": "crude-series.md: gitignored data the runbook extends",
+    "crude_1m_current.json": "crude-series.md: the manifest beside the gitignored series",
+    "crude_1m.csv": "crude-series.md: the fund's file, in the fund's repository",
+    "data/market/crude_1m.csv": "corpus-a.md, crude-series.md: gitignored, pinned by its digest",
+    "screens/preview/": "design kit README: previews are generated in the app, not kept in git",
+    "screens/preview/08-calculating.html": "design kit README: a generated preview, not in git",
+    "08-calculating-done.html": "design kit README: a generated preview, not in git",
+    "share_positive_total.json": "definitions_v1.md: a fixture name its table asks for, not in git",
+    "share_over_100.json": "definitions_v1.md: a fixture name its table asks for, not in git",
+    "claude/scope_engineering_handoff_v1.md": "testing register: the handoff's old path; now docs/product",
+    "mirror.html": "testing register: named there, not in this repository",
+    "report.txt": "data-deletion.md: an example inspection report, kept by the founder",
+    "docs/runbooks/deletion-log.md":
+        "data-deletion.md: kept on the server at /srv/scope/data/deletion-log.md, never in git",
+    "tracker/record_verify.py": "deploy.md: lives in the feedback-loop repository",
+    "onboarding/tester.md": "deploy.md, uat-smoke.md: lives in the feedback-loop repository",
 }
 
 ALLOWED = {**dict.fromkeys(TARGET_STATE, "target state"),

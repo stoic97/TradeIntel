@@ -33,9 +33,9 @@ this repository.
 | Cited as | What it is | Where | Current version |
 |---|---|---|---|
 | **Research spec**, **R-Spec**, "Spec §x", "Annex B/I/J" | The research specification and its annexes | *repo* `docs/trade_dna_research_spec_v1_0.md` (frozen; SR-011) | see its title and change log |
-| **Thesis**, "T§" | The product thesis | *repo* `docs/trade_dna_product_thesis_v1.5.md` (v1.4 kept beside it) | v1.5, frozen 24 Oct 2026 |
+| **Thesis**, "T§" | The product thesis | *repo* `docs/trade_dna_product_thesis_v1.5.md` (v1.4 is in `docs/archive/`) | v1.5, frozen 24 Oct 2026 |
 | **Workbook**, "B§" | The brainstorm workbook | *repo* `docs/trade_dna_brainstorm_workbook_v1.1_final.md` (frozen; SR-011) | see its title and change log |
-| **Phase 0 plan** | Phase 0's plan of work | *repo* `docs/trade_dna_phase0_plan.md` | as committed |
+| **Phase 0 plan** | Phase 0's plan of work | *repo* `docs/archive/trade_dna_phase0_plan.md` | as committed |
 
 ## Process
 
