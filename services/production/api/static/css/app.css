@@ -527,3 +527,27 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
+
+/* Your day on the market chart (TICKET-1000). The chart is drawn to the kit's 358 px and scales to
+   the width, so a phone never scrolls sideways; a crude day's candles run under 2 px. */
+.dc { margin: var(--space-4) 0; }
+.dc .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.dc-frame { width: 100%; max-width: 100%; overflow: hidden; }
+.dc-chart { display: block; width: 100%; height: auto; }
+.dc-wick { stroke-width: 1; }
+.dc-wick--up, .dc-body--up { stroke: var(--color-gain); fill: var(--color-gain); }
+.dc-wick--down, .dc-body--down { stroke: var(--color-loss); fill: var(--color-loss); }
+.dc-line { stroke-width: 1.5; stroke-dasharray: 3 2; fill: none; }
+.dc-line--gain { stroke: var(--color-gain); }
+.dc-line--loss { stroke: var(--color-loss); }
+.dc-line--plain { stroke: var(--color-muted); }
+.dc-tap { fill: transparent; }
+.dc-mark { stroke: var(--color-page); stroke-width: 1.5; fill: var(--color-navy); }
+.dc-mark--out { fill: var(--color-page); stroke: var(--color-navy); }
+.dc-number { font-size: 9px; fill: var(--color-ink); }
+.dc-rows { list-style: none; padding: 0; margin: var(--space-3) 0; }
+.dc-row { display: grid; grid-template-columns: 2em 1fr; gap: 0 var(--space-2); padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-hairline); }
+.dc-row__figures { grid-column: 2; color: var(--color-muted); }
+.dc-text summary { cursor: pointer; color: var(--color-action-blue); }
+.dc-text .table { display: block; overflow-x: auto; max-width: 100%; }
