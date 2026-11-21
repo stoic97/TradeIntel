@@ -169,6 +169,17 @@ def _after(t: mx.Trip, lookup: dict) -> Choice | None:
             return place, value, label
     return None
 
+AFTER_SOURCE = {"size": "size_after"}
+"""Whose loss-or-win groups a fact's list reads: its own page's. Size reads size_after; How fast
+you went back in and Same way again read next_trades. The two break a same-minute exit tie
+differently, so one shared map would open trades a page didn't count."""
+
+
+def after_groups(key: str, ctx: dict) -> dict:
+    source = AFTER_SOURCE.get(key, "next_trades")
+    return ctx[source].group_of if source in ctx else {}
+
+
 
 def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     half = lookup.get(HALF_OF, {}).get(t.trip_id)
@@ -216,7 +227,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
     lookup = {**expiries, HALF_OF: mx.half_of(behind),
-              AFTER_OF: ctx["size_after"].group_of if "size_after" in ctx else {}}
+              AFTER_OF: after_groups(key, ctx)}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
