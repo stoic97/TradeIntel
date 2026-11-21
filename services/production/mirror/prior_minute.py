@@ -3,8 +3,10 @@
 Two counts per trip, both against the underlying's 1-minute bars and both in the trip's own
 direction (+1 gains when the underlying rises, -1 when it falls):
 
-* **Before:** the minute that closed just before the entry minute. Its move is its own close
-  less its own open, so nothing at or after the entry minute is read.
+* **Before:** the minute that closed just before the entry minute, read close to close: the
+  close of the bar two minutes before the entry minute to the close of the bar one minute
+  before it, both on the entry's day (research spec 4.7.5). Nothing at or after the entry
+  minute is read.
 * **After:** from the close of the entry minute to the close of the minute ``h`` minutes later,
   for each ``h`` in ``HORIZONS``. Measuring from any earlier price would count the minute he
   bought in as skill.
