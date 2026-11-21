@@ -22,7 +22,7 @@ from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_admin_page import (
+from tests.helpers.admin_page import (
     ADMIN,
     THEN,
     add_budget,

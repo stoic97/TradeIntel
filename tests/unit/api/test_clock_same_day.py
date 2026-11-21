@@ -18,8 +18,8 @@ import pytest
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import IMP, TRIPS, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
 
 HELD = mx.load_trips(
     json.loads(Path("tests/fixtures/mirror_contract/held_past_day.json").read_text())

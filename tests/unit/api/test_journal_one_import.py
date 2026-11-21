@@ -29,7 +29,7 @@ from sqlalchemy import select
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.upload import CSRF, sign_up
 
 HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
 OPTION = "NIFTY 25 JAN 20000 CALL"

@@ -17,8 +17,18 @@ import pytest
 
 from services.production.eligibility import assess as el
 from services.shared.prereg import reader
+from tests.helpers.eligibility_page import eligibility_page_client, eligibility_page_engine
 from tests.unit.api.templating import template_env
-from tests.unit.api.test_eligibility_page import client, engine  # noqa: F401
+
+
+@pytest.fixture()
+def client(engine):
+    return eligibility_page_client(engine)
+
+
+@pytest.fixture()
+def engine():
+    return eligibility_page_engine()
 
 NS = types.SimpleNamespace
 
@@ -134,7 +144,7 @@ def test_the_toggle_is_called_for_the_curious():
     assert re.search(r"<summary[^>]*>\s*For the curious\s*</summary>", page)
 
 
-def test_identifiers_and_the_framework_version_are_inside_the_toggle(client):  # noqa: F811
+def test_identifiers_and_the_framework_version_are_inside_the_toggle(client):
     page = client.get("/eligibility").text
     inside, outside = toggle_part(page), main_part(page)
     framework = reader.load()
@@ -145,20 +155,20 @@ def test_identifiers_and_the_framework_version_are_inside_the_toggle(client):  #
     assert framework.version not in text(outside)
 
 
-def test_the_research_teams_words_are_not_outside_the_toggle(client):  # noqa: F811
+def test_the_research_teams_words_are_not_outside_the_toggle(client):
     outside = text(main_part(client.get("/eligibility").text))
     for word in ("TD-0", "framework", "/bucket", "/cell", "Trips", " trips", "engine's count"):
         assert word not in outside, word
 
 
-def test_neither_part_says_what_a_check_asks(client):  # noqa: F811
+def test_neither_part_says_what_a_check_asks(client):
     page = column(client.get("/eligibility").text).lower()
     for test in reader.load().tests:
         for name in (test.title, test.question):
             assert name.lower() not in page, name
 
 
-def test_the_page_says_why_it_does_not_say(client):  # noqa: F811
+def test_the_page_says_why_it_does_not_say(client):
     outside = text(main_part(client.get("/eligibility").text))
     assert "We do not say here what each check asks." in outside
     assert "would be telling you what they would say." in outside

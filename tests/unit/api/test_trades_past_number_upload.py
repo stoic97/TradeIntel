@@ -23,17 +23,12 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_spread_upload import tradebook
-from tests.unit.api.test_upload import (  # noqa: F401 - fixtures used by name
-    CSRF,
-    client,
-    engine,
-    upload,
-)
+from tests.helpers.spread_upload import tradebook
+from tests.helpers.upload import CSRF, upload
 
 
 @pytest.fixture()
-def counted(client, engine):  # noqa: F811
+def counted(client, engine):
     assert upload(client, content=tradebook()).status_code == 303
     token = CSRF.search(client.get("/budget").text).group(1)
     client.post("/budget", data={"value": "400", "unit": "INR", "effective_from": "2026-10-14",
@@ -45,7 +40,7 @@ def text(html: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
-def test_an_uncapped_sold_option_counts_and_is_still_uncapped(counted, engine):  # noqa: F811
+def test_an_uncapped_sold_option_counts_and_is_still_uncapped(counted, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         trips, _ = loader.load_for(sess, trader)
@@ -55,7 +50,7 @@ def test_an_uncapped_sold_option_counts_and_is_still_uncapped(counted, engine): 
     assert sold.uncapped is True
 
 
-def test_a_spread_is_measured_as_one_position_not_by_its_losing_leg(counted, engine):  # noqa: F811
+def test_a_spread_is_measured_as_one_position_not_by_its_losing_leg(counted, engine):
     with make_session(engine) as sess:
         trader = sess.scalars(select(m.Trader)).one()
         trips, _ = loader.load_for(sess, trader)

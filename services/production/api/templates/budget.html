@@ -22,6 +22,18 @@
   {%- endif %}
   <p class="lead">How much are you willing to lose on a single trade?</p>
   {% if sizes is defined %}{% include "_loss_sizes.html" %}{% endif %}
+  {%- if strip %}
+  {#- TICKET-907 (FB-0168): the slider runs along his own losses, one tick each. With no script
+      the button asks for the same read as a page. New words pending D9. -#}
+  <form class="against" method="get" action="/budget">
+    <label class="field"><span class="field__label">Try a number against your own losses</span>
+      <svg class="against__losses" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">{% for x in strip.ticks %}<rect x="{{ x }}" y="0" width="0.6" height="10"></rect>{% endfor %}</svg>
+      <input class="against__range" type="range" id="against" name="against" min="{{ strip.step }}" max="{{ strip.top }}" step="{{ strip.step }}" value="{{ strip.value }}" hx-get="/budget/against" hx-trigger="input changed delay:200ms" hx-target="#against-read" hx-swap="innerHTML">
+    </label>
+    <div class="screen__actions">{{ button("Show it against my trades", kind="text") }}</div>
+  </form>
+  <div id="against-read" aria-live="polite">{% include "_against.html" %}</div>
+  {%- endif %}
   {%- if error %}
   <p class="field__error field__error--block" role="alert">{{ error }}</p>
   {%- endif %}
@@ -38,6 +50,13 @@
       {{ button("Record it", block=true) }}
     </div>
   </form>
+  {#- TICKET-907 (FB-0171): what recording does, beside the control, saying only what is true
+      today. New words pending D9. -#}
+  <p class="body-small table-note">Recording a number keeps the number and nothing else. It does not and cannot stop a trade, and nothing here reaches your broker. Each time you upload, the trades past it are counted again.</p>
+  {#- TICKET-907 (FB-0169): no day limit can be recorded yet; the declaration and its three counts
+      are their own ticket (Pawan, 17 Nov). Its state shows, never a zero. New words pending D9. -#}
+  <p class="body-small table-note">No day limit is set, so no day is counted against one.</p>
+  {% include "_capital_shares.html" %}
   {%- if declarations %}
   <p class="table-label">What you have told us</p>
   <table class="table">

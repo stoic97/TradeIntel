@@ -13,20 +13,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from tests.unit.api.templating import template_env
+from tests.helpers.layout import PLAIN, render
 
 STATIC = Path("services/production/api/static")
 
 STYLESHEETS = ["/static/css/fonts.css", "/static/css/tokens.css",
                "/static/css/components.css", "/static/css/motion.css", "/static/css/app.css"]
-
-
-def render(child: str, **context) -> str:
-    context.setdefault("title", "Sign in")
-    return template_env({"probe.html": child}).get_template("probe.html").render(**context)
-
-
-PLAIN = '{% extends "layout.html" %}{% block content %}<p>Body</p>{% endblock %}'
 
 
 def test_the_stylesheets_are_the_kits_with_fonts_first_then_ours_last():

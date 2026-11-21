@@ -13,8 +13,7 @@ from services.production.api import scope_map as SM
 from services.production.api import trade_list as TL
 from services.production.api.app import create_app
 from services.shared.prereg import reader
-from tests.unit.api.test_read_again import send
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.read_again import send
 
 TIERS = ("Established", "Likely", "Exploratory")
 
@@ -58,7 +57,7 @@ def test_each_factor_is_named_once():
 
 # ---- the page
 
-def test_anyone_can_open_it(engine):  # noqa: F811
+def test_anyone_can_open_it(engine):
     page = TestClient(create_app()).get("/factors")
     assert page.status_code == 200
     said = text(page.text)
@@ -70,18 +69,18 @@ def test_anyone_can_open_it(engine):  # noqa: F811
         assert status.value in said and FM.STATUS_MEANS[status] in said
 
 
-def test_it_says_when_each_is_known(engine):  # noqa: F811
+def test_it_says_when_each_is_known(engine):
     said = text(TestClient(create_app()).get("/factors").text)
     for f in FM.FACTORS:
         assert f"{f.name} {f.known.value} {f.status.value}" in said, f.name
 
 
-def test_signed_out_there_is_no_column_about_a_file(engine):  # noqa: F811
+def test_signed_out_there_is_no_column_about_a_file(engine):
     page = TestClient(create_app()).get("/factors").text
     assert "In your file?" not in page
 
 
-def test_it_carries_no_figure_from_anyones_file(client):  # noqa: F811
+def test_it_carries_no_figure_from_anyones_file(client):
     """README rule 1: nothing on the published map comes from a trader's results."""
     send(client)
     for c in (TestClient(create_app()), client):
@@ -91,7 +90,7 @@ def test_it_carries_no_figure_from_anyones_file(client):  # noqa: F811
         assert not re.search(r"\b\d{2,}\b", said.replace("15 minutes", ""))
 
 
-def test_a_signed_in_trader_sees_what_his_file_held_and_nothing_is_dropped(client):  # noqa: F811
+def test_a_signed_in_trader_sees_what_his_file_held_and_nothing_is_dropped(client):
     send(client)
     page = client.get("/factors").text
     assert "In your file?" in page
@@ -109,7 +108,7 @@ def test_a_signed_in_trader_sees_what_his_file_held_and_nothing_is_dropped(clien
     assert rows["The minute before you bought"] == "Needs bars"
 
 
-def test_no_page_prints_the_specs_tiers(client):  # noqa: F811
+def test_no_page_prints_the_specs_tiers(client):
     send(client)
     paths = ["/factors", "/mirror", *(f"/mirror/chapter/{c.number}" for c in SM.CHAPTERS),
              *(f"/mirror/fact/{k}" for k in SM.FACTS)]
@@ -119,6 +118,6 @@ def test_no_page_prints_the_specs_tiers(client):  # noqa: F811
             assert not re.search(rf"\b{tier}\b", said), (path, tier)
 
 
-def test_the_reports_last_page_links_to_it(client):  # noqa: F811
+def test_the_reports_last_page_links_to_it(client):
     send(client)
     assert 'href="/factors"' in client.get("/mirror/fact/not-told").text

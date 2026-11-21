@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_scope_chapters import trips_from
+from tests.helpers.scope_chapters import trips_from
 
 TWENTY = trips_from([-100 * i for i in range(1, 21)])
 

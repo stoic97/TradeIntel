@@ -21,9 +21,9 @@ from decimal import Decimal
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_chapter_three_describes import DOWN, one_day
-from tests.unit.api.test_scope_chapters import IMP, chapter_page
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.chapter_three_describes import DOWN, one_day
+from tests.helpers.scope_chapters import IMP, chapter_page
+from tests.helpers.scope_facts import fact_page
 
 
 def held(net: int, day: str, at: str) -> mx.Trip:

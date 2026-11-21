@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from pathlib import Path
+from collections.abc import Iterable
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 from typing import NamedTuple
 
 
@@ -30,12 +31,12 @@ class Frozen(NamedTuple):
 
 FROZEN: dict[str, Frozen] = {
     "docs/trade_dna_research_spec_v1_0.md": Frozen(
-        "v1.0.3", "9a1d561e56db5982ab2fb687033f45f7b1a2a10489183cb4bd9b822a4cf5e23c"),
+        "v1.0.4", "ee119af38b59851807f4eb31ef44a088b760bbfb3b21132773990bee82ab07c1"),
     "docs/trade_dna_brainstorm_workbook_v1.1_final.md": Frozen(
         "v1.1.1", "87be5b1133475b76b0854e8f3919710de88a1ea23f6b1c9e4904be3836cff1c7"),
     "docs/trade_dna_product_thesis_v1.5.md": Frozen(
         "v1.5", "3d09d024d44bc2459fe7901425d4595e0accffd73c0f8ae7d824f635a05cf963"),
-    "docs/trade_dna_product_thesis_v1.4.md": Frozen(
+    "docs/archive/trade_dna_product_thesis_v1.4.md": Frozen(
         "v1.4", "d2e775ec1bc95a3bda4e463d59a2fd6ae6eb19cf1e537e771588f1fc7ccbaa16"),
     "docs/adr/ADR-001-canonical-trade-record.md": Frozen(
         "Accepted", "0bf5938ba648f029b2f5eba933294bd6f105f0f7e2e2b2cfcf8ebdc1b7154dc8"),
@@ -50,7 +51,7 @@ FROZEN: dict[str, Frozen] = {
     "docs/adr/ADR-006-sampler.md": Frozen(
         "Accepted", "9125225d6d1f4eb018668c560be2eda0ab071b14cb3f5fe9c8a7832575c0631c"),
     "docs/adr/ADR-007-scope-v1-runtime.md": Frozen(
-        "amended 2026-11-05", "7c52c751d3e06fbb20712c03075eaf302913b9e51bd607e09d0f1f6e395a8cee"),
+        "amended 2026-11-16", "5d16fff26e63e99e5dce17242bfcd7ecffc8db0698192ba29b5b3ad4327c4867"),
     "docs/adr/ADR-008-market-data-source.md": Frozen(
         "Accepted", "9e6e74f544e82e465b8757ac7e34694a47e532d519dd050b945a76e760569a92"),
 }
@@ -112,8 +113,36 @@ def test_the_amended_research_spec_and_workbook_record_every_post_freeze_change(
             assert commit in text(path), f"{path}: no record of {commit}"
 
 
+def accepted_adrs() -> list[Path]:
+    """Every ADR in docs/adr whose Status line says Accepted."""
+    return [path for path in sorted(Path("docs/adr").glob("ADR-*.md"))
+            if re.search(r"Status[.:*\s]*\**Accepted", head(str(path)))]
+
+
+def not_held(paths: Iterable[PurePath]) -> list[str]:
+    """Each of these paths that FROZEN does not hold, named as its key would be written."""
+    return [path.as_posix() for path in paths if path.as_posix() not in FROZEN]
+
+
 def test_every_accepted_adr_is_held_here():
     """A new ADR is frozen the moment it is accepted, so it is added here when it is."""
-    for path in sorted(Path("docs/adr").glob("ADR-*.md")):
-        if re.search(r"Status[.:*\s]*\**Accepted", head(str(path))):
-            assert str(path) in FROZEN, f"{path} is Accepted: add it to FROZEN"
+    accepted = accepted_adrs()
+    assert accepted, "no Accepted ADR found in docs/adr: run from the repository root"
+    missing = not_held(accepted)
+    assert missing == [], f"Accepted, but not in FROZEN (add each): {missing}"
+
+
+def test_an_adr_is_held_the_same_way_on_every_platform():
+    """TICKET-976: FROZEN's keys are written with "/", and str() of a Windows path uses "\\",
+    so on Windows every Accepted ADR read as missing. Given the same file as a Windows path
+    and as a POSIX path, the check answers the same, on any machine."""
+    adrs = [key for key in FROZEN if key.startswith("docs/adr/")]
+    assert adrs, "FROZEN holds no ADR"
+    for key in adrs:
+        assert not_held([PureWindowsPath(key), PurePosixPath(key)]) == [], key
+
+
+def test_an_adr_missing_from_frozen_is_named_by_its_key_on_every_platform():
+    """The check still catches a real missing ADR, and names it the way FROZEN would."""
+    new = "docs/adr/ADR-999-not-yet-held.md"
+    assert not_held([PureWindowsPath(new), PurePosixPath(new)]) == [new, new]

@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import trips_from
+from tests.helpers.scope_chapters import trips_from
 
 # Worst five -1000, -500, -500, -400, -300 = -2700. All losing days = -3000, so 90%.
 # Five of ten days is 50%. Net is -3000 + 2100 = -900, which would have read 300%.

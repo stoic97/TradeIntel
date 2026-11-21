@@ -13,16 +13,7 @@ from decimal import Decimal
 
 from services.production.api import formatting
 from services.production.ctr.intake import pipeline as pl
-from tests.unit.api.test_read_again import (  # noqa: F401
-    A_LATER_FILE,
-    client,
-    engine,
-    imports,
-    read_again,
-    send,
-    upload_older,
-    words,
-)
+from tests.helpers.read_again import A_LATER_FILE, imports, read_again, send, upload_older, words
 
 OFFER = "Read your file again"
 REPORT_PAGES = ("/", "/mirror", "/mirror/chapter/1", "/mirror/fact/worst-days",
@@ -34,7 +25,7 @@ def offers(page: str, import_id: int) -> bool:
     return f'action="/imports/{import_id}/read-again"' in page and OFFER in page
 
 
-def test_every_page_he_reads_offers_the_reread(client, engine, monkeypatch):  # noqa: F811
+def test_every_page_he_reads_offers_the_reread(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     stale = imports(engine)[0].id
     for path in REPORT_PAGES:
@@ -43,7 +34,7 @@ def test_every_page_he_reads_offers_the_reread(client, engine, monkeypatch):  # 
         assert offers(response.text, stale), path
 
 
-def test_the_offer_is_a_post_with_a_token(client, engine, monkeypatch):  # noqa: F811
+def test_the_offer_is_a_post_with_a_token(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     page = client.get("/mirror").text
     stale = imports(engine)[0].id
@@ -52,20 +43,20 @@ def test_the_offer_is_a_post_with_a_token(client, engine, monkeypatch):  # noqa:
     assert found and 'name="csrf_token"' in found[1]
 
 
-def test_a_stale_report_stays_readable(client, engine, monkeypatch):  # noqa: F811
+def test_a_stale_report_stays_readable(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     for path in REPORT_PAGES:
         page = words(client.get(path).text)
         assert "−₹" in page, path  # his figures are on it, beside the offer
 
 
-def test_nothing_is_offered_when_the_report_is_current(client):  # noqa: F811
+def test_nothing_is_offered_when_the_report_is_current(client):
     send(client)
     for path in REPORT_PAGES:
         assert OFFER not in client.get(path).text, path
 
 
-def test_the_offer_asks_the_one_check_that_decides_a_reread(client, engine, monkeypatch):  # noqa: F811
+def test_the_offer_asks_the_one_check_that_decides_a_reread(client, engine, monkeypatch):
     """The same question the admin page and the read-again route ask, never the deploy."""
     upload_older(client, monkeypatch)
     monkeypatch.setattr(pl, "out_of_date", lambda imp: False)
@@ -73,7 +64,7 @@ def test_the_offer_asks_the_one_check_that_decides_a_reread(client, engine, monk
         assert OFFER not in client.get(path).text, path
 
 
-def test_an_older_upload_page_offers_nothing(client, engine, monkeypatch):  # noqa: F811
+def test_an_older_upload_page_offers_nothing(client, engine, monkeypatch):
     """Only the file the report reads can be read again, so only it is offered."""
     upload_older(client, monkeypatch)
     upload_older(client, monkeypatch, A_LATER_FILE, name="later.csv")
@@ -82,7 +73,7 @@ def test_an_older_upload_page_offers_nothing(client, engine, monkeypatch):  # no
     assert offers(client.get("/mirror").text, second.id)
 
 
-def test_the_offer_does_not_alarm(client, engine, monkeypatch):  # noqa: F811
+def test_the_offer_does_not_alarm(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     page = client.get("/mirror").text
     start = page.index('stale-line" role="note"')
@@ -92,7 +83,7 @@ def test_the_offer_does_not_alarm(client, engine, monkeypatch):  # noqa: F811
     assert "nothing you told us is lost" in line
 
 
-def test_after_the_reread_it_says_what_moved_in_rupees(client, engine, monkeypatch):  # noqa: F811
+def test_after_the_reread_it_says_what_moved_in_rupees(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     response = read_again(client, imports(engine)[0].id)
     page = words(client.get(response.headers["location"]).text)
@@ -102,13 +93,13 @@ def test_after_the_reread_it_says_what_moved_in_rupees(client, engine, monkeypat
     assert f"Your five worst days {was} {now}" in page
 
 
-def test_after_the_reread_the_offer_is_gone(client, engine, monkeypatch):  # noqa: F811
+def test_after_the_reread_the_offer_is_gone(client, engine, monkeypatch):
     upload_older(client, monkeypatch)
     read_again(client, imports(engine)[0].id)
     for path in REPORT_PAGES:
         assert OFFER not in client.get(path).text, path
 
 
-def test_an_ordinary_upload_says_nothing_moved(client):  # noqa: F811
+def test_an_ordinary_upload_says_nothing_moved(client):
     response = send(client)
     assert "What moved" not in words(client.get(response.headers["location"]).text)

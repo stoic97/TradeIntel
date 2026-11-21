@@ -29,8 +29,8 @@ from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle as T
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_scope_chapters import IMP
-from tests.unit.api.test_scope_facts import fact_page
+from tests.helpers.scope_chapters import IMP
+from tests.helpers.scope_facts import fact_page
 
 CLOSED = "No difference we can stand behind."
 OPEN = "After two straight losses, your next trades averaged"

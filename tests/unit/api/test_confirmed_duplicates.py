@@ -83,10 +83,8 @@ from services.production.journal import fields as journal_fields
 from services.production.journal import sections as sec
 from services.production.mirror import loader
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_read_again import (
-    FILE as OTHER_FILE,
-)
-from tests.unit.api.test_read_again import (
+from tests.helpers.read_again import FILE as OTHER_FILE
+from tests.helpers.read_again import (
     answer,
     confirm,
     counts,
@@ -97,7 +95,7 @@ from tests.unit.api.test_read_again import (
     stored_path,
     words,
 )
-from tests.unit.api.test_upload import CSRF, DUPES, client, engine, sign_up  # noqa: F401
+from tests.helpers.upload import CSRF, DUPES, sign_up
 
 HEADER = "Date,Time,Name,Buy/Sell,Order,Exchange,Segment,Quantity/Lot,Trade Price,Trade Value,Status"
 CALL = "NIFTY 25 JAN 20000 CALL"
@@ -334,17 +332,17 @@ def test_confirming_one_group_leaves_the_others_suspected_and_counted():
 # ---- through the route
 
 
-def upload_it(client, engine, content=FILE, name="one.csv"):  # noqa: F811
+def upload_it(client, engine, content=FILE, name="one.csv"):
     assert send(client, content, name, LAST_DAY_COMPLETE).status_code == 303
     return imports(engine)[-1].id
 
 
-def confirm_named(client, engine, name: str):  # noqa: F811
+def confirm_named(client, engine, name: str):
     """Confirm a group from the current import's own page, as he would."""
     return confirm(client, imports(engine)[-1].id, GROUP[name])
 
 
-def _stored(engine, import_id: int) -> dict:  # noqa: F811
+def _stored(engine, import_id: int) -> dict:
     """What a reading says, without what differs by when it was written."""
     with make_session(engine) as sess:
         imp = sess.get(m.Import, import_id)
@@ -373,7 +371,7 @@ def _stored(engine, import_id: int) -> dict:  # noqa: F811
         }
 
 
-def _journal_versions(engine) -> dict[str, int]:  # noqa: F811
+def _journal_versions(engine) -> dict[str, int]:
     with make_session(engine) as sess:
         latest: dict[str, int] = {}
         for journal in sess.scalars(select(m.Journal).order_by(m.Journal.id)):
@@ -381,7 +379,7 @@ def _journal_versions(engine) -> dict[str, int]:  # noqa: F811
         return latest
 
 
-def _journal_id(engine, day: str, version: int) -> int:  # noqa: F811
+def _journal_id(engine, day: str, version: int) -> int:
     with make_session(engine) as sess:
         return sess.scalars(select(m.Journal.id).where(
             m.Journal.period_start == f"2024-01-{day}", m.Journal.version_no == version)).one()
@@ -393,7 +391,7 @@ def all_at_once():
 
 
 @pytest.mark.parametrize("order", list(itertools.permutations("ABC")), ids="".join)
-def test_group_by_group_in_any_order_is_all_at_once(client, engine, order, all_at_once):  # noqa: F811
+def test_group_by_group_in_any_order_is_all_at_once(client, engine, order, all_at_once):
     upload_it(client, engine)
     for name in order:
         assert confirm_named(client, engine, name).status_code == 303
@@ -409,7 +407,7 @@ def test_group_by_group_in_any_order_is_all_at_once(client, engine, order, all_a
     assert stored["days"] == {d.trading_day: d.rows_after for d in all_at_once.day_diffs}
 
 
-def test_every_order_leaves_the_same_record_and_journals(engine):  # noqa: F811
+def test_every_order_leaves_the_same_record_and_journals(engine):
     """Each order on its own trader, and everything stored read back. A trip's id names its
     trader, so ids are compared with the trader taken out."""
     seen = []
@@ -423,7 +421,7 @@ def test_every_order_leaves_the_same_record_and_journals(engine):  # noqa: F811
     assert len(set(seen)) == 1
 
 
-def test_figures_after_confirming_are_the_ones_worked_by_hand(client, engine):  # noqa: F811
+def test_figures_after_confirming_are_the_ones_worked_by_hand(client, engine):
     upload_it(client, engine)
     assert _stored(engine, imports(engine)[0].id)["counts"][4] == 10
     for name in "ABC":
@@ -438,7 +436,7 @@ def test_figures_after_confirming_are_the_ones_worked_by_hand(client, engine):  
     assert newest.trips_reconstructed == 9
 
 
-def test_the_earlier_reading_keeps_every_row_and_trade(client, engine):  # noqa: F811
+def test_the_earlier_reading_keeps_every_row_and_trade(client, engine):
     first = upload_it(client, engine)
     before = _stored(engine, first)
     for name in "ABC":
@@ -451,7 +449,7 @@ def test_the_earlier_reading_keeps_every_row_and_trade(client, engine):  # noqa:
 # ---- journals
 
 
-def test_a_journal_gets_a_new_version_only_where_the_day_really_changed(client, engine):  # noqa: F811
+def test_a_journal_gets_a_new_version_only_where_the_day_really_changed(client, engine):
     """C takes away only what was open, so no trade moves and no Journal is written."""
     upload_it(client, engine)
     assert _journal_versions(engine) == {"02": 1, "03": 1, "04": 1, "05": 1}
@@ -463,7 +461,7 @@ def test_a_journal_gets_a_new_version_only_where_the_day_really_changed(client, 
     assert versions["02"] == 2
 
 
-def test_answers_stay_with_their_day(client, engine):  # noqa: F811
+def test_answers_stay_with_their_day(client, engine):
     upload_it(client, engine)
     changes, stays = _journal_id(engine, "02", 1), _journal_id(engine, "05", 1)
     answer(client, engine, changes, field="note", value="A note on the changed day")
@@ -482,7 +480,7 @@ def test_answers_stay_with_their_day(client, engine):  # noqa: F811
     assert "A note on the quiet day" not in client.get(f"/journals/{newer}").text
 
 
-def test_a_journal_changed_by_a_confirmation_says_so(client, engine):  # noqa: F811
+def test_a_journal_changed_by_a_confirmation_says_so(client, engine):
     """No later upload happened, so the page must not say one did."""
     upload_it(client, engine)
     confirm_named(client, engine, "A")
@@ -494,14 +492,14 @@ def test_a_journal_changed_by_a_confirmation_says_so(client, engine):  # noqa: F
 # ---- what he reads
 
 
-def test_the_review_says_what_happened_with_one_row(client, engine):  # noqa: F811
+def test_the_review_says_what_happened_with_one_row(client, engine):
     upload_it(client, engine)
     response = confirm_named(client, engine, "A")
     page = words(client.get(response.headers["location"]).text)
     assert SET_ASIDE_ONE in page
 
 
-def test_the_review_says_what_happened_with_three_rows_and_counts_them(client, engine):  # noqa: F811
+def test_the_review_says_what_happened_with_three_rows_and_counts_them(client, engine):
     upload_it(client, engine)
     for name in "ABC":
         response = confirm_named(client, engine, name)
@@ -511,12 +509,12 @@ def test_the_review_says_what_happened_with_three_rows_and_counts_them(client, e
             "Trades rebuilt 9 trades") in page
 
 
-def test_a_review_with_nothing_confirmed_says_nothing_of_it(client, engine):  # noqa: F811
+def test_a_review_with_nothing_confirmed_says_nothing_of_it(client, engine):
     first = upload_it(client, engine)
     assert "rebuilt without" not in client.get(f"/imports/{first}").text
 
 
-def test_the_review_compares_with_the_last_reading_not_an_upload(client, engine):  # noqa: F811
+def test_the_review_compares_with_the_last_reading_not_an_upload(client, engine):
     """A confirmation sent no file."""
     upload_it(client, engine)
     response = confirm_named(client, engine, "A")
@@ -526,7 +524,7 @@ def test_the_review_compares_with_the_last_reading_not_an_upload(client, engine)
     assert "fewer rows than before" in page
 
 
-def test_the_rows_set_aside_page_gives_a_reason_for_each(client, engine):  # noqa: F811
+def test_the_rows_set_aside_page_gives_a_reason_for_each(client, engine):
     upload_it(client, engine)
     confirm_named(client, engine, "A")
     page = words(client.get("/mirror/fact/unread").text)
@@ -534,7 +532,7 @@ def test_the_rows_set_aside_page_gives_a_reason_for_each(client, engine):  # noq
     assert "None" not in page
 
 
-def test_the_report_counts_rows_read_as_the_rows_that_remain(client, engine):  # noqa: F811
+def test_the_report_counts_rows_read_as_the_rows_that_remain(client, engine):
     upload_it(client, engine)
     for name in "ABC":
         confirm_named(client, engine, name)
@@ -542,7 +540,7 @@ def test_the_report_counts_rows_read_as_the_rows_that_remain(client, engine):  #
     assert "Rows in your file 21 rows Rows we read 18 rows Rows set aside 3 rows" in page
 
 
-def test_admin_does_not_call_a_set_aside_row_refused(client, engine):  # noqa: F811
+def test_admin_does_not_call_a_set_aside_row_refused(client, engine):
     upload_it(client, engine)
     confirm_named(client, engine, "A")
     with make_session(engine) as sess:
@@ -554,7 +552,7 @@ def test_admin_does_not_call_a_set_aside_row_refused(client, engine):  # noqa: F
     assert row["rows_refused"] == 0
 
 
-def test_admin_shows_no_negative_count_for_a_row_the_old_code_counted_twice(client, engine):  # noqa: F811
+def test_admin_shows_no_negative_count_for_a_row_the_old_code_counted_twice(client, engine):
     confirmed_as_it_used_to_be(client, engine, "1")
     with make_session(engine) as sess:
         sess.execute(update(m.Trader).values(development_data=False))
@@ -567,7 +565,7 @@ def test_admin_shows_no_negative_count_for_a_row_the_old_code_counted_twice(clie
 # ---- a confirmation adds no file
 
 
-def test_a_confirmation_uses_up_no_upload(client, engine):  # noqa: F811
+def test_a_confirmation_uses_up_no_upload(client, engine):
     upload_it(client, engine)
     for name in "ABC":
         confirm_named(client, engine, name)
@@ -580,7 +578,7 @@ def test_a_confirmation_uses_up_no_upload(client, engine):  # noqa: F811
 
 
 def test_a_confirmation_works_at_the_days_limit_and_leaves_the_next_file_alone(
-    client, engine, monkeypatch,  # noqa: F811
+    client, engine, monkeypatch,
 ):
     upload_it(client, engine)
     monkeypatch.setattr(k, "UPLOADS_PER_ACCOUNT_PER_DAY", 2)
@@ -592,7 +590,7 @@ def test_a_confirmation_works_at_the_days_limit_and_leaves_the_next_file_alone(
 # ---- only the file he is reading
 
 
-def test_confirming_on_another_files_older_import_is_a_404(client, engine):  # noqa: F811
+def test_confirming_on_another_files_older_import_is_a_404(client, engine):
     """It would have made the older file the record the report reads."""
     first = upload_it(client, engine)
     upload_it(client, engine, OTHER_FILE, "two.csv")
@@ -604,7 +602,7 @@ def test_confirming_on_another_files_older_import_is_a_404(client, engine):  # n
     assert current(engine).id == latest
 
 
-def test_another_traders_import_is_a_404(client, engine):  # noqa: F811
+def test_another_traders_import_is_a_404(client, engine):
     first = upload_it(client, engine)
     csrf_page = client.get(f"/imports/{first}").text
     assert GROUP["A"] in csrf_page
@@ -618,7 +616,7 @@ def test_another_traders_import_is_a_404(client, engine):  # noqa: F811
     assert counts(engine) == before
 
 
-def test_a_page_left_open_keeps_what_was_confirmed_since(client, engine):  # noqa: F811
+def test_a_page_left_open_keeps_what_was_confirmed_since(client, engine):
     """Two tabs on the first reading, of the same file: the second confirmation is still added."""
     first = upload_it(client, engine)
     assert confirm(client, first, GROUP["A"]).status_code == 303
@@ -629,13 +627,13 @@ def test_a_page_left_open_keeps_what_was_confirmed_since(client, engine):  # noq
     assert gross_stored(engine, newest.id) == Decimal(3550)
 
 
-def gross_stored(engine, import_id: int) -> Decimal:  # noqa: F811
+def gross_stored(engine, import_id: int) -> Decimal:
     with make_session(engine) as sess:
         return sum((t.gross for t in sess.scalars(
             select(m.Trip).where(m.Trip.import_id == import_id))), Decimal(0))
 
 
-def test_a_double_click_reads_once(client, engine):  # noqa: F811
+def test_a_double_click_reads_once(client, engine):
     first = upload_it(client, engine)
     assert confirm(client, first, GROUP["A"]).status_code == 303
     before = counts(engine)
@@ -645,7 +643,7 @@ def test_a_double_click_reads_once(client, engine):  # noqa: F811
     assert counts(engine) == before
 
 
-def test_a_stored_file_gone_missing_gets_the_failure_page(client, engine):  # noqa: F811
+def test_a_stored_file_gone_missing_gets_the_failure_page(client, engine):
     first = upload_it(client, engine)
     stored_path(engine).unlink()
     before = counts(engine)
@@ -659,7 +657,7 @@ def test_a_stored_file_gone_missing_gets_the_failure_page(client, engine):  # no
 # ---- imports already confirmed on the live database
 
 
-def confirmed_as_it_used_to_be(client, engine, version: str | None) -> int:  # noqa: F811
+def confirmed_as_it_used_to_be(client, engine, version: str | None) -> int:
     """A reading as the old code wrote it: rows marked, trips and counts from the whole file."""
     upload_it(client, engine)
     whole = plan()
@@ -680,7 +678,7 @@ def confirmed_as_it_used_to_be(client, engine, version: str | None) -> int:  # n
 
 
 @pytest.mark.parametrize("version", ["1", None])
-def test_an_already_confirmed_import_is_offered_the_reread(client, engine, version):  # noqa: F811
+def test_an_already_confirmed_import_is_offered_the_reread(client, engine, version):
     stale = confirmed_as_it_used_to_be(client, engine, version)
     with make_session(engine) as sess:
         assert pl.out_of_date(sess.get(m.Import, stale))
@@ -690,7 +688,7 @@ def test_an_already_confirmed_import_is_offered_the_reread(client, engine, versi
 
 
 @pytest.mark.parametrize("version", ["1", None])
-def test_the_reread_applies_what_he_confirmed(client, engine, version):  # noqa: F811
+def test_the_reread_applies_what_he_confirmed(client, engine, version):
     stale = confirmed_as_it_used_to_be(client, engine, version)
     assert gross_stored(engine, stale) == Decimal(4350), "the wrong figures it held"
     assert read_again(client, stale).status_code == 303
@@ -706,13 +704,13 @@ def test_the_reread_applies_what_he_confirmed(client, engine, version):  # noqa:
     assert "read with newer code" in page
 
 
-def test_an_import_read_by_the_old_code_makes_no_claim_it_was_rebuilt(client, engine):  # noqa: F811
+def test_an_import_read_by_the_old_code_makes_no_claim_it_was_rebuilt(client, engine):
     """Its figures still hold those rows, so the sentence would be untrue."""
     stale = confirmed_as_it_used_to_be(client, engine, "1")
     assert "rebuilt without" not in client.get(f"/imports/{stale}").text
 
 
-def test_a_file_with_nothing_confirmed_reads_the_same_after_the_offer(client, engine, monkeypatch):  # noqa: F811
+def test_a_file_with_nothing_confirmed_reads_the_same_after_the_offer(client, engine, monkeypatch):
     """The offer's cost: a re-read that changes no figure, and writes no Journal."""
     with monkeypatch.context() as older:
         older.setattr(rc, "RECONSTRUCTION_VERSION", "1")

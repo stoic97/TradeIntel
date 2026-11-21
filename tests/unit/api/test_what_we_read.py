@@ -12,9 +12,9 @@ from types import SimpleNamespace
 from services.production.api import dial
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
-from tests.unit.api.test_scope_chapters import IMP, TRIPS, chapter_page, readable
-from tests.unit.api.test_scope_facts import fact_page
-from tests.unit.api.test_scope_home import home_page
+from tests.helpers.scope_chapters import IMP, TRIPS, chapter_page, readable
+from tests.helpers.scope_facts import fact_page
+from tests.helpers.scope_home import home_page
 
 
 def _imp(**changes) -> SimpleNamespace:

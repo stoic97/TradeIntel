@@ -29,7 +29,7 @@ from services.production.journal import prose
 from services.production.journal import sections as sec
 from services.production.mirror.metrics import Trip
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers.upload import CSRF, sign_up
 
 
 def _trip(name: str, opened: str, closed: str, net: int = -100) -> Trip:

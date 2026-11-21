@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from sqlalchemy import select
 
 from services.production import demo
@@ -17,17 +18,26 @@ from services.production.api import scope_map as SM
 from services.production.db import models as m
 from services.production.db.session import make_session
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api.test_admin_page import (  # noqa: F401
-    ADMIN,
+from tests.helpers.admin_page import (
     add_consent,
     add_dwell,
     add_import,
     add_journal,
     add_trader,
     admin_client,
-    app,
-    engine,
+    admin_page_app,
+    admin_page_engine,
 )
+
+
+@pytest.fixture()
+def app(monkeypatch):
+    return admin_page_app(monkeypatch)
+
+
+@pytest.fixture()
+def engine(app):
+    return admin_page_engine(app)
 
 NOW = datetime(2026, 3, 20, 4, 30, tzinfo=UTC)
 LONG_AGO = NOW - timedelta(days=30)
@@ -37,31 +47,31 @@ LINES = ("Signed up", "Agreed to consent", "Tried the demo", "Uploaded a real fi
          "Came back on a later day", "Asked would they pay", "Answered would they pay")
 
 
-def built(engine, last_looked=None) -> dict:  # noqa: F811
+def built(engine, last_looked=None) -> dict:
     with make_session(engine) as sess:
         return admin_view.build(sess, running_version="x", production=False, now=NOW,
                                 last_looked=last_looked)
 
 
-def ladder(engine) -> dict[str, tuple[int, int]]:  # noqa: F811
+def ladder(engine) -> dict[str, tuple[int, int]]:
     return {line["label"]: (line["all_time"], line["last_7_days"]) for line in built(engine)["ladder"]}
 
 
-def add_person(engine, login, joined=LONG_AGO):  # noqa: F811
+def add_person(engine, login, joined=LONG_AGO):
     return add_trader(engine, login, joined=joined)
 
 
-def test_the_ladder_has_its_ten_lines_in_order(engine):  # noqa: F811
+def test_the_ladder_has_its_ten_lines_in_order(engine):
     assert [line["label"] for line in built(engine)["ladder"]] == list(LINES)
 
 
-def test_an_old_sign_up_counts_for_all_time_and_not_the_last_7_days(engine):  # noqa: F811
+def test_an_old_sign_up_counts_for_all_time_and_not_the_last_7_days(engine):
     add_person(engine, "old")
     add_person(engine, "new", joined=RECENT)
     assert ladder(engine)["Signed up"] == (2, 1)
 
 
-def test_consent_counts_a_grant_of_the_diagnosis_only(engine):  # noqa: F811
+def test_consent_counts_a_grant_of_the_diagnosis_only(engine):
     agreed, withdrew = add_person(engine, "agreed"), add_person(engine, "withdrew")
     with make_session(engine) as sess:
         add_consent(sess, agreed, at=RECENT)
@@ -71,7 +81,7 @@ def test_consent_counts_a_grant_of_the_diagnosis_only(engine):  # noqa: F811
     assert ladder(engine)["Agreed to consent"] == (1, 1)
 
 
-def test_the_demo_and_a_real_file_are_separate_lines(engine):  # noqa: F811
+def test_the_demo_and_a_real_file_are_separate_lines(engine):
     on_demo, on_real, refused = (add_person(engine, n) for n in ("on-demo", "on-real", "refused"))
     with make_session(engine) as sess:
         add_import(sess, on_demo, source=demo.ACCOUNT, at=RECENT, trips=1)
@@ -83,7 +93,7 @@ def test_the_demo_and_a_real_file_are_separate_lines(engine):  # noqa: F811
     assert lines["Uploaded a real file"] == (2, 1), "a refused file was brought, as the File note says"
 
 
-def test_reading_one_fact_and_all_of_them(engine):  # noqa: F811
+def test_reading_one_fact_and_all_of_them(engine):
     one, every = add_person(engine, "one"), add_person(engine, "every")
     with make_session(engine) as sess:
         add_dwell(sess, one, "money", at=LONG_AGO)
@@ -95,7 +105,7 @@ def test_reading_one_fact_and_all_of_them(engine):  # noqa: F811
     assert lines["Read all the facts"] == (1, 1)
 
 
-def test_read_all_dates_from_the_fact_that_finished_it(engine):  # noqa: F811
+def test_read_all_dates_from_the_fact_that_finished_it(engine):
     trader = add_person(engine, "slow")
     with make_session(engine) as sess:
         for key in SM.FACTS:
@@ -104,7 +114,7 @@ def test_read_all_dates_from_the_fact_that_finished_it(engine):  # noqa: F811
     assert ladder(engine)["Read all the facts"] == (1, 0)
 
 
-def test_a_journal_generated_by_the_upload_is_not_opened(engine):  # noqa: F811
+def test_a_journal_generated_by_the_upload_is_not_opened(engine):
     trader = add_person(engine, "someone")
     with make_session(engine) as sess:
         add_journal(sess, trader, add_import(sess, trader, at=LONG_AGO).id)
@@ -112,7 +122,7 @@ def test_a_journal_generated_by_the_upload_is_not_opened(engine):  # noqa: F811
     assert ladder(engine)["Opened a journal"] == (0, 0)
 
 
-def test_coming_back_means_a_later_day_in_india(engine):  # noqa: F811
+def test_coming_back_means_a_later_day_in_india(engine):
     same_day = add_person(engine, "same-day")
     late = add_person(engine, "came-back")
     # 23:00 and 01:00 UTC are two days there, and both the morning of 2 Feb in India.
@@ -128,7 +138,7 @@ def test_coming_back_means_a_later_day_in_india(engine):  # noqa: F811
     assert ladder(engine)["Came back on a later day"] == (2, 1)
 
 
-def test_asked_and_answered_would_they_pay(engine):  # noqa: F811
+def test_asked_and_answered_would_they_pay(engine):
     trader = add_person(engine, "someone")
     with make_session(engine) as sess:
         journal = add_journal(sess, trader, add_import(sess, trader, at=LONG_AGO).id)
@@ -141,7 +151,7 @@ def test_asked_and_answered_would_they_pay(engine):  # noqa: F811
     assert lines["Answered would they pay"] == (1, 0)
 
 
-def test_a_development_account_moves_no_line(engine):  # noqa: F811
+def test_a_development_account_moves_no_line(engine):
     add_trader(engine, "tester", dev=True, joined=RECENT)
     assert ladder(engine)["Signed up"] == (0, 0)
 
@@ -149,11 +159,11 @@ def test_a_development_account_moves_no_line(engine):  # noqa: F811
 # ---------- New since you last looked ----------
 
 
-def since(engine, last_looked) -> dict[str, int]:  # noqa: F811
+def since(engine, last_looked) -> dict[str, int]:
     return {line["label"]: line["count"] for line in built(engine, last_looked)["new_since"]["lines"]}
 
 
-def test_new_since_counts_only_what_came_after_the_last_look(engine):  # noqa: F811
+def test_new_since_counts_only_what_came_after_the_last_look(engine):
     older, newer = add_person(engine, "older"), add_person(engine, "newer", joined=RECENT)
     with make_session(engine) as sess:
         add_import(sess, older, at=LONG_AGO)
@@ -169,7 +179,7 @@ def test_new_since_counts_only_what_came_after_the_last_look(engine):  # noqa: F
         "Sign-ups": 1, "Demo loads": 1, "Real uploads": 1, "Refused files": 1, "Answers": 2}
 
 
-def test_reading_a_file_again_is_not_a_new_upload(engine):  # noqa: F811
+def test_reading_a_file_again_is_not_a_new_upload(engine):
     trader = add_person(engine, "someone")
     with make_session(engine) as sess:
         first = add_import(sess, trader, at=LONG_AGO)
@@ -178,14 +188,14 @@ def test_reading_a_file_again_is_not_a_new_upload(engine):  # noqa: F811
     assert since(engine, NOW - timedelta(days=7))["Real uploads"] == 0
 
 
-def test_a_first_look_says_so_and_counts_nothing_as_new(engine):  # noqa: F811
+def test_a_first_look_says_so_and_counts_nothing_as_new(engine):
     add_person(engine, "someone", joined=RECENT)
     new_since = built(engine)["new_since"]
     assert new_since["last_looked"] is None
     assert new_since["lines"] == []
 
 
-def test_the_route_reads_this_admins_previous_view(app, engine):  # noqa: F811
+def test_the_route_reads_this_admins_previous_view(app, engine):
     client = admin_client(app, engine)
     first = client.get("/admin").text
     assert "This is your first look" in first
@@ -196,7 +206,7 @@ def test_the_route_reads_this_admins_previous_view(app, engine):  # noqa: F811
         assert len(sess.scalars(select(m.AdminAction)).all()) == 2
 
 
-def test_another_admins_view_is_not_my_last_look(app, engine, monkeypatch):  # noqa: F811
+def test_another_admins_view_is_not_my_last_look(app, engine, monkeypatch):
     client = admin_client(app, engine)
     with make_session(engine) as sess:
         sess.add(m.AdminAction(actor="trader:999999", action="admin_view", target=None, at=RECENT))
@@ -207,30 +217,30 @@ def test_another_admins_view_is_not_my_last_look(app, engine, monkeypatch):  # n
 # ---------- How it is drawn ----------
 
 
-def test_new_since_is_at_the_very_top_and_the_ladder_comes_before_the_traders(app, engine):  # noqa: F811
+def test_new_since_is_at_the_very_top_and_the_ladder_comes_before_the_traders(app, engine):
     page = admin_client(app, engine).get("/admin").text
     assert page.index("This is your first look") < page.index("Who came and how far")
     assert page.index("Who came and how far") < page.index("Traders</h2>")
 
 
-def test_the_cards_are_gone_and_nothing_unknowable_is_shown(app, engine):  # noqa: F811
+def test_the_cards_are_gone_and_nothing_unknowable_is_shown(app, engine):
     page = admin_client(app, engine).get("/admin").text
     assert "admin__cards" not in page
     assert "Reached the reveal" not in page
     assert "read none" not in page
 
 
-def test_counts_only_no_percent_and_no_chart_in_the_ladder(app, engine):  # noqa: F811
+def test_counts_only_no_percent_and_no_chart_in_the_ladder(app, engine):
     page = admin_client(app, engine).get("/admin").text
     section = page[page.index("Who came and how far"):page.index("Traders</h2>")]
     assert "%" not in section.split("System health")[0]
     assert "<svg" not in section
 
 
-def test_said_wrong_keeps_a_plain_line(app, engine):  # noqa: F811
+def test_said_wrong_keeps_a_plain_line(app, engine):
     assert "Said Wrong on any chapter" in admin_client(app, engine).get("/admin").text
 
 
-def test_the_table_header_says_both_periods(app, engine):  # noqa: F811
+def test_the_table_header_says_both_periods(app, engine):
     page = admin_client(app, engine).get("/admin").text
     assert re.search(r"All time</th>\s*<th[^>]*>Last 7 days", page)

@@ -44,7 +44,7 @@ LOCATIONS = (
 )
 """Everywhere this code can reach. Backups are the runbook's, not the code's.
 
-A daily droplet backup holds yesterday's copy of both, and no code of ours can
+Scope's nightly backup holds yesterday's copy of both, and no code of ours can
 reach into it. The consent text promises 30 days because that is the retention,
 and the runbook is what checks it. Saying so here keeps the gap visible rather
 than letting this list imply a completeness it does not have.

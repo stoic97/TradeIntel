@@ -10,49 +10,18 @@ Every unit that arrived is matched into a trip (consuming one unit on each side)
 still open, or inside a trip we refused. Research Spec s4.2: unresolved positions
 are flagged, never forced.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from services.production.ctr.reconstruct import reconstruct
-from services.shared.schemas.ctr_v1 import (
-    Direction,
-    Fill,
-    OptionType,
-    RiskUnitSource,
-    Segment,
-    Side,
-)
+from services.shared.schemas.ctr_v1 import Direction, RiskUnitSource, Segment, Side
+from tests.helpers.reconstruction import CRUDE, T0, fill
 
-IST = datetime(2026, 9, 1, 9, 15, 0).astimezone().tzinfo
-T0 = datetime(2026, 9, 1, 9, 15, 0, tzinfo=IST)
-RAW = "c" * 64
-
-CRUDE = {
-    "exchange": "MCX",
-    "segment": Segment.OPT,
-    "symbol": "CRUDEOILM",
-    "expiry": date(2026, 9, 17),
-    "option_type": OptionType.CE,
-    "strike": Decimal(5500),
-}
 NIFTY = {**CRUDE, "exchange": "NSE", "symbol": "NIFTY", "expiry": date(2026, 9, 22)}
 EQ = {"exchange": "NSE", "segment": Segment.EQ, "symbol": "RELIANCE"}
-
-
-def fill(side, qty, price, minutes=0, **contract):
-    return Fill(
-        trader_id="T01",
-        broker="dhan",
-        ts=T0 + timedelta(minutes=minutes),
-        side=side,
-        quantity=qty,
-        price=Decimal(str(price)),
-        raw_hash=RAW,
-        **(contract or CRUDE),
-    )
 
 
 def signed_value(f):

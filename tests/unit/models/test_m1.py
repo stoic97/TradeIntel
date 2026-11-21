@@ -128,6 +128,7 @@ def test_changing_any_prior_changes_the_spec_digest(field, value):
     assert replace(PRIORS, **{field: value}).digest() != PRIORS.digest()
 
 
+@pytest.mark.research_fit
 def test_a_condition_no_trade_ever_met_leaves_theta_at_its_prior():
     """If no trip meets the condition the data cannot speak about theta, so the
     posterior must be the prior. Catches a model that has wired theta to every trip."""
@@ -139,6 +140,7 @@ def test_a_condition_no_trade_ever_met_leaves_theta_at_its_prior():
 
 # --- the structure section 6.2 exists for, and where it stops working ----------
 
+@pytest.mark.research_fit
 def test_tau_day_is_larger_when_days_really_differ():
     flat = m1.fit(_data(day_sd=0.0, seed=7), PRIORS, FIT)
     lumpy = m1.fit(_data(day_sd=0.6, seed=7), PRIORS, FIT)
@@ -147,6 +149,11 @@ def test_tau_day_is_larger_when_days_really_differ():
     assert lumpy.posterior_mean["tau_day"] > 2 * flat.posterior_mean["tau_day"]
 
 
+# TD-034 (TICKET-954): which M1 fit fails its diagnostics varies run to run on identical
+# images and identical packages, so no platform can be asserted to fail and a strict xfail
+# turns a clean run red. Cause: the marginal fits of TICKET-897. The fit runs in the
+# research-fits job; TICKET-975 holds the reference environment.
+@pytest.mark.research_fit
 def test_day_structure_protects_theta_from_a_day_level_confound():
     """Section 6.2's justification, as a test.
 
@@ -186,6 +193,7 @@ def test_day_structure_protects_theta_from_a_day_level_confound():
     assert abs(blinded.posterior_mean["theta"]) > abs(honest.posterior_mean["theta"])
 
 
+@pytest.mark.research_fit
 def test_a_condition_almost_determined_by_the_day_defeats_m1():
     """A limitation worth knowing before the library is built, not after.
 
@@ -213,6 +221,11 @@ def test_a_condition_almost_determined_by_the_day_defeats_m1():
     assert abs(got.posterior_mean["theta"]) > 3 * got.posterior_sd["theta"]
 
 
+# TD-034 (TICKET-954): which M1 fit fails its diagnostics varies run to run on identical
+# images and identical packages, so no platform can be asserted to fail and a strict xfail
+# turns a clean run red. Cause: the marginal fits of TICKET-897. The fit runs in the
+# research-fits job; TICKET-975 holds the reference environment.
+@pytest.mark.research_fit
 def test_nu_falls_when_the_tails_are_heavy():
     """Student-t is in the model for fat tails. If nu does not respond to them, the
     robustness is nominal."""
@@ -223,6 +236,7 @@ def test_nu_falls_when_the_tails_are_heavy():
     assert heavy.posterior_mean["nu"] < gaussian.posterior_mean["nu"]
 
 
+@pytest.mark.research_fit
 def test_the_funnel_case_samples_without_divergences():
     """Many days with few trips each is the geometry that makes hierarchical models
     diverge, and the framework permits zero. A centred parameterisation fails here; a
@@ -243,6 +257,7 @@ def test_a_history_on_one_day_is_refused_rather_than_fitted():
 
 # --- determinism and the framework's diagnostic thresholds --------------------
 
+@pytest.mark.research_fit
 def test_the_same_seed_gives_the_same_posterior_summary():
     data = _data(seed=19)
     assert m1.fit(data, PRIORS, FIT).summary_digest() == m1.fit(data, PRIORS, FIT).summary_digest()
@@ -261,6 +276,7 @@ def test_the_diagnostics_gate_is_the_frameworks_three_thresholds():
 
 # --- nu's prior, corrected after the SBC run of 10 Oct 2026 --------------------
 
+@pytest.mark.research_fit
 def test_a_nu_floor_holds_at_both_ends_when_set():
     """The floor mechanism is kept, defaulted off. It was proposed as the fix for 59
     diverged SBC replications and its pre-registered prediction failed - 4.3 per cent
@@ -289,6 +305,7 @@ def test_the_nu_floor_is_part_of_the_spec_digest():
 
 # --- parameterisation: the same model, two geometries --------------------------
 
+@pytest.mark.research_fit
 def test_centred_and_non_centred_are_the_same_model():
     """The non-centred form was chosen for the funnel - weak per-day data. The SBC
     log of 10 Oct 2026 showed alpha failing at low sigma, where per-day data is

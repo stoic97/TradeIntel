@@ -35,8 +35,8 @@ from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations
 from services.production.journal import prose
 from services.shared.schemas import scope_v1 as s
-from tests.unit.api import test_journals_worth_writing as w
-from tests.unit.api.test_upload import CSRF, sign_up
+from tests.helpers import journals_worth_writing as w
+from tests.helpers.upload import CSRF, sign_up
 
 REMEMBER = "Do you remember this day?"
 FEB = ["2025-02-03", "2025-02-04", "2025-02-05", "2025-02-06", "2025-02-07",

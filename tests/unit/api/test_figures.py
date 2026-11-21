@@ -19,6 +19,7 @@ from markupsafe import Markup
 
 from services.production.api.app import TEMPLATES, create_app
 from services.production.api.figures import Figure, NoNoun, Written
+from tests.helpers.figures import KIT_SHA
 from tests.unit.api import figure_pages
 
 TEMPLATE_ROOT = Path("services/production/api/templates")
@@ -230,6 +231,3 @@ def test_the_kit_stylesheet_is_untouched():
     """Its digest on main before this work: a figure changes nothing about how a page is drawn."""
     css = Path("services/production/api/static/css/components.css").read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(css).hexdigest() == KIT_SHA
-
-
-KIT_SHA = "01e8fe7836a1d3a9364111f14807399e041d0c3cd6fa3f4d164e4f857aa0d04d"

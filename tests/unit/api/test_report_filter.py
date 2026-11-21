@@ -20,8 +20,7 @@ from fastapi.testclient import TestClient
 from services.production.api import report_filter as RF
 from services.production.api.app import create_app
 from services.production.mirror import metrics as mx
-from tests.unit.api.test_read_again import HEADER, send, words
-from tests.unit.api.test_upload import client, engine  # noqa: F401
+from tests.helpers.read_again import HEADER, send, words
 
 
 def _nifty(day: str, time: str, side: str, value: int, expiry: str, units: int) -> str:
@@ -50,12 +49,12 @@ LATER = FIRST + "\n".join([
 ]).encode() + b"\n"
 
 
-def choose(client, period: str = RF.ALL, book: str = "", next_: str = "/mirror"):  # noqa: F811
+def choose(client, period: str = RF.ALL, book: str = "", next_: str = "/mirror"):
     return client.get("/mirror/filter?" + urlencode({"period": period, "book": book, "next": next_}),
                       follow_redirects=False)
 
 
-def test_the_bar_offers_each_year_and_book_and_all(client):  # noqa: F811
+def test_the_bar_offers_each_year_and_book_and_all(client):
     send(client, FIRST)
     page = client.get("/mirror").text
     said = words(page)
@@ -64,7 +63,7 @@ def test_the_bar_offers_each_year_and_book_and_all(client):  # noqa: F811
     assert RF.SINCE_WORDS not in said  # one upload: there is nothing to be "since"
 
 
-def test_a_year_changes_every_page_and_says_so(client):  # noqa: F811
+def test_a_year_changes_every_page_and_says_so(client):
     send(client, FIRST)
     r = choose(client, "2025")
     assert r.status_code == 303 and r.headers["location"] == "/mirror"
@@ -74,7 +73,7 @@ def test_a_year_changes_every_page_and_says_so(client):  # noqa: F811
     assert "2 trades" in home  # the 2025 trades only: one NIFTY, one WIDGETOIL
 
 
-def test_the_choice_survives_a_page_move_and_clears_in_one_tap(client):  # noqa: F811
+def test_the_choice_survives_a_page_move_and_clears_in_one_tap(client):
     send(client, FIRST)
     choose(client, "2024", next_="/mirror/chapter/2")
     assert "Showing 2024 only." in words(client.get("/mirror/fact/math").text)
@@ -82,7 +81,7 @@ def test_the_choice_survives_a_page_move_and_clears_in_one_tap(client):  # noqa:
     assert "Showing" not in words(client.get("/mirror").text).split("Counted from your file")[0]
 
 
-def test_a_book_row_is_a_link_that_filters_to_that_book(client, monkeypatch):  # noqa: F811
+def test_a_book_row_is_a_link_that_filters_to_that_book(client, monkeypatch):
     """Each book gets its own row on Scope home only from a minimum of trades; this file is
     tiny, so the minimum is lowered to let each book have its row, as a real record's do."""
     monkeypatch.setattr(mx, "NAMED_BOOK_MINIMUM", 1)
@@ -94,7 +93,7 @@ def test_a_book_row_is_a_link_that_filters_to_that_book(client, monkeypatch):  #
     assert "Showing NIFTY options only." in words(client.get("/mirror/chapter/1").text)
 
 
-def test_an_empty_choice_is_shown_not_hidden(client):  # noqa: F811
+def test_an_empty_choice_is_shown_not_hidden(client):
     send(client, FIRST)
     choose(client, "2024", "WIDGETOIL options")
     said = words(client.get("/mirror").text)
@@ -102,7 +101,7 @@ def test_an_empty_choice_is_shown_not_hidden(client):  # noqa: F811
     assert "Showing 2024 only, in WIDGETOIL options." in said
 
 
-def test_each_book_shows_its_result_year_by_year(client, monkeypatch):  # noqa: F811
+def test_each_book_shows_its_result_year_by_year(client, monkeypatch):
     """Each book gets its own row on Scope home only from a minimum of trades; this file is
     tiny, so the minimum is lowered to let each book have its row, as a real record's do."""
     monkeypatch.setattr(mx, "NAMED_BOOK_MINIMUM", 1)
@@ -112,7 +111,7 @@ def test_each_book_shows_its_result_year_by_year(client, monkeypatch):  # noqa: 
     assert "By year: 2024 no trades · 2025 +₹200" in said
 
 
-def test_since_your_last_upload_reads_only_the_new_days(client):  # noqa: F811
+def test_since_your_last_upload_reads_only_the_new_days(client):
     send(client, FIRST)
     send(client, LATER, name="later.csv")
     assert RF.SINCE_WORDS in words(client.get("/mirror").text)
@@ -122,26 +121,26 @@ def test_since_your_last_upload_reads_only_the_new_days(client):  # noqa: F811
     assert "1 trades" in said or "1 trade" in said
 
 
-def test_home_stays_the_whole_record(client):  # noqa: F811
+def test_home_stays_the_whole_record(client):
     send(client, FIRST)
     before = words(client.get("/").text)
     choose(client, "2024")
     assert words(client.get("/").text) == before
 
 
-def test_it_only_ever_goes_back_to_a_report_page(client):  # noqa: F811
+def test_it_only_ever_goes_back_to_a_report_page(client):
     send(client, FIRST)
     for bad in ("https://elsewhere.example/", "//elsewhere.example", "/account"):
         assert choose(client, "2025", next_=bad).headers["location"] == "/mirror"
 
 
-def test_a_year_the_file_does_not_hold_falls_back_to_all(client):  # noqa: F811
+def test_a_year_the_file_does_not_hold_falls_back_to_all(client):
     send(client, FIRST)
     choose(client, "1999", "Gold options")
     assert "Showing" not in words(client.get("/mirror").text).split("Counted from your file")[0]
 
 
-def test_the_sample_is_never_filtered(engine):  # noqa: F811
+def test_the_sample_is_never_filtered(engine):
     visitor = TestClient(create_app())
     visitor.cookies.set(RF.COOKIE, "2026|")
     page = visitor.get("/sample").text
