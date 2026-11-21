@@ -32,7 +32,7 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from services.production import demo
-from services.production.api import admin_ladder, formatting
+from services.production.api import admin_ladder, admin_market, formatting
 from services.production.api import scope_map as SM
 from services.production.ctr.intake import pipeline
 from services.production.db import models as m
@@ -41,6 +41,7 @@ from services.production.journal import leaving as LC
 from services.production.journal import wtp as WTP
 from services.production.mirror import feedback as FB
 from services.production.mirror import guess as GU
+from services.production.prices import layer as prices_layer
 from services.shared.schemas import scope_v1 as s
 
 NOT_RECORDED = "—"
@@ -51,6 +52,7 @@ ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
 VIEW_ACTION = "admin_view"
+MARKET_SAID = admin_market.SAID
 MIRROR_LINE = "mirror_line"
 FILE_REAL, FILE_DEMO, FILE_NONE = "real", "demo", "none"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
@@ -107,15 +109,26 @@ def _tallies(sess: Session) -> dict:
     deletions were three statements and are now one.
     """
     is_view = m.AdminAction.action == VIEW_ACTION
-    views, last_view, last_read, deleted, last_deleted = sess.execute(
+    last_run = select(m.MarketSyncRun).order_by(m.MarketSyncRun.id.desc()).limit(1).subquery()
+    (views, last_view, last_read, deleted, last_deleted, token_expires, run_at, run_result, run_summary,
+     waiting) = sess.execute(
         select(func.count().filter(is_view), func.max(m.AdminAction.at).filter(is_view),
                func.max(m.AdminAction.at).filter(m.AdminAction.action == "wrong_reports"),
                select(func.count()).select_from(m.DeletionRecord).scalar_subquery(),
-               select(func.max(m.DeletionRecord.completed_at)).scalar_subquery())
+               select(func.max(m.DeletionRecord.completed_at)).scalar_subquery(),
+               # The Market data card (TICKET-998): its reads ride this one statement too.
+               select(m.MarketToken.expires_at).limit(1).scalar_subquery(),
+               select(last_run.c.finished_at).scalar_subquery(),
+               select(last_run.c.result).scalar_subquery(),
+               select(last_run.c.summary).scalar_subquery(),
+               select(func.count()).select_from(m.MarketDayRequest)
+               .where(m.MarketDayRequest.status == "waiting").scalar_subquery())
         .select_from(m.AdminAction)
     ).one()
     return {"views": views, "last_view": last_view, "last_read": last_read,
-            "deleted": deleted, "last_deleted": last_deleted}
+            "deleted": deleted, "last_deleted": last_deleted,
+            "market": {"expires": token_expires, "run_at": run_at, "run_result": run_result,
+                       "run_summary": run_summary, "waiting": waiting}}
 
 
 def _trail(sess: Session, accounts: list[tuple], tally: dict) -> tuple[list[dict], dict]:
@@ -770,6 +783,8 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
             "last_deletion": _when(last_deleted),
             "consent_declines": declines,
         },
+        "market": admin_market.build(root=prices_layer.market_dir(), now=now or datetime.now(UTC),
+                                     **tally["market"]),
         "dev_left_out": _left_out(sum(1 for a in accounts if a.development_data)),
         "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(_shown_id(a.login_id)),
                           "joined": _when(a.created_at)}

@@ -211,13 +211,14 @@ def test_every_other_page_is_unchanged_and_still_truly_gross(client, engine, url
     """One line, not fed through: strike rate and break-even read the tradebook's result.
 
     Where the money went (995) is the one page his file feeds: its card, its wedge on chapter
-    1's dial and its answer in All pages change, and are taken out before comparing."""
+    1's desktop dial, its row under the phone dial and its answer in All pages change, and are taken out before comparing."""
     def page():
         html = re.sub(r'value="[^"]{20,}"', "", client.get(url).text)
         html = re.sub(r'<li><a class="all-pages__page"[^>]*data-page="charges".*?</li>', "", html)
         html = re.sub(r'<a class="story-card[^"]*" href="/mirror/fact/charges.*?</a>', "", html,
                       flags=re.DOTALL)
         html = re.sub(r'<div class="scope[^"]*"><svg class="scope__svg".*?</svg>', "", html)
+        html = re.sub(r'<li class="scope__list-row" data-fact="charges".*?</li>', "", html)  # under the phone dial
         return " ".join(html.split())  # the card it took out leaves its blank line behind
 
     before = page()
