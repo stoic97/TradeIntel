@@ -6,7 +6,7 @@
 
 | Version | Date | What changed | Why | Ticket · commit |
 |---|---|---|---|---|
-| v1.0.5 | 17 Nov 2026 | §4.7.5 and §4.7.9, one sentence each: the interval after an entry starts at the close of the entry minute, and the prior minute is the bar before the entry minute read on its own, its close against its own open | The founder ruled both on 13 Nov (TICKET-898, D1 and D2); the code and the independent count apply them. No other rule changes | TICKET-898 |
+| v1.0.5 | 17 Nov 2026 | §4.7.5, two clauses: the interval after an entry starts at the close of the entry minute, and the minute before an entry is read close to close, the close of the bar two minutes before the entry minute to the close of the bar one minute before it, both on the entry's day; and its Annex I entry ("What changed from v1.0.4 → v1.0.5") | The founder ruled both on 13 Nov and re-confirmed the prior-minute reading on 17 Nov (TICKET-898, D1 and D2); the code and the independent count apply them. No other rule changes | TICKET-898 |
 | v1.0.4 | 14 Nov 2026 | §4.7.8, the multi-leg direction convention (it said the question was open), the 4.7.7 table's multi-leg row, and its Annex I entry ("What changed from v1.0.3 → v1.0.4") | The founder ruled the convention on 12 and 13 Nov; the code applies it from the legs alone | TICKET-902 |
 | v1.0.3 | 14 Nov 2026 | This change log. The header names this version and its parent, Thesis v1.5 (it still said v1.4), and says "frozen" (it said "freeze candidate", though the README and the Status paragraph call it frozen). No rule changes | Repo audit C3: three post-freeze edits were made under v1.0 | TICKET-931 |
 | v1.0.2 | 13 Nov 2026 | §5.5a, the finding bar, and its Annex I entry ("What changed from v1.0.1 → v1.0.2") | The live gate did not correct for the number of checks tried | TICKET-909 · `a4f9836` |
@@ -220,7 +220,7 @@ The worked example, and the reason the check is in this section at all: on 6 Nov
 
 **4.7.5 · What a bar may be used to claim, and what it may not.**
 
-**Permitted: direction after an entry.** Whether the underlying moved in a trade's direction over a stated interval, as a count of trades. This is a question about the close of one minute against the close of another, and a 1-minute bar answers it exactly. The interval starts at the close of the entry minute: a move measured from anything earlier is contaminated by the entry itself.
+**Permitted: direction after an entry.** Whether the underlying moved in a trade's direction over a stated interval, as a count of trades. This is a question about the close of one minute against the close of another, and a 1-minute bar answers it exactly. The interval starts at the close of the entry minute: a move measured from anything earlier is contaminated by the entry itself. The minute before an entry is read the same way, close to close: from the close of the bar two minutes before the entry minute to the close of the bar one minute before it, both on the entry's day. It is not that bar's own open against its own close, and a bar from another day is never borrowed.
 
 **Forbidden: exit capture, and anything else that needs the path inside a bar.** `docs/phase0/method-findings.md` measures the bias: bar-sampled MFE overstates exit capture by roughly **0.33 ÷ √(hold ÷ bar interval)**, and the bias differs by holding time. At a median hold under ten minutes, 1-minute bars overstate capture by about **+0.12** and 5-minute bars by about **+0.26** — larger than the effects E2 and E4′ are looking for. So for a trader of that kind those two tests are **impossible without tick data, not degraded.** A bar-derived capture figure is not a weaker version of the right answer; it is a different number that happens to look like one.
 
@@ -258,7 +258,7 @@ So a debit call vertical is long and a credit call vertical short; a debit put v
 
 **The exclusion is reported, never silent.** Any count reading 4.7.7 reports the trips it could not measure with their reason, and "no single direction" is one of those reasons. A position the convention leaves without a direction is counted out the same way.
 
-**4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. That minute is the bar before the entry minute, read on its own, its close against its own open; it is not the close of that bar against the close of the one before it (the close-to-close sentence in 4.7.5 is about direction after an entry). Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
+**4.7.9 · Scope of this section.** It covers the **minute before an entry** and nothing further back. Longer look-backs are a separate question and go to the candidate register: T-001's 6 Nov measurement found that in NIFTY the single prior minute agrees with the trade 69.7% of the time while the prior fifteen minutes agree 44.2% — he buys the turn — whereas in crude the prior fifteen agree 64.4% — he follows a move. That is a real second finding, with a real instrument difference in it, and it waits like every other proposal until the core has proved the machinery.
 
 ## 5. The Evidence Standard
 
@@ -1104,6 +1104,10 @@ The CEO asked for every open conflict to be decided and the document rewritten t
 ### What changed from v1.0.1 → v1.0.2 (13 November 2026)
 
 **§5.5a added: the finding bar corrects for the number of checks tried.** Found by a trader reviewing the product, not by us: the live gate cleared p ≤ 0.05 with no correction, so with eighteen core tests about one trader in two would get a finding by luck, and the trader's own rule already divided by the number of checks. Ruled by the research seat on 12 November: Westfall–Young step-down min-p on the shared within-day shuffle, over a family of eighteen fixed by this version (a check that can't run stays in at p = 1), 10,000 draws, Holm as the fallback, the same sign in both halves of his own days as a hard condition, and three levels on the page. Bonferroni was considered and turned down as too strict for checks that share one trader's trades.
+
+### What changed from v1.0.4 → v1.0.5 (17 November 2026)
+
+**§4.7.5 now says two things it had left to the code.** The interval after an entry starts at the close of the entry minute (ruled 13 November, TICKET-898 D1): a move measured from anything earlier is contaminated by the entry itself. And the minute before an entry is read close to close (ruled 13 November, re-confirmed 17 November, D2): from the close of the bar two minutes before the entry minute to the close of the bar one minute before it, both bars on the entry's day. A bar's own open against its own close is not the reading, and a bar from another day is never borrowed. A trip with either bar missing is left out of the prior-minute count alone, with a reason that names the bar. **No other rule changes.**
 
 ### What changed from v1.0.3 → v1.0.4 (14 November 2026)
 
