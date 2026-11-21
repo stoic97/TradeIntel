@@ -487,6 +487,18 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .ch-cell--loss-4 { fill: var(--color-loss); fill-opacity: .9; }
 .ch-table td, .ch-table th { font-size: 12px; }
 
+/* Where the money went (TICKET-995) */
+.wf-chart { display: block; width: 100%; max-width: 560px; height: auto; margin: var(--space-3) auto; background: var(--color-surface); border-radius: 12px; }
+.wf-bar rect { fill: var(--color-ink); }
+.wf-bar--step rect, .wf-bar--loss rect { fill: var(--color-loss); }
+.wf-bar--gain rect { fill: var(--color-gain); }
+.wf-bar:hover rect, .wf-bar:focus rect { opacity: .8; }
+.wf-steps { list-style: none; margin: var(--space-3) 0; padding: 0; }
+.wf-row { border-bottom: 1px solid var(--color-hairline); }
+.wf-row--total { font-weight: 500; }
+.wf-step { display: flex; justify-content: space-between; gap: var(--space-3); min-height: 44px; align-items: center; color: var(--color-ink); text-decoration: none; }
+.wf-left-out { color: var(--color-faint); }
+
 /* TICKET-988: Your numbers */
 .numbers__top { color: var(--color-faint); }
 .numbers__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-4); }

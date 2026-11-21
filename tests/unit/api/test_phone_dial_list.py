@@ -54,7 +54,7 @@ ON_MAIN = {
     "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
     "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
-                          "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
+                          "6eb51cfb9b374295da704757df16ca79fc8d2f876f481413df604b54d2935901"],  # desktop: 995 adds a wedge
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
     "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
@@ -64,7 +64,7 @@ ON_MAIN = {
 }
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
-    (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
+    (1, "desktop"): "de82504974afc60ce463d7c6ae2776da1d5564171db868fa100d361a1d3fd1e8",  # 995's wedge
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
@@ -75,6 +75,8 @@ CHAPTERS_ON_MAIN = {
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
+OFF_THE_PHONE_DIAL = {"charges"}
+"""Facts added after the dial, each in the list under its chapter's phone dial (995's charges)."""
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 
@@ -103,7 +105,7 @@ def later(monkeypatch):
 
 def test_every_fact_says_whether_it_sits_on_the_phone_dial():
     assert {f.key for c in S.CHAPTERS for f in c.facts if f.on_phone_dial} == ON_THE_PHONE_DIAL
-    assert all(f.on_phone_dial for c in S.CHAPTERS for f in c.facts)  # every fact on main stays on it
+    assert {f.key for c in S.CHAPTERS for f in c.facts if not f.on_phone_dial} == OFF_THE_PHONE_DIAL
 
 
 # ---------- nothing else moves ----------
@@ -121,7 +123,9 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
-        assert "scope__list" not in html, path
+        off = any(not f.on_phone_dial for c in S.CHAPTERS for f in c.facts
+                  if path in (f"/mirror/chapter/{c.number}",))
+        assert ("scope__list" in html) == off, path
 
 
 # ---------- a fact off the phone dial ----------

@@ -163,15 +163,31 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+CHARGED_ON = "the charges each trade was charged"
+"""The lookup's key for each trade's charge steps (TICKET-995): trip id to the steps it was
+charged on, in waterfall order. A trade is charged on several, so this filter reads many."""
+
+
+def _charge(t: mx.Trip, lookup: dict) -> list[Choice]:
+    return [(place, key, name) for place, key, name in lookup.get(CHARGED_ON, {}).get(t.trip_id, ())]
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
     label: str
-    read: Callable[[mx.Trip, dict], Choice | None]
+    read: Callable[[mx.Trip, dict], Choice | None | list[Choice]]
     only: frozenset[str] | None = None  # the facts whose list offers it; None: every list
+    many: bool = False  # a trade can sit under several of its choices (a charge step)
     quiet: bool = False
     """Offered only when a link has already chosen it (TICKET-993's closed_day): a menu of every
     date he closed a trade on would bury the list, and a calendar cell is the way in."""
+
+    def choices(self, t: mx.Trip, lookup: dict) -> list[Choice]:
+        got = self.read(t, lookup)
+        if self.many:
+            return list(got or ())
+        return [] if got is None else [got]
 
 
 FILTERS = (
@@ -187,7 +203,17 @@ FILTERS = (
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    Filter("charge", "Charge", _charge, only=frozenset({"charges"}), many=True),
 )
+
+
+def _charged_on(ctx: dict) -> dict[str, list[Choice]]:
+    wf = ctx.get("charges")
+    out: dict[str, list[Choice]] = {}
+    for place, step in enumerate(wf.steps if wf is not None else ()):
+        for trip_id in step.trip_ids:
+            out.setdefault(trip_id, []).append((place, step.key, step.name))
+    return out
 
 
 def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> dict:
@@ -199,14 +225,14 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
+    lookup = {**expiries, HALF_OF: mx.half_of(behind), CHARGED_ON: _charged_on(ctx)}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
         if f.quiet and not query.get(f.name):
             continue
-        read = [(t, f.read(t, lookup)) for t in behind]
-        offered = sorted({choice for _, choice in read if choice is not None}, key=lambda c: c[0])
+        read = [(t, f.choices(t, lookup)) for t in behind]
+        offered = sorted({c for _, chs in read for c in chs}, key=lambda c: c[0])
         if f.quiet:
             offered = [c for c in offered if c[1] == query.get(f.name)]
             if not offered:
@@ -225,7 +251,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
             ],
         })
         if wanted:
-            kept = {id(t) for t, choice in read if choice is not None and choice[1] == wanted}
+            kept = {id(t) for t, chs in read if any(c[1] == wanted for c in chs)}
             shown = [t for t in shown if id(t) in kept]
     return {
         "filters": drawn,
