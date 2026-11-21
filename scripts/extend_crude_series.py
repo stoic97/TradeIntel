@@ -36,7 +36,7 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -45,53 +45,18 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from services.shared.market import day_store as ds
+from services.shared.market import fyers_history as fh
 from services.shared.market import series as ms
 
-IST = timezone(timedelta(hours=5, minutes=30))
+# The symbol choice and the request live in one place, shared with the server's sync (TICKET-998).
+IST, CHUNK_DAYS, MONTHS = fh.IST, fh.CHUNK_DAYS, fh.MONTHS
+Refused = fh.Refused
+_history, near_month_symbol, fetch = fh.history, fh.near_month_symbol, fh.fetch
 OVERLAP_DAYS = 10
 MAX_OHLC_MISMATCH = 0.001
-CHUNK_DAYS = 99  # the broker answers at most 100 days of 1-minute bars per request
-MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 DEFAULT_FOLDER = ROOT / "data" / "market" / "CRUDEOIL"
 SESSION_OPEN = time(9, 0)  # MCX_CRUDEOIL.yaml's session_start
 FMT = "%Y-%m-%d %H:%M:%S"
-
-
-class Refused(Exception):
-    """The run wrote nothing, and the message says why."""
-
-
-def _history(client, symbol: str, start: datetime, end: datetime) -> dict:
-    return client.history({"symbol": symbol, "resolution": "1", "date_format": "0",
-                           "range_from": str(int(start.timestamp())), "range_to": str(int(end.timestamp())),
-                           "cont_flag": "1"})
-
-
-def near_month_symbol(client, today: date) -> str:
-    end = datetime(today.year, today.month, today.day, 23, 59, tzinfo=IST)
-    for ahead in range(4):
-        y, m = divmod(today.month - 1 + ahead, 12)
-        symbol = f"MCX:CRUDEOIL{(today.year + y) % 100:02d}{MONTHS[m]}FUT"
-        if _history(client, symbol, end - timedelta(days=5), end).get("s") == "ok":
-            return symbol
-    raise Refused(f"no crude contract from {today:%b %Y} on is known to the broker")
-
-
-def fetch(client, symbol: str, start: date, end: date) -> dict[datetime, list[str]]:
-    """Bars from the start of ``start`` to the end of ``end``, IST naive, start of minute."""
-    out: dict[datetime, list[str]] = {}
-    s = datetime(start.year, start.month, start.day, tzinfo=IST)
-    stop = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=IST)
-    while s <= stop:
-        e = min(s + timedelta(days=CHUNK_DAYS), stop)
-        r = _history(client, symbol, s, e)
-        if r.get("s") != "ok":
-            raise Refused(f"the broker refused {symbol} {s:%Y-%m-%d} to {e:%Y-%m-%d}: {r.get('message', r)}")
-        for c in r.get("candles") or []:
-            t = datetime.fromtimestamp(c[0], IST).replace(tzinfo=None)
-            out[t] = [f"{float(v):g}" for v in c[1:5]] + [str(int(c[5]))]
-        s = e + timedelta(seconds=1)
-    return out
 
 
 def _stamp(line: str) -> datetime:
