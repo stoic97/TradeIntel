@@ -938,11 +938,8 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                       phone_shown=formatting.count(n))
     if key == "busiest":
         on_day = fig["busiest_date"].replace(" ", chr(0xA0))  # a date holds together
-        # Three facts in chapter 3 since TICKET-996: on a phone the wedge is narrower, so it
-        # says "8 on / busiest day", and the date is on desktop and on the page.
         return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}"),
-                      phone="busiest\nday",
-                      phone_shown=f"{formatting.count(ctx['days'].busiest_trips)} on")
+                      phone=f"busiest day,\n{on_day}")
     if key == "unread":
         read, _, whole = fig["figure"].removesuffix(" rows").partition(" of ")
         return _wedge(Figure(read, "rows", of=f"of {whole} rows read"), shown=read)

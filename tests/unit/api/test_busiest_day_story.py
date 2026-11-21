@@ -444,7 +444,7 @@ def dial_figures(trips) -> dict:
 
 def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
     figs = SF.facts(SF.record_context(DAY), IMP)
-    item = SF.chapter_view(3, figs)["items"][2]
+    item = SF.chapter_view(3, figs)["items"][1]  # the phone dial's items: size sits under it
     assert (item["figure"], item["label"].replace("\xa0", " ")) == (
         "6 trades", "on your\nbusiest day,\n02 Sep 2026")
 
@@ -463,8 +463,7 @@ def test_one_trade_after_two_straight_losses_is_one_trade():
 
 
 def test_a_fact_in_a_state_keeps_its_dash_on_the_dial():
-    assert dial_figures([]) == {"After two straight losses": "—", "Your size after a loss": "—",
-                                "Your busiest day": "—"}
+    assert dial_figures([]) == {"After two straight losses": "—", "Your busiest day": "—"}
 
 
 def test_the_card_and_home_keep_their_own_figures():
