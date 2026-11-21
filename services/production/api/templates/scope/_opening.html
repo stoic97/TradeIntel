@@ -25,3 +25,25 @@ There aren't enough trades yet to test it: it needs {% if f.post_loss_needs.cond
 {% macro busiest_sentence(days) -%}
 Your busiest day had <span class="num">{{ Figure(days.busiest_trips, "trades")|count }}</span> {{ "trade" if days.busiest_trips == 1 else "trades" }}, against <span class="num">{{ Figure(days.normal_day, "trades") }}</span> on your normal day.
 {%- endmacro %}
+
+{#- Your size after a loss (TICKET-996). The counted line states both groups side by side,
+    whichever way they point; an average needs R2's minimum of 30 in its group. -#}
+{% macro size_line(f) -%}
+{%- set loss, win = f.groups[0], f.groups[1] -%}
+After a loss {% if loss.enough %}you traded <span class="num">{{ Figure(loss.mean, "lots")|lots }}</span> lots on average (<span class="num">{{ Figure(loss.trades, "trades")|count }}</span> trades){% else %}you took <span class="num">{{ Figure(loss.trades, "trades")|count }}</span> {{ "trade" if loss.trades == 1 else "trades" }}, too few to average{% endif %}; after a win, {% if win.enough %}<span class="num">{{ Figure(win.mean, "lots")|lots }}</span> (<span class="num">{{ Figure(win.trades, "trades")|count }}</span> trades){% else %}<span class="num">{{ Figure(win.trades, "trades")|count }}</span>, too few to average{% endif %}.
+{%- endmacro %}
+
+{#- The claim, only when R2's finding bar passed on his own file; otherwise nothing. -#}
+{% macro size_sentence(f) -%}
+{%- if f.size_sentence -%}
+You trade bigger right after a loss than right after a win, and it held in both halves of your trading days.
+{%- endif -%}
+{%- endmacro %}
+
+{% macro size_level(f) -%}
+{%- if f.size_level == "worth_watching" -%}
+Something showed up here, but it didn't clear the bar a finding has to clear. Upload more months to confirm.
+{%- elif f.size_needs -%}
+There aren't enough trades yet to test it: it needs {% if f.size_needs.loss %}<span class="num">{{ Figure(f.size_needs.loss, "trades")|count }}</span> more right after a loss{% if f.size_needs.win %} and {% endif %}{% endif %}{% if f.size_needs.win %}<span class="num">{{ Figure(f.size_needs.win, "trades")|count }}</span> more right after a win{% endif %}.
+{%- endif -%}
+{%- endmacro %}

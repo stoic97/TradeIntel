@@ -1,0 +1,12 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% from "scope/_opening.html" import size_line, size_sentence, size_level %}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  {%- set claim = size_sentence(f) %}{% if claim|trim %}
+  <span class="mirror mirror--card">{{ claim }}</span>{% endif %}
+  <span class="mirror mirror--card">{{ size_line(f) }}</span>
+  {%- set level = size_level(f) %}{% if level|trim %}
+  <span class="body-small down__level">{{ level }}</span>{% endif %}
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>After a loss</span><span><span class="legend__swatch legend__swatch--faint"></span>After a win</span></span></span>
+  {%- endif %}
+{% endcall %}

@@ -352,7 +352,7 @@ def card_sentences(page: str, number: int) -> list[str]:
 
 def test_the_busiest_page_says_none_of_its_cards_sentences():
     page = readable(fact_page("busiest", DAY))
-    said = card_sentences(chapter_page(3, DAY), 2)
+    said = card_sentences(chapter_page(3, DAY), 3)  # down, size, then busiest (TICKET-996)
     assert len(said) == 2
     for sentence in said:
         assert sentence not in page, sentence
@@ -444,7 +444,7 @@ def dial_figures(trips) -> dict:
 
 def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
     figs = SF.facts(SF.record_context(DAY), IMP)
-    item = SF.chapter_view(3, figs)["items"][1]
+    item = SF.chapter_view(3, figs)["items"][1]  # the phone dial's items: size sits under it
     assert (item["figure"], item["label"].replace("\xa0", " ")) == (
         "6 trades", "on your\nbusiest day,\n02 Sep 2026")
 
@@ -495,7 +495,8 @@ def test_the_way_into_chapter_four_uses_its_real_title():
 
 def test_the_down_page_has_one_way_on():
     """TICKET-903: one next step, the spine's, and no jump to chapter 4 beside it."""
-    assert S.next_step("down")["label"] == "Next: Your busiest day"
+    assert S.next_step("down")["label"] == "Next: Your size after a loss"
+    assert S.next_step("size")["label"] == "Next: Your busiest day"
     assert "Chapter 4: What we read" not in readable(fact_page("down", DOWN))
 
 
@@ -531,7 +532,8 @@ def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):
 def test_a_fact_in_a_state_still_goes_on():
     """TICKET-903: the way on is scope_map's, so a page in a state has it as surely as any."""
     assert S.next_step("busiest")["href"] == S.fact_href("unread")
-    assert S.next_step("down")["href"] == S.fact_href("busiest")
+    assert S.next_step("down")["href"] == S.fact_href("size")
+    assert S.next_step("size")["href"] == S.fact_href("busiest")
 
 
 def test_the_opening_card_sentence_is_untouched():

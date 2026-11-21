@@ -166,6 +166,32 @@ other readers find each contract's expiry in the same lookup."""
 
 HALVES = (("first", "First half"), ("second", "Second half"))
 
+AFTER_OF = "the last trade's result before each trade"
+"""The lookup's key for each trade's group: the result of the last trade that closed before it
+opened, the same day. One filter for every fact that groups trades this way (Your size after a
+loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
+
+AFTERS = (("loss", "After a loss"), ("win", "After a win"))
+
+
+def _after(t: mx.Trip, lookup: dict) -> Choice | None:
+    group = lookup.get(AFTER_OF, {}).get(t.trip_id)
+    for place, (value, label) in enumerate(AFTERS):
+        if group == value:
+            return place, value, label
+    return None
+
+AFTER_SOURCE = {"size": "size_after"}
+"""Whose loss-or-win groups a fact's list reads: its own page's. Size reads size_after; How fast
+you went back in and Same way again read next_trades. The two break a same-minute exit tie
+differently, so one shared map would open trades a page didn't count."""
+
+
+def after_groups(key: str, ctx: dict) -> dict:
+    source = AFTER_SOURCE.get(key, "next_trades")
+    return ctx[source].group_of if source in ctx else {}
+
+
 
 def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     half = lookup.get(HALF_OF, {}).get(t.trip_id)
@@ -200,6 +226,7 @@ FILTERS = (
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    Filter("after", "After a loss or a win", _after, only=frozenset({"size"})),
 )
 
 
@@ -212,7 +239,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
+    lookup = {**expiries, HALF_OF: mx.half_of(behind),
+              AFTER_OF: after_groups(key, ctx)}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue

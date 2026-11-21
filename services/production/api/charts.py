@@ -196,6 +196,7 @@ _WRITE = {
     "rupees": through_figure(formatting.rupees),
     "rupee": through_figure(formatting.rupees),
     "percent": through_figure(formatting.out_of_a_hundred),
+    "lots": through_figure(formatting.lots),
 }
 _COUNT = through_figure(formatting.count)
 
@@ -221,3 +222,40 @@ def text_table(rows: Iterable[Sequence], headings: Sequence[str], *, caption: st
         out.append("<tr>" + "".join(_cell(v) for v in row) + "</tr>")
     out.append("</tbody></table>")
     return Markup("".join(out))
+
+
+# ---------- dots by row (kit format) ----------
+
+def _dot(cx: float, cy: float, r: float) -> str:
+    return f"M{cx - r:.1f} {cy:.1f}a{r:g} {r:g} 0 1 0 {2 * r:g} 0a{r:g} {r:g} 0 1 0 {-2 * r:g} 0"
+
+
+def dot_rows(rows: Sequence[tuple[Sequence[float], Decimal | None, bool]], w: float, h: float,
+             mini: bool = False) -> dict:
+    """Two rows of dots, one per trade at its size, each row's average as a tick: the shape of
+    the kit's "how long you hold" chart, in the kit's format (``{"w", "h", "parts"}``) so a card,
+    a fact page and the dial's mini draw it the same way. A row flagged thin (under the
+    minimum) is hatched with the kit's pattern and its average isn't drawn.
+
+    ``rows`` is ``[(values, average, thin), ...]``: the first row's dots are ink, the second's
+    faint. The scale is the largest value on either row, from zero."""
+    ys = [h * 0.3, h * 0.72]
+    r, t = (1.3 if mini else 3.2), (3 if mini else 8)
+    top = max([float(v) for vals, _, _ in rows for v in vals] or [1.0]) or 1.0
+
+    def x(v: float) -> float:
+        return r + float(v) / top * (w - 2 * r)
+
+    parts: list[dict] = []
+    for y, (_vals, _avg, thin) in zip(ys, rows, strict=False):
+        if thin:
+            parts.append({"role": "hatch", "d": f"M0 {y - t:.1f}H{w:g}V{y + t:.1f}H0Z"})
+    parts.append({"role": "axis", "d": "".join(f"M0 {y:.1f}H{w:g}" for y in ys[:len(rows)])})
+    for role, y, (vals, _avg, _thin) in zip(("ink", "faint"), ys, rows, strict=False):
+        if vals:
+            parts.append({"role": role, "d": "".join(_dot(x(v), y, r) for v in vals)})
+    ticks_d = "".join(f"M{x(avg):.1f} {y - t:.1f}V{y + t:.1f}"
+                      for y, (_vals, avg, thin) in zip(ys, rows, strict=False) if avg is not None and not thin)
+    if ticks_d:
+        parts.append({"role": "stroke", "d": ticks_d})
+    return {"w": w, "h": h, "parts": parts}

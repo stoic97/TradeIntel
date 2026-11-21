@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import math
 
+from services.production.api import charts as _charts
+
 # ---------- Numbers and paths ----------
 
 
@@ -1074,6 +1076,7 @@ CHARTS = {
     "read": chart_read,
     "risk": chart_risk,
     "notold": chart_notold,
+    "size": _charts.dot_rows,  # not the kit's: lots after a loss and after a win (TICKET-996)
 }
 
 

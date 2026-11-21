@@ -53,7 +53,7 @@ def test_the_clocks_figure_opens_its_own_hour():
 
 def test_each_chapter_wedge_opens_its_trades_or_is_visibly_not_a_link():
     for n in (1, 2, 3, 4):
-        svg = str(dial.scope_dial(SF.chapter_view(n, FIGS)))
+        svg = str(dial.scope_dial(SF.chapter_view(n, FIGS), "desktop"))  # every fact has a wedge there
         for f in S.chapter(n).facts:
             opens = FIGS[f.key]["opens"]
             if opens:

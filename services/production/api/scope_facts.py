@@ -19,12 +19,12 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
-from services.production.api import dial, findings, formatting
+from services.production.api import charts, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
-from services.shared.conditions import b2_shuffle, multiplicity
+from services.shared.conditions import b2_shuffle, multiplicity, r2_shuffle
 from services.shared.schemas import scope_v1 as s
 
 COUNTED = s.ResultState.COUNTED_FACT
@@ -38,6 +38,7 @@ CARD_H = {
     "run": 40,
     "clock": 84,
     "busy": 84,
+    "size": 84,
 }
 INDIA_OFFSET = timedelta(hours=5, minutes=30)
 NOT_TOLD = 4
@@ -70,6 +71,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "money_found": mx.money_found(trips),
         "past_number": mx.trades_past_number(trips),
         "two_losses": two_losses,
+        "size_after": mx.size_after_loss(same_day),
         "strike": mx.strike_rate(same_day),
         "break_even": mx.break_even(same_day),
         "lots": mx.average_lots(trips),
@@ -123,6 +125,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     if kind == "down":
         tl = ctx["two_losses"]
         return G.chart_down(_f(tl.condition_mean), _f(tl.comparison_mean), w, h, mini)
+    if kind == "size":
+        return charts.dot_rows(_size_rows(ctx["size_after"]), w, h, mini)
     if kind == "busy":
         days = ctx["days"]
         return G.chart_busy(days.counts, _f(days.normal_day), w, h)
@@ -159,11 +163,48 @@ def _state(key: str, ctx: dict) -> str:
         "math": "holding",  # both a winner and a loser, or there is nothing to balance
         "run": "run",
         "down": "two_losses",
+        "size": "size_after",
         "busiest": "days",
     }.get(key)
     if metric and ctx[metric].state is not COUNTED:
         return "not-enough"
     return ""
+
+
+def _size_rows(sz) -> list:
+    """The chart's two rows: lots after a loss, then after a win; a row under R2's minimum is
+    hatched and its average isn't drawn (TICKET-996)."""
+    return [
+        ([t.lots for t in sz.after_loss], sz.loss_mean, len(sz.after_loss) < r2_shuffle.MIN_GROUP),
+        ([t.lots for t in sz.after_win], sz.win_mean, len(sz.after_win) < r2_shuffle.MIN_GROUP),
+    ]
+
+
+def _size_view(ctx: dict, same_day: list) -> dict:
+    """What "Your size after a loss" says beyond its figure: each group's count and whether it
+    has the minimum for an average, R2's level, and the chart's numbers as a table."""
+    sz = ctx["size_after"]
+    check = mx.size_after_check(same_day) if same_day else None
+    rows = []
+    for label, group, mean in (("After a loss", sz.after_loss, sz.loss_mean),
+                               ("After a win", sz.after_win, sz.win_mean)):
+        enough = len(group) >= r2_shuffle.MIN_GROUP
+        rows.append({"label": label, "trades": len(group), "enough": enough, "mean": mean if enough else None})
+    return {
+        "groups": rows,
+        "scratch": sz.scratch,
+        "left_out": sz.left_out,
+        "size_level": check.level if check else None,
+        "size_needs": None if check is None or check.level != b2_shuffle.NOT_ENOUGH else {
+            "loss": max(0, r2_shuffle.MIN_GROUP - check.n_condition),
+            "win": max(0, r2_shuffle.MIN_GROUP - check.n_comparison),
+        },
+        "size_sentence": mx.size_sentence_may_show(same_day) and all(r["enough"] for r in rows),
+        "table": charts.text_table(
+            [[r["label"], Figure(r["trades"], "trades"),
+              Figure(r["mean"], "lots") if r["mean"] is not None else "too few to average"] for r in rows],
+            ["", "Trades", "Average lots"], caption="Your size after a loss, as numbers"),
+    }
 
 
 def _trades_said(n: int) -> str:
@@ -194,6 +235,8 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
     if key == "down":
         return Figure(_trades_said(ctx["two_losses"].population), "trades")
+    if key == "size":
+        return Figure(_trades_said(len(ctx["size_after"].after_loss)), "trades")
     if key == "busiest":
         return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
@@ -718,6 +761,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
+    out["size"].update(_size_view(ctx, same_day))
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
     options = mx.option_result(trips)
@@ -882,6 +926,16 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                       phone="largest\nhour", shown=hour)
     if key == "down":
         return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
+    if key == "size":
+        n = len(ctx["size_after"].after_loss)
+        if n < 10:  # a lone digit reads as a serial: it keeps a word beside it (TICKET-853)
+            return _wedge(_of(_trades(n), "right after a loss"), phone="a loss",
+                          phone_shown=f"{formatting.count(n)} after")
+        if n >= WIDE_COUNT:  # "113 trades" is too wide for the desktop wedge: the noun moves under
+            return _wedge(_of(_trades(n), "trades right after a loss"), shown=formatting.count(n),
+                          phone="after\na loss", phone_shown=formatting.count(n))
+        return _wedge(_of(_trades(n), "right after a loss"), phone="after\na loss",
+                      phone_shown=formatting.count(n))
     if key == "busiest":
         on_day = fig["busiest_date"].replace(" ", chr(0xA0))  # a date holds together
         return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}"),

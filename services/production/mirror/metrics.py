@@ -25,7 +25,7 @@ from math import ceil
 from statistics import median
 from typing import Any
 
-from services.shared.conditions import b2_shuffle, halves_shuffle
+from services.shared.conditions import b2_shuffle, halves_shuffle, r2_condition, r2_shuffle
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
 
@@ -635,20 +635,79 @@ def two_straight_losses(trips: list[Trip]) -> TwoStraightLosses:
     )
 
 
-CHECKS_RUN: tuple[str, ...] = (b2_shuffle.CHECK,)
-"""The core-list checks production runs today. The finding bar corrects for the whole list
-(``multiplicity.family``), so this only says how many of them a report could hold."""
+CHECKS_RUN: tuple[str, ...] = (b2_shuffle.CHECK, r2_shuffle.CHECK)
+"""The core-list checks production runs today: B2, and R2 since TICKET-996. The finding bar
+corrects for the whole list (``multiplicity.family``) whatever runs; the ones that run share one
+shuffle, so each is corrected with the other."""
+
+
+def sized_in_lots(trip: Trip) -> bool:
+    """Is this trade's size a number of lots? Options and futures, yes; a share's "lot" is one
+    share, so shares and ETFs are not (TICKET-797, TICKET-996)."""
+    return trip.is_option or bool(trip.lines) and trip.lines[0].segment == "FUT"
 
 
 @lru_cache(maxsize=64)
-def _post_loss_gate(obs: tuple[Obs, ...]) -> b2_shuffle.ShuffleResult:
-    return b2_shuffle.shuffle_test(obs)
+def _checks_run(obs: tuple[Obs, ...], lots: tuple[float, ...],
+                sized: tuple[bool, ...]) -> dict[str, b2_shuffle.ShuffleResult]:
+    return r2_shuffle.shuffle_family(obs, lots, sized)
+
+
+def _checks_for(trips: list[Trip]) -> dict[str, b2_shuffle.ShuffleResult]:
+    """B2 and R2 on this file, on one shuffle, corrected together. Once per file per process."""
+    return _checks_run(tuple(b2_observations(trips)), tuple(float(t.lots) for t in trips),
+                       tuple(sized_in_lots(t) for t in trips))
 
 
 def post_loss_check(trips: list[Trip]) -> b2_shuffle.ShuffleResult:
     """B2's test on this file, corrected for the family: its level, p before and after the
-    correction, and the gap in each half of his days. Once per file per process."""
-    return _post_loss_gate(tuple(b2_observations(trips)))
+    correction, and the gap in each half of his days."""
+    return _checks_for(trips)[b2_shuffle.CHECK]
+
+
+def size_after_check(trips: list[Trip]) -> b2_shuffle.ShuffleResult:
+    """R2's test on this file: lots after a loss against after a win, corrected with B2."""
+    return _checks_for(trips)[r2_shuffle.CHECK]
+
+
+def size_sentence_may_show(trips: list[Trip]) -> bool:
+    """May a page say he trades bigger after a loss? Only if R2's test is a finding on his own
+    file. Closed, the page states the two averages side by side and claims nothing."""
+    return size_after_check(trips).passes if trips else False
+
+
+@dataclass(frozen=True)
+class SizeAfterLoss:
+    """Lots of the next trade after a loss and after a win, the same day (TICKET-996)."""
+
+    after_loss: list[Trip]
+    after_win: list[Trip]
+    scratch: int  # sized trades whose last earlier trade finished level: in neither group
+    left_out: int  # trades in the population whose size isn't in lots: shares and ETFs
+    loss_mean: Decimal | None
+    win_mean: Decimal | None
+    group_of: dict[str, str]  # trip id -> "loss" or "win", for the trade list's filter
+    state: s.ResultState
+
+
+def _mean_lots(trips: list[Trip]) -> Decimal | None:
+    if not trips:
+        return None
+    return _trim(_round(Decimal(sum(t.lots for t in trips)) / Decimal(len(trips)), "0.1"))
+
+
+def size_after_loss(trips: list[Trip]) -> SizeAfterLoss:
+    """R2's population and groups (``shared.conditions.r2_condition``) on this trader's trips,
+    with each group's lots counted on options and futures only."""
+    in_pop, after_loss, after_win = r2_condition.population_and_condition(b2_observations(trips))
+    loss = [t for t, flag in zip(trips, after_loss, strict=True) if flag and sized_in_lots(t)]
+    win = [t for t, flag in zip(trips, after_win, strict=True) if flag and sized_in_lots(t)]
+    scratch = sum(1 for t, p, a, b in zip(trips, in_pop, after_loss, after_win, strict=True)
+                  if p and not a and not b and sized_in_lots(t))
+    left_out = sum(1 for t, p in zip(trips, in_pop, strict=True) if p and not sized_in_lots(t))
+    groups = {t.trip_id: "loss" for t in loss} | {t.trip_id: "win" for t in win}
+    state = s.ResultState.COUNTED_FACT if loss or win or scratch else s.ResultState.INSUFFICIENT_SAMPLE
+    return SizeAfterLoss(loss, win, scratch, left_out, _mean_lots(loss), _mean_lots(win), groups, state)
 
 
 def post_loss_sentence_may_show(trips: list[Trip]) -> bool:
