@@ -129,6 +129,13 @@ product does not import it, and leaving it out keeps the box small.
     systemctl daemon-reload && systemctl enable --now scope
     systemctl status scope
 
+The market sync's timer (TICKET-998; see "Market data" below). Until Fyers is connected on the
+admin page each run records "needs login" and does nothing else:
+
+    cp deploy/scope-market.service deploy/scope-market.timer /etc/systemd/system/
+    systemctl daemon-reload && systemctl enable --now scope-market.timer
+    systemctl list-timers scope-market.timer
+
 Startup takes about five seconds on the smallest droplet — the migration check
 and the framework read on one shared vCPU. A `curl` fired straight after a
 restart returns 502 with nothing whatever wrong; wait for "Application startup
@@ -302,6 +309,7 @@ with `git switch main`.
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
     cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl restart scope
@@ -319,6 +327,7 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
     cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl start scope
@@ -326,9 +335,10 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
 Expected (Path B): `integrity_check` prints `ok`. If it does not, `systemctl start scope`
 on the old code (`git checkout "$LIVE"` first if you already moved) and stop the train.
 
-Either path: a changed `scope.service` or `backup.sh` is not applied by checking out
-code (`cron.daily` runs its own copy). The two `cmp` lines install each only when it
-differs, and say `unit updated` or `backup script updated` when they did.
+Either path: a changed `scope.service`, market unit or `backup.sh` is not applied by checking
+out code (`cron.daily` runs its own copy). The `cmp` lines install each only when it differs,
+and say `unit updated`, `scope-market.timer updated` or `backup script updated` when they did.
+The timer picks up a changed service on its next run; nothing needs restarting for it.
 
 ### e. Check production
 
@@ -446,6 +456,36 @@ production answers anything else, put the old file back at once:
 
 Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the
 before and after codes.
+
+## Market data (TICKET-998)
+
+Bars for the bar-based figures live in `/srv/scope/data/market`, one gzip file per trading day
+(the layout and the day writer are in `docs/runbooks/price-series.md`). The sync keeps them
+current; nobody's laptop does.
+
+**The founder's steps, once:**
+
+1. Add the Fyers app's keys to `/etc/scope/scope.env` (root-owned, 0600; never in the
+   repository): `FYERS_APP_ID`, `FYERS_SECRET_KEY`, and `FYERS_REDIRECT_URI`, the address the app
+   is registered with in the Fyers dashboard. Then `systemctl restart scope`.
+2. For one click, register an app whose redirect is `https://scope.plusev.in/admin/fyers/callback`
+   (a second app in the Fyers dashboard, or the existing one's redirect changed) and use its keys
+   above. With the existing app, whose redirect lands on google.com, it still works: the card
+   says to paste the address bar.
+3. Seed the series from the laptop that holds them, as `docs/runbooks/price-series.md` says
+   (split with `scripts/split_series_by_day.py`, then `scp -r` the folder up).
+4. Each morning after 06:00, open `/admin`, **Market data**, and Connect Fyers. The day's login
+   ends at 06:00 the next day.
+
+**What runs:** `scope-market.timer` starts `scope-market.service` every ten minutes and at 00:15
+IST. Each run adds every finished session after the last day held (never today's), fetches the
+stock days traders asked for, records the run, and exits, at nice 10, half a CPU and 200 MB at
+most. `journalctl -u scope-market` shows counts, dates and reasons only. The card on `/admin` shows
+the last day held per series, days behind, the last run, the stock days waiting, and the login.
+
+**Staging** gets no Fyers keys: its card says "not set up on this server", it never syncs, and it
+reads production's folder read only (`SCOPE_MARKET_DIR` in `deploy/staging.env.example`). Don't
+install the market units for staging.
 
 ## 6. Before the first partner uploads
 

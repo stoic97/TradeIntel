@@ -505,3 +505,25 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__fill--loss { background: var(--color-loss); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* TICKET-993: Your calendar */
+.cal { margin-top: var(--space-5); }
+.cal__month { margin-top: var(--space-4); }
+.cal__label { font: 500 14px/20px var(--font-sans); margin: 0 0 var(--space-2); }
+.cal__total { font-weight: 400; color: var(--color-faint); white-space: nowrap; }
+.cal__grid { display: block; width: 100%; max-width: 420px; height: auto; }
+.cal__dow { font: 400 10px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.cal__date { font: 400 10px var(--font-mono); fill: var(--color-ink); }
+.cal__closed { fill: var(--color-hairline); }
+.cal__day:focus rect, .cal__day:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.cal__legend { display: flex; align-items: center; gap: 4px; margin-top: var(--space-3); color: var(--color-faint); }
+.cal__swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.cal__swatch--gain-1 { background: color-mix(in srgb, var(--color-gain) 18%, transparent); }
+.cal__swatch--gain-2 { background: color-mix(in srgb, var(--color-gain) 38%, transparent); }
+.cal__swatch--gain-3 { background: color-mix(in srgb, var(--color-gain) 62%, transparent); }
+.cal__swatch--gain-4 { background: color-mix(in srgb, var(--color-gain) 90%, transparent); }
+.cal__swatch--loss-1 { background: color-mix(in srgb, var(--color-loss) 18%, transparent); }
+.cal__swatch--loss-2 { background: color-mix(in srgb, var(--color-loss) 38%, transparent); }
+.cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
+.cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
+.cal__numbers { margin-top: var(--space-3); }

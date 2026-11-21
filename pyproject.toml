@@ -25,6 +25,7 @@ dependencies = [
   "argon2-cffi>=23,<26",        # password hashing (argon2id)
   "itsdangerous>=2.2,<3",       # signed session cookies and CSRF tokens
   "cryptography>=43,<50",       # raw-file encryption at rest
+  "fyers-apiv3>=3.1",
 ]
 
 [dependency-groups]

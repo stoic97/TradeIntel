@@ -77,6 +77,33 @@ fetched from a feed during a request.
   `/srv/scope-staging/data`, so it can read production's days and never change them. Staging never
   fetches bars of its own.
 
+## Keeping it current: the market sync (TICKET-998)
+
+`uv run python -m services.production.api.cli market-sync`, started by `deploy/scope-market.timer`
+every ten minutes and at 00:15 IST (the units and the founder's one-time steps are in
+`docs/runbooks/deploy.md`, "Market data"). Each run:
+
+- uses the day's Fyers login, connected on `/admin` under **Market data** (one click when the app's
+  registered redirect is `/admin/fyers/callback`, otherwise by pasting the address bar the login
+  ended on). With no login, or an expired one, it records "needs login" and does nothing else;
+- for NIFTY, BANKNIFTY, SENSEX, crude, gold and silver, asks for every finished session after the
+  last day held, up to yesterday, never today's, at most 100 days a request and one request a
+  second, waiting out a busy broker. Futures are asked with the near-month contract
+  (`services/shared/market/fyers_history.py`, the same choice the extend script makes);
+- writes each day through the day writer. A day it refuses is recorded with its reason, and the
+  run carries on; the card on `/admin` shows it;
+- fetches the stock days traders' trades need (`market_day_request`), one day each; a stock Fyers
+  won't serve is given up after three tries, with the reason. Indices and commodities are never
+  fetched a day at a time;
+- records the run (`market_sync_run`): counts, dates and reasons, never a price.
+
+An underlying with no day files yet is left alone until it is seeded with the split script. The
+sync never builds a series from nothing a day at a time.
+
+The day's login can place orders. It is kept only encrypted with `SCOPE_FILE_KEY`, decrypted only
+by the sync, and never written to a log, a page, an error or the admin trail. The laptop's own
+Fyers token file is for local checks only: never copy it to the server, a test or a log.
+
 ## Backups, and the copy kept off the server
 
 `deploy/backup.sh` backs up `scope.db` and `files/` only. **Market data is not in the nightly backup**:
