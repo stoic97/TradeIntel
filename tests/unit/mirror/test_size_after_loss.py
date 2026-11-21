@@ -278,4 +278,4 @@ def test_a_three_figure_count_still_fits_the_desktop_dial():
         lay = G.layout_contents(drawn, sec, rr, z["figSizesChapter"])
         for k, block in enumerate(lay["blocks"]):
             clear = G.block_clearance(sec["slices"][k], sec["span"], lay["radius"][k], block, rr)
-            assert clear >= -13, (which, items[k]["name"], clear)
+            assert clear >= -13, (which, drawn[k]["name"], clear)
