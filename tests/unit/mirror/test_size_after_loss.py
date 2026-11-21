@@ -231,6 +231,20 @@ def test_its_labels_and_its_factor():
     assert any(f.name == "after" for f in trade_list.FILTERS)
 
 
+def test_the_after_filter_narrows_the_size_list():
+    """The after filter is shared with 1006's facts: only `only` differs. Unoffered, a filter fails
+    nothing, so this opens size's own list by loss and by win: the two make the whole list."""
+    from services.production.api import scope_facts as SF
+    from services.production.api import trade_list as TL
+    ctx = SF.record_context(_planted(after_loss_lots=2, days=2))
+
+    def shown(**query):
+        return TL.listing("size", ctx, query, {})["shown"]
+
+    assert 0 < shown(after="loss") < shown() and 0 < shown(after="win") < shown()
+    assert shown(after="loss") + shown(after="win") == shown()
+
+
 def test_the_page_states_the_counted_line_and_no_claim(client):
     page = client.get("/mirror/fact/size")
     assert page.status_code == 200

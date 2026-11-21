@@ -155,8 +155,9 @@ other readers find each contract's expiry in the same lookup."""
 HALVES = (("first", "First half"), ("second", "Second half"))
 
 AFTER_OF = "the last trade's result before each trade"
-"""The lookup's key for each trade's group on "Your size after a loss" (TICKET-996): the
-result of the last trade that closed before it opened, the same day."""
+"""The lookup's key for each trade's group: the result of the last trade that closed before it
+opened, the same day. One filter for every fact that groups trades this way (Your size after a
+loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
 AFTERS = (("loss", "After a loss"), ("win", "After a win"))
 
