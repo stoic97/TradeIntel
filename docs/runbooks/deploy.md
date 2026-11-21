@@ -404,6 +404,49 @@ it there the same day; the founder tags that sha with the day's next number
 (`v2026.11.14.2`) and it deploys by step d like any train, logged by step f. No path
 deploys `main` directly.
 
+### When `deploy/Caddyfile` changes
+
+Caddy serves production as well as staging, so its config is installed by a person, on its
+own, never by `update.sh` or `refresh-staging.sh`. Do it before the deploy window of the
+train that carries the change, while production still runs the previous train: a bad file is
+then found with nothing else moving. Before a train is tagged, check whether it touches the
+file (`git log --oneline <last tag>..$SHA -- deploy/Caddyfile`); if it does, this comes first.
+
+The staging block reads its user and bcrypt hash from `/etc/caddy/staging-auth.env`, which
+systemd hands Caddy through `caddy.service.d/staging-auth.conf`. A plain `caddy validate` in
+a root shell has neither, so it checks a different config from the one the reload loads. Load
+the file first, as below. If the file or the drop-in is missing, do staging's first install
+(the header of `deploy/refresh-staging.sh`) before this.
+
+    cd /srv/scope || exit 1
+    SHA=
+    curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
+    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next
+    cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA"
+    test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf && echo "staging auth: present"
+    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) && echo "VALID"
+
+Go on only after `staging auth: present` and `VALID`:
+
+    cd /srv/scope || exit 1
+    SHA=
+    install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile
+    diff <(git show "$SHA:deploy/Caddyfile") /etc/caddy/Caddyfile && echo "matches $SHA"
+    systemctl reload caddy && sleep 2
+    curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
+    curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+
+Expected: `matches <sha>`, `production after:` the same as `production before:` (200), and
+staging without the password `401`, so the staging block and its `basic_auth` survived. If
+production answers anything else, put the old file back at once:
+
+    cd /srv/scope || exit 1
+    SHA=
+    cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && systemctl reload caddy
+
+Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the
+before and after codes.
+
 ## 6. Before the first partner uploads
 
 The release gate, PRD section 10. None of it is optional and none of it is code:
