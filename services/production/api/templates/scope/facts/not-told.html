@@ -51,6 +51,7 @@
     <h2 class="heading" id="ending-changed">What changed since your last file</h2>
     <p class="body">Trades: <span class="num">{{ Figure(ending.changed.trades[0], "trades")|count }}</span> in this file, <span class="num">{{ Figure(ending.changed.trades[1], "trades")|count }}</span> in your last file.</p>
     <p class="body">Trading days: <span class="num">{{ Figure(ending.changed.days[0], "days")|count }}</span> in this file, <span class="num">{{ Figure(ending.changed.days[1], "days")|count }}</span> in your last file.</p>
+    <p class="body"><a class="link" href="/process">Your process, line by line, beside your last file</a></p>
     {%- endif %}
   </section>
   {%- endif %}

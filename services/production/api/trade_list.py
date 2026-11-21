@@ -163,6 +163,19 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+LINE_OF = "your process line"
+"""The lookup's key for the line chosen from Your process and the trades behind it: the page's
+row builders say which trades a figure counted (process.members), and this filter keeps those."""
+
+
+def _line(t: mx.Trip, lookup: dict) -> Choice | None:
+    from services.production.api import process
+    chosen = lookup.get(LINE_OF)
+    if chosen is None or t.trip_id not in chosen[1]:
+        return None
+    return 0, chosen[0], process.LABELS.get(chosen[0], "From Your process")
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
@@ -187,6 +200,8 @@ FILTERS = (
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    # Your process opens each figure's trades, whatever row drew it.
+    Filter("line", "Your process", _line, only=frozenset({"risk"}), quiet=True),
 )
 
 
@@ -200,6 +215,9 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
     lookup = {**expiries, HALF_OF: mx.half_of(behind)}
+    if key == "risk" and query.get("line"):
+        from services.production.api import process
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"]) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
