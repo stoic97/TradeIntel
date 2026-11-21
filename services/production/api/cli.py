@@ -16,6 +16,11 @@ Usage:
     python -m services.production.api.cli classify --login-id rikk --development-data
     python -m services.production.api.cli import --login-id rikk --file path/to/export.csv
     python -m services.production.api.cli review --import-id 1
+    python -m services.production.api.cli market-sync
+
+``market-sync`` (TICKET-998) is the timer's job, not a person's: it adds each finished session
+to the market data and fetches the stock days traders need, then exits. It prints counts, dates
+and reasons only. With no usable Fyers login it says "needs login", touches nothing, and exits 0.
 """
 
 from __future__ import annotations
@@ -280,6 +285,37 @@ def _print_review(sess, imp: m.Import) -> None:
               f"({day.diff.value}){shrank}")
 
 
+def cmd_market_sync(args: argparse.Namespace) -> None:
+    import time
+
+    from services.production.market import fyers, sync, token
+    from services.production.prices import layer
+    from services.shared.market import fyers_history as fh
+
+    engine = make_engine(args.db)
+    now = datetime.now(UTC)
+    with make_session(engine) as sess:
+        app = fyers.from_env()
+        login = token.read(sess, os.environ["SCOPE_FILE_KEY"], now=now) if app else None
+        if app is None or login is None:
+            sync.needs_login(sess, now=now)
+            sess.commit()
+            print("market-sync: needs login" + ("" if app else " (no Fyers keys on this server)"))
+            return
+        client = fyers.Paced(fyers.history_client(app, login), clock=time.monotonic, sleep=time.sleep)
+        today = datetime.now(fh.IST).date()
+        report = sync.run(sess, client, root=layer.market_dir(), today=today, now=now)
+        sess.commit()
+    for underlying, line in report.items():
+        if underlying == "stocks":
+            print(f"  stock days: {line['fetched']} fetched, {line['waiting']} waiting, {line['gave up']} given up")
+            continue
+        said = line.get("broker") or line.get("note") or f"{line['added']} days added, last {line.get('last')}"
+        print(f"  {underlying}: {said}")
+        for day, why in line["refused"]:
+            print(f"    refused {day}: {why}")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="scope", description=__doc__)
     parser.add_argument("--db", default=DEFAULT_DB)
@@ -321,6 +357,8 @@ def main(argv: list[str] | None = None) -> None:
     review.set_defaults(func=cmd_review)
 
     sub.add_parser("wrong-reports").set_defaults(func=cmd_wrong_reports)
+
+    sub.add_parser("market-sync").set_defaults(func=cmd_market_sync)
 
     args = parser.parse_args(argv)
     args.func(args)

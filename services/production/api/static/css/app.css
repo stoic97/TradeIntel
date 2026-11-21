@@ -14,6 +14,12 @@
 /* A page draws both of the kit's dials and one shows. Below 1366 px the desktop dial would be
    scaled down until its 11 px words can't be read, so the phone's drawing, scaled up, stays. */
 .stage .scope.scope--desktop { display: none; }
+/* A chapter's facts the phone dial has no wedge for (TICKET-1002), under it in its own box. */
+.scope__list { list-style: none; margin: 12px 0 0; padding: 0; text-align: left; }
+.scope__list-row { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.scope__list-row a { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 44px; padding: 10px 4px; color: var(--color-on-navy); text-decoration: none; }
+.scope__list-title { font-weight: 600; }
+.scope__list-said { color: var(--color-on-navy-soft); }
 @media (min-width: 1366px) {
   .stage .scope:not(.scope--desktop) { display: none; }
   .stage .scope.scope--desktop { display: block; width: min(100%, var(--stage-desktop-w)); }
@@ -409,6 +415,78 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .against__losses { display: block; width: 100%; height: 12px; margin-top: var(--space-2); fill: var(--color-navy); }
 .against__range { display: block; width: 100%; margin-top: var(--space-1); }
 
+/* TICKET-987: How you got here */
+/* Home's card after the verdict: three numbers, book and timeframe chips (links), his running
+   result as candles with the trades taken under them. The chart is SVG drawn on the server;
+   it scales to the card, so nothing here sets a width a phone could overflow. */
+.hy-card { margin: var(--space-4) 0; }
+.hy-span { color: var(--color-faint); margin: var(--space-1) 0 var(--space-3); }
+.hy-books, .hy-frames { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.hy-frames { justify-content: center; margin-top: var(--space-3); }
+.hy-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--color-hairline); border-radius: var(--radius-control); font: 500 13px/1 var(--font-sans); color: var(--color-action-blue); text-decoration: none; }
+.hy-chip--on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-navy); }
+.hy-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
+.hy-kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px; background: var(--color-surface); border-radius: 12px; color: var(--color-ink); text-decoration: none; }
+.hy-kpi__label { font: 500 10px/14px var(--font-mono); letter-spacing: var(--type-label-tracking); text-transform: uppercase; color: var(--color-faint); }
+.hy-kpi__fig { font: 500 14px/20px var(--font-mono); letter-spacing: -.02em; white-space: nowrap; }
+.hy-kpi__note { font: 400 11px/15px var(--font-sans); color: var(--color-faint); }
+.hy-nowrap { white-space: nowrap; }
+.hy-readout { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); margin: var(--space-2) 0; font: 400 12px/18px var(--font-mono); }
+.hy-readout__when { width: 100%; font: 500 12px var(--font-sans); color: var(--color-faint); }
+.hy-readout__ohlc { display: grid; grid-template-columns: auto auto; gap: 0 14px; width: 100%; }
+.hy-readout b { font-weight: 500; color: var(--color-faint); }
+.hy-readout__net { color: var(--color-faint); }
+.hy-chart { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; background: var(--color-surface); border-radius: 12px; }
+.hy-grid { stroke: var(--color-hairline); stroke-width: 1; }
+.hy-zero { stroke: var(--color-ink); stroke-width: 1; opacity: .6; }
+.hy-high { stroke: var(--color-gain); stroke-width: 1; stroke-dasharray: 4 3; }
+.hy-tag { font: 500 10px var(--font-mono); fill: var(--color-faint); }
+.hy-tag--low { fill: var(--color-loss); }
+.hy-lowdot { fill: var(--color-loss); }
+.hy-axis { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.hy-axis--x { text-anchor: middle; }
+.hy-hit { fill: transparent; }
+.hy-wick { stroke-width: 1.2; }
+.hy-candle--up .hy-wick { stroke: var(--color-gain); }
+.hy-candle--up .hy-body, .hy-candle--up .hy-vol { fill: var(--color-gain); }
+.hy-candle--down .hy-wick { stroke: var(--color-loss); }
+.hy-candle--down .hy-body, .hy-candle--down .hy-vol { fill: var(--color-loss); }
+.hy-vol { opacity: .35; }
+.hy-candle:hover .hy-hit, .hy-candle:focus .hy-hit { fill: rgba(4, 64, 141, .08); }
+.hy-last--loss { fill: var(--color-loss); }
+.hy-last--gain { fill: var(--color-gain); }
+.hy-last--plain { fill: var(--color-ink); }
+.hy-last-text { font: 500 10px var(--font-mono); fill: var(--color-on-navy); }
+.hy-details { margin-top: var(--space-3); }
+.hy-table td, .hy-table th { font-size: 12px; }
+.hy-lead { color: var(--color-faint); margin: var(--space-3) 0 0; }
+.hy-more { margin: var(--space-3) 0 0; }
+@media (min-width: 420px) { .hy-kpi__fig { font-size: 16px; line-height: 22px; } }
+
+/* charts toolkit */
+.ch-grid { stroke: var(--color-hairline); stroke-width: 1; }
+.ch-zero { stroke: var(--color-ink); stroke-width: 1; opacity: .6; }
+.ch-ref { stroke: var(--color-faint); stroke-width: 1; stroke-dasharray: 4 3; }
+.ch-tag { font: 500 10px var(--font-mono); fill: var(--color-faint); }
+.ch-axis { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.ch-axis--x { text-anchor: middle; }
+.ch-last--loss { fill: var(--color-loss); }
+.ch-last--gain { fill: var(--color-gain); }
+.ch-last--plain { fill: var(--color-ink); }
+.ch-last-text { font: 500 10px var(--font-mono); fill: var(--color-on-navy); }
+.ch-cell { stroke: var(--color-hairline); stroke-width: .5; }
+.ch-cell--surface { fill: var(--color-surface); }
+.ch-cell--ink { fill: var(--color-surface); }
+.ch-cell--gain-1 { fill: var(--color-gain); fill-opacity: .18; }
+.ch-cell--gain-2 { fill: var(--color-gain); fill-opacity: .38; }
+.ch-cell--gain-3 { fill: var(--color-gain); fill-opacity: .62; }
+.ch-cell--gain-4 { fill: var(--color-gain); fill-opacity: .9; }
+.ch-cell--loss-1 { fill: var(--color-loss); fill-opacity: .18; }
+.ch-cell--loss-2 { fill: var(--color-loss); fill-opacity: .38; }
+.ch-cell--loss-3 { fill: var(--color-loss); fill-opacity: .62; }
+.ch-cell--loss-4 { fill: var(--color-loss); fill-opacity: .9; }
+.ch-table td, .ch-table th { font-size: 12px; }
+
 /* TICKET-988: Your numbers */
 .numbers__top { color: var(--color-faint); }
 .numbers__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-4); }
@@ -427,6 +505,28 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__fill--loss { background: var(--color-loss); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* TICKET-993: Your calendar */
+.cal { margin-top: var(--space-5); }
+.cal__month { margin-top: var(--space-4); }
+.cal__label { font: 500 14px/20px var(--font-sans); margin: 0 0 var(--space-2); }
+.cal__total { font-weight: 400; color: var(--color-faint); white-space: nowrap; }
+.cal__grid { display: block; width: 100%; max-width: 420px; height: auto; }
+.cal__dow { font: 400 10px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.cal__date { font: 400 10px var(--font-mono); fill: var(--color-ink); }
+.cal__closed { fill: var(--color-hairline); }
+.cal__day:focus rect, .cal__day:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.cal__legend { display: flex; align-items: center; gap: 4px; margin-top: var(--space-3); color: var(--color-faint); }
+.cal__swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.cal__swatch--gain-1 { background: color-mix(in srgb, var(--color-gain) 18%, transparent); }
+.cal__swatch--gain-2 { background: color-mix(in srgb, var(--color-gain) 38%, transparent); }
+.cal__swatch--gain-3 { background: color-mix(in srgb, var(--color-gain) 62%, transparent); }
+.cal__swatch--gain-4 { background: color-mix(in srgb, var(--color-gain) 90%, transparent); }
+.cal__swatch--loss-1 { background: color-mix(in srgb, var(--color-loss) 18%, transparent); }
+.cal__swatch--loss-2 { background: color-mix(in srgb, var(--color-loss) 38%, transparent); }
+.cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
+.cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
+.cal__numbers { margin-top: var(--space-3); }
 
 /* TICKET-1008: the journal's one-tap trade questions, and what he said after */
 .journal-chips { border: 0; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }

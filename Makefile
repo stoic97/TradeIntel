@@ -1,4 +1,4 @@
-.PHONY: help hash-check hash-lock test test-fast test-repro lint clean run
+.PHONY: help hash-check hash-lock test test-research test-fast test-repro lint clean run
 
 PREREG := services/research/prereg/framework_v1.yaml
 # Every Python tool runs through uv, as the docs do: no activated venv needed (TICKET-929).
@@ -15,8 +15,11 @@ hash-check: ## Verify the pre-commitment file matches its committed hash
 hash-lock: ## Write the hash of the pre-commitment file (kickoff only; CEO sign-off)
 	@shasum -a 256 $(PREREG) > $(PREREG).sha256 && cat $(PREREG).sha256
 
-test: ## Run the whole suite to the end (the deploy check; what CI runs)
-	$(UV) pytest tests
+test: ## Run everything the required CI check runs, to the end (the deploy check)
+	$(UV) pytest tests -m "not research_fit"
+
+test-research: ## Run only the research fits (outside the required CI check)
+	$(UV) pytest tests -m research_fit
 
 test-fast: ## Run the suite, stopping at the first failure (local use)
 	$(UV) pytest tests -x
