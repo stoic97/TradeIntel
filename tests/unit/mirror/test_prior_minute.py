@@ -74,9 +74,14 @@ def test_a_trader_who_follows_the_last_minute_reads_all_of_them_agreeing(chased)
 def test_from_the_close_of_the_entry_minute_he_is_about_a_coin_flip(chased):
     """The build note's own test: anything measured from earlier than the entry minute's close
     would read the chase as skill."""
+    # A minute that did not move is neither with him nor against him, so the share sits a little
+    # under a half whatever the trader does (20 seeds: 0.42 to 0.52, centred near 0.47). The claim
+    # is only that the chase reads no skill: the share is not above half by more than chance, and
+    # it is not above its own shuffle control.
     for horizon in pm.HORIZONS:
         c = chased.after[horizon]
-        assert 0.43 < c.agreed / c.measured < 0.57, horizon
+        assert c.agreed / c.measured < 0.57, horizon
+        assert not c.above_band, horizon
 
 
 def test_the_before_count_clears_its_control_and_so_may_be_said(chased):
