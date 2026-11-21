@@ -2,6 +2,8 @@
 
 *11–12 October 2026 · 1,000 null histories from corpus A · rows from `aa10a0b`, intervals recomputed later · machine-readable: `null-rate-b2.json`*
 
+Produced by `scripts/run_null_rate_b2.py` at `aa10a0b`.
+
 ## The number
 
 | | fired | evaluable | starved | rate | authority interval | envelope |

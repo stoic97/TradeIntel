@@ -1,3 +1,6 @@
+# Who runs it: the research seat, by hand.
+# When: when ADR-006's sampler choice is revisited (last run 10 Oct 2026).
+# Writes: docs/phase0/adr-006-benchmark.json.
 """Measure what ADR-006 turns on: information per second from each sampler.
 
 Fits the conjugate core of M1 at several problem sizes with every registered

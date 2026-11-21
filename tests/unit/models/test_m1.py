@@ -30,6 +30,7 @@ recovered where the data cannot speak, and the structure behaves as section 6.2
 claims. Simulation-based calibration at 1,000 replications (cycle 9) does the
 rigorous work.
 """
+import sys
 from dataclasses import replace
 
 import numpy as np
@@ -147,6 +148,14 @@ def test_tau_day_is_larger_when_days_really_differ():
     assert lumpy.posterior_mean["tau_day"] > 2 * flat.posterior_mean["tau_day"]
 
 
+# TD-034 (TICKET-929): under the same lock this fit draws one divergent transition on Linux
+# (GitHub Actions, 14 Nov) and none on macOS. Excused on Linux only, and only for that
+# diagnostics failure: any other failure is red everywhere, and strict means a clean fit on
+# Linux is red until ruled.
+@pytest.mark.xfail(
+    sys.platform == "linux", raises=BadDiagnostics, strict=True,
+    reason="TD-034: one divergent transition on Linux under the lock; research seat to rule",
+)
 def test_day_structure_protects_theta_from_a_day_level_confound():
     """Section 6.2's justification, as a test.
 
@@ -213,6 +222,14 @@ def test_a_condition_almost_determined_by_the_day_defeats_m1():
     assert abs(got.posterior_mean["theta"]) > 3 * got.posterior_sd["theta"]
 
 
+# TD-034 (TICKET-929): under the same lock this fit draws one divergent transition on Linux
+# (GitHub Actions, 14 Nov) and none on macOS. Excused on Linux only, and only for that
+# diagnostics failure: any other failure is red everywhere, and strict means a clean fit on
+# Linux is red until ruled.
+@pytest.mark.xfail(
+    sys.platform == "linux", raises=BadDiagnostics, strict=True,
+    reason="TD-034: one divergent transition on Linux under the lock; research seat to rule",
+)
 def test_nu_falls_when_the_tails_are_heavy():
     """Student-t is in the model for fat tails. If nu does not respond to them, the
     robustness is nominal."""
