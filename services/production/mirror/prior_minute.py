@@ -53,6 +53,7 @@ class Reason(str, Enum):
     NO_SERIES = "no series for the underlying"
     NOT_COVERED = "the series does not cover the date"
     NO_PRIOR_BAR = "no bar for the minute before entry"
+    NO_BAR_TWO_BEFORE = "no bar for the minute two before entry"
     NO_ENTRY_BAR = "no bar for the entry minute"
     NO_HORIZON_BAR = "no bar at the horizon"
     NO_DIRECTION = "no single direction"
@@ -155,6 +156,13 @@ def _sign(move: float) -> int:
     return (move > 0) - (move < 0)
 
 
+def _bar_before(bars: MinuteBars, minute: datetime, minutes_before: int) -> Bar | None:
+    """The bar that many minutes before the entry minute, or None if it is missing or falls on
+    another day: a bar from the night before is never borrowed (D2, D3)."""
+    at = minute - timedelta(minutes=minutes_before)
+    return None if at.date() != minute.date() else bars.bar(at)
+
+
 def _counted(signs: list[int], directions: list[int], rng: np.random.Generator, draws: int) -> Count:
     """The agreeing count, and the band from recounting with the directions shuffled."""
     if not signs:
@@ -190,14 +198,20 @@ def count(entries: Sequence[Entry], series: Mapping[str, MinuteBars], *,
         if e.direction not in (1, -1):
             unmeasured.append(Unmeasured(e.trip_id, Reason.NO_DIRECTION))
             continue
-        # Each count asks only for the bars it reads (ruling on TICKET-898, D3): the before
-        # count the bar ahead of the entry minute; each after count the entry-minute bar and the
-        # bar ``h`` minutes later. A trip missing one of them is left out of that count alone.
-        previous, entered = bars.bar(minute - timedelta(minutes=1)), bars.bar(minute)
+        # Each count asks only for the bars it reads (ruling on TICKET-898, D3). The before count
+        # reads the minute before the entry minute close to close (D2, ruled b): the close of the
+        # bar two minutes before the entry minute to the close of the bar one minute before it,
+        # both on the entry's day. Each after count reads the entry-minute bar and the bar ``h``
+        # minutes later. A trip missing a bar a count needs is left out of that count alone, and
+        # the reason names the bar.
+        previous, earlier = _bar_before(bars, minute, 1), _bar_before(bars, minute, 2)
+        entered = bars.bar(minute)
         if previous is None:
             before_out.append(Unmeasured(e.trip_id, Reason.NO_PRIOR_BAR))
+        elif earlier is None:
+            before_out.append(Unmeasured(e.trip_id, Reason.NO_BAR_TWO_BEFORE))
         else:
-            before_signs.append(_sign(previous.close - previous.open))
+            before_signs.append(_sign(previous.close - earlier.close))
             before_dirs.append(e.direction)
         for h in HORIZONS:
             if entered is None:
