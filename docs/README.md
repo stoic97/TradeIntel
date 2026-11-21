@@ -66,7 +66,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [runbooks/uat-smoke.md](runbooks/uat-smoke.md) | The fixed UAT pass every release train gets | live | engineering | 2026-11-20 |
 | [trade_dna_brainstorm_workbook_v1.1_final.md](trade_dna_brainstorm_workbook_v1.1_final.md) | The brainstorm workbook, cited as B section | frozen v1.1.1 | founder | 2026-11-20 |
 | [trade_dna_product_thesis_v1.5.md](trade_dna_product_thesis_v1.5.md) | The product thesis, cited as T section | frozen v1.5 | founder | 2026-11-20 |
-| [trade_dna_research_spec_v1_0.md](trade_dna_research_spec_v1_0.md) | The research specification and its annexes | frozen v1.0.4 | founder, research | 2026-11-20 |
+| [trade_dna_research_spec_v1_0.md](trade_dna_research_spec_v1_0.md) | The research specification and its annexes | frozen v1.0.5 | founder, research | 2026-11-21 |
 
 ## Phase 0 result files
 
