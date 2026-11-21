@@ -4,8 +4,8 @@ One row per trader per broker, holding the encrypted connection key. Disconnecti
 the row and so does /delete. The consent for it is a ``broker_pull`` row in consent_event:
 no change to that table, because ``purpose`` is plain text.
 
-Revision ID: 0014
-Revises: 0013
+Revision ID: 0015
+Revises: 0014
 """
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0014'
-down_revision = '0013'
+revision = '0015'
+down_revision = '0014'
 branch_labels = None
 depends_on = None
 
