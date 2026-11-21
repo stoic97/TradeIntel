@@ -262,15 +262,18 @@ def test_a_three_figure_count_still_fits_the_desktop_dial():
     from tests.helpers.scope_chapters import IMP
     trips = _planted(after_loss_lots=3)
     figs = SF.facts(SF.record_context(trips), IMP)
-    items = SF.chapter_view(3, figs)["items"]
-    size = next(i for i in items if i["name"] == "Your size after a loss")
+    view = SF.chapter_view(3, figs)
+    # Size is on the desktop dial only (on_phone_dial=False); the phone dial is main's.
+    desktop, phone = view["desktop_items"], view["items"]
+    size = next(i for i in desktop if i["name"] == "Your size after a loss")
     assert size["figure"] == "132" and "trades" in size["label"]
+    assert all(i["name"] != "Your size after a loss" for i in phone)
     for which in ("desktop", "phone"):
         z = G.SIZES[which]
         rr = G.radii(z["R"])
-        drawn = items if which == "desktop" else [
+        drawn = desktop if which == "desktop" else [
             {**i, "figure": i.get("phone_figure", i["figure"]),
-             "label": i.get("phone_label", i.get("label", ""))} for i in items]
+             "label": i.get("phone_label", i.get("label", ""))} for i in phone]
         sec = G.sectors(len(drawn), False)
         lay = G.layout_contents(drawn, sec, rr, z["figSizesChapter"])
         for k, block in enumerate(lay["blocks"]):
