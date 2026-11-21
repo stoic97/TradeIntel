@@ -206,6 +206,10 @@ def test_the_after_filter_opens_each_group():
     assert listed("back-in", PAIRS, after="loss") == 2
     assert listed("back-in", PAIRS, after="win") == 2
     assert listed("same-way", PAIRS) == 3  # a6 has no single direction
+    # The after filter is shared with 996's size; only `only` differs, and an unoffered filter
+    # fails nothing. Same way again's list, by loss and by win, must make the whole list.
+    by_loss, by_win = listed("same-way", PAIRS, after="loss"), listed("same-way", PAIRS, after="win")
+    assert 0 < by_loss < 3 and 0 < by_win < 3 and by_loss + by_win == 3
 
 
 def test_the_next_day_filter_opens_each_group():

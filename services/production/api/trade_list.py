@@ -165,7 +165,8 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
 
 AFTER_OF = "the last trade's result before each trade"
 """The lookup's key for each trade's group: the result of the last trade that closed before it
-opened, the same day (How fast you went back in, Same way again)."""
+opened, the same day. One filter for every fact that groups trades this way (Your size after a
+loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
 AFTERS = (("loss", "After a loss"), ("win", "After a win"))
 
