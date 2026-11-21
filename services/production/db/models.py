@@ -447,6 +447,24 @@ class RuleDeclaration(Base, _InsertOnly):
     screen: Mapped[str | None] = mapped_column(String(32))
 
 
+class Challenge(Base):
+    """A challenge he set himself: 10 or 20 exchange trading days and one to three
+    of the rules he set. Written once when he starts it; only how it ended and his share link
+    change after that, so it is not insert-only. ``rule_ids`` is a JSON list of
+    ``rule_declaration`` ids; ``start_day`` an India date."""
+
+    __tablename__ = "challenge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    rule_ids: Mapped[str] = mapped_column(Text)
+    length: Mapped[int] = mapped_column(Integer)
+    start_day: Mapped[str] = mapped_column(String(10))
+    started_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
+    ended_how: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    share_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+
+
 class PreTradeNote(Base, _InsertOnly):
     """Two taps before a click: the book and the reason, matched to a fill on upload."""
 

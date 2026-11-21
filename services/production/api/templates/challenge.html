@@ -1,0 +1,50 @@
+{#- The challenge: counts only, never a grade. Every day opens its trades. -#}
+{% extends "layout.html" %}
+{% set nav = "home" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/rules">‹ Rules you set</a></p>
+  <h1 class="title">Your challenge</h1>
+  {%- if view and view.running %}
+  {%- set p = view.progress %}
+  <p class="body nb-top">Day <span class="num">{{ Figure(p.so_far, "days") }}</span> of <span class="num">{{ Figure(p.length, "days") }}</span>. From {{ view.row.start_day|day }}; {{ p.status }}.</p>
+  <ul class="challenge__rules">
+    {%- for r in p.rules %}
+    <li class="body">{{ r.rule.text }}: kept on <span class="num">{{ Figure(r.kept_days, "days") }}</span> of <span class="num">{{ Figure(r.days, "days") }}</span> days{% if r.broken_days %}; broken on {% for d in r.broken_days %}<a class="link" href="/mirror/day/{{ d.isoformat() }}">{{ d.isoformat()|day }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.</li>
+    {%- endfor %}
+  </ul>
+  <ol class="challenge__days">
+    {%- for d in p.days %}
+    <li class="challenge__day challenge__day--{{ d.state }}">{% if d.state in ("kept", "broken") %}<a class="link" href="/mirror/day/{{ d.day.isoformat() }}">{{ d.day.isoformat()|day }}</a>{% else %}{{ d.day.isoformat()|day }}{% endif %}<span class="body-small">{{ {"kept": "kept", "broken": "broken", "no-trades": "no trades", "not-yet": "not in a file yet"}[d.state] }}</span></li>
+    {%- endfor %}
+  </ol>
+  <form method="post" action="/challenge/stop"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn--secondary" type="submit">Stop the challenge</button></form>
+  {%- else %}
+  {%- if view %}
+  <section class="card challenge__card">
+    <p class="body">{{ view.card }}</p>
+    {%- if view.row.share_token %}
+    <p class="body-small">Anyone with this link sees this card and nothing else: <a class="link" href="/c/{{ view.row.share_token }}">/c/{{ view.row.share_token }}</a></p>
+    <form method="post" action="/challenge/unshare"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn--secondary" type="submit">Remove the link</button></form>
+    {%- else %}
+    <form method="post" action="/challenge/share"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn--secondary" type="submit">Make a link to share</button></form>
+    {%- endif %}
+  </section>
+  {%- endif %}
+  <h2 class="card-title">Start a challenge</h2>
+  {%- if rules %}
+  <form method="post" action="/challenge/start" class="challenge__start">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset class="challenge__chips"><legend class="body-small">How long</legend>
+      {%- for n in lengths %}<label class="chip"><input type="radio" name="length" value="{{ n }}"{% if loop.first %} checked{% endif %}> {{ Figure(n, "trading days") }} trading days</label>{% endfor %}
+    </fieldset>
+    <fieldset class="challenge__chips"><legend class="body-small">Up to {{ Figure(most, "rules") }} of the rules you set</legend>
+      {%- for r in rules %}<label class="chip"><input type="checkbox" name="rule" value="{{ r.id }}"> {{ r.text }}</label>{% endfor %}
+    </fieldset>
+    <button class="btn" type="submit">Start a challenge</button>
+  </form>
+  <p class="body-small">It starts on the next trading day after today and after the last day in your file.</p>
+  {%- else %}
+  <p class="body">Set a rule first: <a class="link" href="/rules/set">Set a rule</a>. Then pick 10 trading days or 20 trading days and up to three of the rules you set.</p>
+  {%- endif %}
+  {%- endif %}
+{% endblock %}
