@@ -37,6 +37,7 @@ REASONS = {
     mine.NO_SERIES: theirs.Reason.NO_SERIES,
     mine.NOT_COVERED: theirs.Reason.NOT_COVERED,
     mine.MISSING_PRIOR_BAR: theirs.Reason.NO_PRIOR_BAR,
+    mine.MISSING_BAR_TWO_BEFORE: theirs.Reason.NO_BAR_TWO_BEFORE,
     mine.MISSING_ENTRY_BAR: theirs.Reason.NO_ENTRY_BAR,
     mine.MISSING_HORIZON_BAR: theirs.Reason.NO_HORIZON_BAR,
 }
