@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from services.production.api import formatting
 from services.production.api import scope_map as S
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
@@ -136,6 +137,12 @@ def closed_on(t: mx.Trip, _expiries: dict) -> Choice:
     return day, WEEKDAYS[day].lower(), WEEKDAYS[day]
 
 
+def closed_day(t: mx.Trip, _expiries: dict) -> Choice:
+    """The date he closed it, in the instrument's zone: the calendar's day (TICKET-993)."""
+    iso = t.exit_ts.date().isoformat()
+    return iso, iso, formatting.day(iso)
+
+
 def _year(t: mx.Trip, _expiries: dict) -> Choice:
     year = t.trading_day[:4]
     return year, year, year
@@ -162,6 +169,9 @@ class Filter:
     label: str
     read: Callable[[mx.Trip, dict], Choice | None]
     only: frozenset[str] | None = None  # the facts whose list offers it; None: every list
+    quiet: bool = False
+    """Offered only when a link has already chosen it (TICKET-993's closed_day): a menu of every
+    date he closed a trade on would bury the list, and a calendar cell is the way in."""
 
 
 FILTERS = (
@@ -175,6 +185,7 @@ FILTERS = (
     # contract had left then (TICKET-988); offered on that list only.
     Filter("closed", "Day closed", closed_on, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
+    Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
 )
 
@@ -192,9 +203,15 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
+        if f.quiet and not query.get(f.name):
+            continue
         read = [(t, f.read(t, lookup)) for t in behind]
         offered = sorted({choice for _, choice in read if choice is not None}, key=lambda c: c[0])
-        if len(offered) < 2:
+        if f.quiet:
+            offered = [c for c in offered if c[1] == query.get(f.name)]
+            if not offered:
+                continue
+        if len(offered) < 2 and not f.quiet:
             continue
         wanted = query.get(f.name, "")
         if wanted not in {value for _, value, _ in offered}:

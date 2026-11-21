@@ -10,8 +10,10 @@ how the series is built, how to tell how current it is, and how to bring it curr
 uv run --with fyers-apiv3 python scripts/extend_crude_series.py --token-file <path to a Fyers token>
 ```
 
-It extends `data/market/crude_1m_current.csv` from where the file ends to yesterday's session, and
-prints a line to add to `data/market/CROSSINGS.md`. If it refuses, it has written nothing, and its
+It adds a day file to `data/market/CRUDEOIL/` for each finished session after the last day held, up
+to yesterday's, and prints a line to add to `data/market/CROSSINGS.md` (TICKET-997; the layout is in
+`docs/runbooks/price-series.md`). The first time on a machine, split the old single file into day
+files with `scripts/split_series_by_day.py`. If it refuses, its manifest is unchanged, and its
 message says why: either the broker's bars no longer match the file at the join, or a session that
 isn't a full session has no reason in `services/shared/market/mcx_sessions.yaml`. Add the reason
 (from MCX's holiday list) and run it again. Don't loosen the check.
@@ -20,7 +22,7 @@ isn't a full session has no reason in `services/shared/market/mcx_sessions.yaml`
 
 | | |
 | --- | --- |
-| File | `data/market/crude_1m_current.csv`, gitignored. Its manifest, `crude_1m_current.json`, sits beside it. |
+| Files | `data/market/CRUDEOIL/<year>/<day>.csv.gz`, one gzip file per session, and `data/market/CRUDEOIL/manifest.json`, gitignored (TICKET-997). Until 20 Nov 2026 it was one file, `crude_1m_current.csv`; `scripts/split_series_by_day.py` makes the day files from it byte for byte. |
 | Instrument | MCX CRUDEOIL futures, near month. CRUDEOILM is served by the same series (below). |
 | Interval and clock | 1 minute. IST, naive timestamps; each bar is stamped at the start of its minute. |
 | Prices | Rupees a barrel, as traded. Columns: timestamp, open, high, low, close, volume. |
@@ -58,7 +60,7 @@ manifest's `serves` lists both roots, so nothing should build a second series fo
 
 ## How current it is
 
-The manifest's `as_of` is the last complete session. `SeriesManifest.covers(day)` is the question to
+The manifest's `as_of` is the last complete session. `DayManifest.covers(day)` is the question to
 ask before using a bar for a trade on `day`. When it says no, the claim says the series doesn't cover
 that date. It never falls back to the nearest bar.
 

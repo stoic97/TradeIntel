@@ -22,6 +22,7 @@
   <p class="home__continue">{{ button(continue_step.label, href=continue_step.href, block=true) }}</p>
   {%- endif %}
   {{ uncounted_line(imp.trips_refused) }}
+  {% include "_how_you_got_here.html" %}
   {%- if challenge %}{% include "_challenge_home.html" %}{% endif %}
   {%- if latest %}
   <section class="latest">

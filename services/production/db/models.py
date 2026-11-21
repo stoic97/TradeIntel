@@ -509,6 +509,49 @@ class AdminAction(Base, _InsertOnly):
     at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class MarketToken(Base):
+    """The day's Fyers token, one row (TICKET-998). It can place orders, so only its Fernet
+    ciphertext is kept, under the file key; the sync is the one reader that decrypts it. A new
+    login replaces the row. No trader's data: the admin who connected is ``trader:<id>``, as the
+    admin trail writes it."""
+
+    __tablename__ = "market_token"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ciphertext: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    connected_by: Mapped[str] = mapped_column(String(100))
+
+
+class MarketSyncRun(Base, _InsertOnly):
+    """One run of ``cli market-sync`` (TICKET-998): its result, and per underlying the days it
+    added and refused, as counts, dates and reasons. Never a price."""
+
+    __tablename__ = "market_sync_run"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+    result: Mapped[str] = mapped_column(String(32))
+    summary: Mapped[str] = mapped_column(Text)
+
+
+class MarketDayRequest(Base):
+    """A stock's trading day that a trader's trades need and the store lacks (TICKET-998). The
+    sync fetches it; one Fyers won't serve is given up after three tries, with the reason. It names
+    a stock and a day, never a trader, so a deletion leaves it: it holds nothing of his."""
+
+    __tablename__ = "market_day_request"
+    __table_args__ = (UniqueConstraint("underlying", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    underlying: Mapped[str] = mapped_column(String(40))
+    trading_day: Mapped[str] = mapped_column(String(10))
+    requested_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    status: Mapped[str] = mapped_column(String(16))
+    tries: Mapped[int] = mapped_column(Integer, default=0)
+    reason: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+
+
 INSERT_ONLY_TABLES = frozenset(
     mapper.class_.__tablename__
     for mapper in Base.registry.mappers
