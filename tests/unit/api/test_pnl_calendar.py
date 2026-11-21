@@ -227,7 +227,8 @@ def test_the_calendar_sits_after_the_tiles_and_before_the_weekday_table(demo):
     html = demo.get("/numbers").text
     assert '<section class="cal" id="calendar">' in html
     assert "Your calendar" in html
-    assert html.index("numbers__grid") < html.index('id="calendar"') < html.index("By the day you closed the trade")
+    # The weekday table it sat before became "When you trade" (TICKET-994).
+    assert html.index("numbers__grid") < html.index('id="calendar"') < html.index('id="when"')
 
 
 def test_no_script_and_no_sentence_about_the_days(demo):
