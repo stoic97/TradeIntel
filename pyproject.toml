@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tradeintel"
 version = "0.1.0"
-description = "PlusEV TradeDNA research engine"
+description = "PlusEV Scope — trade-level diagnosis app and research engine"
 requires-python = "==3.11.*"
 # Bounded ranges here; uv.lock carries the exact pins (ADR 004).
 dependencies = [
@@ -56,6 +56,9 @@ include = ["services*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+markers = [
+  "research_fit: runs an MCMC fit and asserts its diagnostics or a threshold. Outside the required CI check; the research-fits job runs these (TICKET-954).",
+]
 
 [tool.ruff]
 line-length = 100

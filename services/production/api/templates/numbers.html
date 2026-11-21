@@ -1,0 +1,75 @@
+{#- Your numbers (TICKET-988): his scoreboard, then his trades by the day he closed them, by
+    days left to expiry and by book. Counted rows, never a verdict: no row is called good or bad,
+    and none is ranked or marked out. Every figure opens its trades or its day where it has any.
+    Nothing here is computed (numbers.build). -#}
+{% extends "layout.html" %}
+{% set nav = "home" %}
+
+{% macro row(r) -%}
+<tr>
+  <td>{% if r.href %}<a class="link" href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</td>
+  <td class="table__num num">{{ Figure(r.trades, "trades")|count }}</td>
+  <td class="table__num num">{% if r.rate is not none %}{{ Figure(r.rate, "percent")|out_of_a_hundred }}{% else %}<span class="numbers__thin">Too few</span>{% endif %}</td>
+  <td class="table__num num num--{{ r.bar_side }}">{{ Figure(r.net, "rupees")|rupees }}<span class="numbers__bar" aria-hidden="true"><span class="numbers__fill numbers__fill--{{ r.bar_side }}" style="{{ 'left' if r.bar_side == 'gain' else 'right' }}:50%;width:{{ r.bar_width }}%"></span></span></td>
+</tr>
+{%- endmacro %}
+
+{% macro table(rows) -%}
+<table class="table numbers__table">
+  <thead><tr><th></th><th class="table__num">Trades</th><th class="table__num">Made money</th><th class="table__num">Result</th></tr></thead>
+  <tbody>{% for r in rows %}{{ row(r) }}{% endfor %}</tbody>
+</table>
+{%- endmacro %}
+
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
+  <h1 class="title">Your numbers</h1>
+  <p class="body nb-top numbers__top"><span class="num">{{ Figure(trades, "trades")|count }}</span> trades, {{ first|day }} to {{ last|day }}.{% if gross %} Result before charges.{% endif %}</p>
+
+  <div class="numbers__grid">
+    <div class="numbers__tile">
+      <p class="label label--plain">Your average winner</p>
+      <p class="numbers__figure">{% if tiles.winner.value is not none %}{{ Figure(tiles.winner.value, "rupees", opens=tiles.winner.href)|rupees }}{% else %}None yet{% endif %}</p>
+      <p class="body-small numbers__note">Over <span class="num">{{ Figure(tiles.winner.count, "winners")|count }}</span> winners</p>
+    </div>
+    <div class="numbers__tile">
+      <p class="label label--plain">Your average loser</p>
+      <p class="numbers__figure">{% if tiles.loser.value is not none %}{{ Figure(tiles.loser.value, "rupees", opens=tiles.loser.href)|rupees }}{% else %}None yet{% endif %}</p>
+      <p class="body-small numbers__note">Over <span class="num">{{ Figure(tiles.loser.count, "losers")|count }}</span> losers</p>
+    </div>
+    <div class="numbers__tile">
+      <p class="label label--plain">Best day</p>
+      <p class="numbers__figure">{{ Figure(tiles.best_day.value, "rupees", opens=tiles.best_day.href)|rupees }}</p>
+      <p class="body-small numbers__note">{{ tiles.best_day.day|day }}</p>
+    </div>
+    <div class="numbers__tile">
+      <p class="label label--plain">Worst day</p>
+      <p class="numbers__figure">{{ Figure(tiles.worst_day.value, "rupees", opens=tiles.worst_day.href)|rupees }}</p>
+      <p class="body-small numbers__note">{{ tiles.worst_day.day|day }}</p>
+    </div>
+    <div class="numbers__tile">
+      <p class="label label--plain">Months that made money</p>
+      <p class="numbers__figure">{{ Figure(tiles.months.made, "months", opens=tiles.months.href)|count }} of {{ Figure(tiles.months.of, "months")|count }}</p>
+      <p class="body-small numbers__note">Counted on each month's own result</p>
+    </div>
+    <div class="numbers__tile">
+      <p class="label label--plain">Trades a day</p>
+      <p class="numbers__figure">{{ Figure(tiles.per_day.value, "trades a day") }}</p>
+      <p class="body-small numbers__note">Most in a day: <span class="num">{{ Figure(tiles.per_day.most, "trades", opens=tiles.per_day.href)|count }}</span>, on <span class="nowrap">{{ tiles.per_day.day|day }}</span></p>
+    </div>
+  </div>
+
+  {% include "_calendar.html" %}
+
+  <h2 class="card-title numbers__heading">By the day you closed the trade</h2>
+  {{ table(weekdays) }}
+
+  <h2 class="card-title numbers__heading">By how close to expiry you closed</h2>
+  <p class="body-small numbers__thin">Days left on the contract when you closed it.{% if no_expiry %} <span class="num">{{ Figure(no_expiry, "trades")|count }}</span> {{ "trade has" if no_expiry == 1 else "trades have" }} no contract expiry in the file and {{ "is" if no_expiry == 1 else "are" }} left out.{% endif %}</p>
+  {{ table(expiry) }}
+
+  <h2 class="card-title numbers__heading">By book</h2>
+  {{ table(books) }}
+
+  <p class="body-small numbers__thin numbers__foot">"Made money" needs <span class="num">{{ Figure(minimum, "trades")|count }}</span> trades in a row; below that it says too few.</p>
+{% endblock %}
