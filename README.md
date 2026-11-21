@@ -58,6 +58,7 @@ Layout follows `docs/methodology.md` section 5. A folder is created when its fir
 | `services/production/db/` | The product tables (`models.py`), the engine, session and migration runner, and the column types |
 | `services/production/eligibility/` | Which checks a history can support, and which it cannot |
 | `services/production/journal/` | The Journal: its fields, periods and prose, and which five he sees |
+| `services/production/market/` | Market data on the server: the Fyers connection for market data only (`fyers.py`), the day's token handled like a key (`token.py`), and the timer-run `cli market-sync` that keeps each series current (`sync.py`) |
 | `services/production/mirror/` | The Mirror: `metrics.py` is the one place each figure is decided; the loader, the guess before the reveal, chapter feedback |
 | `services/production/prices/` | Price-series layer: one 1-minute series per underlying (`underlyings.yaml`) |
 | `services/production/replay/` | Blind replay: his real entries mixed with random moments, the result hidden |
@@ -117,6 +118,7 @@ Each runs from the repo root with `uv run python scripts/<name>`, unless its row
 | `regenerate_golden.py` | Shows the golden diff and, with `--yes`, rewrites `data/golden/` (`--groww` for Groww's) | Only when a behaviour change is intended | Yes |
 | `run_null_rate_b2.py` | How often B2 fires on corpus A's nulls, with nothing planted (Research Spec section 6.2); writes `docs/phase0/null-rate-b2.json` (`recall-b2.json` with `--planted`), rows to `data/null_rate/` | TICKET-897 Stage A, step 5 | Yes, research |
 | `run_sbc_m1.py` | Simulation-based calibration of M1, 1,000 replications (Research Spec section 6.4); writes `docs/phase0/sbc-m1.json` | TICKET-897 Stage A, step 6 | Yes, research |
+| `split_series_by_day.py` | Splits a single-file 1-minute series into one gzip file per day and its manifest under `data/market/<UNDERLYING>/`, proving every row landed byte for byte before the manifest is written | Once per underlying, when its series moves to the day files (`docs/runbooks/crude-series.md`) | Yes |
 
 ## Rules
 1. **No trader data in this repo. Ever** — and that includes anything *derived* from

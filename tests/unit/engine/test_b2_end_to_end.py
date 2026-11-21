@@ -19,7 +19,6 @@ Robustness, BH, economic significance and sign agreement are later cycles. They 
 carried as unevaluated gates, and no tier above Exploratory is awarded while any gate
 is unevaluated - the alternative is to invent values, which is worse than waiting.
 """
-import sys
 
 import numpy as np
 import pytest
@@ -237,14 +236,12 @@ def test_below_the_minimum_sample_is_not_enough_evidence_with_the_reason_stored(
 
 # --- end to end ----------------------------------------------------------------
 
-# TD-023 (TICKET-929): under the same lock this fails on macOS (p_hold 0.53525, every run on
-# the MacBook Air 5-14 Nov) and passes on Linux (GitHub Actions, 14 Nov). Excused on macOS
-# only, and only for the assertion it is known to fail: on Linux it stays a full check, any
-# other failure is red everywhere, and strict means a pass on macOS is red until ruled.
-@pytest.mark.xfail(
-    sys.platform == "darwin", raises=AssertionError, strict=False,
-    reason="TD-023: p_hold is machine-dependent under the same lock - 0.53525 on one MacBook Air, passing on another, 0.40125 on Linux CI. Not strict: no machine can be asserted to fail. Research seat to rule",
-)
+# TD-023 (TICKET-954): the hold-out bar is missed under the lock on both platforms - 0.354
+# to 0.40125 on Linux CI, 0.53525 on a MacBook Air, against 0.65. The cause is the marginal
+# M1 fits of TICKET-897, not the machine, so the platform excuse is withdrawn and the fit
+# runs in the research-fits job. The 0.65 bar is a committed research threshold and is not
+# moved here. TICKET-975 holds the reference environment.
+@pytest.mark.research_fit
 def test_b2_fires_on_a_planted_trader_and_is_silent_on_a_clean_one():
     """The point of step D. A trader with a planted 0.5R post-loss leak: the
     statistical core fires - real, big enough, and the hold-out agrees. A clean trader:

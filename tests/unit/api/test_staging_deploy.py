@@ -121,7 +121,9 @@ def test_the_env_example_names_every_setting_with_a_comment_and_no_real_value():
             settings[key] = value
             assert lines[n - 1].startswith("#"), f"{key} has no comment above it"
     assert set(settings) == {"SCOPE_SECRET_KEY", "SCOPE_FILE_KEY", "SCOPE_DB", "SCOPE_FILES",
-                             "SCOPE_PRODUCTION", "ADMIN_LOGIN_IDS"}
+                             "SCOPE_PRODUCTION", "ADMIN_LOGIN_IDS", "SCOPE_MARKET_DIR"}
+    # TICKET-997: staging reads production's day files; its unit can write only its own data.
+    assert settings["SCOPE_MARKET_DIR"] == "/srv/scope/data/market"
     assert settings["SCOPE_PRODUCTION"] == "1"
     assert settings["SCOPE_DB"] == "sqlite:////srv/scope-staging/data/scope.db"
     assert settings["SCOPE_FILES"] == "/srv/scope-staging/data/files"
