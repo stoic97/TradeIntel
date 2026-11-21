@@ -183,6 +183,14 @@ class DaySeries:
     def covers(self, day: date) -> bool:
         return self.manifest.covers(day) and not self.problem(day)
 
+    def held(self, day: date) -> bool:
+        """Whether the store has this day's file at all (a stock's day may not be fetched yet)."""
+        return day.isoformat() in self.manifest.days
+
+    def minutes(self, day: date) -> list[datetime]:
+        """Every minute with a bar on this day, in order (TICKET-999 draws random moments from these)."""
+        return sorted(self._day(day))
+
     def bar(self, minute: datetime) -> Bar | None:
         naive = minute.replace(tzinfo=None) if minute.tzinfo else minute
         return self._day(naive.date()).get(naive)
