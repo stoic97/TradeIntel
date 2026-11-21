@@ -68,16 +68,25 @@ particular history needs more is answered per fit by the framework's diagnostics
 - zero divergences, r_hat, bulk ess - so no further threshold is invented here."""
 
 NU_FLOOR_PROVENANCE = (
-    "a floor on nu, parked. Proposed 10 Oct 2026 after 59 of 1,000 SBC replications "
-    "diverged, on the theory that Gamma(2, 0.1)'s mass below nu = 2 - where Student-t "
-    "has no variance - was the cause. The prediction recorded before the re-run was "
-    "divergences near zero and alpha and tau_day completion above 0.9. The re-run at "
-    "floor = 2 gave 4.3 per cent diverged against 5.9, and 87 per cent completion "
-    "against 84 and 85: the prediction failed, so the floor is withdrawn as a fix and "
-    "the default is the framework's value. Cost per replication halved, so the tail "
-    "made fits slow rather than failed. Whether nu should be floored on correctness "
-    "grounds alone - real returns have finite variance - is a separate question for "
-    "the kickoff (TD-021), and it must not ride in under a fix that fixed nothing."
+    "a floor on nu at 2, ADOPTED 14 Nov 2026 (TICKET-897) on propriety grounds - not "
+    "the grounds it was first proposed on. Proposed 10 Oct 2026 as the fix for 59 of "
+    "1,000 diverged SBC replications; the re-run at floor = 2 gave 4.3 per cent "
+    "diverged against 5.9 and 87 per cent completion against 84 and 85, so the "
+    "prediction failed and the floor was correctly withdrawn AS A FIX FOR THAT. It "
+    "could not have worked: SBC draws from this model's own continuous likelihood, so "
+    "SBC data holds no ties and the pathology below never appears in it. What adopts "
+    "the floor is a different argument. With n_1 observations tied at one exact value "
+    "and n_0 untied, the posterior has infinite mass wherever nu <= (n_1 - 4) / n_0 "
+    "(see tie_propriety_floor), so Gamma(2, 0.1) makes M1 improper on any history "
+    "with a large tie group - every futures trader with a stop. Corpus A's B2 cells "
+    "are 49-55 per cent tied at -1R, and on 13 Nov 2026 all four chains of a seeded "
+    "fit collapsed to sigma = 6e-14, alpha = -1, theta = 0: a planted leak reported "
+    "as no effect. 64 of 72 planted histories failed diagnostics this way. The floor "
+    "removed the collapse on all nine probed histories. TD-021's correctness argument "
+    "- real returns have finite variance - still stands on its own and is still the "
+    "kickoff's to rule; the floor no longer waits on it. A cap on nu is NOT adopted "
+    "here: truncation would have to be matched in prior_draw or SBC would validate a "
+    "prior the model does not use, and nothing in this ticket needs it."
 )
 
 TAU_DAY_PROVENANCE = (
@@ -99,7 +108,7 @@ class M1Priors:
     sigma_scale: float = 2.0
     nu_shape: float = 2.0
     nu_rate: float = 0.1
-    nu_floor: float = 0.0  # framework as written; the floor is parked, see NU_FLOOR_PROVENANCE
+    nu_floor: float = 2.0  # adopted 14 Nov 2026 on propriety grounds, see NU_FLOOR_PROVENANCE
     beta_sd: float = 0.3
     tau_day_scale: float = 0.5  # not in the framework: see TAU_DAY_PROVENANCE
 
@@ -171,6 +180,39 @@ class M1Data:
         return index.astype(int), int(index.max()) + 1
 
 
+Q_FREE_DIRECTIONS = 3
+"""alpha, theta and tau_day: the free location and scale directions that have to be
+pinned to hold every tied observation at the atom. Used by tie_propriety_floor."""
+
+
+def tie_propriety_floor(data: M1Data) -> float:
+    """The smallest ``nu`` at which M1's posterior is still a probability distribution
+    on this history. Proposition 1, TICKET-897, 14 Nov 2026.
+
+    Where ``n_1`` observations share one exact value and ``n_0`` do not, the likelihood
+    goes as ``sigma ** (nu * n_0 - n_1)`` as ``sigma -> 0`` with every tied ``eta`` held
+    within ``O(sigma)`` of the atom, and that region has volume ``sigma ** q`` in the
+    ``q = 3`` free location and scale directions. The integral over ``sigma`` diverges
+    whenever ``nu <= (n_1 - q - 1) / n_0``, so the posterior carries infinite mass
+    there - a spike at ``sigma -> 0, nu -> 0`` that reports ``theta = 0``.
+
+    Returns that bound for the largest exact tie group; 0.0 when no group is large
+    enough to make one, and ``inf`` when every observation is tied.
+
+    Exact ties are not a synthetic artifact. A trader with a stop exits at the same R
+    repeatedly, and discrete P&L on ticks times lots produces them even without one.
+    """
+    r = np.asarray(data.r, dtype=float).ravel()
+    if r.size == 0:
+        return 0.0
+    _, counts = np.unique(r, return_counts=True)
+    n_1 = int(counts.max())
+    n_0 = int(r.size - n_1)
+    if n_0 == 0:
+        return float("inf")
+    return max(0.0, (n_1 - Q_FREE_DIRECTIONS - 1) / n_0)
+
+
 def fit(
     data: M1Data,
     priors: M1Priors | None = None,
@@ -190,6 +232,16 @@ def fit(
             f"M1 needs at least {MIN_DAYS} distinct days to identify the day-level "
             f"intercepts against alpha; this history has {n_days}. A diagnosis cannot "
             "be drawn from a single day's trading."
+        )
+    bound = tie_propriety_floor(data)
+    if bound > priors.nu_floor:
+        raise ValueError(
+            f"M1's posterior is improper on this history: one exact R value is shared "
+            f"by enough trips that nu would have to be floored above {bound:.2f}, and "
+            f"the floor is {priors.nu_floor:.2f} (see tie_propriety_floor). Fitting it "
+            "would return theta = 0 with clean-looking summaries. A history that is "
+            "almost entirely one number needs a likelihood with an atom in it, not a "
+            "wider floor."
         )
 
     started = time.perf_counter()
@@ -224,6 +276,8 @@ def fit(
         tune=config.warmup,
         chains=config.chains,
         seed=config.seed,
+        target_accept=config.target_accept,
+        maxdepth=config.maxdepth,
         progress_bar=False,
     )
     seconds = time.perf_counter() - started

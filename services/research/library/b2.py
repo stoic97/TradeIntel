@@ -29,7 +29,12 @@ import numpy as np
 from services.research.engine import evidence as ev
 from services.research.engine import zones as zn
 from services.research.models import m1
-from services.research.models.base import FitConfig, FitResult, failing_parameters
+from services.research.models.base import (
+    FitConfig,
+    FitResult,
+    failing_parameters,
+    fit_escalating,
+)
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 
 TEST_ID = "B2"
@@ -57,6 +62,10 @@ class B2Result:
     train: FitResult
     hold: FitResult
     zones: zn.Zones
+    # The arrays the two fits were actually given. Carried so a sweep can put theta
+    # beside the contrast the trades themselves show, without rebuilding the zones.
+    train_data: m1.M1Data
+    hold_data: m1.M1Data
 
 
 def _m1_data(obs: Sequence[Obs], idx: np.ndarray, in_pop: np.ndarray, cond: np.ndarray) -> m1.M1Data:
@@ -81,8 +90,10 @@ def run(
 
     train_data = _m1_data(obs, zones.training, in_pop, cond)
     hold_data = _m1_data(obs, zones.isolation, in_pop, cond)
-    train = m1.fit(train_data, priors, config, keep_samples=True)
-    hold = m1.fit(hold_data, priors, config, keep_samples=True)
+    # One escalated attempt each when the diagnostics refuse the first. A Finding
+    # killed on diagnostics has to be killed after the harder budget, not before it.
+    train = fit_escalating(m1.fit, train_data, priors, config, keep_samples=True)
+    hold = fit_escalating(m1.fit, hold_data, priors, config, keep_samples=True)
     assert train.samples is not None and hold.samples is not None
 
     core = ev.statistical_core(train.samples["theta"], hold.samples["theta"], DIRECTION, THETA_MIN)
@@ -102,4 +113,7 @@ def run(
         n_min=N_MIN,
         diagnostics_failed=theta_bad,
     )
-    return B2Result(core, finding, n_condition, n_comparison, n_condition_isolation, train, hold, zones)
+    return B2Result(
+        core, finding, n_condition, n_comparison, n_condition_isolation,
+        train, hold, zones, train_data, hold_data,
+    )

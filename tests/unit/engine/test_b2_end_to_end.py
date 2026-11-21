@@ -28,7 +28,8 @@ from services.research.engine import evidence as ev
 from services.research.engine import zones
 from services.research.evaluation.synthetic import corpus as cp
 from services.research.library import b2
-from services.research.models.base import FitConfig
+from services.research.models import base, m1
+from services.research.models.base import FitConfig, FitResult
 
 MARKET = cp.synthetic_market(seed=1, n_days=700)
 FIT = FitConfig(draws=1000, warmup=1000, chains=4, seed=11)
@@ -265,3 +266,52 @@ def test_b2_fires_on_a_planted_trader_and_is_silent_on_a_clean_one():
     assert not (quiet.core.real and quiet.core.big_enough), (quiet.core.p_train, quiet.core.m_train)
     assert quiet.finding.mde > 0
     assert "no leak larger than" in quiet.finding.null_statement
+
+
+# --- the sampler budget reaches both zones -------------------------------------
+
+def _daily_history(days=55):
+    """Six trips a day, with two consecutive losses mid-morning so the B2 condition
+    fires once a day and the population holds three trips a day.
+
+    Fifty-five days is the smallest round number whose training zone clears both of
+    B2's minimums - 30 condition and 60 comparison - once section 4.6 has taken its
+    quarter for isolation and its embargo. At forty it is 28 condition, and the
+    Finding is gated on sample size before it is gated on anything this test is
+    about."""
+    rows = []
+    for day in range(days):
+        for k, r in enumerate((0.5, -0.5, -0.5, 0.5, 0.5, 0.5)):
+            rows.append((day, float(k), float(k) + 0.5, r))
+    return _obs(rows)
+
+
+def test_both_zones_get_the_escalated_attempt_and_the_result_says_so(monkeypatch):
+    """A retry nothing calls is decoration. B2 fits twice - training and isolation -
+    and a Finding killed on diagnostics must be killed after the harder attempt, not
+    before it. The sampler is stubbed: this is about the wiring, not the posterior."""
+    seen = []
+
+    def fake_fit(data, priors, config, **kw):
+        seen.append(config)
+        failing = len(seen) % 2 == 1  # the first attempt of each zone
+        return FitResult(
+            backend="stub", spec_digest="x",
+            posterior_mean={"theta": -0.4}, posterior_sd={"theta": 0.1},
+            r_hat={"theta": 1.0}, ess={"theta": 2000.0},
+            divergences=1 if failing else 0,
+            draws=200, seconds=0.0,
+            samples={"theta": np.full(200, -0.4)},
+        )
+
+    monkeypatch.setattr(m1, "fit", fake_fit)
+    result = b2.run(_daily_history(), config=FIT)
+
+    assert len(seen) == 4, "two zones, each retried once"
+    assert seen[1] == base.escalate(FIT)
+    assert seen[3] == base.escalate(FIT)
+    assert result.train.budget == base.ESCALATED
+    assert result.hold.budget == base.ESCALATED
+    assert "failed_diagnostics" not in result.finding.failed_gate, (
+        "the escalated fit was clean, so nothing may be killed on diagnostics"
+    )

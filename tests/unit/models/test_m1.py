@@ -36,7 +36,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from services.research.models import m1
+from services.research.models import base, m1
 from services.research.models.base import BadDiagnostics, FitConfig, FitResult, check_diagnostics
 
 FIT = FitConfig(draws=1000, warmup=1000, chains=4, seed=3)
@@ -103,7 +103,8 @@ def test_the_priors_are_the_frameworks_verbatim():
     assert p.sigma_scale == 2.0
     assert (p.nu_shape, p.nu_rate) == (2.0, 0.1)
     assert p.beta_sd == 0.3
-    # nu's floor is the one proposed amendment to these; see the nu_ tests below.
+    # nu's floor is the one amendment to these, adopted 14 Nov 2026 on propriety
+    # grounds (TICKET-897); see the nu_ tests below.
 
 
 def test_tau_day_is_declared_arbitrary_because_the_framework_omits_it():
@@ -278,13 +279,13 @@ def test_the_diagnostics_gate_is_the_frameworks_three_thresholds():
 
 # --- nu's prior, corrected after the SBC run of 10 Oct 2026 --------------------
 
-def test_a_nu_floor_holds_at_both_ends_when_set():
-    """The floor mechanism is kept, defaulted off. It was proposed as the fix for 59
-    diverged SBC replications and its pre-registered prediction failed - 4.3 per cent
-    diverged against 5.9 - so it is withdrawn as a fix. Whether to floor nu on
-    correctness grounds is a separate kickoff question (TD-021). Here: when a floor is
-    set, neither the prior nor the posterior can fall below it; by default, the prior
-    is the framework's and can."""
+def test_the_nu_floor_holds_at_both_ends():
+    """The floor is on by default from 14 Nov 2026 (TICKET-897): neither the prior nor
+    the posterior can fall below it. It was withdrawn on 10 Oct as a fix for diverged
+    SBC replications, which it was not; it is adopted now because without it the
+    posterior is improper on any history with a large tie group, and SBC - drawing from
+    this model's own continuous likelihood - could never have shown that. The
+    framework's unfloored prior is still reachable, and still reaches below 2."""
     floored = replace(PRIORS, nu_floor=2.0)
     rng = np.random.default_rng(31)
     assert min(m1.prior_draw(rng, floored)["nu"] for _ in range(5000)) >= 2.0
@@ -293,15 +294,16 @@ def test_a_nu_floor_holds_at_both_ends_when_set():
     assert got.samples is not None
     assert float(got.samples["nu"].min()) >= 2.0
 
-    assert PRIORS.nu_floor == 0.0
+    assert PRIORS.nu_floor == 2.0
+    unfloored = replace(PRIORS, nu_floor=0.0)
     rng = np.random.default_rng(31)
-    assert min(m1.prior_draw(rng)["nu"] for _ in range(5000)) < 2.0
+    assert min(m1.prior_draw(rng, unfloored)["nu"] for _ in range(5000)) < 2.0
 
 
 def test_the_nu_floor_is_part_of_the_spec_digest():
     """Moving the floor must move the digest, or a fit could carry a hash for a
     prior it did not use."""
-    assert replace(PRIORS, nu_floor=2.0).digest() != PRIORS.digest()
+    assert replace(PRIORS, nu_floor=0.0).digest() != PRIORS.digest()
 
 
 # --- parameterisation: the same model, two geometries --------------------------
@@ -329,3 +331,126 @@ def test_centred_and_non_centred_are_the_same_model():
         assert a.posterior_mean[p] == pytest.approx(
             b.posterior_mean[p], abs=5 * np.sqrt(2) * mcse
         ), p
+
+
+# --- ties at the stop: section 6.3's prior is improper without a floor on nu ----
+
+def _tied_data(n=240, tied_share=0.8, prevalence=0.25, seed=97):
+    """A history shaped like a trader with a stop: a mass of trips at exactly -1R,
+    the rest continuous. Corpus A's B2 cells measured 49-55 per cent tied at -1R on
+    13 Nov 2026; the share here is higher on purpose, because the improper region
+    widens with the tie mass and that makes the failure reproducible in one seeded
+    fit rather than in six of nine."""
+    rng = np.random.default_rng(seed)
+    day = np.repeat(np.arange(n // 6), 6)
+    cond = (rng.random(n) < prevalence).astype(float)
+    tied = rng.random(n) < tied_share
+    r = np.where(tied, -1.0, rng.normal(0.5, 0.9, size=n))
+    return m1.M1Data(r=r, condition=cond, day=day)
+
+
+def test_a_tie_mass_defines_an_improper_region_and_the_prior_must_exclude_it():
+    """Proposition 1, TICKET-897. With n_1 trips tied at one exact value and n_0
+    untied, the likelihood behaves as sigma ** (nu * n_0 - n_1) as sigma -> 0, and the
+    region where every tied eta sits within K sigma of the atom has volume sigma ** q
+    in the q = 3 free location and scale directions (alpha, theta, tau_day). The
+    integral diverges whenever nu <= (n_1 - q - 1) / n_0, so the posterior has
+    infinite mass there. Gamma(2, 0.1) puts positive density in that region, which
+    makes M1 as section 6.3 writes it improper on any history with a large tie group
+    - that is, on every futures trader who uses a stop."""
+    half, most = _tied_data(tied_share=0.5), _tied_data(tied_share=0.8)
+    assert m1.tie_propriety_floor(most) > m1.tie_propriety_floor(half) > 0.0
+    assert m1.tie_propriety_floor(_tied_data(tied_share=0.0)) == 0.0
+    # The floor covers a realistic stop share: corpus A's B2 cells are 49-55 per
+    # cent tied at -1R, which puts the bound near 1.0.
+    assert m1.M1Priors().nu_floor > m1.tie_propriety_floor(half)
+    # It does not cover a history that is almost entirely one number. That is why
+    # the bound is computed per fit and such a history is refused, not floored
+    # into silence.
+    assert m1.M1Priors().nu_floor < m1.tie_propriety_floor(most)
+
+
+def test_a_tie_mass_does_not_collapse_the_fit():
+    """The failure TICKET-897 was raised for, in one fit. Without a floor the chains
+    find the spike and report sigma -> 0, alpha -> -1 and theta = 0 - a trader told
+    there is no effect because half his trips share a number (diag_897_chains,
+    13 Nov). Diagnostics are deliberately not asserted here: divergences are the
+    sampler budget's business, and this test is about the posterior being a
+    distribution at all."""
+    data = _tied_data(tied_share=0.55)  # corpus A's measured share
+    assert m1.tie_propriety_floor(data) < PRIORS.nu_floor  # so the floor covers it
+    got = m1.fit(data, PRIORS, FIT, keep_samples=True)
+    assert got.samples is not None
+    assert float(got.samples["sigma"].min()) > 0.05, "sigma collapsed onto the tie mass"
+    assert float(got.samples["nu"].min()) >= PRIORS.nu_floor
+
+
+def test_a_history_that_is_almost_one_number_is_refused_rather_than_fitted():
+    """Where the tie mass puts the bound above the floor, no floor rescues the fit, so
+    M1 says so instead of returning theta = 0 with clean summaries - the same answer
+    it gives a single-day history. Measured 13 Nov 2026: at an 80 per cent tie share
+    all four chains reached sigma = 6e-14."""
+    data = _tied_data(tied_share=0.8)
+    assert m1.tie_propriety_floor(data) > PRIORS.nu_floor
+    with pytest.raises(ValueError, match="improper"):
+        m1.fit(data, PRIORS, FIT)
+
+
+# --- the sampler budget: the thresholds hold, the effort adapts -----------------
+
+def test_the_standard_budget_is_the_one_adr_006_measured():
+    """nutpie's own defaults. ADR-006's benchmark, the null-rate sweep and the recall
+    sweep were all run at them, so the first attempt has to reproduce them exactly or
+    every number already recorded moves without anyone deciding that it should."""
+    assert (FitConfig().target_accept, FitConfig().maxdepth) == (0.8, 10)
+
+
+def test_the_escalated_budget_is_harder_and_reseeded():
+    """One retry, pre-committed. This is not a tolerance: the framework's three
+    thresholds do not move. What moves is how carefully the same posterior is
+    explored. The seed moves too, because re-running a seeded failure reproduces it."""
+    hard = base.escalate(FIT)
+    assert (hard.draws, hard.warmup) == (2 * FIT.draws, 2 * FIT.warmup)
+    assert hard.target_accept > FIT.target_accept
+    assert hard.maxdepth > FIT.maxdepth
+    assert hard.seed != FIT.seed
+    assert hard.chains == FIT.chains
+
+
+def test_a_clean_fit_is_not_retried():
+    calls = []
+
+    def fit_fn(data, priors, config, **kw):
+        calls.append(config)
+        return _stub()
+
+    got = base.fit_escalating(fit_fn, None, None, FIT)
+    assert len(calls) == 1
+    assert got.budget == "standard"
+
+
+def test_a_failing_fit_is_retried_once_and_the_result_says_so():
+    """Once, not until it passes - a third attempt is fishing. The escalated fit is
+    returned even when it fails again, because it is the more careful one, and the
+    caller is told which budget produced it rather than left to assume."""
+    calls = []
+
+    def fit_fn(data, priors, config, **kw):
+        calls.append(config)
+        return _stub(divergences=1)
+
+    got = base.fit_escalating(fit_fn, None, None, FIT)
+    assert len(calls) == 2
+    assert calls[1] == base.escalate(FIT)
+    assert got.budget == "escalated"
+    assert got.divergences == 1
+
+
+def test_the_budget_reaches_the_sampler():
+    """A config field nothing passes on is a lie in the evidence object. maxdepth 1
+    cripples the sampler, so the same data at the same seed must come back different."""
+    data = _data(seed=43)
+    assert (
+        m1.fit(data, PRIORS, replace(FIT, maxdepth=1)).summary_digest()
+        != m1.fit(data, PRIORS, FIT).summary_digest()
+    )
