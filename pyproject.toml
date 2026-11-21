@@ -56,6 +56,9 @@ include = ["services*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+markers = [
+  "research_fit: runs an MCMC fit and asserts its diagnostics or a threshold. Outside the required CI check; the research-fits job runs these (TICKET-954).",
+]
 
 [tool.ruff]
 line-length = 100
