@@ -113,7 +113,7 @@ def _new_days(sess, imp) -> set[str] | None:
 def choose_filter(request: Request, period: str = RF.ALL, book: str = "", next: str = "/mirror"):
     """Remember the chosen period and book, then go back to the page it was chosen on. Only a
     report address is gone back to; anything else goes to the report's home."""
-    back = next if next.startswith("/mirror") and "//" not in next else "/mirror"
+    back = next if next.startswith(("/mirror", "/numbers")) and "//" not in next else "/mirror"
     response = RedirectResponse(back, status_code=303)
     chosen = RF.ReportFilter(period or RF.ALL, book or None)
     if chosen.active:

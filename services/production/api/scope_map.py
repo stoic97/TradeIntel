@@ -25,6 +25,10 @@ class Fact:
     key: str  # its URL and its dwell key (/mirror/fact/<key>)
     title: str  # the Mirror's own heading
     chart: str  # the scope_geometry chart that draws it
+    on_phone_dial: bool = True
+    """Whether it has a wedge on its chapter's phone dial. The kit sized the wedges for
+    the facts main has; a fact added after them sits in a list under the phone dial instead, and
+    keeps its wedge on desktop. A new fact sets this on purpose: test_phone_dial_list names the rest."""
 
 
 @dataclass(frozen=True)
@@ -53,7 +57,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("math", "Your wins and losses", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
-            Fact("after", "After you clicked", "after"),
+            Fact("after", "After you clicked", "after", on_phone_dial=False),
         ),
         feedback=True,
     ),

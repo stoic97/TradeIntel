@@ -103,6 +103,7 @@ def test_the_analytic_posterior_matches_a_hand_computed_case():
 # --- one spec, two backends ----------------------------------------------------
 
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
+@pytest.mark.research_fit
 def test_every_backend_fits_the_spec_it_was_given_and_nothing_else(backend, fits):
     got = fits[backend]
     assert got.backend == backend
@@ -112,6 +113,7 @@ def test_every_backend_fits_the_spec_it_was_given_and_nothing_else(backend, fits
 
 
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
+@pytest.mark.research_fit
 def test_every_backend_matches_the_closed_form_posterior(backend, fits):
     want = ce.analytic_posterior(SPEC, Y, X)
     got = fits[backend]
@@ -128,6 +130,7 @@ def test_every_backend_matches_the_closed_form_posterior(backend, fits):
 
 
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
+@pytest.mark.research_fit
 def test_every_backend_turns_its_draws_into_information(backend, fits):
     """A degrading sampler still returns draws — it returns fewer independent ones,
     which widens every interval the promotion criterion reads. Both backends measured
@@ -138,12 +141,14 @@ def test_every_backend_turns_its_draws_into_information(backend, fits):
 
 
 @pytest.mark.parametrize("backend", sorted(ce.BACKENDS))
+@pytest.mark.research_fit
 def test_the_same_seed_gives_the_same_posterior_summary(backend):
     a = ce.BACKENDS[backend](SPEC, Y, X, FIT)
     b = ce.BACKENDS[backend](SPEC, Y, X, FIT)
     assert a.summary_digest() == b.summary_digest()
 
 
+@pytest.mark.research_fit
 def test_the_two_backends_agree_with_each_other(fits):
     assert len(fits) >= 2, "a one-backend benchmark cannot decide ADR-006"
     a, b = (fits[n] for n in sorted(fits))
