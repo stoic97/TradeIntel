@@ -24,4 +24,8 @@ def your_numbers(request: Request):
     with make_session(request.app.state.engine) as sess:
         expiries = loader.expiries_for(sess, imp)
     view = N.build(trips, expiries, gross=not imp.fees_available)
+    chosen = getattr(request.state, "report_filter", None) or {}
+    year_chosen = any(p["current"] and p["label"].isdigit() for p in chosen.get("periods", []))
+    view["calendar"] = N.calendar(trips, show_all=request.query_params.get("months") == "all",
+                                  year_chosen=year_chosen)
     return page(request, "numbers.html", title="Your numbers", imp=imp, **view)
