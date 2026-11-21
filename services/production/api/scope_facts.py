@@ -84,6 +84,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "premium_paid": mx.premium_by_book(same_day),
         "book_math": mx.math_by_book(same_day),
         "book_halves": mx.book_halves(trips),
+        "previous_result": mx.previous_result_figures(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -289,6 +290,58 @@ def _hidden_cell(half, href: str, row: str):
     return _hidden_link(str(half.math.break_even_percent), "percent", href) + "%"
 
 
+def _trades_word(n: int) -> str:
+    return "trade" if n == 1 else "trades"
+
+
+def _count_link(n: int, href: str | None):
+    """A count of trades inside a sentence, as a figure, opening them when there are any."""
+    return formatting.opens(Figure(formatting.count(n), _trades_word(n), opens=href if n else None))
+
+
+def _previous_rows(ctx: dict) -> dict[str, list[dict]]:
+    """The hiding page's two figures for previous result (TICKET-919), per book, as written.
+
+    Every figure goes through Figure with its noun and opens its own trades; each carries its
+    band and its two labels. The page decides nothing: the chance line reads the band through
+    the |inside filter, and a figure inside its band is the result, never a blank."""
+    out: dict[str, list[dict]] = {}
+    for r in ctx.get("previous_result", ()):
+        after = f"a {r.state}"
+        record_href = S.see_all_href("hidden", book=r.book, after=r.state)
+        n = len(r.record_ids)
+        row = {
+            "state": r.state,
+            "record": _hidden_link(formatting.rupees(r.record_net), "rupees", record_href),
+            "record_words": Markup("net on {} {} opened right after {} that day").format(
+                _count_link(n, record_href), _trades_word(n), after),
+            "record_band": r.record_band,
+            "record_finding": findings.of_figure("hidden.record"),
+            "then": NOT_ENOUGH_YET,
+            "then_words": "",
+            "then_band": r.then_band,
+            "then_finding": findings.of_figure("hidden.then"),
+        }
+        if r.reached:
+            k = len(r.then_ids)
+            then_href = (S.see_all_href("hidden", book=r.book, after=r.state, then="yes")
+                         if k else None)
+            minimum = formatting.opens(Figure(formatting.count(r.minimum), "trades"))
+            if not k:  # nothing was picked: said plainly, with no figure and no verdict on it
+                row["then"] = Markup(
+                    "no trade after {} was opened while your earlier ones after {}, {} or more,"
+                    " were down overall").format(after, after, minimum)
+            else:
+                row["then"] = formatting.opens(
+                    Figure(formatting.rupees(r.then_net), "rupees", opens=then_href))
+                row["then_words"] = Markup(
+                    "net on {} {} opened right after {} that day while your earlier ones after {},"
+                    " {} or more, were down overall").format(
+                    _count_link(k, then_href), _trades_word(k), after, after, minimum)
+        out.setdefault(r.book, []).append(row)
+    return out
+
+
 def _hidden_view(ctx: dict) -> dict:
     """The plain-counts page (TICKET-910): each book's own halves, as its table writes them.
 
@@ -296,11 +349,13 @@ def _hidden_view(ctx: dict) -> dict:
     metrics.book_halves decided, never by a page. The p sits beside the change in net per trade
     it checks. Nothing here is called a finding, ranked or priced."""
     books = []
+    previous = _previous_rows(ctx)
     for r in ctx["book_halves"]:
         every = S.see_all_href("hidden", book=r.book)
         if r.state is not COUNTED:
             books.append({"book": r.book, "counted": False,
-                          "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
+                          "trades": _hidden_link(formatting.count(r.trades), "trades", every),
+                          "previous": previous.get(r.book, [])})
             continue
         halves = (
             (r.first, S.see_all_href("hidden", book=r.book, half="first")),
@@ -320,7 +375,8 @@ def _hidden_view(ctx: dict) -> dict:
                              "cells": ["", "", change]})
                 rows.append({"label": "Whole days shuffled between the halves: p",
                              "control": "net-per-trade", "cells": ["", "", checked]})
-        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
+        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows,
+                      "previous": previous.get(r.book, [])})
     return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 

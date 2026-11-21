@@ -26,6 +26,10 @@
   {%- else %}
   <p class="body">{{ b.trades }} same-day trades: not enough trades yet.</p>
   {%- endif %}
+  {%- for p in b.previous %}
+  <p class="body" data-previous="{{ p.state }}" data-figure="record" data-known="{{ p.record_finding|known }}" data-rung="{{ p.record_finding|rung }}">On your record: {{ p.record }} {{ p.record_words }}.{% if p.record_band|inside %} Can't be told apart from chance.{% endif %}</p>
+  <p class="body" data-previous="{{ p.state }}" data-figure="then" data-known="{{ p.then_finding|known }}" data-rung="{{ p.then_finding|rung }}">Choosing with only what you knew then: {{ p.then }}{% if p.then_words %} {{ p.then_words }}{% endif %}.{% if p.then_band|inside %} Can't be told apart from chance.{% endif %}</p>
+  {%- endfor %}
   {%- endfor %}
 {% endblock %}
 {% block caption %}Every trade you closed the day you opened it, in these books.{% endblock %}
