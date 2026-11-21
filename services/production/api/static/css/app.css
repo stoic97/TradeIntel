@@ -463,6 +463,30 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .hy-more { margin: var(--space-3) 0 0; }
 @media (min-width: 420px) { .hy-kpi__fig { font-size: 16px; line-height: 22px; } }
 
+/* charts toolkit */
+.ch-grid { stroke: var(--color-hairline); stroke-width: 1; }
+.ch-zero { stroke: var(--color-ink); stroke-width: 1; opacity: .6; }
+.ch-ref { stroke: var(--color-faint); stroke-width: 1; stroke-dasharray: 4 3; }
+.ch-tag { font: 500 10px var(--font-mono); fill: var(--color-faint); }
+.ch-axis { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.ch-axis--x { text-anchor: middle; }
+.ch-last--loss { fill: var(--color-loss); }
+.ch-last--gain { fill: var(--color-gain); }
+.ch-last--plain { fill: var(--color-ink); }
+.ch-last-text { font: 500 10px var(--font-mono); fill: var(--color-on-navy); }
+.ch-cell { stroke: var(--color-hairline); stroke-width: .5; }
+.ch-cell--surface { fill: var(--color-surface); }
+.ch-cell--ink { fill: var(--color-surface); }
+.ch-cell--gain-1 { fill: var(--color-gain); fill-opacity: .18; }
+.ch-cell--gain-2 { fill: var(--color-gain); fill-opacity: .38; }
+.ch-cell--gain-3 { fill: var(--color-gain); fill-opacity: .62; }
+.ch-cell--gain-4 { fill: var(--color-gain); fill-opacity: .9; }
+.ch-cell--loss-1 { fill: var(--color-loss); fill-opacity: .18; }
+.ch-cell--loss-2 { fill: var(--color-loss); fill-opacity: .38; }
+.ch-cell--loss-3 { fill: var(--color-loss); fill-opacity: .62; }
+.ch-cell--loss-4 { fill: var(--color-loss); fill-opacity: .9; }
+.ch-table td, .ch-table th { font-size: 12px; }
+
 /* TICKET-988: Your numbers */
 .numbers__top { color: var(--color-faint); }
 .numbers__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-4); }
