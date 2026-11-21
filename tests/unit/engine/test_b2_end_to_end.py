@@ -241,7 +241,6 @@ def test_below_the_minimum_sample_is_not_enough_evidence_with_the_reason_stored(
 # M1 fits of TICKET-897, not the machine, so the platform excuse is withdrawn and the fit
 # runs in the research-fits job. The 0.65 bar is a committed research threshold and is not
 # moved here. TICKET-975 holds the reference environment.
-@pytest.mark.research_fit
 def test_b2_fires_on_a_planted_trader_and_is_silent_on_a_clean_one():
     """The point of step D. A trader with a planted 0.5R post-loss leak: the
     statistical core fires - real, big enough, and the hold-out agrees. A clean trader:
