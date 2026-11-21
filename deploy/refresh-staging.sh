@@ -31,7 +31,8 @@
 #  6. DNS: an A record staging.scope.plusev.in -> the droplet's address (founder, at the
 #     registrar). Wait until `dig +short staging.scope.plusev.in` answers it.
 #  7. cp /srv/scope-staging/deploy/Caddyfile /etc/caddy/Caddyfile
-#     caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile && systemctl reload caddy
+#     ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy
+#     (the staging block reads its user and hash from that file, as systemd hands them to Caddy)
 #     Let's Encrypt issues the certificate on this first reload.
 #  8. Run this script.
 set -Eeuo pipefail
