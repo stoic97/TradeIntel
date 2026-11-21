@@ -50,8 +50,11 @@ SAID = {
 
 def render(case: str) -> str:
     name = case.split("#")[0]
+    # TICKET-915 (gate 5): the day's rupees wait for an answer or a skip. These cases pin
+    # the page once they are shown; the hidden page is pinned in test_journal_day_figures_915.
     return template_env().get_template(name).render(
-        title="T", csrf_token="x", changed_ids={3}, earlier_id=2, **CONTEXT[case]
+        title="T", csrf_token="x", changed_ids={3}, earlier_id=2, show_figures=True,
+        **CONTEXT[case]
     )
 
 
