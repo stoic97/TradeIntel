@@ -43,12 +43,14 @@ def chaser(table: pm.BarTable, n: int = 600, seed: int = 11) -> list[pm.Entry]:
     rng = np.random.default_rng(seed)
     hour = timedelta(minutes=max(pm.HORIZONS))
     starts = [t for t in sorted(table.bars)
-              if t - timedelta(minutes=1) in table.bars and t + hour in table.bars]
+              if t - timedelta(minutes=2) in table.bars and t - timedelta(minutes=1) in table.bars
+              and t + hour in table.bars]
     entries = []
     for k in rng.choice(len(starts), size=n, replace=False):
         minute = starts[int(k)]
-        before = table.bars[minute - timedelta(minutes=1)]
-        direction = 1 if before.close > before.open else -1
+        last = table.bars[minute - timedelta(minutes=1)]
+        one_before = table.bars[minute - timedelta(minutes=2)]
+        direction = 1 if last.close > one_before.close else -1  # close to close (D2)
         entries.append(pm.Entry(trip_id=f"t{k}", underlying="NIFTY",
                                 entry_ts=minute + timedelta(seconds=int(rng.integers(0, 60))),
                                 direction=direction))
@@ -103,7 +105,8 @@ def test_before_reads_only_the_minute_that_closed_before_the_entry_minute(table)
     minute = datetime(2026, 6, 2, 11, 0, tzinfo=IST)
     entry = pm.Entry("x", "NIFTY", minute + timedelta(seconds=40), 1)
     bars = dict(table.bars)
-    bars[minute - timedelta(minutes=1)] = pm.Bar(open=100.0, close=101.0)
+    bars[minute - timedelta(minutes=2)] = pm.Bar(open=99.0, close=100.0)
+    bars[minute - timedelta(minutes=1)] = pm.Bar(open=100.0, close=101.0)  # 100 to 101: with him
     first = pm.count([entry], {"NIFTY": dataclasses.replace(table, bars=bars)})
     bars[minute] = pm.Bar(open=101.0, close=50.0)  # the entry minute itself falls hard
     second = pm.count([entry], {"NIFTY": dataclasses.replace(table, bars=bars)})
@@ -123,7 +126,9 @@ def test_after_is_measured_from_the_close_of_the_entry_minute(table):
 def test_a_flat_minute_does_not_agree_with_either_side(table):
     minute = datetime(2026, 6, 2, 11, 0, tzinfo=IST)
     bars = dict(table.bars)
-    bars[minute - timedelta(minutes=1)] = pm.Bar(open=100.0, close=100.0)
+    # Close to close there is no move (100 then 100), though the bar itself rose inside its minute.
+    bars[minute - timedelta(minutes=2)] = pm.Bar(open=100.0, close=100.0)
+    bars[minute - timedelta(minutes=1)] = pm.Bar(open=99.0, close=100.0)
     series = {"NIFTY": dataclasses.replace(table, bars=bars)}
     for direction in (1, -1):
         result = pm.count([pm.Entry("x", "NIFTY", minute, direction)], series)
@@ -261,7 +266,8 @@ def _with_bars(table, *, drop=(), put=None):
 
 def test_a_missing_entry_minute_bar_does_not_drop_the_before_count(table):
     entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
-    series = _with_bars(table, drop=(0,), put={-1: pm.Bar(open=100.0, close=101.0)})
+    put = {-2: pm.Bar(open=99.0, close=100.0), -1: pm.Bar(open=100.0, close=101.0)}
+    series = _with_bars(table, drop=(0,), put=put)
     result = pm.count([entry], series)
     assert (result.before.agreed, result.before.measured) == (1, 1)
     assert result.unmeasured_before == ()
@@ -290,6 +296,38 @@ def test_a_missing_horizon_bar_drops_only_that_horizon(table):
 
 
 def test_each_missing_bar_has_a_reason_that_names_it():
-    reasons = {pm.Reason.NO_PRIOR_BAR, pm.Reason.NO_ENTRY_BAR, pm.Reason.NO_HORIZON_BAR}
-    assert len({r.value for r in reasons}) == 3
+    reasons = {pm.Reason.NO_PRIOR_BAR, pm.Reason.NO_BAR_TWO_BEFORE, pm.Reason.NO_ENTRY_BAR,
+               pm.Reason.NO_HORIZON_BAR}
+    assert len({r.value for r in reasons}) == 4
     assert not hasattr(pm.Reason, "NO_BAR")  # the generic "no bar for that minute" is gone
+
+
+def test_the_minute_before_is_read_close_to_close_not_open_to_close(table):
+    # D2, ruled b: the bar before the entry minute is read from the close of the bar before it to
+    # its own close. Its own open does not enter.
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    # The bar rose inside its own minute (100 to 101) but closed below the 102 the bar before it
+    # closed at: from close to close the market fell, against a long.
+    put = {-2: pm.Bar(open=101.0, close=102.0), -1: pm.Bar(open=100.0, close=101.0)}
+    result = pm.count([entry], _with_bars(table, put=put))
+    assert (result.before.agreed, result.before.measured) == (0, 1)
+    # The bar fell inside its own minute (102 to 101) but closed above the 100 before it: up.
+    put = {-2: pm.Bar(open=99.0, close=100.0), -1: pm.Bar(open=102.0, close=101.0)}
+    result = pm.count([entry], _with_bars(table, put=put))
+    assert (result.before.agreed, result.before.measured) == (1, 1)
+
+
+def test_a_missing_bar_two_before_drops_only_the_before_count_and_names_that_bar(table):
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    put = {0: pm.Bar(open=100.0, close=100.0), 5: pm.Bar(open=100.0, close=110.0)}
+    result = pm.count([entry], _with_bars(table, drop=(-2,), put=put))
+    assert result.before.measured == 0
+    assert result.unmeasured_before == (pm.Unmeasured("x", pm.Reason.NO_BAR_TWO_BEFORE),)
+    assert result.unmeasured == ()
+    assert all(result.after[h].measured == 1 for h in pm.HORIZONS)
+
+
+def test_with_both_bars_missing_the_reason_names_the_one_nearer_the_entry(table):
+    entry = pm.Entry("x", "NIFTY", MINUTE + timedelta(seconds=40), 1)
+    result = pm.count([entry], _with_bars(table, drop=(-2, -1)))
+    assert result.unmeasured_before == (pm.Unmeasured("x", pm.Reason.NO_PRIOR_BAR),)
