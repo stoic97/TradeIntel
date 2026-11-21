@@ -1,3 +1,6 @@
+# Who runs it: the engineer checking TICKET-891's prior-minute figure against a real history.
+# When: by hand, on a real 1-minute crude file and a trips CSV that both stay outside the repo.
+# Writes: nothing, except a per-trip CSV when --per-trip is given; keep that file outside git.
 """TICKET-898: an independent count of the prior-minute figure.
 
 Written from docs/trade_dna_research_spec_v1_0.md s4.7 and the raw 1-minute bars only.
