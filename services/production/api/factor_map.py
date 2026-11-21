@@ -85,7 +85,7 @@ FACTORS: tuple[Factor, ...] = (
     # Clock
     F("Clock", "Hour you opened", K.AT_CLICK, S.WORKED_OUT, checks=("S1",),
       filters=("hour",), facts=("clock",)),
-    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("closed",)),
+    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("closed", "closed_day")),
     F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year",)),
     F("Clock", "Around a scheduled release", K.BEFORE, S.HELD, checks=("S10",)),
     # Sequence
