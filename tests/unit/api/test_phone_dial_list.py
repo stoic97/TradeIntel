@@ -56,7 +56,7 @@ ON_MAIN = {
     "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
+                          "80e660cad35f1b6d1160fd02dd803a7cd5bb471f6ae44f41960d9a06a450a1dd"],  # desktop: 1001 adds a wedge
     "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
                           "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
@@ -66,7 +66,7 @@ CHAPTERS_ON_MAIN = {
     (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
     (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
+    (2, "desktop"): "4c1c58015e784dd70c3fac39624bdee568b0f198afa53ead22b20cc8e3c2a88c",  # 1001's wedge
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
     (3, "desktop"): "9224b880ab89b1d829e0a95a1a178dae6459d414512552236f544902dc58a24e",
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
@@ -75,6 +75,8 @@ CHAPTERS_ON_MAIN = {
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
+OFF_THE_PHONE_DIAL = {"after"}
+"""Facts added after the dial, each in the list under its chapter's phone dial (1001's after)."""
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 
@@ -94,7 +96,8 @@ LATER = S.Fact("down", "After two straight losses", "down", on_phone_dial=False)
 @pytest.fixture()
 def later(monkeypatch):
     two = S.CHAPTERS[1]
-    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*two.facts, LATER)), *S.CHAPTERS[2:])
+    on_dial = tuple(f for f in two.facts if f.on_phone_dial)  # main's chapter 2, then one later fact
+    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*on_dial, LATER)), *S.CHAPTERS[2:])
     monkeypatch.setattr(S, "CHAPTERS", chapters)
     return SF.chapter_view(2, SF.facts(CTX, IMP))
 
@@ -103,7 +106,7 @@ def later(monkeypatch):
 
 def test_every_fact_says_whether_it_sits_on_the_phone_dial():
     assert {f.key for c in S.CHAPTERS for f in c.facts if f.on_phone_dial} == ON_THE_PHONE_DIAL
-    assert all(f.on_phone_dial for c in S.CHAPTERS for f in c.facts)  # every fact on main stays on it
+    assert {f.key for c in S.CHAPTERS for f in c.facts if not f.on_phone_dial} == OFF_THE_PHONE_DIAL
 
 
 # ---------- nothing else moves ----------
@@ -121,7 +124,9 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
-        assert "scope__list" not in html, path
+        off = any(not f.on_phone_dial for c in S.CHAPTERS for f in c.facts
+                  if path in (f"/mirror/chapter/{c.number}",))
+        assert ("scope__list" in html) == off, path
 
 
 # ---------- a fact off the phone dial ----------
@@ -135,7 +140,7 @@ def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
 
 
 def test_the_desktop_keeps_chapter_order_and_clears(later):
-    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
+    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.chapter(2).facts]
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
     items = later["desktop_items"]

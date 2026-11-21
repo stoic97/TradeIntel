@@ -12,7 +12,8 @@ from services.production.api import scope_map as S
 
 
 def test_the_chapter_has_three_facts_and_the_merged_one_is_first():
-    assert [f.key for f in S.chapter(2).facts] == ["math", "run", "clock"]
+    # Three until the after-you-clicked fact joined them, after the clock.
+    assert [f.key for f in S.chapter(2).facts] == ["math", "run", "clock", "after"]
     assert S.FACTS["math"].title == "Your wins and losses"
     assert "hold" not in S.FACTS and "strike" not in S.FACTS
 

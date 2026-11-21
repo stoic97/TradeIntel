@@ -33,7 +33,7 @@ def test_the_chapters_and_facts_are_the_handoffs():
     share as a line on worst days."""
     assert [(c.number, c.name, [f.key for f in c.facts]) for c in S.CHAPTERS] == [
         (1, "Where your results came from", ["hidden", "worst-days", "money"]),
-        (2, "Your patterns", ["math", "run", "clock"]),
+        (2, "Your patterns", ["math", "run", "clock", "after"]),
         (3, "Your behaviour", ["down", "busiest"]),
         (4, "What we read", ["unread", "risk", "not-told"]),
     ]
@@ -41,17 +41,21 @@ def test_the_chapters_and_facts_are_the_handoffs():
 
 
 def test_every_fact_has_a_chart_the_geometry_draws():
+    # The hold and strike charts stay in the geometry, pinned there, with no fact drawing them.
+    # After you clicked is not one of the kit's charts, which CHARTS holds to the kit's
+    # JavaScript byte for byte; its own module draws it in the kit's shape.
+    from services.production.api import after_clicked
     from services.production.api import scope_geometry as G
 
-    # The hold and strike charts stay in the geometry, pinned there, with no fact drawing them.
-    assert {f.chart for f in S.FIGURES.values()} <= set(G.CHARTS)
+    assert {f.chart for f in S.FIGURES.values()} - {"after"} <= set(G.CHARTS)
+    assert "after" not in G.CHARTS and callable(after_clicked.geometry)
 
 
 def test_every_fact_title_is_a_heading_the_mirror_already_uses():
     """Handoff 6: the Mirror's own headings, word for word."""
     mirror = mirror_sentences()
     for f in S.FACTS.values():
-        if f.key in ("share", "math", "run", "busiest", "hidden"):
+        if f.key in ("share", "math", "run", "busiest", "hidden", "after"):
             continue  # told inside another section's sentences, or a new title (D9)
         assert f.title in mirror, f.key
 
