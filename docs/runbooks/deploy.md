@@ -251,6 +251,16 @@ in `docs/runbooks/uat-smoke.md` on a phone and a laptop. Results go in the loop 
 check), on the train page (`trains/<date>.md`), and as a `uat-pass` / `uat-fail` label on
 each Jira ticket. The tester's page there, `onboarding/tester.md`, is the whole station.
 
+**A train's results, in one query.** The deployer reads them in Jira, not ticket by ticket:
+
+    project = TICKET AND labels in (uat-pass, uat-fail) AND key in (<the train's tickets>)
+
+A ticket the query doesn't return has no result yet, and the train is not tagged.
+`labels = needs-yes` lists the drafted gates held for the founder's yes. Jira makes a label
+the first time it is used, so there is nothing to set up: the first tester's Pass is what
+creates `uat-pass` (ruled 21 Nov 2026, TICKET-1014). Never add `uat-pass` to test the
+label: a Pass is recorded only by a tester who saw the gate true on staging.
+
 Nothing is tagged until every ticket on the train has a result and the smoke pass is a
 Pass on both devices. A Fail does not stop the train if the founder takes that ticket off
 it: its fix rides the next train.
