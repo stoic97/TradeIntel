@@ -56,7 +56,12 @@ def test_a_page_draws_the_dial_the_kit_draws(key):
         view["items"][0]["mini"] = G.chart_read(40, 40, dial.MINI_W, dial.MINI_H, True)
         view["items"][2]["mini"] = G.chart_notold(dial.MINI_W, dial.MINI_H, True)
         want = G.render_dial_svg(
-            G.build_dial(case["view"], "phone", dial.OPTS),
+            G.build_dial(  # each mini as wide as its wedge clears, as the page draws it (TICKET-1036)
+                {**case["view"], "items": dial.fitted(case["view"]["items"],
+                                                      G.SIZES["phone"]["figSizesChapter"])},
+                "phone",
+                dial.OPTS,
+            ),
             {
                 "read": G.render_chart(view["items"][0]["mini"]),
                 "notold": G.render_chart(view["items"][2]["mini"]),

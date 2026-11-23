@@ -165,6 +165,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .chart--on-navy .chart__axis { stroke: var(--color-muted); }
 .chart--on-navy .chart__stroke, .chart--on-navy .chart__dash { stroke: #FFFFFF; }
 .chart--on-navy .chart__hatch { fill: none; stroke: #FFFFFF; stroke-opacity: .5; }
+.chart__label { fill: var(--color-faint); font-family: var(--font-mono); font-size: 8px; }  /* a count under its bar in a dial mini (TICKET-1036) */
+.chart--on-navy .chart__label { fill: var(--color-on-navy-soft); }
 .chart--not-enough { opacity: .5; }
 
 /* ---------- Data table ---------- */

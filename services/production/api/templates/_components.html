@@ -103,7 +103,7 @@
 {#- A chart from scope_geometry.CHARTS (each part a path, its role a .chart__ class).
     Its size is the chart's own: 350 x 96 on a fact page, 302 wide in a story card. -#}
 {% macro chart(c, cls="") -%}
-<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg>
+<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}{% for l in c.labels or [] %}<text class="chart__label" x="{{ l.x }}" y="{{ l.y }}" text-anchor="middle">{{ l.t }}</text>{% endfor %}</svg>
 {%- endmacro %}
 
 {#- A figure on a fact page: its number and caption, the chart, then - from a call

@@ -3,4 +3,4 @@
 
 from __future__ import annotations
 
-KIT_SHA = "01e8fe7836a1d3a9364111f14807399e041d0c3cd6fa3f4d164e4f857aa0d04d"
+KIT_SHA = "afb69ca1d998f06b1a49420343e60ae899b6aaf7886d4574f8fe594b975699c4"  # TICKET-1036: .chart__label

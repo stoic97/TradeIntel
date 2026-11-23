@@ -19,7 +19,7 @@ from services.production.api import dial as D
 from services.production.api import formatting
 from services.production.api import scope_geometry as G
 from services.production.api.app import create_app
-from tests.helpers.scope_chapters import CTX, FIGS, IMP, TRIPS
+from tests.helpers.scope_chapters import CTX, FIGS, TRIPS
 from tests.unit.api import figure_pages as P
 
 KIT_CSS = Path("docs/design/scope-kit/static/css/components.css")
@@ -82,10 +82,11 @@ def test_the_run_steps_down_one_loss_at_a_time():
 def test_busiest_day_is_two_counts_with_their_numbers():
     days = CTX["days"]
     mini = FIGS["busiest"]["mini"]
-    assert mini == G.chart_counts(days.busiest_trips, float(days.normal_day), D.MINI_W, D.MINI_H)
-    assert [lb["t"] for lb in mini["labels"]] == [
-        formatting.count(days.busiest_trips), formatting.count(days.normal_day)
-    ]
+    said = [formatting.count(days.busiest_trips), formatting.count(days.normal_day)]
+    assert mini == G.chart_counts(
+        days.busiest_trips, float(days.normal_day), D.MINI_W, D.MINI_H, said
+    )
+    assert [lb["t"] for lb in mini["labels"]] == said
 
 
 def test_the_clock_marks_the_hour_its_figure_names():

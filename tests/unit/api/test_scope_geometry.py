@@ -99,7 +99,7 @@ CHART_IDS = [f"{c['kind']}-{c['w']}x{c['h']}-{j}" for j, c in enumerate(CASES["c
 
 @pytest.mark.parametrize("case", CASES["charts"], ids=CHART_IDS)
 def test_chart(case):
-    args = [*case["args"], case["w"], case["h"]]
+    args = [*case["args"], case["w"], case["h"], *case.get("tail", [])]
     if case["kind"] in {"share", "hold", "strike", "run", "down", "read", "risk", "notold"}:
         args.append(case["mini"])
     got = G.CHARTS[case["kind"]](*args)
@@ -115,5 +115,5 @@ def test_trade_strip(times, width, height, want):
 
 def test_every_recorded_dial_view_is_checked():
     # A view added to record.js without a test above would pass silently; this one would not.
-    assert len(CASES["dials"]) == 13
-    assert len(CASES["charts"]) == 52
+    assert len(CASES["dials"]) == 15
+    assert len(CASES["charts"]) == 52 + 36  # TICKET-1036: six dial forms, three inputs, two sizes
