@@ -536,3 +536,10 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
+
+/* A signed figure stays with its sign: "+" never ends a line before "₹47,602". */
+.nowrap { white-space: nowrap; }
+
+/* The best and worst five's days, one line per group above the bars (the kit's grid had a column
+   per date, which put ten dates in a row that no bar lines up with). */
+.money-days { grid-template-columns: 1fr; text-align: left; gap: var(--space-1); }

@@ -363,10 +363,8 @@ def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list
         out: dict[str, Decimal] = {}
         if verdict.options_trades:
             out["Option trades"] = verdict.options_net
-        for book in verdict.books:
+        for book in verdict.books:  # each book by its own name; the stocks are a book of their own
             out[book.label] = book.net
-        if verdict.others_trades:
-            out["Other trades"] = verdict.others_net
         out["Your five worst days"] = mx.five_worst_days(trips).sum
         return out
 

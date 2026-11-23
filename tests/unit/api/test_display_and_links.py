@@ -66,7 +66,7 @@ def test_every_link_on_every_sample_page_opens(app):
             continue
         for href in HREF.findall(r.text):
             href = unescape(href)
-            if href.startswith("/journals"):
+            if re.match(r"/journals/\d", href):  # one of his Journals; the nav's tab is every page's
                 journal_links.append((path, href))
             if href.startswith("/sample") and href.split("?")[0] not in seen:
                 queue.append(href.split("#")[0])
@@ -79,7 +79,7 @@ def test_every_link_on_every_sample_page_opens(app):
 
 def test_the_report_card_says_one_trade(demo):
     home = text(demo.get("/").text)
-    assert "1 trades" not in home
+    assert not re.search(r"\b1 trades", home)
     assert re.search(r"Stocks, ETFs and futures \+₹[\d,]+ · 1 trade\b", home)
 
 

@@ -247,19 +247,21 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 
 # ---------- 2. the home card draws through it, byte for byte ----------
 
-# sha256 of the card's HTML for every book and timeframe on the demo file, taken on 987's
-# branch before the card used the toolkit. The demo file is synthetic.
+# sha256 of the card's HTML for every book and timeframe on the demo file. Taken on 987's branch
+# before the card used the toolkit; moved once, on purpose, by 1027 (month names on the month
+# view, the axis label under the last tag dropped, the count label ending inside the chart).
+# The demo file is synthetic.
 BEFORE = {
-    "all/d": "0de84ee2fe1ba980a63acc449b528b569520aad70285d1ec92a6d714f64a9ac7",
-    "all/w": "123d83ce13e6a879dfaed25ab6c0ed2db83ca382943515de8eb1f691949a885c",
-    "all/m": "390f2b1a586a1609e2524712306efb923329d2eea598af42b6c782055f8742f6",
-    "crude-options/d": "e96f4538e617eacc15866359fdd8dd0a2a94dfab138e9d3755a629ccdcc1cb23",
-    "crude-options/w": "1f78c57df264b611cee51957b7ebe5fcf77a545b7bf7eae2bc192a531dc246c7",
-    "crude-options/m": "fa1fbfc2e0a2b9dd6ce93fd48fb242be8d964bf69e2182730529fba87cad7c84",
-    "nifty-options/d": "2baa3f20b843f313e3daf8f37d63f0720d7480be6db6e0124080602383ce4cdd",
-    "nifty-options/w": "e0f80c18007b68f7a7287f8f418323ff215973801d2aa0cdc3d506a51c822314",
-    "nifty-options/m": "d254898f74f3c04018606d957a4668db370c9d9ab0006bc0d903d0ceaf1a3230",
-    "default": "123d83ce13e6a879dfaed25ab6c0ed2db83ca382943515de8eb1f691949a885c",
+    "all/d": "ab1f11ca46297c068972c86d1b4490de6ad9d46420f70a06c4d73167d754ee2c",
+    "all/w": "59b59bd1b2d0be59e0d85a922a48a458b1b72d7a62bec9d0cab3df38ffa0e107",
+    "all/m": "365c823fb1d0984dbbacfdcf663ff08daf54af1a34570a6699d4f1c4c01f4e29",
+    "crude-options/d": "f2fc5b836dcc0324d371ed1207d78f8a014bc30668312399812bdae78b63c5db",
+    "crude-options/w": "8ae4e2ed5780ed509d62bea56a2f71a02d2274fbd2975ff00112c2a59f65a524",
+    "crude-options/m": "b829f864a6b180980d31bffb9e56830a28f9447e288dac2e4978b4a9c3c5950c",
+    "nifty-options/d": "61788fffe8e26aebb843082ebf0f2ede0c29c9ab141679face41ac7267928afb",
+    "nifty-options/w": "fb1d1fb874e1f2451d78de7d575a1c2d07ac6b337df027118cbb35e26ed5f45c",
+    "nifty-options/m": "c3be4c59c3086e103110c6d1ddcfa5cd4181eac58087deb28e68d2a2152e0bd7",
+    "default": "59b59bd1b2d0be59e0d85a922a48a458b1b72d7a62bec9d0cab3df38ffa0e107",
 }
 
 
