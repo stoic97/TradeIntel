@@ -78,17 +78,21 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
         """A day's trades: its day page when one opened then, else the trades closed that day."""
         return day_href(iso) or closed_day_href(iso)
 
+    # The tiles are trading figures: same-day trades only. A position held past the day is said
+    # on its own line (``held``) and mixed into none of them (the ruling of 23 Nov 2026).
+    same = [t for t in ordered if t.closed_same_day] or ordered
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
-    for t in ordered:  # in date order, so a tie goes to the earlier day
+    for t in same:  # in date order, so a tie goes to the earlier day
         day = t.exit_ts.date().isoformat()
         by_day[day] = by_day.get(day, Decimal(0)) + t.net
         per_day[day] += 1
     best = max(by_day.items(), key=lambda kv: kv[1])
     worst = min(by_day.items(), key=lambda kv: kv[1])
     busiest = max(per_day.items(), key=lambda kv: kv[1])
-    strike, even = mx.strike_rate(trips), mx.break_even(trips)
-    months = mx.running_result(trips).candles["month"]
+    strike, even = mx.strike_rate(same), mx.break_even(same)
+    months = mx.running_result(same).candles["month"]
+    held = mx.held_past_day(trips)
 
     tiles = {
         "winner": {"value": even.average_winner, "count": strike.wins,
@@ -99,7 +103,7 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
         "worst_day": {"value": worst[1], "day": worst[0], "href": any_day_href(worst[0])},
         "months": {"made": sum(1 for c in months if c.net > 0), "of": len(months),
                    "href": _trades()},
-        "per_day": {"value": (Decimal(len(trips)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
+        "per_day": {"value": (Decimal(len(same)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
                     "most": busiest[1], "day": busiest[0], "href": day_href(busiest[0])},
     }
 
@@ -120,6 +124,7 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
         "trades": len(trips), "first": ordered[0].exit_ts.date().isoformat(),
         "last": ordered[-1].exit_ts.date().isoformat(), "gross": gross, "minimum": MINIMUM,
         "tiles": tiles, "expiry": _rows(expiry_rows),
+        "held": {"count": held.count, "net": held.net},
         "no_expiry": no_expiry, "books": _rows(book_rows),
     }
 

@@ -253,17 +253,19 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # column adds up to its own "Ended at". That column is left out of the digest (its own test is
 # test_figures_agree); everything else on the card is still pinned byte for byte, and these
 # digests are main's own with the column left out. The demo file is synthetic.
+# Re-pinned for 1026: the card now says "same-day trades" beside needed, and names the demo's one
+# held position in its Result note; made money and needed read same-day trades. Nothing else moved.
 BEFORE = {
-    "all/d": "3b036ca93081bbf9d8c882f43e35ca52e1f2e92a3bff59fae2e781a98bb44dbf",
-    "all/w": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
-    "all/m": "349e561911eadedeffac461a70489223c5e8fe0b7c3a643e71f7e8fe017073d0",
-    "crude-options/d": "69f4355dc0f5d7a3ad4e189b83588b269b2ac9d4a2a027378d3ff03c6f28628a",
-    "crude-options/w": "3d60ff3d23c3c9a1478345c70eafeeda73778ecfc4284dda75c44cae1fe6a8ab",
-    "crude-options/m": "1dd60a894996bd51ca7daa93531287fb6b6b8fecdc49f2b3e578941030e9f54b",
-    "nifty-options/d": "7105cf9f38709c962606f21f47a848f0ed3a1eef3aca585d992134fc64007a9f",
-    "nifty-options/w": "cb305676a84a4ce42ee4ee2f2a08f2df91df6a62f15c3e9358e8ea1907acd674",
-    "nifty-options/m": "bb398663d8c2e8ea2c5326f5de419983a46a448b9dfe66955e8d5f4fbc9598fd",
-    "default": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
+    "all/d": "858689c74343636ce23a5bbcabd1ff54f8ba87af5dfe359aaf79967535addef8",
+    "all/w": "e16c16da745dfc3a86664df4eda8f6635491c2b74c23974960cd2c4c58d10fba",
+    "all/m": "176cd5767e16ccea9bbefab5ffc337b7f5fe8a66a338ff4ec6caa24397aec32c",
+    "crude-options/d": "68e7ff4a0389943ccb9fb7789699f5f32b1675f04f5795b33e78ee6b64a44389",
+    "crude-options/w": "3adc043492909f73869a1577b3b7d0e9155b72ae80ba4b3385321a13ab58c74e",
+    "crude-options/m": "98da811af2713a802a5f5aec053decf58ea619ad7c7c80623a93b1689fdb2ae2",
+    "nifty-options/d": "75ba5c0e8133ab4e12686fe6a676ce0eaf9abb0d8760e14ea7a6adc497a40ccf",
+    "nifty-options/w": "1d2be52f7022617bcacde45937fcfdb4279577b59c71fa97a1a51bf4c864a70a",
+    "nifty-options/m": "8c3ac17bda5fc8428c705f87e561afd14b30292db559b4bccdd3341339ccc374",
+    "default": "e16c16da745dfc3a86664df4eda8f6635491c2b74c23974960cd2c4c58d10fba",
 }
 
 

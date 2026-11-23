@@ -54,7 +54,7 @@ def history_facts(history: list[Trip]) -> dict[str, dict[str, Any]]:
     the finding bar read (a position held past the day has not closed when the next trade
     opens), over the days he closed a same-day trade, the days chapter 3 counts (855).
     """
-    day_counts = mx.day_counts(history)
+    day_counts = mx.day_counts(mx.same_day_trips(history))  # chapter 3's normal day (855)
     condition = mx.two_straight_losses(mx.same_day_trips(history))
     condition_ids = set(condition.condition_trip_ids)
     return {

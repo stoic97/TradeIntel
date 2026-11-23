@@ -192,10 +192,12 @@ def test_a_day_with_no_trades_opens_nothing():
     assert cells(view)["2026-02-04"]["href"] is None
 
 
-def test_the_best_day_tile_takes_the_same_link_when_nothing_opened_that_day():
+def test_the_best_day_tile_reads_same_day_trades_and_opens_its_day():
+    # 1026: the tiles read same-day trades, so t09 (opened 26 Feb, closed 27 Feb) is held past the
+    # day and in no tile. Same-day days: 30 Jan +600 and 3 Feb +700, so the best day is 3 Feb.
     v = N.build(RECORD, {}, gross=True)
-    assert v["tiles"]["best_day"]["day"] == "2026-02-27"
-    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-27"
+    assert v["tiles"]["best_day"]["day"] == "2026-02-03"
+    assert v["tiles"]["best_day"]["href"] == "/mirror/day/2026-02-03"
     assert v["tiles"]["worst_day"]["href"] == "/mirror/day/2026-02-02"
 
 
