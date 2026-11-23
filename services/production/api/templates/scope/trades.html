@@ -23,8 +23,20 @@
     {%- if listing.filtered %}
     <p class="trade-filters__clear"><a href="{{ listing.clear_href }}">Clear filters</a></p>
     {%- endif %}
+    {%- if listing.shown > 1 %}
+    <p class="trade-sorts body-small">Sort: {% for x in listing.sorts %}{% if x.on %}<span class="trade-sorts__on" aria-current="true">{{ x.label }}</span>{% else %}<a class="link" href="{{ x.href }}">{{ x.label }}</a>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {%- endif %}
     {%- if listing.shown %}
-    {{ trades(listing.groups) }}
+    {%- if listing.pages > 1 %}
+    <p class="trade-pager__range body-small">Trades <span class="num">{{ Figure(listing.first, "trade") }}</span>–<span class="num">{{ Figure(listing.last, "trade") }}</span> of <span class="num">{{ Figure(listing.shown, "trades")|count }}</span>.</p>
+    {%- endif %}
+    {{ trades(listing.groups, dense=true) }}
+    {%- if listing.pages > 1 %}
+    <nav class="trade-pager" aria-label="More trades">
+      {%- if listing.prev_href %}<a class="link" href="{{ listing.prev_href }}">Show the previous 100</a>{% endif %}
+      {%- if listing.next_href %}<a class="btn btn--secondary btn--block" href="{{ listing.next_href }}">Show the next 100</a>{% endif %}
+    </nav>
+    {%- endif %}
     {%- else %}
     <p class="body">No trades match these filters.</p>
     {%- endif %}

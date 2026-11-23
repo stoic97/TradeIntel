@@ -21,6 +21,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from services.production.api import formatting
 from services.production.api import scope_map as S
@@ -175,6 +176,25 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+PAGE_SIZE = 100
+"""Trades on one page of a list. Every trade is on exactly one page, and the
+count line says the whole list: paging splits the list, it never samples it."""
+
+DEFAULT_SORT = "oldest"
+SORT_KEYS: dict[str, Callable[[list[mx.Trip]], list[mx.Trip]]] = {
+    "newest": lambda ts: sorted(ts, key=lambda t: -t.entry_ts.timestamp()),
+    "oldest": lambda ts: list(ts),
+    "biggest-loss": lambda ts: sorted(ts, key=lambda t: t.net),
+    "biggest-win": lambda ts: sorted(ts, key=lambda t: -t.net),
+    "longest-held": lambda ts: sorted(ts, key=lambda t: -t.holding_seconds),
+}
+"""Each sort is stable over the list's own order (the order the trades were opened), so a tie
+goes to the earlier trade."""
+SORT_LABELS = {"newest": "Newest", "oldest": "Oldest", "biggest-loss": "Biggest loss",
+               "biggest-win": "Biggest win", "longest-held": "Longest held"}
+SORT_WORDS = {k: f"{v.lower()} first" for k, v in SORT_LABELS.items()}
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
@@ -240,6 +260,42 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
         if wanted:
             kept = {id(t) for t, choice in read if choice is not None and choice[1] == wanted}
             shown = [t for t in shown if id(t) in kept]
+    chosen = {f["name"]: c for f in drawn for c in f["choices"] if c["selected"]}
+    sort = query.get("sort", DEFAULT_SORT)
+    if sort not in SORT_KEYS:
+        sort = DEFAULT_SORT
+    pages = max(1, -(-len(shown) // PAGE_SIZE))
+    raw_page = query.get("page", "1")
+    page = min(max(int(raw_page), 1), pages) if str(raw_page).isdigit() else 1
+    start = (page - 1) * PAGE_SIZE
+
+    def href(**changes) -> str:
+        params = {name: c["value"] for name, c in chosen.items()}
+        params.update({"sort": sort if sort != DEFAULT_SORT else None, "page": page if page > 1 else None})
+        params.update(changes)
+        kept = {k: v for k, v in params.items() if v not in (None, "")}
+        return "?" + urlencode(kept) if kept else "?"
+
+    # A filtered risk list was opened from another page (Your numbers, the calendar, a process
+    # line): its risk-measure groups would say nothing about what is in it, so it reads as one
+    # group named by its filters. Any sort but the default reads as one group too, since a
+    # sort across groups is no longer the groups' order.
+    flat = sort != DEFAULT_SORT or (key == "risk" and bool(chosen))
+    if flat:
+        numbers = {t.trip_id: i for i, t in enumerate(ctx["trips"], start=1)}
+        ordered = SORT_KEYS[sort](shown)
+        words = [c["label"] for c in chosen.values()]
+        if sort != DEFAULT_SORT:
+            words.append(SORT_WORDS[sort])
+        title = " · ".join(words)
+        groups = [{
+            "title": title[:1].upper() + title[1:],
+            "trade_count": len(ordered),
+            "net": sum((t.net for t in ordered), Decimal(0)),
+            "trades": [S.trade(t, numbers[t.trip_id]) for t in ordered[start:start + PAGE_SIZE]],
+        }] if ordered else []
+    else:
+        groups = _page_of(S.groups(key, ctx, only=shown), start)
     return {
         "filters": drawn,
         "filtered": len(shown) != len(behind) or any(
@@ -247,7 +303,31 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
         ),
         "shown": len(shown),
         "total": len(behind),
-        "groups": S.groups(key, ctx, only=shown),
+        "groups": groups,
         "clear_href": S.see_all_href(key),
+        "sorts": [{"value": v, "label": SORT_LABELS[v], "on": v == sort,
+                   "href": href(sort=v if v != DEFAULT_SORT else None, page=None)} for v in SORT_KEYS],
+        "page": page,
+        "pages": pages,
+        "first": start + 1 if shown else 0,
+        "last": min(start + PAGE_SIZE, len(shown)),
+        "next_href": href(page=page + 1) if page < pages else None,
+        "prev_href": href(page=page - 1 if page > 2 else None) if page > 1 else None,
     }
+
+
+def _page_of(groups: list[dict], start: int) -> list[dict]:
+    """One page of a grouped list: the groups' trades in order, a hundred of them. A group split
+    across pages keeps its whole count and result in its heading and says it continues."""
+    out, seen = [], 0
+    for g in groups:
+        n = len(g["trades"])
+        lo, hi = max(start - seen, 0), min(start + PAGE_SIZE - seen, n)
+        if lo < hi:
+            part = dict(g, trades=g["trades"][lo:hi])
+            if lo > 0:
+                part["title"] = f"{g['title']} (continued)"
+            out.append(part)
+        seen += n
+    return out
 

@@ -146,7 +146,8 @@ def test_the_list_page_is_light_paged_and_dense(client, engine):
     two_thousand(client)
     html = client.get("/mirror/fact/risk/trades").text
     assert len(html.encode()) < 150_000, len(html.encode())
-    assert html.count('<article class="trade trade--dense">') == 100
+    assert html.count('<article class="trade">') == 100
+    assert 'class="trades trades--dense"' in html
     assert "Show the next 100" in html
     assert '<details class="trade__more">' in html  # prices and premium behind a tap
     nxt = re.search(r'href="([^"]*page=2[^"]*)"', html).group(1).replace("&amp;", "&")
