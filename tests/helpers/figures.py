@@ -3,4 +3,4 @@
 
 from __future__ import annotations
 
-KIT_SHA = "01e8fe7836a1d3a9364111f14807399e041d0c3cd6fa3f4d164e4f857aa0d04d"
+KIT_SHA = "4c258d3593d09dbd84e9478c44cab99a046ea679a47bfba4f6b82ae816eaa134"

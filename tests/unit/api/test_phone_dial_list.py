@@ -49,18 +49,20 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
+# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, then
+# re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
+# views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
-                "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
-                          "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
-    "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38"],
-    "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
-                          "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
+    "/mirror": ["1337a013815fc05d60daec17ebd8bf70141cbfc5e5133fffecf89b3dc9994487",
+                "2d90544bf322d04babec32a745aa907a6886da2e8ea3ee227e769808e5075976"],
+    "/mirror/chapter/1": ["433fba89abf84d9c39564977e228d4dbe36d3a0fd732f01e4b2d0fbdeeba2a27",
+                          "fd6a1b3468fb431a53ab044bc5dafe70fc4e367998c59b1fc44134da7321b72e"],
+    "/mirror/chapter/2": ["b6c918062c340106c08879967f725702f43e9e5159b0a8eb87706161e23ef779",
+                          "39fe69032f7b69741e19e290360670836124d201b3a43c45fb0ae9ef7c01f302"],
+    "/mirror/chapter/3": ["3779667462bfb0fa671dfa7657976c3fb521497d45c77f8a21233f401455a6f7",
+                          "95c9988e4b01dce62086f17a9c0455febbe48706f42ec109c5af588fab43ffe0"],
+    "/mirror/chapter/4": ["9d9e251ad138b1ff8ae132906b013a47bc5a23c063947e146a7015442e5b3fa1",
+                          "30ca9d728d015b57316303eeb0aed23ffff42bbc433f83b76ed40bb3b3745656"],
 }
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",

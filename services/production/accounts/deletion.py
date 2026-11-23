@@ -127,6 +127,9 @@ def delete_trader(
     for model in (m.LeavingCardAnswer, m.LeavingCardShown):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
+    # The pages he opened, per upload (the dial's reading ring). Before the imports.
+    _delete_where(sess, m.FactRead, m.FactRead.trader_id == trader_id, removed)
+
     # His bar figures (TICKET-999). The market files hold no trader data and stay.
     _delete_where(sess, m.BarFigureJob, m.BarFigureJob.trader_id == trader_id, removed)
     if import_ids:
@@ -245,7 +248,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer,
-                  m.JournalRememberAnswer):
+                  m.JournalRememberAnswer, m.FactRead):
         if sess.scalars(select(model.id)
                         .where(model.trader_id == trader_id).limit(1)).first():
             found.append(model.__tablename__)

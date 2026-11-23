@@ -287,6 +287,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope__slice:focus { outline: none; }
 .scope__slice:focus-visible .scope__focus { stroke: var(--dial-line); }        /* focus ring: white on navy */
 .scope__opened { fill: var(--dial-line); }                                       /* opened: a dot near the rim, never a fill */
+/* The reading ring: one segment a wedge, read by weight on navy (no amber, no loss-red on navy). */
+.scope__progress-seg { fill: none; stroke: var(--dial-line); stroke-linecap: round; }
+.scope__progress-seg--unread { stroke-opacity: var(--dial-minor-opacity); stroke-width: 1.5; }   /* not opened yet: faint */
+.scope__progress-seg--opened { stroke-opacity: var(--dial-mid-opacity); stroke-width: 3; }      /* opened */
+.scope__progress-seg--current { stroke-opacity: 1; stroke-width: 5; }                          /* the one to read next: brightest */
 .scope__number { fill: var(--color-on-navy); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 .scope__figure { fill: var(--color-on-navy); font-family: var(--font-mono); font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .scope__figure--s15 { font-size: 15px; } .scope__figure--s18 { font-size: 18px; } .scope__figure--s22 { font-size: 22px; } .scope__figure--s32 { font-size: 32px; }
@@ -306,6 +311,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope__centre-caption { fill: var(--color-ink); font-size: 11px; }
 .scope__centre-name { fill: var(--color-ink); font-size: 11px; font-weight: 600; }
 .scope--desktop .scope__centre-name { font-size: 15px; }
+.scope__centre-read { fill: var(--color-faint); font-size: 10px; }
+.scope--desktop .scope__centre-read { font-size: 12px; }
 .scope__centre-scope { fill: var(--color-action-blue); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 .scope__centre-hit { fill: transparent; }
 .scope__centre-link:focus-visible .scope__centre-scope { text-decoration: underline; }
@@ -477,7 +484,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .feedback-demo__label { margin-top: var(--space-8); }
 
 /* Scope dial — group hooks used by motion.css */
-.scope__bezel, .scope__dividers { transform-origin: center; }
+.scope__bezel, .scope__progress, .scope__dividers { transform-origin: center; }
 .scope__figure--rupee, .scope__figure--plain { fill: var(--color-on-navy); }   /* rupees on navy: white with their sign */
 .scope__figure--state { fill: var(--color-on-navy-soft); }
 .scope__mini { pointer-events: none; }

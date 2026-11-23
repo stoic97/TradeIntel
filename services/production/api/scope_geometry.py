@@ -459,6 +459,11 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     is_home = view["kind"] == "home"
     sec = sectors(len(view["items"]), is_home)
     t = ticks(cx, cy, rr, sec["dividers"], 0)
+    # The reader's place: one state a wedge (unread | opened | current). Given, the ring
+    # replaces the ticks.
+    progress = view.get("progress")
+    reading = progress if isinstance(progress, list) and len(progress) == len(view["items"]) else None
+    ring_r = (rr["majorStart"] + rr["tickEnd"]) / 2
     lay = layout_contents(
         view["items"],
         sec,
@@ -513,7 +518,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     else ""
                 ),
                 "openedMark": polar(cx, cy, rr["inner"] - 3 * rr["u"], sl["mid"])
-                if it.get("opened")
+                if it.get("opened") and not reading
                 else None,
                 "contents": {
                     "x": q[0],
@@ -548,8 +553,15 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
         "outerRing": circle(cx, cy, rr["outer"]),
         "innerRing": circle(cx, cy, rr["inner"]),
         "ticks": t,
+        "progress": [
+            {"state": reading[i], "d": arc(cx, cy, ring_r, sl["start"] + 2, sl["end"] - 2)}
+            for i, sl in enumerate(sec["slices"])
+        ]
+        if reading
+        else [],
+        "progressLabel": (view.get("progressLabel") or "") if reading else "",
         "dividers": [radial(cx, cy, a, rr["divStart"], rr["divEnd"]) for a in sec["dividers"]],
-        "arc": "" if is_home else arc(cx, cy, rr["inner"], -43, 43),
+        "arc": "" if is_home or reading else arc(cx, cy, rr["inner"], -43, 43),
         "disc": circle(cx, cy, rr["disc"]),
         "centreRing": circle(cx, cy, rr["ring"]),
         "slices": slices,
@@ -595,6 +607,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if d["kind"] == "home"
         else "The Scope inside this chapter"
     )
+    if d["progressLabel"]:
+        label += f". {_esc(d['progressLabel'])}."
     o.append(
         f'<svg class="scope__svg" viewBox="{-pad} 0 {d["stageW"] + 2 * pad} {d["stageH"]}" '
         f'width="{d["stageW"] + 2 * pad}" height="{d["stageH"]}" role="img" aria-label="{label}">'
@@ -610,11 +624,18 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if s["dashed"]:
             o.append(f'<path class="scope__state-dashed" d="{s["dashed"]}"/>')
     tk = d["ticks"]
-    o.append(
-        f'<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="{tk["minor"]}"/>'
-        f'<path class="scope__tick scope__tick--mid" d="{tk["mid"]}"/>'
-        f'<path class="scope__tick scope__tick--major" d="{tk["major"]}"/></g>'
-    )
+    if d["progress"]:
+        segs = "".join(
+            f'<path class="scope__progress-seg scope__progress-seg--{p["state"]}" d="{p["d"]}"/>'
+            for p in d["progress"]
+        )
+        o.append(f'<g class="scope__progress">{segs}</g>')
+    else:
+        o.append(
+            f'<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="{tk["minor"]}"/>'
+            f'<path class="scope__tick scope__tick--mid" d="{tk["mid"]}"/>'
+            f'<path class="scope__tick scope__tick--major" d="{tk["major"]}"/></g>'
+        )
     o.append(f'<path class="scope__inner" d="{d["innerRing"]}"/>')
     if d["arc"]:
         o.append(f'<path class="scope__arc" d="{d["arc"]}"/>')
@@ -733,11 +754,19 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 cur = t
         if cur:
             lines.append(cur)
+        read = d["centre"].get("readLine") or ""
         lh = js_round(fs * 1.25)
-        tot = len(lines) * lh + 4 + 13
+        tot = len(lines) * lh + 4 + 13 + (13 if read else 0)
         o.append(
             _text_block(lines, d["cx"], d["cy"] - tot / 2, lh, fs, "center", "scope__centre-name")
         )
+        if read:
+            o.append(
+                _text_block(
+                    [read], d["cx"], d["cy"] - tot / 2 + len(lines) * lh + 2, 13, 10, "center",
+                    "scope__centre-read",
+                )
+            )
         scope_href = d["centre"].get("scopeHref") or "/scope"
         o.append(
             f'<a class="scope__centre-link" href="{scope_href}" aria-label="Scope out to all four chapters">'

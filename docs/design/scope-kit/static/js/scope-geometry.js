@@ -301,6 +301,9 @@
     const isHome = view.kind === 'home';
     const sec = sectors(view.items.length, isHome);
     const t = ticks(cx, cy, rr, sec.dividers, 0);
+    // The reader's place: one state a wedge (unread | opened | current). Given, the ring replaces the ticks.
+    const reading = Array.isArray(view.progress) && view.progress.length === view.items.length ? view.progress : null;
+    const ringR = (rr.majorStart + rr.tickEnd) / 2;
     const lay = layoutContents(view.items, sec, rr, isHome ? size.figSizesHome : size.figSizesChapter);
     const slices = sec.slices.map((sl, i) => {
       const it = view.items[i], b = lay.blocks[i], q = polar(cx, cy, lay.radius[i], sl.mid);
@@ -313,7 +316,7 @@
         lift: wedge(cx, cy, sl.start, sl.end, rr.divStart - 6 * rr.u, rr.inner),  // pressed: white at 10 %
         hatch: it.state === 'not-enough' ? wedge(cx, cy, sl.start, sl.end, rr.divStart, rr.inner) : '',
         dashed: it.state === 'not-in-file' ? wedge(cx, cy, sl.start + 1.5, sl.end - 1.5, rr.divStart + 3, rr.inner - 3) : '',
-        openedMark: it.opened ? polar(cx, cy, rr.inner - 3 * rr.u, sl.mid) : null,
+        openedMark: it.opened && !reading ? polar(cx, cy, rr.inner - 3 * rr.u, sl.mid) : null,
         contents: {
           x: q[0],
           numberY: top,                                  // top of the 11 px number line
@@ -332,8 +335,10 @@
       kind: view.kind, centre: view.centre || {},
       outerRing: circle(cx, cy, rr.outer), innerRing: circle(cx, cy, rr.inner),
       ticks: t,
+      progress: reading ? sec.slices.map((sl, i) => ({ state: reading[i], d: arc(cx, cy, ringR, sl.start + 2, sl.end - 2) })) : [],
+      progressLabel: reading ? (view.progressLabel || '') : '',
       dividers: sec.dividers.map((a) => radial(cx, cy, a, rr.divStart, rr.divEnd)),
-      arc: isHome ? '' : arc(cx, cy, rr.inner, -43, 43),     // inside a chapter: at the top, on the inner ring
+      arc: isHome || reading ? '' : arc(cx, cy, rr.inner, -43, 43),     // inside a chapter: at the top, on the inner ring
       disc: circle(cx, cy, rr.disc), centreRing: circle(cx, cy, rr.ring),
       slices, figSize: lay.figSize
     };
@@ -360,11 +365,12 @@
     miniCharts = miniCharts || {};
     const o = [];
     const pad = 40; // room for names outside the stage box on phone
-    o.push(`<svg class="scope__svg" viewBox="${-pad} 0 ${d.stageW + 2 * pad} ${d.stageH}" width="${d.stageW + 2 * pad}" height="${d.stageH}" role="img" aria-label="${d.kind === 'home' ? 'The Scope: four chapters of your story' : 'The Scope inside this chapter'}">`);
+    o.push(`<svg class="scope__svg" viewBox="${-pad} 0 ${d.stageW + 2 * pad} ${d.stageH}" width="${d.stageW + 2 * pad}" height="${d.stageH}" role="img" aria-label="${d.kind === 'home' ? 'The Scope: four chapters of your story' : 'The Scope inside this chapter'}${d.progressLabel ? '. ' + esc(d.progressLabel) + '.' : ''}">`);
     o.push('<defs><pattern id="scope-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/></pattern></defs>');
     o.push(`<path class="scope__outer" d="${d.outerRing}"/>`);
     d.slices.forEach((s) => { if (s.hatch) o.push(`<path class="scope__state-hatch" d="${s.hatch}"/>`); if (s.dashed) o.push(`<path class="scope__state-dashed" d="${s.dashed}"/>`); });
-    o.push(`<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="${d.ticks.minor}"/><path class="scope__tick scope__tick--mid" d="${d.ticks.mid}"/><path class="scope__tick scope__tick--major" d="${d.ticks.major}"/></g>`);
+    if (d.progress.length) o.push(`<g class="scope__progress">${d.progress.map((p) => `<path class="scope__progress-seg scope__progress-seg--${p.state}" d="${p.d}"/>`).join('')}</g>`);
+    else o.push(`<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="${d.ticks.minor}"/><path class="scope__tick scope__tick--mid" d="${d.ticks.mid}"/><path class="scope__tick scope__tick--major" d="${d.ticks.major}"/></g>`);
     o.push(`<path class="scope__inner" d="${d.innerRing}"/>`);
     if (d.arc) o.push(`<path class="scope__arc" d="${d.arc}"/>`);
     o.push(`<g class="scope__dividers">${d.dividers.map((p) => `<path class="scope__divider" d="${p}"/>`).join('')}</g>`);
@@ -390,8 +396,10 @@
     } else {
       const words = (d.centre.name || '').split(' '), maxW = R.disc * 1.55, fs = d.size === 'phone' ? 11 : 15, lines = []; let cur = '';
       words.forEach((w) => { const t = cur ? cur + ' ' + w : w; if (sansWidth(t, fs) > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }); if (cur) lines.push(cur);
-      const lh = Math.round(fs * 1.25), tot = lines.length * lh + 4 + 13;
+      const read = d.centre.readLine || '';
+      const lh = Math.round(fs * 1.25), tot = lines.length * lh + 4 + 13 + (read ? 13 : 0);
       o.push(textBlock(lines, d.cx, d.cy - tot / 2, lh, fs, 'center', 'scope__centre-name'));
+      if (read) o.push(textBlock([read], d.cx, d.cy - tot / 2 + lines.length * lh + 2, 13, 10, 'center', 'scope__centre-read'));
       o.push(`<a class="scope__centre-link" href="${d.centre.scopeHref || '/scope'}" aria-label="Scope out to all four chapters">${textBlock(['Scope'], d.cx, d.cy + tot / 2 - 13, 13, 11, 'center', 'scope__centre-scope')}<circle cx="${fmt(d.cx)}" cy="${fmt(d.cy)}" r="${fmt(R.disc)}" class="scope__centre-hit"/></a>`);
     }
     o.push('</svg>');

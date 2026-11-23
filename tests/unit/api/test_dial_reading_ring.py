@@ -147,12 +147,26 @@ def test_the_hub_marks_a_chapter_once_every_fact_in_it_is_open(reader):
     assert "scope__opened" not in client.get("/mirror").text  # the dots are gone
 
 
-def test_a_new_upload_starts_unread(reader):
-    _app, client = reader
+def test_a_new_upload_starts_unread():
+    """A second upload is a new import; what he opened in the first is not carried over."""
+    from fastapi.testclient import TestClient
+
+    from services.production.api.app import create_app
+    from services.production.db import models as m
+    from services.production.db.session import make_session
+    app = create_app()
+    client = TestClient(app)
+    P._sign_up(client, app.state.engine, "reader")
+    P._consent(client)
+    P._upload(client, P.CLEAN)
     key = S.chapter(2).facts[0].key
     client.get(f"/mirror/fact/{key}")
-    client.post("/upload/demo", data={"csrf_token": P._token(client, "/upload")},
-                follow_redirects=False)
+    assert "opened" in segments(_first_dial(client.get("/mirror/chapter/2").text))
+    again = P.CLEAN.read_bytes() + b"\n"  # the same trades, a new file: a new upload
+    client.post("/upload", files={"file": (P.CLEAN.name, again, "text/csv")},
+                data={"csrf_token": P._token(client, "/upload")}, follow_redirects=False)
+    with make_session(app.state.engine) as sess:
+        assert len(sess.scalars(select(m.Import.id)).all()) == 2
     assert "opened" not in segments(_first_dial(client.get("/mirror/chapter/2").text))
 
 
