@@ -536,3 +536,21 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
+
+/* Your win rate against break-even (the math page): a bar per book, the years on one scale. */
+.wins-gap { margin: var(--space-6) 0; }
+.wg-book { margin: var(--space-3) 0; }
+.wg-book__name { font-weight: 600; margin-right: var(--space-1); }
+.wg-bar, .wg-years { display: block; width: 100%; height: auto; }
+.wg-track { fill: var(--color-surface); }
+.wg-gap--short { fill: var(--color-loss); fill-opacity: .35; }
+.wg-gap--above { fill: var(--color-gain); fill-opacity: .35; }
+.wg-win { stroke: var(--color-ink); stroke-width: 2.5; }
+.wg-need { stroke: var(--color-ink); stroke-width: 2; stroke-dasharray: 3 2; }
+.wg-you { fill: none; stroke: var(--color-ink); stroke-width: 2; }
+.wg-even { fill: none; stroke: var(--color-faint); stroke-width: 2; stroke-dasharray: 4 3; }
+.wg-band { fill: var(--color-loss); fill-opacity: .12; stroke: none; }
+.wg-you-dot { fill: var(--color-ink); }
+.wg-even-dot { fill: var(--color-page); stroke: var(--color-faint); stroke-width: 1.5; }
+.wg-years__title { margin-top: var(--space-4); }
+.wg-figures { margin-top: var(--space-3); }

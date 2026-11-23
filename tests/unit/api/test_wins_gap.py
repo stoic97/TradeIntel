@@ -131,8 +131,9 @@ def test_every_book_shares_one_scale():
 
 def test_a_text_table_carries_every_figure_in_of_100():
     table = plain(view()["table"])
-    assert "NIFTY options 2024 40 trades 40 of 100 33 of 100" in table
-    assert "NIFTY options 2026 10 trades too few" in table
+    assert "Book Year Trades You win Break even at" in table
+    assert "NIFTY options 2024 40 40 of 100 33 of 100" in table
+    assert "NIFTY options 2026 10 too few" in table
 
 
 def test_no_adjective_and_no_percent_sign():
