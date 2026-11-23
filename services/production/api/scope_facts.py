@@ -859,7 +859,7 @@ def _clock_view(ctx: dict) -> dict:
 
 def wins_needed(ctx: dict) -> str | None:
     """The win rate his own average winner and loser break even at, said as the strike rate is
-    ("needs 47"): only at BOOK_ROW_MINIMUM same-day trades or more (TICKET-1035)."""
+    ("needs 47"): only at BOOK_ROW_MINIMUM same-day trades or more."""
     if ctx["break_even"].percent is None or len(mx.same_day_trips(ctx["trips"])) < mx.BOOK_ROW_MINIMUM:
         return None
     return _hundredths(ctx["break_even"].percent)
@@ -884,7 +884,7 @@ def run_lost(ctx: dict) -> Decimal:
 
 
 def worse(key: str, ctx: dict, fig: dict) -> bool:
-    """Whether a fact's figure is worse than its own reference (TICKET-1035): the five worst days
+    """Whether a fact's figure is worse than its own reference: the five worst days
     came to less than every other day together; the strike rate is under what it needs; the
     worst trade lost more than the best made; the clock's hour lost more than its whole book;
     trades after two losses did worse than other times; the busiest day lost. Nothing else has

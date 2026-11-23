@@ -512,7 +512,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     if state == "not-in-file"
                     else ""
                 ),
-                # Worse than its own reference (TICKET-1035): a quiet fill, under the ticks and words.
+                # Worse than its own reference: a quiet fill, under the ticks and words.
                 "marked": (
                     wedge(cx, cy, sl["start"], sl["end"], rr["divStart"], rr["inner"])
                     if it.get("marked")
