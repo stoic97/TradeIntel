@@ -13,6 +13,7 @@ import pytest
 
 DEPLOY = Path("deploy")
 SCRIPT = DEPLOY / "refresh-staging.sh"
+RUNBOOK = Path("docs/runbooks/deploy.md")
 
 
 def _directives(path):
@@ -76,6 +77,20 @@ def test_the_refresh_script_does_the_steps_in_order():
     assert body.count('step "') == 9
     assert "FAILED at step" in body  # a failure names its step and exits non-zero
 
+
+def test_the_runbook_says_staging_can_run_the_sha_a_train_will_tag():
+    """TICKET-1003 gate 6: the Staging section and step a both say it."""
+    text = RUNBOOK.read_text(encoding="utf-8")
+    staging = text[text.index("## Staging"):text.index("## The release train")]
+    step_a = text[text.index("### a. "):text.index("### b. ")]
+    assert "refresh-staging.sh 09919b5" in staging
+    assert "REFRESH_STAGING_CHECK_ONLY" in staging
+    assert "refused before" in staging
+    assert "refresh-staging.sh 09919b5" in step_a
+    assert "split into two tags" in step_a
+    assert "(origin/main)" in step_a
+    assert "(ref 09919b5, not" in step_a
+    assert "git pull" not in text
 
 def test_the_refresh_script_takes_one_optional_ref_defaulting_to_main():
     """TICKET-1003: no argument keeps today's behaviour; one argument is a tag or sha."""
