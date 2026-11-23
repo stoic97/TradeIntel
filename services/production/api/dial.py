@@ -16,15 +16,35 @@ strip under each trade, each a pure drawing a template asks for by name.
 
 from __future__ import annotations
 
+import re
+from decimal import Decimal
+
 from markupsafe import Markup, escape
 
+from services.production.api import charts
 from services.production.api import scope_geometry as G
 
 MINI_W, MINI_H = 36, 14
 OPTS = {"threeLineNames": G.THREE_LINE_NAMES}
 CRUMB_LIMIT = 44  # characters in "Scope › chapter › fact" on the phone (the kit's path note)
 STRIP_W = 350  # a trade strip's drawing width; the SVG stretches it to the column
-HUB_FIG_SIZES_PHONE = [22, 18, 15]  # a hub wedge's figure has a noun now, and needs the smallest
+HUB_FIG_SIZES_PHONE = [22, 18, 15, 13, 12]  # a hub wedge's figure has a noun now; "100 of 100" needs 12
+RUPEES = re.compile(r"([−-]?)₹(\d[\d,]*)(?![\d.])")
+"""A whole-rupee amount as formatting.rupees writes it."""
+
+
+def phone_rupees(text: str) -> str:
+    """A phone dial's rupees in the toolkit's short form (₹50.6k, −₹1.2L); under a thousand
+    they stay whole. The desktop dial and every page keep the whole figure."""
+
+    def short(m: re.Match) -> str:
+        value = Decimal(m.group(2).replace(",", ""))
+        if value < charts.THOUSAND:
+            return m.group(0)
+        return charts.short(-value if m.group(1) else value)
+
+    return RUPEES.sub(short, text or "")
+
 
 
 def _text(value: str, what: str) -> str:
@@ -46,6 +66,12 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
     if centre.get("scopeHref"):
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
+    if size == "phone" and view["kind"] == "home" and centre.get("figure"):
+        full = centre["figure"]
+        centre["figure"] = phone_rupees(full)
+        if centre["figure"] != full:  # read out whole: the figure and what it is
+            centre["spoken"] = " ".join([full, *(centre.get("captionLines") or ())])
+
     if size == "desktop" and view.get("desktop_items"):  # every fact keeps its wedge (Fact.on_phone_dial)
         view = {**view, "items": view["desktop_items"]}
     items, minis = [], {}
@@ -53,8 +79,8 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
         view = {**view, "figSizes": HUB_FIG_SIZES_PHONE}  # all of them the kit's own classes
     for item in view["items"]:
         if size == "phone":  # a phone's wedge can say the same fact in fewer words
-            item = {**item, "figure": item.get("phone_figure", item["figure"]),
-                    "label": item.get("phone_label", item.get("label", ""))}
+            item = {**item, "figure": phone_rupees(item.get("phone_figure", item["figure"])),
+                    "label": phone_rupees(item.get("phone_label", item.get("label", "")))}
         _text(item["name"], "name")
         _text(item["figure"], "figure")
         _text(item.get("label") or "", "label")

@@ -289,7 +289,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope__opened { fill: var(--dial-line); }                                       /* opened: a dot near the rim, never a fill */
 .scope__number { fill: var(--color-on-navy); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 .scope__figure { fill: var(--color-on-navy); font-family: var(--font-mono); font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-.scope__figure--s15 { font-size: 15px; } .scope__figure--s18 { font-size: 18px; } .scope__figure--s22 { font-size: 22px; } .scope__figure--s32 { font-size: 32px; }
+.scope__figure--s12 { font-size: 12px; } .scope__figure--s13 { font-size: 13px; } .scope__figure--s15 { font-size: 15px; } .scope__figure--s18 { font-size: 18px; } .scope__figure--s22 { font-size: 22px; } .scope__figure--s32 { font-size: 32px; }
 .scope__figure--tight { word-spacing: -0.45em; }
 .scope__figure-tail { fill: var(--color-on-navy); font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
 .scope__state { fill: var(--color-on-navy-soft); font-family: var(--font-mono); font-size: 11px; }

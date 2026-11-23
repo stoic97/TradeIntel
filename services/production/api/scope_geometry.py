@@ -159,7 +159,17 @@ SIZES = {
         "nameLine": 14,
         "edge": 187,
         "figSizesHome": [22, 18],
-        "figSizesChapter": [18, 15],
+        "figSizesChapter": [18, 15, 13],
+        # The phone dial makes room inside the same 260 px: a smaller centre where its words
+        # allow (a chapter's name wraps into 50 units; Home's "before charges" needs 56), the
+        # wedge band runs out to 147 where the bezel ticks were, a state's words take 56 px, and
+        # no empty serial row sits above a figure.
+        "room": {
+            "home": {"disc": 56, "ring": 56.5, "divStart": 62.5, "inner": 147, "divEnd": 142,
+                     "minorStart": None, "midStart": None, "majorStart": None, "stateW": 56, "serialRow": 0},
+            "chapter": {"disc": 50, "ring": 53, "divStart": 59, "inner": 147, "divEnd": 142,
+                        "minorStart": None, "midStart": None, "majorStart": None, "stateW": 56, "serialRow": 0},
+        },
     },
     "desktop": {
         "stageW": 640,
@@ -181,10 +191,11 @@ THREE_LINE_NAMES = [
 ]
 
 
-def radii(R: float) -> dict:
-    """Radii scaled from the kit's 300-unit master drawing (outer ring at 149.5)."""
+def radii(R: float, room: dict | None = None) -> dict:
+    """Radii scaled from the kit's 300-unit master drawing (outer ring at 149.5). `room`
+    overrides some of them, in the same units (None: that tick is not drawn)."""
     u = R / 150
-    return {
+    rr = {
         "u": u,
         "outer": 149.5 * u,  # outer hairline ring
         "tickEnd": 149 * u,  # all ticks end here
@@ -196,7 +207,18 @@ def radii(R: float) -> dict:
         "divEnd": 132 * u,  # ...and of the inner ring
         "ring": 64 * u,  # fine ring around the centre disc
         "disc": 60 * u,  # centre disc
+        "stateW": 66,  # px a state's words take in a slice
+        "serialRow": 17,  # px kept above an unlabelled figure, where the kit drew its serial
     }
+    for k, v in (room or {}).items():
+        rr[k] = v if k in ("stateW", "serialRow") or v is None else v * u
+    return rr
+
+
+def dial_radii(size_name: str, is_home: bool) -> dict:
+    """The radii a dial of this size and kind is drawn with."""
+    size = SIZES[size_name or "phone"]
+    return radii(size["R"], (size.get("room") or {}).get("home" if is_home else "chapter"))
 
 
 def sectors(n: int, is_home: bool) -> dict:
@@ -228,10 +250,11 @@ def ticks(cx: float, cy: float, rr: dict, dividers: list, rotation: float = 0) -
         if is_div(a):
             continue
         if math.fmod(a, 30) == 0:
-            mid += radial(cx, cy, a + rotation, rr["midStart"], rr["tickEnd"])
-        else:
+            if rr["midStart"] is not None:
+                mid += radial(cx, cy, a + rotation, rr["midStart"], rr["tickEnd"])
+        elif rr["minorStart"] is not None:
             minor += radial(cx, cy, a + rotation, rr["minorStart"], rr["tickEnd"])
-    for a in dividers:
+    for a in dividers if rr["majorStart"] is not None else ():
         major += radial(cx, cy, a + rotation, rr["majorStart"], rr["tickEnd"])
     return {"minor": minor, "mid": mid, "major": major}
 
@@ -305,7 +328,9 @@ def stacked_split(fig: str) -> list[str] | None:
     return [fig[:j], fig[j + 1 :]] if j > 0 else None
 
 
-def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
+def slice_block(
+    item: dict, fig_size: float, stacked: bool, state_w: float = 66, serial_row: float = 17
+) -> dict:
     """The box a slice's contents take: number, figure head, [tail], mini chart or state."""
     state = item.get("state") or ""
     label = "" if state else (item.get("label") or "")  # the line under a hub answer's figure
@@ -317,10 +342,10 @@ def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
     head_w = mono_width(head, fig_size) - (2 * 0.45 * fig_size if tight else 0)
     tail_w = max((mono_width(line, 11) for line in tail_lines), default=0)
     lh = js_round(fig_size * 1.15)
-    lead = 0 if label else 13 + 4  # the kit's serial row, which a labelled figure has no need of
+    lead = 0 if label else serial_row  # the kit's serial row, which a labelled figure has no need of
     row_a = lead + lh + 13 * len(tail_lines)
     row_b = 28 if state else (14 if item.get("chart") else 0)
-    width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
+    width = max(head_w, tail_w, (state_w if state else 36) if row_b else 0, 8)
     return {
         "head": head,
         "tail": tail,
@@ -386,7 +411,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
 
     for si, fs in enumerate(fig_sizes):
         forms = [False] * len(items)
-        blocks = [slice_block(it, fs, False) for it in items]
+        blocks = [slice_block(it, fs, False, rr["stateW"], rr["serialRow"]) for it in items]
         r = best(blocks)
         passes = 0
         while passes < 8 and r["score"] < 0:
@@ -399,7 +424,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
             if wi < 0:
                 break
             forms[wi] = True
-            blocks = [slice_block(it, fs, forms[i]) for i, it in enumerate(items)]
+            blocks = [slice_block(it, fs, forms[i], rr["stateW"], rr["serialRow"]) for i, it in enumerate(items)]
             r = best(blocks)
             passes += 1
         if r["score"] >= 0:
@@ -408,7 +433,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
                     continue
                 f2 = list(forms)
                 f2[i] = False
-                b2 = [slice_block(x, fs, f2[j]) for j, x in enumerate(items)]
+                b2 = [slice_block(x, fs, f2[j], rr["stateW"], rr["serialRow"]) for j, x in enumerate(items)]
                 r2 = best(b2)
                 if r2["score"] >= 0:
                     forms[i], blocks, r = False, b2, r2
@@ -455,8 +480,8 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     opts = opts or {}
     size_name = size_name or "phone"
     size = SIZES[size_name]
-    cx, cy, rr = size["stageW"] / 2, size["stageH"] / 2, radii(size["R"])
     is_home = view["kind"] == "home"
+    cx, cy, rr = size["stageW"] / 2, size["stageH"] / 2, dial_radii(size_name, is_home)
     sec = sectors(len(view["items"]), is_home)
     t = ticks(cx, cy, rr, sec["dividers"], 0)
     lay = layout_contents(
@@ -595,6 +620,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if d["kind"] == "home"
         else "The Scope inside this chapter"
     )
+    if d["centre"].get("spoken"):  # a centre drawn short is read out in full
+        label += ". " + _esc(d["centre"]["spoken"])
     o.append(
         f'<svg class="scope__svg" viewBox="{-pad} 0 {d["stageW"] + 2 * pad} {d["stageH"]}" '
         f'width="{d["stageW"] + 2 * pad}" height="{d["stageH"]}" role="img" aria-label="{label}">'

@@ -209,14 +209,14 @@ def test_a_wedge_with_a_number_says_how_many_went_past_it():
     assert item["figure"] == f"{mx.trades_past_number(trips).count} trades"
 
 
-FIT_ON_A_PHONE = -14  # "100 of 100", the widest: seen in a browser, it reaches the ring and stays legible
+FIT_ON_A_PHONE = 0  # the phone dial keeps its spacing whole, "100 of 100" included
 
 
 def fit(figure, label):
     """How far a wedge's words clear the ring, the rim and the dividers, at their best radius."""
-    z = G.SIZES["phone"]
-    rr, sec = G.radii(z["R"]), G.sectors(4, True)
-    block = G.slice_block({"figure": figure, "label": label}, min(D.HUB_FIG_SIZES_PHONE), False)
+    rr, sec = G.dial_radii("phone", True), G.sectors(4, True)
+    block = G.slice_block({"figure": D.phone_rupees(figure), "label": D.phone_rupees(label)},
+                          min(D.HUB_FIG_SIZES_PHONE), False, rr["stateW"], rr["serialRow"])
     best, rc = -1e9, rr["ring"]
     while rc <= rr["inner"]:
         best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))

@@ -29,7 +29,8 @@ from tests.helpers.scope_chapters import IMP
 from tests.unit.api import figure_pages as P
 
 PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
-FIT_ON_A_PHONE = -13  # the layout's own limit, as test_dial_states_facts holds every dial to it
+FIT_ON_A_PHONE = 0  # the layout's own limit, as test_dial_states_facts holds every dial to it
+FIT_ON_A_DESKTOP = -13  # the desktop dial as it was
 
 
 @pytest.fixture()
@@ -50,26 +51,28 @@ def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
 # Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
+# The phone digests were re-taken when the phone dial made room inside itself (TICKET-1039);
+# every desktop digest is the one main had.
 ON_MAIN = {
-    "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
+    "/mirror": ["40fa64ef4773aade256a0c8e027c1dc74395d3903416a24eec121bcc621dc40a",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
+    "/mirror/chapter/1": ["28e028a865f1412785f8540e103330fdbf47df32c7a18a22c8447f9ac8f57e4c",
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
-    "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
+    "/mirror/chapter/2": ["599d9d570fee5586121cd385f840308af28982c7a5b17cb5b5f57c104bf5909b",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
+    "/mirror/chapter/3": ["bf95a10de2409dbc6c3149e4098d5adf7019b23314baff62678869a6b2b703d6",
                           "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38"],
-    "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
+    "/mirror/chapter/4": ["7f4cdb20eb508a9079cf93b012aea6086e2146cc5c7255b59180014a7907017a",
                           "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
+    (1, "phone"): "697494a6207985a97d3c2becf8cf093f19aab0ad09759185d8cc7436bd8e32fd",
     (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
-    (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
+    (2, "phone"): "d8fe6207341fb2e9cb79241c21353750f0c4eb67811078b45f1830ce1a929a5b",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
-    (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
+    (3, "phone"): "ed540ed53f0e3104cb8a00905cbd01e2253e6a9f3c38addffb1e06eef6b7d4d4",
     (3, "desktop"): "9224b880ab89b1d829e0a95a1a178dae6459d414512552236f544902dc58a24e",
-    (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
+    (4, "phone"): "6dacfeeef6fe9c6afc189612eeb8315072614b09c57c26d0c5651c7420512d4c",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
 
@@ -137,19 +140,19 @@ def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
 def test_the_desktop_keeps_chapter_order_and_clears(later):
     assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
     z = G.SIZES["desktop"]
-    rr = G.radii(z["R"])
+    rr = G.dial_radii("desktop", False)
     items = later["desktop_items"]
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
-        assert G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], b, rr) >= FIT_ON_A_PHONE
+        assert G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], b, rr) >= FIT_ON_A_DESKTOP
 
 
 def test_the_phone_dial_still_clears(later):
     z = G.SIZES["phone"]
-    rr = G.radii(z["R"])
-    items = [{**i, "figure": i.get("phone_figure", i["figure"]),  # as the phone clearance test reads them
-              "label": i.get("phone_label", i.get("label", ""))} for i in later["items"]]
+    rr = G.dial_radii("phone", False)
+    items = [{**i, "figure": D.phone_rupees(i.get("phone_figure", i["figure"])),  # as the phone draws them
+              "label": D.phone_rupees(i.get("phone_label", i.get("label", "")))} for i in later["items"]]
     assert len(items) == 3
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])

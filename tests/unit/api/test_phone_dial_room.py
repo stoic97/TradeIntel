@@ -2,8 +2,8 @@
 
 The phone dial's fit limit was -13 px: a wedge's words could run 13 px into the spacing kept
 around the centre ring, the inner ring and the dividers. On the phone the dial now draws a
-smaller centre where its words allow (a chapter's name wraps into 46 units; Home's caption
-"before charges" needs 55), runs the wedge band out to 147 units where the bezel ticks were,
+smaller centre where its words allow (a chapter's name wraps into 50 units; Home's caption
+"before charges" needs 56), runs the wedge band out to 147 units where the bezel ticks were,
 gives a state's words the 56 px they take, keeps a 13 px figure as the last size, and writes
 rupees short (the toolkit's ₹50.6k). So every wedge clears with the spacing intact: limit 0.
 The desktop dial is drawn exactly as before.
@@ -11,6 +11,7 @@ The desktop dial is drawn exactly as before.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from decimal import Decimal
 
@@ -20,7 +21,23 @@ from services.production.api import charts
 from services.production.api import dial as D
 from services.production.api import scope_geometry as G
 from tests.unit.api import figure_pages as P
-from tests.unit.api.test_phone_dial_list import ON_MAIN, PAGES, dials, sha
+
+PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
+DESKTOP_ON_MAIN = {  # each page's desktop dial on main before this change (test_phone_dial_list's)
+    "/mirror": "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df",
+    "/mirror/chapter/1": "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab",
+    "/mirror/chapter/2": "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63",
+    "/mirror/chapter/3": "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38",
+    "/mirror/chapter/4": "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5",
+}
+
+
+def dials(html: str) -> list[str]:
+    return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
+
+
+def sha(text) -> str:
+    return hashlib.sha256(str(text).encode()).hexdigest()
 
 FIT_ON_A_PHONE = 0
 
@@ -64,15 +81,15 @@ def demo():
 
 def test_the_phone_chapter_dial_has_a_smaller_centre_and_a_wider_band():
     rr, u = G.dial_radii("phone", False), 130 / 150
-    assert rr["disc"] == pytest.approx(46 * u) and rr["ring"] == pytest.approx(50 * u)
-    assert rr["divStart"] == pytest.approx(56 * u) and rr["inner"] == pytest.approx(147 * u)
+    assert rr["disc"] == pytest.approx(50 * u) and rr["ring"] == pytest.approx(53 * u)
+    assert rr["divStart"] == pytest.approx(59 * u) and rr["inner"] == pytest.approx(147 * u)
     assert rr["outer"] == pytest.approx(149.5 * u)  # the dial's size is unchanged
     assert rr["stateW"] == 56
 
 
 def test_the_phone_hub_keeps_room_for_its_caption():
     rr, u = G.dial_radii("phone", True), 130 / 150
-    assert rr["disc"] == pytest.approx(55 * u) and rr["inner"] == pytest.approx(147 * u)
+    assert rr["disc"] == pytest.approx(56 * u) and rr["inner"] == pytest.approx(147 * u)
     caption = max(G.sans_width(w, 11) for w in ("your result,", "before charges"))
     y = 2 + 13 + 13  # the caption's last line ends here below the centre
     assert 2 * (rr["disc"] ** 2 - y**2) ** 0.5 >= caption
@@ -137,11 +154,13 @@ def test_every_demo_phone_wedge_clears_with_its_spacing_intact(demo):
 def test_the_desktop_dials_are_drawn_as_on_main(demo):
     pages, _ = demo
     for path in PAGES:
-        assert sha(dials(pages[path])[1]) == ON_MAIN[path][1], path
+        assert sha(dials(pages[path])[1]) == DESKTOP_ON_MAIN[path], path
 
 
 def test_a_phone_figure_can_step_down_to_13px():
-    assert G.SIZES["phone"]["figSizesChapter"][-1] == 13 and D.HUB_FIG_SIZES_PHONE[-1] == 13
+    # A hub answer goes one step further: "100 of 100" over "made money" clears only at 12.
+    assert G.SIZES["phone"]["figSizesChapter"][-1] == 13 and D.HUB_FIG_SIZES_PHONE[-2:] == [13, 12]
     css = (P.ROOT if hasattr(P, "ROOT") else __import__("pathlib").Path(__file__).parents[3])
     text = (css / "services/production/api/static/css/components.css").read_text()
     assert re.search(r"\.scope__figure--s13 \{ font-size: 13px; \}", text)
+    assert re.search(r"\.scope__figure--s12 \{ font-size: 12px; \}", text)
