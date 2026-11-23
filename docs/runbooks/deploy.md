@@ -205,14 +205,23 @@ misses. It reads the key from the environment:
 A second Scope on the same droplet, so a person can check a change before a trader
 sees it: `https://staging.scope.plusev.in`, behind a browser password (founder's
 password manager), on port 8001, in `/srv/scope-staging`, with its own database and
-session key. It runs `main`; production does not.
+session key. It runs `main`, or any commit `main` already holds; production runs only a
+tag.
 
 Refresh it by hand, as root, right before testing — never on a timer:
 
     /srv/scope-staging/deploy/refresh-staging.sh
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
 
-It restores the newest backup from `/var/backups/scope` into staging, checks out
-`origin/main`, starts `scope-staging`, and prints the version it runs. Migrations
+With no argument it takes `origin/main`. With one argument it takes that tag or sha
+instead, which is how a train whose tag sits behind `main` is checked (TICKET-1003). A
+ref that does not resolve, or that `origin/main` does not hold, is refused before the
+service stops, and staging keeps running what it was running. To judge a ref and change
+nothing, put `REFRESH_STAGING_CHECK_ONLY=1` before the command.
+
+It restores the newest backup from `/var/backups/scope` into staging, checks out the ref
+it was given, starts `scope-staging`, and prints the version it runs and whether that
+version was `main`. Migrations
 newer than production apply at startup, as they do in production. First install is
 the numbered block at the top of the script. Staging is never backed up; it is
 rebuilt from production's backups on every refresh. `deploy/scope-staging.service`
@@ -235,7 +244,7 @@ hour is reset: reconnect before pasting, or the block runs on your laptop.
 | f. Log it | same person | `docs/runbooks/deploys.md` |
 | g. Tell the traders | customer team | the loop tracker |
 
-### a. Refresh staging from `main`
+### a. Refresh staging at the sha the train will tag
 
     /srv/scope-staging/deploy/refresh-staging.sh
 
@@ -245,10 +254,20 @@ Expected, last lines:
     without the password: 401, as it must be
     from the app on :8001: {"status":"ok","code_version":"3f2a1bc"}
 
-    Staging is refreshed and running 3f2a1bc.
+    Staging is refreshed and running 3f2a1bc (origin/main).
 
 That sha is **what will be tagged**. Write it at the top of the train page. If the script
 stops, it names the step; fix that before anyone tests.
+
+A train split into two tags does not start at `main`. Give the script the first tag's
+sha, and staging runs that commit and nothing newer (TICKET-1003):
+
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
+
+The last line then reads `Staging is refreshed and running 09919b5 (ref 09919b5, not
+main)`, and that sha is what step c tags. The ref must be a commit `origin/main` already
+holds; anything else is refused before the service stops. The second tag gets its own
+refresh, at its own sha, once the first train is live.
 
 ### b. UAT on staging
 
