@@ -64,7 +64,7 @@ def trip(tid, opened, closed, net, lots=1, book="NIFTY"):
 # Running result, every trade in exit order: 1000, -500, -800, -900 (a5), -700 (b1), -300 (a4),
 #   -250, -300 (c1), -400, -500, -200 (d3). High 1000 on 02 Mar, lowest after it -900 on 02 Mar:
 #   the biggest drop is 1,900, from 02 Mar to 02 Mar. Day by day it would be 500 (02 Mar's -500).
-# Trading days (any trade opened): 02, 03, 04, 06 Mar = 4.
+# Trading days (any trade opened): 02, 03, 04, 06 Mar = 4; with a same-day trade: 02, 03, 06 = 3.
 # B2, same-day trades only (what the finding bar tests): a5 alone, on 1 day.
 #   On every trade it would be a4, a5 and d3, on 2 days: the off-by-one this ticket closes.
 # Options' lots: 1,1,2,3,1,1,1,1,1,1,1 = 14 over 11 trades = 1.27...; written "1.3".
@@ -121,12 +121,12 @@ def test_the_journal_counts_the_days_as_chapter_3_does():
     facts = sec.build(day("2026-03-02"), history=RECORD, fees_available=False, trips_with_a_stop=set())
     after = facts["after_two_straight_losses"]
     assert after["days_it_happened"] == ctx["days_with_the_condition"] == 1
-    assert after["your_trading_days"] == ctx["file_trading_days"] == 4
+    assert after["your_trading_days"] == ctx["same_day_days"] == 3  # 02, 03, 06 Mar
 
 
-def test_chapter_3_says_of_your_trading_days_over_every_trading_day():
+def test_chapter_3_names_the_days_it_counts():
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", chapter_page(3, RECORD)))
-    assert "This happened on 1 of your 4 trading days" in text
+    assert "This happened on 1 of the 3 days you closed a same-day trade" in text
 
 
 def test_eligibility_counts_b2_on_the_trades_the_finding_bar_tests():
@@ -136,9 +136,14 @@ def test_eligibility_counts_b2_on_the_trades_the_finding_bar_tests():
 
 # ---------- 5. a headline is the figure its first sentence explains ----------
 
-def test_where_the_money_came_from_leads_with_the_best_trade():
+def test_where_the_money_came_froms_card_opens_with_the_figure_it_leads_with():
+    """The figure is what he closed the same day (818, 882): the card's first line says so.
+    Same-day trades: +1000 -1500 -300 -100 +200 +50 -100 -100 = -850."""
     figs = SF.facts(SF.record_context(RECORD), IMP)
-    assert figs["money"]["figure"] == formatting.rupees(D(1000))  # a1, the best same-day trade
+    assert figs["money"]["figure"] == formatting.rupees(D(-850))
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", chapter_page(1, RECORD)))
+    card = text[text.index("Where the money came from"):]
+    assert card.index("Everything you closed the same day: −₹850.") < card.index("Your best five")
 
 
 def test_after_two_straight_losses_leads_with_the_trades_after_two_losses():
@@ -207,3 +212,45 @@ def test_the_best_and_worst_five_count_names_the_held_positions(client):
     caption = re.search(r"Your best five and worst five[^.]*\.[^.]*\.", page).group(0)
     # The demo has ten ranked same-day trades and two positions held past the day.
     assert "held past the day" in caption and "2 positions" in caption
+
+
+# ---------- 8. the guard: one label, one function, on any record ----------
+
+def _random_record(seed: int) -> list[mx.Trip]:
+    import random
+    rnd = random.Random(seed)
+    out, n = [], 0
+    for d in range(rnd.randint(3, 9)):
+        day = f"2026-04-{d + 1:02d}"
+        minute = 0
+        for _ in range(rnd.randint(1, 7)):
+            minute += rnd.randint(1, 50)
+            held = rnd.random() < 0.15
+            opened = f"{day}T{9 + minute // 60:02d}:{minute % 60:02d}"
+            closed = (f"2026-04-{d + 2:02d}T10:00" if held
+                      else f"{day}T{9 + (minute + 9) // 60:02d}:{(minute + 9) % 60:02d}")
+            out.append(trip(f"r{seed}-{n}", opened, closed, rnd.choice([-700, -300, -80, 0, 90, 250, 900]),
+                            lots=rnd.randint(1, 4), book=rnd.choice(["NIFTY", "CRUDEOIL"])))
+            n += 1
+            minute += 10
+    return out
+
+
+@pytest.mark.parametrize("seed", range(25))
+def test_every_paired_figure_reads_one_function(seed):
+    record = _random_record(seed)
+    drop, fall = mx.running_result(record).drop, mx.deepest_fall(record)
+    assert (fall is None) == (drop.value == 0)
+    if fall is not None:
+        assert (fall.amount, fall.from_day, fall.to_day) == (drop.value, drop.from_day, drop.to_day)
+    ctx = SF.record_context(record)
+    days = sorted({t.trading_day for t in record})
+    facts = sec.build(Period(s.JournalUnit.DAY, days[0], days[0],
+                             tuple(t for t in record if t.trading_day == days[0]), True),
+                      history=record, fees_available=False, trips_with_a_stop=set())
+    after = facts["after_two_straight_losses"]
+    assert after["days_it_happened"] == ctx["days_with_the_condition"]
+    assert after["your_trading_days"] == ctx["same_day_days"]
+    b2 = next(v for v in E.assess(record).verdicts if v.test.id == "B2")
+    assert b2.have == ctx["two_losses"].condition
+    assert D(facts["against_your_normal"]["lots_usually"]) == (mx.average_lots(record).mean or 0)

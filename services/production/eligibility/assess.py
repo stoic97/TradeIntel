@@ -36,7 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from services.production.mirror.metrics import Trip
+from services.production.mirror.metrics import Trip, same_day_trips
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.prereg import reader
 from services.shared.prereg.reader import Framework, LibraryTest, Unit
@@ -135,7 +135,12 @@ def _counted(test: LibraryTest, trips: list[Trip]) -> tuple[int | None, Basis]:
 
 
 def _b2_counts(trips: list[Trip]) -> tuple[int, int]:
-    """B2's population and condition on this history, from the shared function."""
+    """B2's population and condition on this history, from the shared function.
+
+    Counted on same-day trades, the trades chapter 3 and the finding bar (post_loss_check)
+    read: a position held past the day has not closed when the next trade opens, so on every
+    trade the condition read one more than chapter 3 printed for the same fact."""
+    trips = same_day_trips(trips)
     days = {day: n for n, day in enumerate(sorted({t.trading_day for t in trips}))}
     obs = [
         Obs(day=days[t.trading_day],
