@@ -8,6 +8,7 @@ the close in counts, never a cause.
 """
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 from markupsafe import Markup
@@ -88,6 +89,10 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
     ref = (path.peak.running, f"best {path.peak.exit_ts:%H:%M}") if path.peak is not None else None
     back, front = charts.axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=w, ref=ref,
                               last=path.close)
+    tag_y = y(path.close)  # an axis label the close's tag would sit on is left out
+    back = Markup(re.sub(
+        r'<text x="[^"]+" y="([^"]+)" class="ch-axis">[^<]*</text>',
+        lambda m: "" if abs(float(m.group(1)) - 4 - tag_y) < 12 else m.group(0), str(back)))
     line = [f"{x(path.started):.1f},{y(Decimal(0)):.1f}"]
     line += [f"{x(p.exit_ts):.1f},{y(p.running):.1f}" for p in path.points]
     most = max([p.lots for p in path.points] + [1])

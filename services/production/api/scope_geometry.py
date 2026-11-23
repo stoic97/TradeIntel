@@ -813,26 +813,30 @@ def chart_worst(daily_net: list, w: float, h: float) -> dict:
 
 
 def chart_worst_sorted(nets: list, cumulative: list, w: float, h: float) -> dict:
-    """Every trading day, worst to best, as bars; the five worst in ink, the rest light; and
-    the running total across them as a line, so the five worst days' share is the shape itself.
+    """Every trading day added up from worst to best, as one running total. The five worst
+    days' stretch is drawn in ink, the rest light, so their share of the whole is the shape
+    itself, and where the line ends is the whole result.
 
     Not the kit's and not in CHARTS, which are held to the JavaScript byte for byte: the Scope's
     own, written the same way, as paths by role. The dial's mini still draws ``chart_worst``.
     """
-    n = len(nets)
+    n = len(cumulative)
     if not n:
         return _chart(w, h, {})
-    reach = max([abs(v) for v in nets] + [abs(v) for v in cumulative] + [1])
-    z = h * 0.5
-    scale = h * 0.46 / reach
-    bw = w / n
-    m = {"ink": "", "light": "", "axis": f"M0 {fmt(z)}H{js_str(w)}", "stroke": ""}
-    for i, v in enumerate(nets):
-        bh = max(0.6, abs(v) * scale)
-        m["ink" if i < 5 else "light"] += _r2(i * bw + bw * 0.15, z - bh if v > 0 else z, bw * 0.7, bh)
-    m["stroke"] = "M0 " + fmt(z) + "".join(
-        f"L{fmt((i + 1) * bw)} {fmt(z - c * scale)}" for i, c in enumerate(cumulative))
-    return _chart(w, h, m)
+    top, bottom = max([0, *cumulative]), min([0, *cumulative])
+    spread = (top - bottom) or 1
+
+    def y(v: float) -> str:
+        return fmt(4 + (top - v) / spread * (h - 8))
+
+    def x(i: int) -> str:
+        return fmt(i / n * w)
+
+    points = [(x(0), y(0))] + [(x(i + 1), y(c)) for i, c in enumerate(cumulative)]
+    cut = min(5, n)
+    worst = "M" + "L".join(f"{px} {py}" for px, py in points[:cut + 1])
+    rest = "M" + "L".join(f"{px} {py}" for px, py in points[cut:]) if n > cut else ""
+    return _chart(w, h, {"axis": f"M0 {y(0)}H{js_str(w)}", "rest": rest, "stroke": worst})
 
 
 def chart_share(share: float, w: float, h: float, mini: bool = False) -> dict:
