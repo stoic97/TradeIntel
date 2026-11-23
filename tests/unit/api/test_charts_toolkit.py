@@ -256,16 +256,16 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # Re-pinned for 1026: the card now says "same-day trades" beside needed, and names the demo's one
 # held position in its Result note; made money and needed read same-day trades. Nothing else moved.
 BEFORE = {
-    "all/d": "858689c74343636ce23a5bbcabd1ff54f8ba87af5dfe359aaf79967535addef8",
-    "all/w": "e16c16da745dfc3a86664df4eda8f6635491c2b74c23974960cd2c4c58d10fba",
-    "all/m": "176cd5767e16ccea9bbefab5ffc337b7f5fe8a66a338ff4ec6caa24397aec32c",
-    "crude-options/d": "68e7ff4a0389943ccb9fb7789699f5f32b1675f04f5795b33e78ee6b64a44389",
-    "crude-options/w": "3adc043492909f73869a1577b3b7d0e9155b72ae80ba4b3385321a13ab58c74e",
-    "crude-options/m": "98da811af2713a802a5f5aec053decf58ea619ad7c7c80623a93b1689fdb2ae2",
+    "all/d": "c84a1caaf6eaaffdb900a3030884fca62d674ce28ddeb3a845c33734544afd82",
+    "all/w": "5f4dc015b8f0807205ef97c557abfcffb4224bc3c5ba71efec01bb6097735c67",
+    "all/m": "e070b62e5301d63fd5516936023ab8a017de4e565ad516eccc9eb09761eb3280",
+    "crude-options/d": "9d4d3fbc870908682886b0ab65202e903d82e01947fe6a8f85df862c0180023d",
+    "crude-options/w": "ef1513d9ab6e25e0177d5e516aaf65602edbb2d1cc7f9f16d4a6a8c4d4590a2c",
+    "crude-options/m": "b49027c54493aaf3fa9935d765df99f47622a1b90c1cfbd2ec1af421c94a589f",
     "nifty-options/d": "75ba5c0e8133ab4e12686fe6a676ce0eaf9abb0d8760e14ea7a6adc497a40ccf",
     "nifty-options/w": "1d2be52f7022617bcacde45937fcfdb4279577b59c71fa97a1a51bf4c864a70a",
     "nifty-options/m": "8c3ac17bda5fc8428c705f87e561afd14b30292db559b4bccdd3341339ccc374",
-    "default": "e16c16da745dfc3a86664df4eda8f6635491c2b74c23974960cd2c4c58d10fba",
+    "default": "5f4dc015b8f0807205ef97c557abfcffb4224bc3c5ba71efec01bb6097735c67",
 }
 
 
