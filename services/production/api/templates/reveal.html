@@ -21,7 +21,7 @@
       <circle class="reveal__slice" cx="150" cy="150" r="99" stroke-dasharray="{{ view.slice_length }} {{ view.circumference }}" transform="rotate(-90 150 150)"/>
       <path class="scope__tick scope__tick--major" d="{{ view.edge_tick }}"/>
       <circle class="reveal__disc" cx="150" cy="150" r="56"/>
-      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ share.share_percent }}%</text>
+      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ Figure(share.share_percent, "percent") }}%</text>
       {%- else %}
       <circle class="reveal__disc reveal__disc--empty" cx="150" cy="150" r="56"/>
       {%- endif %}
