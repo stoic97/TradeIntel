@@ -536,3 +536,22 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
+
+/* The report's page structure: the ladder as five marks, its words once a page, small books
+   folded, and the filter bar one line on a phone. */
+.ladder-row { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 0; }
+.ladder { display: flex; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
+.ladder__mark { color: var(--color-navy); line-height: 1; }
+.ladder__mark[data-reached="no"] { color: var(--color-faint); }
+.ladder__top { color: var(--color-muted); }
+.ladder-words { margin: var(--space-3) 0; }
+.ladder-words summary { cursor: pointer; color: var(--color-action-blue); }
+.ladder-words__list { margin: var(--space-2) 0 0; padding-left: var(--space-5); }
+.books-fold { margin: var(--space-4) 0; }
+.books-fold summary { cursor: pointer; color: var(--color-action-blue); }
+.report-filter__phone { display: none; }
+.report-filter__summary { cursor: pointer; color: var(--color-action-blue); padding: var(--space-2) 0; min-height: 44px; }
+@media (max-width: 599px) {
+  .report-filter__phone { display: block; }
+  .report-filter__desk { display: none; }
+}

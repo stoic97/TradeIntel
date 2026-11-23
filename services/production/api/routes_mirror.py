@@ -80,8 +80,9 @@ def load_record(request: Request):
             return page(request, "mirror_empty.html", title="Your record"), None
         if is_sample(request):
             return None, (trips, imp, SF.record_context(trips))
-        chosen = RF.valid(RF.decode(request.cookies.get(RF.COOKIE)), trips, new_days)
-        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path)
+        asked = RF.decode(request.cookies.get(RF.COOKIE))
+        chosen = RF.valid(asked, trips, new_days)
+        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:

@@ -147,3 +147,4 @@ def ladder(value) -> tuple[Step, ...]:
 def register(env) -> None:
     """The filters a template reads the labels and the ladder through."""
     env.filters.update(known=known, rung=rung, ladder=ladder)
+    env.globals["ladder_words"] = tuple((name, says) for _key, _label, name, says in LADDER)

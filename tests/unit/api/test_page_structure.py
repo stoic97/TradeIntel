@@ -7,6 +7,8 @@ record is the demo file (made up); nothing here is a trader's.
 """
 from __future__ import annotations
 
+import dataclasses
+import html
 import os
 import re
 
@@ -17,6 +19,8 @@ from services.production.api import report_filter as RF
 from services.production.api.app import create_app
 from services.production.db.session import make_engine, run_migrations
 from services.production.mirror import metrics as mx
+from tests.helpers.scope_chapters import trips_from
+from tests.helpers.scope_facts import fact_page
 from tests.helpers.upload import CSRF, sign_up
 
 SAYS = "it appears in your file."  # the first rung's words: on a page once, never per card
@@ -59,23 +63,43 @@ def test_each_finding_keeps_its_own_five_marks_with_their_names_for_a_screen_rea
 
 
 # ---------- 2. small books folded ----------
+# A made-up record: 40 same-day WIDGETOIL trades (one book over the minimum) and 3 same-day
+# GADGETCO trades (a book under it). The small book folds; the big one stays as it is.
 
-def test_books_under_the_minimum_fold_on_the_hidden_page(client):
-    page = main_of(client.get("/mirror/fact/hidden").text)
-    fold = re.search(r'<details class="books-fold">(.*?)</details>', page, re.DOTALL)
-    assert fold, "no fold on the hidden page"
-    assert f"under {mx.BOOK_ROW_MINIMUM} same-day trades" in re.sub(r"<[^>]+>", "", fold.group(1))
-    assert "Stocks and ETFs" in fold.group(1)        # the demo's one-trade book
-    assert "NIFTY options" not in fold.group(1)      # a counted book stays out of the fold
+def two_books():
+    big = trips_from([100 if i % 3 else -80 for i in range(40)])
+    small = [dataclasses.replace(t, trip_id=f"g{i}", symbol="GADGETCO")
+             for i, t in enumerate(trips_from([50, -20, 30]))]
+    return big + small
 
 
-def test_books_under_the_minimum_fold_on_the_math_page(client):
-    page = main_of(client.get("/mirror/fact/math").text)
-    fold = re.search(r'<details class="books-fold">(.*?)</details>', page, re.DOTALL)
-    assert fold, "no fold on the math page"
-    assert "Stocks and ETFs" in fold.group(1)
+def fold_of(page: str) -> str:
+    found = re.search(r'<details class="books-fold">(.*?)</details>', page, re.DOTALL)
+    assert found, "no fold on the page"
+    return found.group(1)
+
+
+def test_books_under_the_minimum_fold_on_the_hidden_page():
+    trips = two_books()
+    small_book = mx.trade_book(trips[-1])
+    big_book = mx.trade_book(trips[0])
+    fold = fold_of(fact_page("hidden", trips))
+    said = " ".join(re.sub(r"<[^>]+>", " ", fold).split())
+    assert f"1 smaller book, under {mx.BOOK_ROW_MINIMUM} same-day trades" in said
+    assert small_book in fold and big_book not in fold
+
+
+def test_books_under_the_minimum_fold_on_the_math_page():
+    trips = two_books()
+    page = fact_page("math", trips)
+    fold = fold_of(page)
+    assert mx.trade_book(trips[-1]) in fold
     table = page[:page.index('<details class="books-fold">')]
-    assert "Crude options" in table and "NIFTY options" in table
+    assert mx.trade_book(trips[0]) in table
+
+
+def test_no_fold_when_every_book_is_over_the_minimum():
+    assert '<details class="books-fold">' not in fact_page("hidden", trips_from([100, -80] * 20))
 
 
 # ---------- 3. the filter bar on a phone ----------
@@ -100,5 +124,5 @@ def test_since_your_last_upload_says_so_when_there_is_nothing_since(client):
 
 def test_a_book_the_file_does_not_hold_says_so(client):
     client.cookies.set(RF.COOKIE, "all|Gold options")
-    page = client.get("/mirror").text
+    page = html.unescape(client.get("/mirror").text)
     assert "That book isn't in this file, so this shows every book." in page

@@ -83,6 +83,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
         "book_math": mx.math_by_book(same_day),
+        "book_row_minimum": mx.BOOK_ROW_MINIMUM,
         "book_halves": mx.book_halves(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),

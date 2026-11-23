@@ -332,7 +332,7 @@ def test_a_history_with_only_small_books_shows_the_largest_of_them():
     fig = SF.facts(SF.record_context(small), IMP)["clock"]
     assert [c["book"] for c in fig["clocks"]] == ["WIDGETOIL options"]
     assert fig["other_clocks"] == []
-    assert "<details" not in fact_page("clock", small)
+    assert '<details class="clock-others"' not in fact_page("clock", small)  # the ladder's words are a <details> too
 
 
 # ---------- The charts and the card ----------

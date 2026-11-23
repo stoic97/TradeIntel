@@ -1,4 +1,5 @@
 {% extends "scope/fact.html" %}
+{% from "scope/_books_fold.html" import books_fold %}
 {% from "_components.html" import figure %}
 {% from "scope/_math.html" import math_table, sizes_table %}
 {% block head %}
@@ -21,8 +22,11 @@
   {% endcall %}
   <p class="body table-note">There are two ways to break even, and they are one sum solved two ways: a higher win rate at these sizes, or a bigger average winner at this win rate. This page shows both and does not pick one.</p>
   <p class="table-label">Table 1 · Each book, same-day trades</p>
-  {% set rows = [] %}{% for book in book_math %}{% if rows.append(book.whole) %}{% endif %}{% endfor %}
+  {% set rows = [] %}{% set small = [] %}{% for book in book_math %}{% if (rows if book.whole.trades >= book_row_minimum else small).append(book.whole) %}{% endif %}{% endfor %}
   {{ math_table(rows, "Book") }}
+  {%- if small %}
+  {% call books_fold(small|length, book_row_minimum) %}{{ math_table(small, "Book", "small-books") }}{% endcall %}
+  {%- endif %}
   <h2 class="heading math__book">How long you hold</h2>
   <p class="body">Each median is worked out on its own, so these figures do not describe any one trade.</p>
   {% for book in book_math if book.years %}
