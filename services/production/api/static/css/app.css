@@ -550,5 +550,5 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .worst-sorted { margin: var(--space-4) 0; }
 .worst-sorted svg { display: block; width: 100%; height: auto; }
 .day-block__story { margin: var(--space-2) 0; }
-.chart__rest { fill: none; stroke: var(--color-hairline); stroke-width: 1.5; }
+.chart__rest { fill: none; stroke: var(--color-faint); stroke-width: 1.5; }
 .worst-sorted .chart__stroke, .story-card__chart .chart__stroke { stroke-width: 2; }
