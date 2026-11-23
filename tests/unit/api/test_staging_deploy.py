@@ -64,7 +64,7 @@ def test_the_refresh_script_does_the_steps_in_order():
         ".restore",
         '"$BACKUPS"/files-*.tar.gz',
         "fetch --quiet --tags origin",
-        "--detach origin/main",
+        '--detach "$REF_SHA"',
         "uv sync --frozen --no-group research",
         'chown -R scope:scope "$STAGING"',
         'systemctl start "$SERVICE"',
@@ -76,6 +76,70 @@ def test_the_refresh_script_does_the_steps_in_order():
     assert body.count('step "') == 9
     assert "FAILED at step" in body  # a failure names its step and exits non-zero
 
+
+def test_the_refresh_script_takes_one_optional_ref_defaulting_to_main():
+    """TICKET-1003: no argument keeps today's behaviour; one argument is a tag or sha."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'REF="${1:-origin/main}"' in text
+    assert "--detach origin/main" not in text
+    assert '--detach "$REF_SHA"' in text
+
+
+def test_the_ref_is_judged_before_anything_stops():
+    """TICKET-1003: a typo must leave staging running what it was running."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    stop = body.index('systemctl stop "$SERVICE"')
+    assert "fetch --quiet --tags --prune origin" in body
+    assert body.index("fetch --quiet --tags --prune origin") < stop
+    assert "rev-parse --verify --quiet" in body
+    assert body.index("rev-parse --verify --quiet") < stop
+    assert "merge-base --is-ancestor" in body
+    assert body.index("merge-base --is-ancestor") < stop
+
+
+def test_a_ref_that_does_not_resolve_is_refused():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert "does not resolve to a commit" in body
+    assert "Nothing was stopped." in body
+
+
+def test_a_ref_that_is_not_on_main_is_refused():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'merge-base --is-ancestor "$REF_SHA" origin/main' in body
+    assert "is not on origin/main" in body
+
+
+def test_both_refusals_name_the_step():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'STEP="checking the ref"' in body
+    assert "FAILED at step" in body
+
+
+def test_step_4_names_and_prints_the_commit_it_checked_out():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'step "4/9 check out $REF"' in body
+    assert "log -1 --format='%h %s'" in body
+
+
+def test_the_last_line_says_which_ref_staging_runs():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'echo "Staging is refreshed and running $version (origin/main)."' in body
+    assert 'echo "Staging is refreshed and running $version (ref $REF, not main)."' in body
+
+
+def test_a_ref_can_be_checked_without_changing_anything():
+    """The droplet rehearsal: judge the ref, stop before step 1/9."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert "REFRESH_STAGING_CHECK_ONLY" in body
+    assert body.index("REFRESH_STAGING_CHECK_ONLY") < body.index('systemctl stop "$SERVICE"')
+
+
+def test_the_script_still_sets_up_no_automatic_refresh():
+    low = SCRIPT.read_text(encoding="utf-8").lower()
+    for banned in ("oncalendar", "crontab", "systemd-run", ".timer"):
+        assert banned not in low, banned
 
 def test_the_refresh_script_parses():
     bash = shutil.which("bash")
