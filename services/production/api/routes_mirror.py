@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
-from services.production.api import formatting
+from services.production.api import day_chart, formatting
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -34,6 +34,7 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import feedback as FB
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
@@ -448,10 +449,14 @@ def trading_day(request: Request, iso: str):
         raise HTTPException(status_code=404)
     with make_session(request.app.state.engine) as sess:
         opens = _journal_ids(sess, reader(request, sess), {iso})
+    before, after = mx.day_neighbours(trips, iso)
     return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
                 when=formatting.day(iso), count=len(that_day),
                 groups=SM.groups("busiest", context, only=that_day),
-                journal_href=f"/journals/{opens[iso]}" if iso in opens else None)
+                journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
+                path=day_chart.view(mx.day_path(that_day)),
+                before=(before, formatting.day(before)) if before else None,
+                after=(after, formatting.day(after)) if after else None)
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)

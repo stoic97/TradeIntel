@@ -536,3 +536,17 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
+
+/* Days you can replay: a day's running result, the shared component (day_chart). */
+.day-nav { display: flex; gap: var(--space-2); margin: 0 0 var(--space-2); }
+.daychart-figure { margin: var(--space-4) 0; }
+.daychart { display: block; width: 100%; height: auto; max-width: 100%; }
+.daychart__run { stroke: var(--color-ink); stroke-width: 1.5; }
+.daychart__dot--gain { fill: var(--color-gain); }
+.daychart__dot--loss { fill: var(--color-loss); }
+.daychart__dot--level { fill: var(--color-faint); }
+.daychart__dot--switched { stroke: var(--color-ink); stroke-width: 1.5; }
+.daychart-figure__table .table, .worst-sorted__table .table { display: block; overflow-x: auto; max-width: 100%; }
+.worst-sorted { margin: var(--space-4) 0; }
+.worst-sorted svg { display: block; width: 100%; height: auto; }
+.day-block__story { margin: var(--space-2) 0; }

@@ -6,11 +6,19 @@
 {% set nav = "scope" %}
 {% block content %}
   <p class="body-small"><a class="link link--back" href="/mirror">‹ Scope</a></p>
+  <p class="body-small day-nav">{% if before %}<a class="link" href="/mirror/day/{{ before[0] }}">‹ {{ before[1] }}</a>{% endif %}{% if before and after %} · {% endif %}{% if after %}<a class="link" href="/mirror/day/{{ after[0] }}">{{ after[1] }} ›</a>{% endif %}</p>
   <p class="label label--plain">One trading day</p>
   <h1 class="title">{{ when }}</h1>
   <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day, every one of them.</p>
   {%- if journal_href %}
   <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
+  {%- endif %}
+  {%- if path %}
+  <figure class="daychart-figure">
+    {{ path.svg }}
+    <figcaption class="body">{{ path.said }}</figcaption>
+    <details class="daychart-figure__table"><summary class="body-small">The day as numbers</summary>{{ path.table }}</details>
+  </figure>
   {%- endif %}
   {{ trades(groups) }}
 {% endblock %}

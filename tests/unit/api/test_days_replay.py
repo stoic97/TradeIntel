@@ -78,8 +78,8 @@ def test_the_path_is_the_running_result_in_exit_order_with_peak_trough_and_close
     path = need(mx, "day_path")(list(reversed(DAY_A)))  # given in any order, drawn in exit order
     assert [p.trip.trip_id for p in path.points] == ["a1", "a2", "a3", "a4", "a5"]
     assert [p.running for p in path.points] == [D(500), D(200), D(-200), D(-800), D(-700)]
-    assert (path.peak.running, path.peak.at.strftime("%H:%M")) == (D(500), "09:30")
-    assert (path.trough.running, path.trough.at.strftime("%H:%M")) == (D(-800), "10:00")
+    assert (path.peak.running, path.peak.exit_ts.strftime("%H:%M")) == (D(500), "09:30")
+    assert (path.trough.running, path.trough.exit_ts.strftime("%H:%M")) == (D(-800), "10:00")
     assert path.close == D(-700)
     assert [p.switched for p in path.points] == [False, True, False, True, False]
     assert [p.lots for p in path.points] == [1, 1, 1, 2, 2]
@@ -184,4 +184,4 @@ def test_the_day_page_draws_the_day_and_links_its_neighbours(demo):
 def test_the_worst_days_page_draws_the_sorted_chart(demo):
     html = demo.get("/mirror/fact/worst-days").text
     assert "Your days, worst to best" in html
-    assert '<svg class="daychart' in html  # each day's own line is the shared component
+    assert "data-daypath" in html  # each worst day's line is the shared component

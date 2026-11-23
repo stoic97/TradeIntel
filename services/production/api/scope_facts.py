@@ -17,9 +17,7 @@ from collections import Counter
 from datetime import timedelta
 from decimal import Decimal
 
-from markupsafe import Markup
-
-from services.production.api import dial, findings, formatting
+from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
@@ -101,7 +99,11 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
     if kind == "worst":
-        return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
+        if mini:  # the dial's mini is the kit's chart, held to it byte for byte
+            return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
+        days = days_worst_to_best(trips)
+        return G.chart_worst_sorted([_f(d["net"]) for d in days],
+                                    [_f(d["cumulative"]) for d in days], w, h)
     if kind == "share":
         share = ctx["share"]
         if not share.shown_as_percentage:
@@ -411,6 +413,24 @@ def _flips_words(flips: int) -> str | None:
     return "once" if flips == 1 else f"{formatting.count(flips)} times"
 
 
+def _story_words(story) -> dict:
+    """The run page's three lines, from a run or a day: switches, a size step, re-entries.
+    The run page and each of the five worst days say them through ``scope/_story_lines.html``."""
+    return {"flips_words": _flips_words(story.flips), "size_words": _size_words(story.size),
+            "back_in": story.back_in}
+
+
+def days_worst_to_best(trips: list) -> list[dict]:
+    """Every trading day, worst to best (ties: earlier date first), with the running total
+    of the days so far. The last total is the record's result: the shape is the share."""
+    out, total = [], Decimal(0)
+    for d in sorted(mx.daily_series(trips), key=lambda d: (d.net, d.trading_day)):
+        total += d.net
+        out.append({"iso": d.trading_day, "day": formatting.day(d.trading_day), "net": d.net,
+                    "cumulative": total})
+    return out
+
+
 def _timeline_x(moments: list) -> dict:
     """Each moment's place across the timeline: each date its own stretch, in proportion to
     how long it runs, with a fixed gap for each night left out. x maps each moment to its place;
@@ -658,7 +678,8 @@ def _day_block(block: mx.DayBlock, ctx: dict) -> dict:
         "span": _day_span(block),
         "net": block.net,
         "went": _day_went(block),
-        "line": Markup(G.day_line(block.running)),
+        "line": day_chart.mini(mx.day_path(only)),  # the day page's path, drawn small
+        "story": _story_words(mx.day_story(only)),
         "vs_normal": f"{times}× your normal day's trades" if times else None,
         "groups": S.groups("worst-days", ctx, only=only),
     }
@@ -746,7 +767,13 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for d in ctx["worst_days"].days
     ]
+    sorted_days = days_worst_to_best(trips)
     out["worst-days"].update(
+        sorted_days_table=charts.text_table(
+            [(d["day"], Figure(d["net"], "rupees"), Figure(d["cumulative"], "rupees"))
+             for d in sorted_days],
+            ("Day", "Result", "Running total, worst day first"),
+            caption="Your days, worst to best"),
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
         all_trades_href=S.see_all_href("worst-days"),
