@@ -3,4 +3,5 @@
 
 from __future__ import annotations
 
-KIT_SHA = "01e8fe7836a1d3a9364111f14807399e041d0c3cd6fa3f4d164e4f857aa0d04d"
+# TICKET-1035 added .scope__marked, the kit's and the app's copy alike (test_design_kit).
+KIT_SHA = "978d8557b61c5c8a22ceb4f241622226777c64ce03bab8067fc48d3dccdf7d6d"

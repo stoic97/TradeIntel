@@ -296,6 +296,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope__state-hatch { fill: url(#scope-hatch); }
 .scope__hatch-line { stroke: var(--dial-line); stroke-opacity: .35; stroke-width: 1; }
 .scope__state-dashed { fill: none; stroke: var(--dial-line); stroke-opacity: .6; stroke-width: .75; stroke-dasharray: 3 3; }
+.scope__marked { fill: var(--dial-line); fill-opacity: .08; }                    /* worse than its own reference: one quiet fill per dial */
 .scope__leader { fill: none; stroke: var(--dial-line); stroke-opacity: .75; stroke-width: .75; }
 .scope__name { fill: var(--color-on-navy); font-size: var(--type-rim-name-size); font-weight: 500; }
 .scope--desktop .scope__name { font-size: 13px; }

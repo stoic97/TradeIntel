@@ -753,6 +753,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
         fig["wedge"] = _no_answer(fig["state"]) if fig["state"] else _chapter_wedge(key, ctx, fig)
+        fig["wedge"]["worse"] = worse(key, ctx, fig)
     out["money"]["pairs"] = [
         {
             "best": b,
@@ -856,36 +857,122 @@ def _clock_view(ctx: dict) -> dict:
     }
 
 
+def wins_needed(ctx: dict) -> str | None:
+    """The win rate his own average winner and loser break even at, said as the strike rate is
+    ("needs 47"): only at BOOK_ROW_MINIMUM same-day trades or more (TICKET-1035)."""
+    if ctx["break_even"].percent is None or len(mx.same_day_trips(ctx["trips"])) < mx.BOOK_ROW_MINIMUM:
+        return None
+    return _hundredths(ctx["break_even"].percent)
+
+
+def _hundredths(rate) -> str:
+    """A rate as the count of a hundred a page says: 46.6 is "47"."""
+    return formatting.out_of_a_hundred(rate).removesuffix(" of 100")
+
+
+def other_days(ctx: dict) -> tuple[int, Decimal]:
+    """Every trading day but the five worst, and what they came to together."""
+    trips, worst = ctx["trips"], ctx["worst_days"]
+    days = len({t.trading_day for t in trips}) - len(worst.days)
+    return days, sum((t.net for t in trips), Decimal(0)) - worst.sum
+
+
+def run_lost(ctx: dict) -> Decimal:
+    """What the longest losing run's trades lost together."""
+    ids = set(ctx["run"].trip_ids)
+    return sum((t.net for t in ctx["trips"] if t.trip_id in ids), Decimal(0))
+
+
+def worse(key: str, ctx: dict, fig: dict) -> bool:
+    """Whether a fact's figure is worse than its own reference (TICKET-1035): the five worst days
+    came to less than every other day together; the strike rate is under what it needs; the
+    worst trade lost more than the best made; the clock's hour lost more than its whole book;
+    trades after two losses did worse than other times; the busiest day lost. Nothing else has
+    a reference to be worse than."""
+    if fig["state"]:
+        return False
+    if key == "worst-days":
+        return ctx["worst_days"].sum < other_days(ctx)[1]
+    if key == "math":
+        needs = wins_needed(ctx)
+        return needs is not None and int(_hundredths(ctx["strike"].rate_percent)) < int(needs)
+    if key == "money":
+        return bool(ctx["best"]) and bool(ctx["worst"]) and -ctx["worst"][0].net > ctx["best"][0].net
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        return lead.largest.net < 0 and lead.largest.net < lead.net
+    if key == "down":
+        tl = ctx["two_losses"]
+        return bool(fig.get("post_loss_sentence")) and tl.condition_mean < tl.comparison_mean
+    if key == "busiest":
+        return bool(fig.get("story")) and fig["story"]["net"] < 0
+    return False
+
+
+def mark_first(items: list[dict]) -> list[dict]:
+    """The first wedge in reading order that is worse than its reference is marked; none other."""
+    out, done = [], False
+    for item in items:
+        mark = bool(item.get("worse")) and not done
+        done = done or mark
+        out.append({**item, "marked": mark})
+    return out
+
+
 def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     """Each fact's wedge on its chapter's dial (TICKET-880). Same figures its page shows."""
     if key == "hidden":
         n = formatting.count(_counted_days(ctx))
         return _wedge(Figure(n, "days", of="traded, in two halves"))
     if key == "worst-days":
+        days, net = other_days(ctx)
+        came = formatting.rupees(ctx["worst_days"].sum)
         return _wedge(Figure(len(ctx["worst_days"].days), "days",
-                             of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
+                             of=f"came to {came}; the other {days} days {formatting.rupees(net)}"),
+                      phone=f"came to {came}")  # a phone's wedge has room for two lines (fit test)
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
         best = formatting.rupees(ctx["best"][0].net)
-        return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
-                      phone="best\ntrade", phone_shown=best.removeprefix("+"))
+        worst = formatting.rupees(ctx["worst"][0].net) if ctx["worst"] else None
+        return _wedge(Figure(best, "rupees", of=f"your best trade; worst {worst}" if worst else "your best trade"),
+                      shown=best, phone="best\ntrade",
+                      phone_shown=best.removeprefix("+"))
     if key == "math":
-        return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
+        needs = wins_needed(ctx)
+        return _wedge(Figure(ctx["strike"].rate_percent, "trades",
+                             of=f"trades made money; needs {needs}" if needs else "trades made money"),
+                      phone=f"made money,\nneeds {needs}" if needs else None,
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
     if key == "run":
         n = ctx["run"].length
-        return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of="in a row"),
-                      phone_shown=f"{formatting.count(n)} lost")
+        lost = formatting.rupees(run_lost(ctx))
+        return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of=f"in a row, {lost} in all"),
+                      phone="in a row", phone_shown=f"{formatting.count(n)} lost")
     if key == "clock":
         hour = fig["figure"].removesuffix(" hour")
-        return _wedge(Figure(hour, "hour", of="the hour of your largest result"),
-                      phone="largest\nhour", shown=hour)
+        lead = mx.lead_clock(ctx["clocks"])
+        net = formatting.rupees(lead.largest.net)
+        if worse(key, ctx, fig):
+            of, phone = (f"largest hour, {net}: more than its book",
+                         f"hour,\n{net}")
+        else:
+            book = formatting.rupees(lead.net)
+            of, phone = (f"largest hour, {net}; its book {book}",
+                         f"hour,\n{net}")
+        return _wedge(Figure(hour, "hour", of=of), phone=phone, shown=hour)
     if key == "down":
-        return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
+        tl = ctx["two_losses"]
+        if not fig.get("post_loss_sentence"):  # the file's own test allows no direction
+            return _wedge(_of(_trades(tl.condition), "right after two losses"))
+        after, other = formatting.rupees(tl.condition_mean), formatting.rupees(tl.comparison_mean)
+        return _wedge(_of(_trades(tl.condition),
+                          f"right after two losses; {after} a trade, other times {other}"),
+                      phone="right after two losses")
     if key == "busiest":
         on_day = fig["busiest_date"].replace(" ", chr(0xA0))  # a date holds together
-        return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}"),
-                      phone=f"busiest day,\n{on_day}")
+        normal = ctx["days"].normal_day
+        return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}; usually {normal}"),
+                      phone=f"busiest day,\nusually {normal}")
     if key == "unread":
         read, _, whole = fig["figure"].removesuffix(" rows").partition(" of ")
         return _wedge(Figure(read, "rows", of=f"of {whole} rows read"), shown=read)
@@ -963,6 +1050,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
             items.append(item)
         else:
             rows.append(_list_row(f, fig, item))
+    items, every = mark_first(items), mark_first(every)
     view = {
         "kind": "chapter",
         "items": items,
@@ -1040,6 +1128,7 @@ def _answer_one(ctx: dict) -> dict:
     else:
         wedge = _wedge(_of(days, f"came to {formatting.rupees(worst.sum)}"),
                        phone=formatting.rupees(worst.sum))
+    wedge["worse"] = worst.sum < other_days(ctx)[1]
     return {
         "state": "",
         "days_word": _number(len(worst.days)).capitalize(),
@@ -1058,9 +1147,13 @@ def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
     if state:
         return {"state": state, "wedge": _no_answer(state)}
     strike, even = ctx["strike"], ctx["break_even"]
-    return {"state": "", "strike": strike, "even": even,
-            "wedge": _wedge(Figure(strike.rate_percent, "trades", of="trades made money"),
-                            phone="made money", shown=formatting.out_of_a_hundred(strike.rate_percent))}
+    needs = wins_needed(ctx)
+    wedge = _wedge(Figure(strike.rate_percent, "trades",
+                          of=f"trades made money; needs {needs}" if needs else "trades made money"),
+                   phone="made money",  # the hub's phone wedge has one line of room (fit test)
+                   shown=formatting.out_of_a_hundred(strike.rate_percent))
+    wedge["worse"] = worse("math", ctx, figs["math"])
+    return {"state": "", "strike": strike, "even": even, "wedge": wedge}
 
 
 def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
@@ -1075,7 +1168,9 @@ def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
         "story": story,
         "after_two": ctx["two_losses"].condition,
         "says_direction": bool(figs["down"].get("post_loss_sentence")),
-        "wedge": _trades_wedge(story["trades"], "on your busiest day", "busiest day"),
+        "wedge": {**_trades_wedge(story["trades"], f"on your busiest day; usually {ctx['days'].normal_day}",
+                                  "busiest day"),
+                  "worse": story["net"] < 0},
     }
 
 
@@ -1116,7 +1211,7 @@ def home_view(
     figure (TICKET-905); one whose figure has none behind it is drawn plain."""
     figs = figs or facts(ctx, imp)
     answers = answers or hub_answers(ctx, figs, number)
-    items = [
+    items = mark_first([
         {
             "name": c.name,
             **answers[c.number]["wedge"],
@@ -1124,7 +1219,7 @@ def home_view(
             "href": _hub_opens(c.number, answers[c.number], figs),
         }
         for c in S.CHAPTERS
-    ]
+    ])
     caption = ["your result,", "before charges"] if gross else ["your result for", "the whole period"]
     centre = {"figure": formatting.rupees(ctx["share"].total), "captionLines": caption}
     return {"kind": "home", "items": items, "centre": centre}

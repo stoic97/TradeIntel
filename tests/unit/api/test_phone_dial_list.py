@@ -49,26 +49,27 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
+# Every dial on the demo pages, phone then desktop, as main drew them after TICKET-1002 and
+# TICKET-1035 (each wedge says its reference; the worst one is marked).
 ON_MAIN = {
-    "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
-                "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
-                          "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
-    "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38"],
+    "/mirror": ["4dc4d7bcd2a4994688fdcac075024102cd1bdd189bd9c25b89ff88c1533840e0",
+                "050bbbe0a5b4384db3c105f52bb26d3f1a0e4dc4b9e1be87725674ef57ac9d6a"],
+    "/mirror/chapter/1": ["f7a7fc91dee5aba033a7bbf7c9a1febd2e8b14bd3a46fa958b3e3b2d03bbef34",
+                          "74e7aa9b1c711bf4b5ee147a5fc585dae57b9abe666b106839fd28c147336190"],
+    "/mirror/chapter/2": ["dc836d57f0a3b891db56ba3672604b114931ea541bc21a3d062b090dc6ccaa65",
+                          "328bf1a460346108458b6fe96cf506177d0fcadea699269ace9ed6485b66c131"],
+    "/mirror/chapter/3": ["ec1e44153358053ebbdc2302a63e69c1af5279767872739ee205e2c80f174bb9",
+                          "6ec89f603be2313c3b691c87bdcaf8624c329b6e582b150a7d05b8c3a29b6761"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
                           "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
-    (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
-    (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
-    (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "9224b880ab89b1d829e0a95a1a178dae6459d414512552236f544902dc58a24e",
+    (1, "phone"): "52ec9f907b95c22a1a27c3c5fb7efe51c1633f62e67880ddb2dea8b8b5ef457b",
+    (1, "desktop"): "4f9c3e8f4e90a927761ca74dbd266ee0c02677bf59c2595c92840fb6062b9153",
+    (2, "phone"): "73f43c3c75f70b63a424c670ef7dd4036e2fef6a7d5a2754362fdc2e4b3ed596",
+    (2, "desktop"): "8f46fd6cf9e56520d022fbf504d5c0e9bd3bb40127db883567e959c2852b9d24",
+    (3, "phone"): "c3cbe5d67525418c62a6c66fa7eeef14c270188bb01f6999996e923bd59c699e",
+    (3, "desktop"): "0f53ca78b62ead39ad8aab8de3de47ff62eae03951965e66d9c08dda94e71701",
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }

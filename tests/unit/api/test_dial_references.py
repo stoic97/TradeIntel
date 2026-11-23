@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -112,9 +113,9 @@ def test_the_clock_says_its_hour_against_its_book():
     words = said(TWO["The clock"])
     assert formatting.rupees(lead.largest.net) in words
     worse = lead.largest.net < 0 and lead.largest.net < lead.net
-    assert ("more than the book's whole result" in words) is worse
+    assert ("more than its book" in words) is worse
     if not worse:
-        assert f"the book {formatting.rupees(lead.net)}" in words
+        assert f"its book {formatting.rupees(lead.net)}" in words
 
 
 def test_the_busiest_day_says_the_usual_day():
@@ -145,8 +146,11 @@ def hub_items(trips) -> list[dict]:
 
 
 def test_the_hub_wins_wedge_says_what_it_needs():
+    """The hub's phone wedge has one line of room (test_hub_answers' fit), so there the mark and
+    the chapter's own dial carry it; the desktop hub says it."""
     items = hub_items(trips_from(EVEN))
-    assert "needs 40" in said(items[1]) and "needs 40" in said(items[1], phone=True)
+    assert "needs 40" in said(items[1])
+    assert said(items[1], phone=True) == "made money"
 
 
 def test_the_hub_busiest_wedge_says_the_usual_day():
@@ -156,7 +160,9 @@ def test_the_hub_busiest_wedge_says_the_usual_day():
 
 def test_one_wedge_at_most_is_marked_on_the_hub():
     assert len(marked(hub_items(TRIPS))) <= 1
-    assert marked(hub_items(trips_from(UNDER))) == ["Your patterns"]
+    under = hub_items(trips_from(UNDER))
+    assert [i["name"] for i in under if i.get("worse")][:2] == ["Where your results came from", "Your patterns"]
+    assert marked(under) == ["Where your results came from"], "the first in reading order, and only it"
 
 
 # ---------- the fill: the kit and its port draw it alike ----------
@@ -174,13 +180,13 @@ def test_a_marked_slice_is_filled_quietly_and_an_unmarked_one_is_not():
 
 
 def test_the_kit_draws_the_same_fill():
-    js = open(KIT_JS, encoding="utf-8").read()
+    js = Path(KIT_JS).read_text(encoding="utf-8")
     assert "marked: it.marked ? wedge(cx, cy, sl.start, sl.end, rr.divStart, rr.inner) : ''" in js
     assert 'if (s.marked) o.push(`<path class="scope__marked" d="${s.marked}"/>`);' in js
 
 
 def test_the_fill_has_its_class_in_components_css():
-    assert re.search(r"^\.scope__marked \{[^}]*fill-opacity", open(CSS, encoding="utf-8").read(), re.M)
+    assert re.search(r"^\.scope__marked \{[^}]*fill-opacity", Path(CSS).read_text(encoding="utf-8"), re.MULTILINE)
 
 
 # ---------- the demo file, as a trader meets it ----------
