@@ -77,7 +77,9 @@ def test_the_title_names_the_condition_and_carries_no_verdict(page, read):
     ids=["fact page", "card"],
 )
 def test_closed_the_page_opens_with_no_difference_we_can_stand_behind(page, read):
-    assert read(page())[1] == CLOSED
+    html = page()
+    assert read(html)[1] == "After two straight losses you averaged +₹137.5 a trade; on your other trades after two had closed, −₹100.5."  # the averages lead since 1030, then the honest line
+    assert CLOSED in readable(html)
 
 
 @pytest.mark.parametrize("page", [lambda: fact_page("down", DOWN), lambda: chapter_page(3, DOWN)],

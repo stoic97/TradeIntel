@@ -37,6 +37,14 @@
     {%- if f.story.costliest %}
     <p class="body-small">Your longest run: {{ f.story.summary }}, {{ money(f.story.net) }}.</p>
     <p class="body-small">Your costliest run: {{ f.story.costliest.summary }}, {{ money(f.story.costliest.net) }}.</p>
+    {%- if f.costliest_timeline %}
+    <details class="run__costliest">
+      <summary class="body">Your costliest run, drawn</summary>
+      {% call figure(2, "Your costliest run, trade by trade", f.costliest_timeline) %}
+        <div class="figure__axis"><span>{{ f.story.costliest.axis_from }}</span><span>{{ f.story.costliest.axis_to }}</span></div>
+      {% endcall %}
+    </details>
+    {%- endif %}
     {%- else %}
     <p class="body-small">Your longest run is also your costliest: {{ f.story.summary }}, {{ money(f.story.net) }}.</p>
     {%- endif %}

@@ -140,7 +140,11 @@ def test_row_three_counts_the_trades_that_actually_followed_two_losses():
     """The condition, not the population: the population needn't have followed any loss."""
     tl = CTX["two_losses"]
     assert tl.population != tl.condition
-    assert f"After two straight losses you opened {tl.condition} trades." in rows(hub())["Your behaviour"]
+    # Since 1030 the row says what those trades averaged against the rest, not only how many.
+    from services.production.api import formatting
+    said = rows(hub())["Your behaviour"]
+    assert (f"After two straight losses you averaged {formatting.rupees(tl.condition_mean, exact=True)} a trade; "
+            f"on your other trades after two had closed, {formatting.rupees(tl.comparison_mean, exact=True)}.") in said
 
 
 def test_row_three_becomes_the_comparison_only_when_the_test_passes(monkeypatch):

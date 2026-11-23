@@ -14,6 +14,21 @@ No difference we can stand behind.
     worth watching (it showed up before the correction, not after it or not in both halves),
     or not enough trades yet, with how many more. A finding says nothing more here: the
     opening sentence already states it. -#}
+{#- The two averages this fact already prints, first, when the sentence above would
+    otherwise open with "No difference". Counted; no comparison word. -#}
+{% macro down_averages(f, two_losses) -%}
+{%- if not f.post_loss_sentence and two_losses.condition and two_losses.comparison and two_losses.condition_mean is not none and two_losses.comparison_mean is not none -%}
+After two straight losses you averaged <span class="opening-figure">{{ money(two_losses.condition_mean, exact=true) }}</span> a trade; on your other trades after two had closed, <span class="opening-figure">{{ money(two_losses.comparison_mean, exact=true) }}</span>.
+{%- endif -%}
+{%- endmacro %}
+
+{#- Your wins and losses' first line: the gap, from the page's own two figures. -#}
+{% macro math_gap(gap) -%}
+{%- if gap -%}
+Your winners are bigger than your losers ({{ Figure(gap.winner, "rupees")|rupees(signed=false) }} against {{ Figure(gap.loser, "rupees")|rupees(signed=false) }}). At this size you need <span class="num">{{ Figure(gap.more, "winners")|count }}</span> more winners in every 100 to break even.
+{%- endif -%}
+{%- endmacro %}
+
 {% macro down_level(f) -%}
 {%- if f.post_loss_level == "worth_watching" -%}
 Something showed up here, but it didn't clear the bar a finding has to clear. Upload more months to confirm.

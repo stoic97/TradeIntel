@@ -32,7 +32,8 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
     assert FIGS["clock"]["figure"] == "10:00 hour"
     assert FIGS["down"]["figure"] == f"{CTX['two_losses'].population} trades"
-    assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
+    days = CTX["days"]  # trades against the usual day since 1030, not a ratio
+    assert FIGS["busiest"]["figure"] == f"{days.busiest_trips} trades, against your usual {days.normal_day}"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"
     assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40 trades"
     assert FIGS["not-told"]["figure"] == "4"

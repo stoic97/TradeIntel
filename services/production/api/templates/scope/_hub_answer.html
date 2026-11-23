@@ -6,9 +6,12 @@
 {%- if a.state -%}
 Not enough trades yet.
 {%- elif c.number == 1 -%}
+  {%- if a.five_vs_rest -%}
+Your five worst days: {{ money(a.worst_sum) }}. Your other <span class="num">{{ Figure(a.other_count, "days")|count }}</span> days: {{ money(a.other_net) }}.{{ " " }}
+  {%- endif -%}
   {%- if a.share.shown_as_percentage -%}
 {{ a.days_word }} of your <span class="num">{{ Figure(a.share.trading_day_count, "days")|count }}</span> trading days carried <span class="num">{{ Figure(a.share.share_percent, "percent") }}</span>% of your losses — {{ money(a.worst_loss, signed=false) }}.
-  {%- else -%}
+  {%- elif not a.five_vs_rest -%}
 Your five worst days came to {{ money(a.worst_sum) }}.
   {%- endif -%}
   {%- if a.at_least %} On each of them you traded at least <span class="num">{{ Figure(a.at_least, "times") }}</span>× your normal day.{% endif -%}
@@ -20,7 +23,8 @@ Your five worst days came to {{ money(a.worst_sum) }}.
 {{ down_sentence(post_loss, two_losses) }}
   {%- else -%}
 Your busiest day: <span class="num">{{ Figure(a.story.trades, "trades")|count }}</span> {{ "trade" if a.story.trades == 1 else "trades" }} on {{ a.story.day }}, {{ money(a.story.net) }}.
-    {%- if a.after_two %} After two straight losses you opened <span class="num">{{ Figure(a.after_two, "trades")|count }}</span> {{ "trade" if a.after_two == 1 else "trades" }}.{% endif -%}
+    {%- if a.after_two and two_losses.comparison and two_losses.condition_mean is not none and two_losses.comparison_mean is not none %} After two straight losses you averaged {{ money(two_losses.condition_mean, exact=true) }} a trade; on your other trades after two had closed, {{ money(two_losses.comparison_mean, exact=true) }}.
+    {%- elif a.after_two %} After two straight losses you opened <span class="num">{{ Figure(a.after_two, "trades")|count }}</span> {{ "trade" if a.after_two == 1 else "trades" }}.{% endif -%}
   {%- endif -%}
 {%- else -%}
   {%- if a.number is not none -%}

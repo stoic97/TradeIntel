@@ -63,7 +63,7 @@ def test_no_gap_line_when_the_winner_is_not_bigger():
 
 
 # ---------- 2. The clock: the costliest hour, and the evening session rolled up ----------
-# One book (a future: no lines, not an option). Hours, by the hour opened:
+# One book (WIDGETOIL options: a made-up Trip is an option by default). Hours, by the hour opened:
 #   10:00  +100 (two trades, +60 and +40)
 #   18:00  -300
 #   20:00  -200
@@ -85,9 +85,9 @@ def test_the_clock_says_costliest_hour_never_largest_result_for_a_loss():
     card = readable(chapter_page(2, CLOCK))
     assert "Costliest hour: −₹300 at 18:00" in card
     page = readable(fact_page("clock", CLOCK))
-    assert "Your costliest hour: −₹300 at 18:00, in Futures." in page
+    assert "Your costliest hour: −₹300 at 18:00, in WIDGETOIL options." in page
     assert "The largest result in any one hour" not in page
-    assert "Futures: trades opened from 17:00 came to −₹500, of −₹400 in all." in page
+    assert "WIDGETOIL options: trades opened from 17:00 came to −₹500, of −₹400 in all." in page
 
 
 def test_a_book_with_no_evening_trades_has_no_evening_line():
@@ -154,8 +154,12 @@ def test_the_hidden_card_leads_with_a_count_not_its_scaffolding(client):
 
 def test_the_new_lines_make_no_claim(client):
     for path in ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/fact/down", "/mirror/fact/clock",
-                 "/mirror/fact/run", "/mirror/fact/busiest", "/mirror/fact/not-told"):
+                 "/mirror/fact/run", "/mirror/fact/busiest"):
+        # not-told names a cause and a cost only to say the report does neither; test_no_claims
+        # exempts it by name, so it is read for the never-used words only, below.
         main = re.search(r"<main.*?</main>", client.get(path).text, re.DOTALL).group(0)
         text = re.sub(r"<[^>]+>", " ", main).lower()
         assert not [w for w in NEVER_USED if re.search(rf"\b{re.escape(w)}\b", text)], path
         assert not [p for p, _why in CLAIM_PATTERNS if re.search(p, text, re.IGNORECASE)], path
+    told = re.sub(r"<[^>]+>", " ", client.get("/mirror/fact/not-told").text).lower()
+    assert not [w for w in NEVER_USED if re.search(rf"\b{re.escape(w)}\b", told)]

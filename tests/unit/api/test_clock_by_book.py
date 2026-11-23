@@ -224,7 +224,8 @@ def test_a_clock_in_another_zone_says_that_zone():
 
 
 def test_the_headline_names_the_hour_as_what_happened():
-    assert "The largest result in any one hour: −₹5,500 at 20:00, in WIDGETOIL options." in PAGE
+    # A loss is "your costliest hour" since 1030; "largest result" stays for a gain.
+    assert "Your costliest hour: −₹5,500 at 20:00, in WIDGETOIL options." in PAGE
     assert "Its largest result in one hour: −₹5,500 at 20:00, over 40 trades, −₹137 per trade." in PAGE
     assert "Its largest result in one hour: +₹3,000 at 10:00, over 30 trades, +₹100 per trade." in PAGE
 
@@ -363,7 +364,7 @@ def test_the_card_names_each_clock_and_its_largest_hour():
     page = readable(chapter_page(2, TRIPS))
     assert "WIDGETOIL options, India time" in page
     assert "WIDGETIDX options, India time" in page
-    assert "Largest: −₹5,500 at 20:00" in page
+    assert "Costliest hour: −₹5,500 at 20:00" in page  # a loss, since 1030
     assert "Largest: +₹3,000 at 10:00" in page
     assert "1 more book on the page." in page
 

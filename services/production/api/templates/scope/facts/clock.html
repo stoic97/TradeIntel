@@ -2,7 +2,14 @@
 {% from "_components.html" import money %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
+    {%- if f.lead_costliest %}
+    <p class="mirror">Your costliest hour: {{ money(f.lead.net) }} at <span class="num">{{ f.lead_label }}</span>, in {{ f.lead_book }}.</p>
+    {%- else %}
     <p class="mirror">The largest result in any one hour: {{ money(f.lead.net) }} at <span class="num">{{ f.lead_label }}</span>, in {{ f.lead_book }}.</p>
+    {%- endif %}
+    {%- for c in f.clocks + f.other_clocks if c.evening %}
+    <p class="mirror">{{ c.book }}: trades opened from <span class="num">{{ c.evening.from }}</span> came to {{ money(c.evening.after) }}, of {{ money(c.evening.total) }} in all.</p>
+    {%- endfor %}
     {%- if f.held.count %}
     <p class="mirror">These are trades you closed the day you opened them. {{ Figure(f.held.count, "positions")|count }} position{{ " held past the day is" if f.held.count == 1 else "s held past the day are" }} not counted here.</p>
     {%- endif %}

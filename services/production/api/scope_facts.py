@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from markupsafe import Markup
 
@@ -25,6 +25,7 @@ from services.production.api import scope_map as S
 from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle, multiplicity
+from services.shared.market.series import EVENING_OPENS
 from services.shared.schemas import scope_v1 as s
 
 COUNTED = s.ResultState.COUNTED_FACT
@@ -195,7 +196,9 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
     if key == "down":
         return Figure(_trades_said(ctx["two_losses"].population), "trades")
     if key == "busiest":
-        return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
+        days = ctx["days"]  # trades, against the usual day: a count he feels, not a ratio
+        return Figure(f"{formatting.count(days.busiest_trips)} trades, against your usual "
+                      f"{days.normal_day}", "trades")  # the median, as "Your normal day is 4.5 trades" writes it
     if key == "unread":
         return Figure(f"{formatting.count(imp.rows_parsed)} of {formatting.count(imp.rows_in)} rows", "rows")
     if key == "risk":
@@ -321,7 +324,12 @@ def _hidden_view(ctx: dict) -> dict:
                 rows.append({"label": "Whole days shuffled between the halves: p",
                              "control": "net-per-trade", "cells": ["", "", checked]})
         books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
-    return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
+    counted = [r for r in ctx["book_halves"] if r.state is COUNTED and r.first and r.second]
+    lead = max(counted, key=lambda r: r.trades) if counted else None
+    return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS,
+            # The card's first line: the biggest book's net per trade, first half against second.
+            "lead": {"book": lead.book, "first": lead.first.net_per_trade,
+                     "second": lead.second.net_per_trade} if lead else None}
 
 
 def _break_even_lines(ctx: dict) -> list[dict]:
@@ -488,18 +496,47 @@ def _summary_words(story: mx.RunStory) -> str:
     return f"{count}, {_days_words(story.days)}, {_books_words(story.books)}"
 
 
+def _of_100(rate: Decimal) -> int:
+    """A rate as out_of_a_hundred writes it, as a whole number: rounded half up."""
+    return int(Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def _math_gap(strike, even) -> dict | None:
+    """The wins-and-losses page's first line: when his average winner is bigger than his loser,
+    how many more winners in every 100 the break-even needs. The difference of the two figures
+    the page already writes ("29 of 100", "43 of 100"), so the line can't disagree with them.
+    No line when the winner isn't bigger, or when the win rate is already at break-even."""
+    if even.percent is None or strike.rate_percent is None:
+        return None
+    if even.average_winner <= even.average_loser:
+        return None
+    more = _of_100(even.percent) - _of_100(strike.rate_percent)
+    if more <= 0:
+        return None
+    return {"winner": even.average_winner, "loser": even.average_loser, "more": more}
+
+
 def _run_view(ctx: dict) -> dict:
     """The run's page and card: its story, in words, with its charts. Nothing here is counted:
     metrics.run_story decides every figure."""
     trips = ctx["trips"]
     story = mx.run_story(trips, ctx["run"].trip_ids)
     if story is None:
-        return {"story": None, "timeline": None, "card_timeline": None}
+        return {"story": None, "timeline": None, "card_timeline": None, "costliest_timeline": None}
     costliest = ctx["costliest_run"]
     other = None
+    costliest_timeline = None
     if costliest.trip_ids != ctx["run"].trip_ids:
         worst = mx.run_story(trips, costliest.trip_ids)
         other = {"summary": _summary_words(worst), "net": worst.net}
+        if worst is not None:  # drawn beside the longest, as the longest is drawn
+            worst_plan = _timeline(worst)
+            worst_shown = [*worst.trades, worst.after] if worst.after else list(worst.trades)
+            worst_moments = [t.entry_ts for t in worst_shown] + [t.exit_ts for t in worst_shown]
+            worst_many = len({m.date() for m in worst_moments}) > 1
+            other["axis_from"] = _axis_label(min(worst_moments), worst_many)
+            other["axis_to"] = _axis_label(max(worst_moments), worst_many)
+            costliest_timeline = G.chart_run_timeline(**worst_plan, w=PAGE_W, h=TIMELINE_H)
     plan = _timeline(story)
     shown = [*story.trades, story.after] if story.after else list(story.trades)
     moments = [t.entry_ts for t in shown] + [t.exit_ts for t in shown]
@@ -534,6 +571,7 @@ def _run_view(ctx: dict) -> dict:
     }
     return {
         "story": view,
+        "costliest_timeline": costliest_timeline,
         "timeline": G.chart_run_timeline(**plan, w=PAGE_W, h=TIMELINE_H),
         "card_timeline": G.chart_run_timeline(**plan, w=CARD_W, h=CARD_TIMELINE_H),
     }
@@ -727,6 +765,10 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         flagged=_flagged_days(ctx, out),
     )
     out["math"]["held"] = ctx["held_past_day"]
+    out["math"]["gap"] = _math_gap(ctx["strike"], ctx["break_even"])
+    # The finding bar's line, moved from the hub to "What we have not told you".
+    out["not-told"]["checks_run"] = len(mx.CHECKS_RUN)
+    out["not-told"]["checks_listed"] = len(multiplicity.family())
     out["run"]["day_count"] = len(ctx["run"].days)
     out["run"]["start_day"] = formatting.day(ctx["run"].days[0]) if ctx["run"].days else None
     out["run"].update(_run_view(ctx))
@@ -802,6 +844,21 @@ def _chart_of(clock: mx.BookClock, w: float, h: float) -> dict:
     return G.chart_clock([_f(hr.net) for hr in clock.hours], few, w, h)
 
 
+def _evening(clock: mx.BookClock) -> dict | None:
+    """A book's trades opened from 17:00, when MCX's evening session opens (series.EVENING_OPENS:
+    the exchange's time, not a threshold of ours), against the book's whole result. A sum of the
+    hour rows the page already prints; None for a book with no trade opened then."""
+    evening = [h for h in clock.hours if h.hour >= EVENING_OPENS.hour]
+    if not evening:
+        return None
+    return {
+        "after": sum((h.net for h in evening), Decimal(0)),
+        "total": sum((h.net for h in clock.hours), Decimal(0)),
+        "trades": sum(h.trips for h in evening),
+        "from": _hour_words(EVENING_OPENS.hour),
+    }
+
+
 def _clock_view(ctx: dict) -> dict:
     """The clocks as the page draws them: books of 30 trades first, the rest behind a toggle.
 
@@ -835,6 +892,8 @@ def _clock_view(ctx: dict) -> dict:
                 "last_hour": hours[-1]["label"],
                 "largest": c.largest,
                 "largest_label": _hour_words(c.largest.hour),
+                "costliest": c.largest.net < 0,
+                "evening": _evening(c),
                 "other": c.larger_per_trade,
                 "other_label": _hour_words(c.larger_per_trade.hour) if c.larger_per_trade else "",
                 "hides_a_rate": any(
@@ -853,6 +912,7 @@ def _clock_view(ctx: dict) -> dict:
         "lead_book": lead.book if lead else "",
         "lead": lead.largest if lead else None,
         "lead_label": _hour_words(lead.largest.hour) if lead else "",
+        "lead_costliest": bool(lead) and lead.largest.net < 0,
     }
 
 
@@ -1047,6 +1107,11 @@ def _answer_one(ctx: dict) -> dict:
         "worst_sum": worst.sum,
         "worst_loss": abs(worst.sum),
         "at_least": int(least) if least >= 2 else None,
+        # The line that leads chapter 1 when it holds: the five worst days lost more than the
+        # other days moved all together.
+        "five_vs_rest": (worst.sum < 0 and worst.sum < share.other_days_net),
+        "other_count": share.other_days_count,
+        "other_net": share.other_days_net,
         "wedge": wedge,
     }
 
