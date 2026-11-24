@@ -12,17 +12,59 @@ ruling's words, not from the program's output.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+import re
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from services.production.api import scope_facts as SF
 from services.production.api import trade_list as TL
-from tests.unit.api.test_what_you_do_next import PAIRS, facts_of, trip, words
+from services.production.mirror import metrics as mx
+from services.shared.schemas import scope_v1 as s
+from tests.helpers.scope_chapters import IMP
 
 D = Decimal
+IST = ZoneInfo("Asia/Kolkata")
 
 
-# ---------- the level trade lands in the comparison group (PAIRS, from test_what_you_do_next) ----------
+# The same made-up trades as test_what_you_do_next's PAIRS, written out here: a test file does
+# not import another test file.
+def leg(kind: str | None, side: str, net) -> mx.TradeLine:
+    seg = "OPT" if kind else "FUT"
+    return mx.TradeLine("NIFTY", seg, side, 1, None, None, D(str(net)),
+                        strike=D("24000") if kind else None, option_type=kind)
+
+
+def trip(tid, day, opened, closed, net, *legs, lots=1):
+    entry = datetime.fromisoformat(f"{day}T{opened}:00").replace(tzinfo=IST)
+    leave = datetime.fromisoformat(f"{day}T{closed}:00").replace(tzinfo=IST)
+    lines = legs or (leg("CE", "Buy", net),)
+    return mx.Trip(trip_id=tid, symbol="NIFTY", trading_day=day, entry_ts=entry, exit_ts=leave,
+                   holding_seconds=int((leave - entry).total_seconds()), net=D(str(net)), lots=lots,
+                   risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID, is_option=True, lines=lines)
+
+
+PAIRS = [
+    trip("a1", "2026-03-02", "09:15", "09:30", -100),
+    trip("a2", "2026-03-02", "09:34", "09:50", 200),
+    trip("a3", "2026-03-02", "10:01", "10:20", 0, leg("PE", "Buy", 0)),
+    trip("a4", "2026-03-02", "10:25", "10:40", -50, leg("PE", "Buy", -50)),
+    trip("a5", "2026-03-02", "10:35", "10:45", 30),
+    trip("a6", "2026-03-02", "10:50", "11:00", -20, leg("CE", "Buy", -60), leg("CE", "Sell", 40)),
+    trip("b1", "2026-03-03", "09:20", "09:40", -300, leg("PE", "Sell", -300)),
+    trip("b2", "2026-03-03", "09:46", "10:00", 100, leg("CE", "Sell", 100)),
+]
+
+
+def facts_of(record):
+    return SF.facts(SF.record_context(record), IMP)
+
+
+def words(markup) -> str:
+    return " ".join(re.sub(r"<[^>]+>", " ", str(markup)).split()).replace(" ,", ",").replace(" .", ".").replace(" ;", ";")
+
+
+# ---------- the level trade lands in the comparison group (PAIRS) ----------
 # a3 finished level (0) and closed at 10:20. a4 opened 10:25 and a5 10:35, each with a3 as the
 # last trade closed before it opened, so both come after a level trade: 5 and 15 minutes.
 # After a loss:                a2 (4), b2 (6)                         -> 2 trades, median 5
