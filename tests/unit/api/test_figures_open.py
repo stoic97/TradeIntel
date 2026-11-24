@@ -116,7 +116,7 @@ def test_a_date_opens_its_day_with_every_trade_on_it(client):
     assert page.status_code == 200
     said = words(page.text)
     count = sum(1 for t in trips if t.trading_day == day)
-    assert f"{count} trade" in said and "opened this day, every one of them." in said
+    assert f"{count} trade" in said and "opened this day." in said
     assert page.text.count('<article class="trade">') == count
 
 

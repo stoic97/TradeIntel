@@ -63,10 +63,12 @@
     {%- if not facts["worst-days"].state %}
     <a class="step" href="{{ facts["worst-days"].href }}">Your five worst days — {{ money(worst_days.sum) }}.</a>
     {%- endif %}
+    {%- if ending.journal_href %}
     {%- if f.flagged.worst %}
     <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your five worst days: <span class="num">{{ Figure(f.flagged.worst.trades, "trades")|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
     {%- else %}
     <a class="step" href="{{ ending.journal_href }}">Your journals.</a>
+    {%- endif %}
     {%- endif %}
   </section>
 
