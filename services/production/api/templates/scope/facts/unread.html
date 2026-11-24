@@ -6,7 +6,7 @@
 {% block gross %}{% endblock %}
 {% block body %}
   {{ figure(1, "Rows read and set aside", f.page_chart) }}
-  <p class="table-label">Table 1</p>
+  <p class="table-label">Rows and trades</p>
   <dl class="facts-list">
     <dt>Rows in your file</dt><dd>{{ Figure(imp.rows_in, "rows")|count }} {{ "row" if imp.rows_in == 1 else "rows" }}</dd><dt>Rows we read</dt><dd>{{ Figure(imp.rows_parsed, "rows")|count }} {{ "row" if imp.rows_parsed == 1 else "rows" }}</dd>
     <dt>Rows set aside</dt><dd>{{ Figure(imp.rows_excluded, "rows")|count }} {{ "row" if imp.rows_excluded == 1 else "rows" }}</dd><dt>Trades reconstructed</dt><dd>{{ Figure(imp.trips_reconstructed, "trades")|count }} {{ "trade" if imp.trips_reconstructed == 1 else "trades" }}</dd>
