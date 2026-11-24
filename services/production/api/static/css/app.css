@@ -185,6 +185,9 @@
 .chapter-next + .chapter-next { margin-top: var(--space-3); }
 .chapter-next__line { margin-bottom: var(--space-3); }
 
+/* What you do next (chapter 3): the red swatch for "after your worst days". */
+.legend__swatch--red { background: var(--color-loss); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
