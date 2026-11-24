@@ -7,6 +7,8 @@ state. Every file here is made up.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from services.production.mirror import metrics as mx
@@ -48,7 +50,7 @@ def test_a_comparison_with_a_side_that_isnt_zero_still_is(nets, minutes, said):
 def test_the_rest_of_the_book_stays_when_the_line_goes():
     text = readable(fact_page("math", NO_QUICK_CLOSES))
     assert "By year" in text
-    assert "Break even at a win rate of" in text
+    assert re.search(r"Break even at \d+ of 100", text)
 
 
 @pytest.mark.parametrize("trips", [NO_QUICK_CLOSES, ONLY_WINNERS, ONLY_LOSERS, LEVEL])
