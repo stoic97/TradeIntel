@@ -150,6 +150,7 @@ def test_where_the_money_came_froms_card_opens_with_the_figure_it_leads_with():
     assert card.index("Everything you closed the same day: −₹850.") < card.index("Your best five")
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2): test_b2_every_round_trip.py; this pinned option (b), same-day trades only")
 def test_after_two_straight_losses_leads_with_the_trades_after_two_losses():
     figs = SF.facts(SF.record_context(RECORD), IMP)
     assert figs["down"]["figure"] == "1 trade"  # a5, not the whole population after two closes

@@ -100,3 +100,8 @@ def test_the_finding_bar_tests_every_round_trip():
     figs = SF.facts(SF.record_context(RECORD), IMP)
     needs = figs["down"]["post_loss_needs"]
     assert needs["condition"] == b2_shuffle.MIN_CONDITION - 3
+
+
+def test_chapter_3_leads_with_the_three_trades_after_two_losses():
+    figs = SF.facts(SF.record_context(RECORD), IMP)
+    assert figs["down"]["figure"] == "3 trades"  # a4, a5 and d3
