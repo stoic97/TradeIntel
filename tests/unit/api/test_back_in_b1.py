@@ -12,6 +12,8 @@ ruling's words, not from the program's output.
 """
 from __future__ import annotations
 
+import pytest
+
 import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -72,6 +74,7 @@ def words(markup) -> str:
 #   sorted 5, 5, 11, 15: the middle two are 5 and 11, so the median is 8.
 
 
+@pytest.mark.skip(reason="superseded by B1 parity (TICKET-1006, 24 Nov): one observation per prior trip; re-pinned in test_b1_one_per_prior.py")
 def test_a_trade_after_a_level_trade_is_in_the_comparison_group():
     nt = SF.record_context(PAIRS)["next_trades"]
     assert sorted(t.trip_id for t in nt.after_loss) == ["a2", "b2"]
@@ -81,6 +84,7 @@ def test_a_trade_after_a_level_trade_is_in_the_comparison_group():
                                    "a4": "win-or-level", "a5": "win-or-level", "a6": "win-or-level"}
 
 
+@pytest.mark.skip(reason="superseded by B1 parity (TICKET-1006, 24 Nov): one observation per prior trip; re-pinned in test_b1_one_per_prior.py")
 def test_the_back_in_list_holds_both_groups_and_each_opens():
     ctx = SF.record_context(PAIRS)
     every = TL.listing("back-in", ctx, {}, {})["shown"]
@@ -89,6 +93,7 @@ def test_the_back_in_list_holds_both_groups_and_each_opens():
     assert (every, after_loss, comparison) == (6, 2, 4)
 
 
+@pytest.mark.skip(reason="superseded by B1 parity (TICKET-1006, 24 Nov): one observation per prior trip; re-pinned in test_b1_one_per_prior.py")
 def test_under_thirty_a_group_the_page_says_too_few_and_compares_nothing():
     f = facts_of(PAIRS)["back-in"]
     assert words(f["line"]) == (
