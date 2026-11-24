@@ -13,7 +13,7 @@ from pathlib import Path
 
 from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader, select_autoescape
 
-from services.production.api import chance, dial, door, findings, formatting
+from services.production.api import chance, dial, door, findings, formatting, wins_gap
 
 TEMPLATES = Path("services/production/api/templates")
 
@@ -29,4 +29,5 @@ def template_env(extra: dict[str, str] | None = None) -> Environment:
     findings.register(env)
     chance.register(env)
     door.register(env)
+    wins_gap.register(env)
     return env

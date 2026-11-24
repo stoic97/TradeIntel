@@ -81,6 +81,24 @@ class ConsentEvent(Base, _InsertOnly):
     wording_shown: Mapped[str] = mapped_column(Text)
 
 
+class BrokerConnection(Base):
+    """TICKET-896: the stored key behind a read-only broker pull. One row per trader per broker.
+
+    Not insert-only: disconnecting deletes the row, and so does /delete. The key is held
+    encrypted (the same Fernet key as uploaded files) and never logged. The consent for it
+    is a ``broker_pull`` row in the ledger, kept apart from the diagnosis consent.
+    """
+
+    __tablename__ = "broker_connection"
+    __table_args__ = (UniqueConstraint("trader_id", "broker",
+                                       name="uq_broker_connection_trader_broker"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    broker: Mapped[str] = mapped_column(String(32))
+    token_ciphertext: Mapped[str] = mapped_column(Text)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RiskBudgetDeclaration(Base, _InsertOnly):
     """PRD 5.5. A percentage requires the capital, or no trip has a denominator."""
 
@@ -489,6 +507,101 @@ class AdminAction(Base, _InsertOnly):
     action: Mapped[str] = mapped_column(String(64))
     target: Mapped[str | None] = mapped_column(String(200))
     at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class MarketToken(Base):
+    """The day's Fyers token, one row (TICKET-998). It can place orders, so only its Fernet
+    ciphertext is kept, under the file key; the sync is the one reader that decrypts it. A new
+    login replaces the row. No trader's data: the admin who connected is ``trader:<id>``, as the
+    admin trail writes it."""
+
+    __tablename__ = "market_token"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ciphertext: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    connected_by: Mapped[str] = mapped_column(String(100))
+
+
+class MarketSyncRun(Base, _InsertOnly):
+    """One run of ``cli market-sync`` (TICKET-998): its result, and per underlying the days it
+    added and refused, as counts, dates and reasons. Never a price."""
+
+    __tablename__ = "market_sync_run"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+    result: Mapped[str] = mapped_column(String(32))
+    summary: Mapped[str] = mapped_column(Text)
+
+
+class MarketDayRequest(Base):
+    """A stock's trading day that a trader's trades need and the store lacks (TICKET-998). The
+    sync fetches it; one Fyers won't serve is given up after three tries, with the reason. It names
+    a stock and a day, never a trader, so a deletion leaves it: it holds nothing of his."""
+
+    __tablename__ = "market_day_request"
+    __table_args__ = (UniqueConstraint("underlying", "trading_day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    underlying: Mapped[str] = mapped_column(String(40))
+    trading_day: Mapped[str] = mapped_column(String(10))
+    requested_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    status: Mapped[str] = mapped_column(String(16))
+    tries: Mapped[int] = mapped_column(Integer, default=0)
+    reason: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+
+
+class BarFigureJob(Base):
+    """One import's bar figures, to be worked out off the web app (TICKET-999). The upload adds it
+    as pending, a cheap insert; ``cli bar-figures`` works it out, leaves it waiting while a day it
+    needs isn't in, and marks it done. ``provenance`` names the code and every day file read."""
+
+    __tablename__ = "bar_figure_job"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"), unique=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    state: Mapped[str] = mapped_column(String(16))
+    waiting_days: Mapped[int] = mapped_column(Integer, default=0)
+    requested_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+    provenance: Mapped[str | None] = mapped_column(Text)
+
+
+class BarTradeFigure(Base):
+    """One trade's bar figures (TICKET-999), in underlying points in its direction, or the reason
+    it has none. Points are Decimal text; ``path`` is the 30 minutes after he clicked, as JSON."""
+
+    __tablename__ = "bar_trade_figure"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_id: Mapped[str] = mapped_column(String(64))
+    underlying: Mapped[str | None] = mapped_column(String(40))
+    reason: Mapped[str | None] = mapped_column(Text)
+    way: Mapped[str | None] = mapped_column(String(32))
+    against: Mapped[str | None] = mapped_column(String(32))
+    took: Mapped[str | None] = mapped_column(String(32))
+    path: Mapped[str | None] = mapped_column(Text)
+    short: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class BarPathSummary(Base):
+    """An import's after-you-clicked paths for one underlying, beside random moments (TICKET-999):
+    medians, his middle half, the random middle 95%, and up to 200 of his paths, as JSON."""
+
+    __tablename__ = "bar_path_summary"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    underlying: Mapped[str] = mapped_column(String(40))
+    measured: Mapped[int] = mapped_column(Integer)
+    randoms: Mapped[int] = mapped_column(Integer)
+    his_median: Mapped[str] = mapped_column(Text)
+    his_q25: Mapped[str] = mapped_column(Text)
+    his_q75: Mapped[str] = mapped_column(Text)
+    random_median: Mapped[str] = mapped_column(Text)
+    random_lo: Mapped[str] = mapped_column(Text)
+    random_hi: Mapped[str] = mapped_column(Text)
+    faint: Mapped[str] = mapped_column(Text)
 
 
 INSERT_ONLY_TABLES = frozenset(

@@ -31,7 +31,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["math"]["figure"] == f'{formatting.out_of_a_hundred(CTX["strike"].rate_percent)} trades'
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
     assert FIGS["clock"]["figure"] == "10:00 hour"
-    assert FIGS["down"]["figure"] == f"{CTX['two_losses'].population} trades"
+    assert FIGS["down"]["figure"] == f"{CTX['two_losses'].condition} trades"  # the fact's own group (1025)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"
     assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40 trades"

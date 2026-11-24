@@ -1,3 +1,6 @@
+# Who runs it: an engineer, by hand, on a real tradebook kept outside this repo.
+# When: when an import needs checking on a real file; it prints counts only.
+# Writes: nothing. Never commit what it prints: no real trader's history goes in git.
 """Run the import pipeline on one real tradebook and report counts only.
 
 Not a test: a one-off diagnostic. It prints aggregates -- how many rows parsed,

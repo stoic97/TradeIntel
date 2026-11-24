@@ -1,0 +1,21 @@
+{#- The shape of your days: his days in thirds by how many trades he took, at his own cut points.
+    No third is said to be better than another. -#}
+<section class="shape" id="day-trades">
+  <h2 class="card-title numbers__heading">Your days by how many trades you took</h2>
+  <p class="body-small numbers__thin">Your days in three groups, cut where your own days fall. A day is the day you closed.</p>
+  <table class="table numbers__table">
+    <thead><tr><th></th><th class="table__num">Days</th><th class="table__num">Trades</th><th class="table__num">Days that made money</th><th class="table__num">Result</th></tr></thead>
+    <tbody>
+      {%- for t in day_trades.thirds %}
+      <tr>
+        <td><a class="link" href="{{ t.href }}">{{ t.label }}</a></td>
+        <td class="table__num num">{{ Figure(t.days, "days")|count }}</td>
+        <td class="table__num num">{{ Figure(t.trades, "trades")|count }}</td>
+        <td class="table__num num">{% if t.rate is not none %}{{ Figure(t.rate, "percent")|out_of_a_hundred }}{% else %}<span class="numbers__thin">Too few</span>{% endif %}</td>
+        <td class="table__num num num--{{ 'gain' if t.net > 0 else 'loss' if t.net < 0 else 'zero' }}">{{ Figure(t.net, "rupees")|rupees }}</td>
+      </tr>
+      {%- endfor %}
+    </tbody>
+  </table>
+  <p class="body-small numbers__thin">"Days that made money" needs <span class="num">{{ Figure(day_trades.minimum, "days")|count }}</span> days in a group; below that it says too few.</p>
+</section>

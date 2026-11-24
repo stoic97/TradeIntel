@@ -3,6 +3,7 @@
     and every link was decided in scope_facts._hidden_view from metrics.book_halves; this page
     only writes them. Nothing here is called a finding, ranked or priced. New copy (D9). -#}
 {% extends "scope/fact.html" %}
+{% from "scope/_books_fold.html" import books_fold %}
 {% block head %}
     <p class="lead">Plain counts, not a finding.</p>
     <p class="body">Each book is split into the first and second half of the days it traded, so a book is only set beside itself. Every count opens the trades behind it.</p>
@@ -11,9 +12,14 @@
     {%- endif %}
 {% endblock %}
 {% block body %}
-  {%- for b in f.books %}
+  {#- A book is folded by its count alone: under the minimum of same-day trades. A book with
+      the minimum or more whose days can't be split in two shows here with its own line. #}
+  {%- for b in f.books if b.n >= book_row_minimum %}
+  {%- if not b.counted %}
   <p class="table-label">{{ Figure(b.book, "book") }} &middot; same-day trades, before charges</p>
-  {%- if b.counted %}
+  <p class="body">{{ b.trades }} same-day trades, on too few days to split into two halves.</p>
+  {%- else %}
+  <p class="table-label">{{ Figure(b.book, "book") }} &middot; same-day trades, before charges</p>
   <table class="table" data-table="hidden">
     <thead><tr><th></th>{% for head in b.columns %}<th class="table__num">{{ head }}</th>{% endfor %}</tr></thead>
     <tbody>
@@ -23,13 +29,20 @@
     </tbody>
   </table>
   <p class="body table-note">p is the share of {{ Figure(f.draws, "shuffles")|count }} shuffles of whole days between the halves, either way, that moved net per trade at least this far. It counts shuffles. It is not a finding.</p>
-  {%- else %}
-  <p class="body">{{ b.trades }} same-day trades: not enough trades yet.</p>
   {%- endif %}
   {%- for p in b.previous %}
   <p class="body" data-previous="{{ p.state }}" data-figure="record" data-known="{{ p.record_finding|known }}" data-rung="{{ p.record_finding|rung }}">On your record: {{ p.record }} {{ p.record_words }}.{% if p.record_band|inside %} Can't be told apart from chance.{% endif %}</p>
   <p class="body" data-previous="{{ p.state }}" data-figure="then" data-known="{{ p.then_finding|known }}" data-rung="{{ p.then_finding|rung }}">Choosing with only what you knew then: {{ p.then }}{% if p.then_words %} {{ p.then_words }}{% endif %}.{% if p.then_band|inside %} Can't be told apart from chance.{% endif %}</p>
   {%- endfor %}
   {%- endfor %}
+  {%- set small = f.books|selectattr("n", "lt", book_row_minimum)|list %}
+  {%- if small %}
+  {% call books_fold(small|length, book_row_minimum) %}
+    {%- for b in small %}
+    <p class="table-label">{{ Figure(b.book, "book") }} &middot; same-day trades, before charges</p>
+    <p class="body">{{ b.trades }} same-day trades: not enough trades yet.</p>
+    {%- endfor %}
+  {% endcall %}
+  {%- endif %}
 {% endblock %}
 {% block caption %}Every trade you closed the day you opened it, in these books.{% endblock %}
