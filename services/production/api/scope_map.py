@@ -70,7 +70,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("same-way", "Same way again", "sameway", on_phone_dial=False),
             Fact("next-day", "The day after a big day", "nextday", on_phone_dial=False),
             Fact("busiest", "Your busiest day", "busy"),
-            Fact("after-close", "After you closed", "after-close"),
+            Fact("after-close", "After you closed", "after-close", on_phone_dial=False),
         ),
         feedback=True,
     ),
