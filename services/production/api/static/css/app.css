@@ -144,6 +144,24 @@
 .math__under { display: block; color: var(--color-faint); }
 .math__secondary { margin-top: var(--space-4); color: var(--color-faint); }
 
+/* Your win rate against break-even (the math page): a bar per book, the years on one scale. */
+.wins-gap { margin: var(--space-6) 0; }
+.wg-book { margin: var(--space-3) 0; }
+.wg-book__name { font-weight: 600; margin-right: var(--space-1); }
+.wg-bar, .wg-years { display: block; width: 100%; height: auto; }
+.wg-track { fill: var(--color-surface); }
+.wg-gap--short { fill: var(--color-faint); fill-opacity: .35; }
+.wg-gap--above { fill: var(--color-faint); fill-opacity: .2; }
+.wg-win { stroke: var(--color-ink); stroke-width: 2.5; }
+.wg-need { stroke: var(--color-ink); stroke-width: 2; stroke-dasharray: 3 2; }
+.wg-you { fill: none; stroke: var(--color-ink); stroke-width: 2; }
+.wg-even { fill: none; stroke: var(--color-faint); stroke-width: 2; stroke-dasharray: 4 3; }
+.wg-band { fill: var(--color-faint); fill-opacity: .15; stroke: none; }
+.wg-you-dot { fill: var(--color-ink); }
+.wg-even-dot { fill: var(--color-page); stroke: var(--color-faint); stroke-width: 1.5; }
+.wg-years__title { margin-top: var(--space-4); }
+.wg-figures { margin-top: var(--space-3); }
+
 /* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
    kit draws the figure there. */
 .fact__title + .mirror { margin-top: var(--space-3); }
