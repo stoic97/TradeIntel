@@ -51,18 +51,30 @@ def _days(row: m.Challenge) -> list[date]:
     return [first, *C.trading_days(first, row.length - 1, _closed())]
 
 
-def _view(sess, trader, row: m.Challenge, trips) -> dict:
-    """How far it has got, and the card; a challenge the files now cover ends as finished."""
+def _progress(sess, trader, row: m.Challenge, trips) -> C.Progress:
     ids = json.loads(row.rule_ids)
     rules = [r for r in _rules(sess, trader) if r.id in ids]
     rules.sort(key=lambda r: ids.index(r.id))
-    progress = C.progress(_days(row), rules, trips, _last_file_day(trips))
+    return C.progress(_days(row), rules, trips, _last_file_day(trips))
+
+
+def _end(row: m.Challenge, progress: C.Progress, how: str) -> None:
+    """End it and keep its card as it reads now: a card is counted as at the moment it ended,
+    never recounted from a later upload."""
+    row.ended_at, row.ended_how = datetime.now(UTC), how
+    row.card_line = C.card_line(progress, stopped=how == "stopped")
+
+
+def _view(sess, trader, row: m.Challenge, trips) -> dict:
+    """How far it has got, and the card; a challenge the files now cover ends as finished."""
+    progress = _progress(sess, trader, row, trips)
     if row.ended_at is None and progress.finished:
-        row.ended_at, row.ended_how = datetime.now(UTC), "finished"
+        _end(row, progress, "finished")
         sess.commit()
-    return {"row": row, "progress": progress, "running": row.ended_at is None,
-            "card": C.card_line(progress, stopped=row.ended_how == "stopped")
-            if row.ended_at is not None else None}
+    card = None
+    if row.ended_at is not None:
+        card = row.card_line or C.card_line(progress, stopped=row.ended_how == "stopped")
+    return {"row": row, "progress": progress, "running": row.ended_at is None, "card": card}
 
 
 def home_card(sess, trader, trips) -> dict | None:
@@ -114,10 +126,17 @@ def challenge_start(request: Request, length: str = Form(""), rule: Annotated[li
             return HTMLResponse("A challenge is already running.", status_code=409)
         trips, _imp = loader.load_for(sess, trader)
         first = C.start_day(trader_today(), _last_file_day(trips), _closed())
+        _take_links_down(sess, trader)  # an earlier card's link never outlives the page that removes it
         sess.add(m.Challenge(trader_id=trader.id, rule_ids=json.dumps(chosen), length=int(length),
                              start_day=first.isoformat(), started_at=datetime.now(UTC)))
         sess.commit()
     return RedirectResponse("/challenge", status_code=303)
+
+
+def _take_links_down(sess, trader) -> None:
+    for row in sess.scalars(select(m.Challenge).where(m.Challenge.trader_id == trader.id,
+                                                      m.Challenge.share_token.is_not(None))):
+        row.share_token = None
 
 
 def _ended(request: Request, csrf_token: str | None, change) -> RedirectResponse | HTMLResponse:
@@ -130,7 +149,7 @@ def _ended(request: Request, csrf_token: str | None, change) -> RedirectResponse
         row = _latest(sess, trader)
         if row is None:
             return HTMLResponse("There is no challenge.", status_code=404)
-        refused = change(row)
+        refused = change(sess, trader, row)
         if refused:
             return HTMLResponse(refused, status_code=409)
         sess.commit()
@@ -139,17 +158,18 @@ def _ended(request: Request, csrf_token: str | None, change) -> RedirectResponse
 
 @router.post("/challenge/stop")
 def challenge_stop(request: Request, csrf_token: str = Form(None)):
-    def stop(row):
+    def stop(sess, trader, row):
         if row.ended_at is not None:
             return "This challenge has already ended."
-        row.ended_at, row.ended_how = datetime.now(UTC), "stopped"
+        trips, _imp = loader.load_for(sess, trader)
+        _end(row, _progress(sess, trader, row, trips), "stopped")
         return None
     return _ended(request, csrf_token, stop)
 
 
 @router.post("/challenge/share")
 def challenge_share(request: Request, csrf_token: str = Form(None)):
-    def share(row):
+    def share(sess, trader, row):
         if row.ended_at is None:
             return "A challenge can be shared once it has ended."
         row.share_token = row.share_token or secrets.token_urlsafe(16)
@@ -159,8 +179,8 @@ def challenge_share(request: Request, csrf_token: str = Form(None)):
 
 @router.post("/challenge/unshare")
 def challenge_unshare(request: Request, csrf_token: str = Form(None)):
-    def unshare(row):
-        row.share_token = None
+    def unshare(sess, trader, row):
+        _take_links_down(sess, trader)  # every link of his, not only the newest card's
     return _ended(request, csrf_token, unshare)
 
 

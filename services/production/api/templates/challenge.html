@@ -25,6 +25,7 @@
     {%- if view.row.share_token %}
     <p class="body-small">Anyone with this link sees this card and nothing else: <a class="link" href="/c/{{ view.row.share_token }}">/c/{{ view.row.share_token }}</a></p>
     <form method="post" action="/challenge/unshare"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn--secondary" type="submit">Remove the link</button></form>
+    <p class="body-small">Starting a new challenge takes this link down.</p>
     {%- else %}
     <form method="post" action="/challenge/share"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn--secondary" type="submit">Make a link to share</button></form>
     {%- endif %}

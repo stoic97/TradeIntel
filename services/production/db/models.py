@@ -467,8 +467,8 @@ class RuleDeclaration(Base, _InsertOnly):
 
 class Challenge(Base):
     """A challenge he set himself: 10 or 20 exchange trading days and one to three
-    of the rules he set. Written once when he starts it; only how it ended and his share link
-    change after that, so it is not insert-only. ``rule_ids`` is a JSON list of
+    of the rules he set. Written once when he starts it; only how it ended (with its card) and his
+    share link change after that, so it is not insert-only. ``rule_ids`` is a JSON list of
     ``rule_declaration`` ids; ``start_day`` an India date."""
 
     __tablename__ = "challenge"
@@ -481,6 +481,8 @@ class Challenge(Base):
     ended_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
     ended_how: Mapped[str | None] = mapped_column(String(16), nullable=True)
     share_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    card_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """The card as it read when it ended; a later upload never recounts it."""
 
 
 class PreTradeNote(Base, _InsertOnly):
