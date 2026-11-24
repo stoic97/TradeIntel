@@ -2339,7 +2339,7 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     for t in same_day:
         by_day.setdefault(t.trading_day, []).append(t)
     loss, win, level, minutes, group, back_in = [], [], [], {}, {}, {}
-    no_dir = 0
+    no_dir = scratch = 0
     way = {("loss", True): 0, ("loss", False): 0, ("win", True): 0, ("win", False): 0}
     way_ids = set()
     for members in by_day.values():
@@ -2349,12 +2349,18 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
                 continue
             prev = max(closed, key=lambda p: (p.exit_ts, p.trip_id))
             minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
-            back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
-            if prev.is_scratch:
-                level.append(t)
+            # B1 is the time to the next entry: one observation per previous trade. A trade opened
+            # after an earlier one that already followed the same previous trade is not its next entry.
+            first = not any(o is not t and prev.exit_ts < o.entry_ts
+                            and (o.entry_ts, o.trip_id) < (t.entry_ts, t.trip_id) for o in members)
+            if first:
+                back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
+            g = "level" if prev.is_scratch else "loss" if prev.is_loss else "win"
+            if first:
+                {"loss": loss, "win": win, "level": level}[g].append(t)
+            if g == "level":
+                scratch += 1
                 continue
-            g = "loss" if prev.is_loss else "win"
-            (loss if g == "loss" else win).append(t)
             group[t.trip_id] = g
             a, b = _direction(prev), _direction(t)
             if a is None or b is None:
@@ -2366,7 +2372,7 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     def mid(group_trips):
         return median([minutes[t.trip_id] for t in group_trips]) if group_trips else None
 
-    return NextTrades(tuple(loss), tuple(win), len(level), minutes, group, mid(loss), mid(win),
+    return NextTrades(tuple(loss), tuple(win), scratch, minutes, group, mid(loss), mid(win),
                       way[("loss", True)], way[("loss", False)], way[("win", True)], way[("win", False)],
                       no_dir, frozenset(way_ids), tuple(level), back_in)
 
