@@ -11,7 +11,7 @@
   {%- endif %}
   <p class="label label--plain">One trading day</p>
   <h1 class="title">{{ when }}</h1>
-  <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day, every one of them.</p>
+  <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day.</p>
   {%- if journal_href %}
   <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
   {%- endif %}

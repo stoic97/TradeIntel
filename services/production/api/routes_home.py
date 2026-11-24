@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import days_worth_a_look as worth
-from services.production.api import door, formatting
+from services.production.api import door, formatting, routes_challenge
 from services.production.api import how_you_got_here as how
 from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
@@ -79,4 +79,5 @@ def home(request: Request):
             # report's filter, and its own chips choose a book and a timeframe.
             how=how.build(trips, imp, request.query_params.get("book"),
                           request.query_params.get("tf")),
+            challenge=routes_challenge.home_card(sess, trader, trips),
         )
