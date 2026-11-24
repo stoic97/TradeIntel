@@ -562,6 +562,8 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .ch-tag { font: 500 10px var(--font-mono); fill: var(--color-faint); }
 .ch-axis { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .ch-axis--x { text-anchor: middle; }
+.ch-axis--x[text-anchor="start"] { text-anchor: start; }  /* an edge label keeps its own anchor: a class outranks the attribute */
+.ch-axis--x[text-anchor="end"] { text-anchor: end; }
 .ch-last--loss { fill: var(--color-loss); }
 .ch-last--gain { fill: var(--color-gain); }
 .ch-last--plain { fill: var(--color-ink); }

@@ -156,3 +156,16 @@ BEFORE = "07af43108373175f03dbb2a77b2f67f417e31c897ef34dad57711509a6714c4e"
 
 def test_the_section_is_drawn_byte_for_byte_as_before(client, engine):
     assert hashlib.sha256(math_page(client).encode()).hexdigest() == BEFORE
+
+
+# ---------- 2. the edge labels, as a phone draws them ----------
+# Found by the 390 px check (headless Chrome, 24 Nov 2026): ".ch-axis--x { text-anchor: middle }"
+# outranks the SVG attribute text-anchor="start", so "2024" was centred on the drawing's left
+# edge and cut in half. The stylesheet now lets an edge label keep its own anchor.
+
+def test_the_stylesheet_lets_an_edge_label_keep_its_anchor():
+    css = Path("services/production/api/static/css/app.css").read_text(encoding="utf-8")
+    assert re.search(r'\.ch-axis--x\[text-anchor="start"\]\s*\{\s*text-anchor:\s*start;\s*\}', css)
+    assert re.search(r'\.ch-axis--x\[text-anchor="end"\]\s*\{\s*text-anchor:\s*end;\s*\}', css)
+    middle = css.index(".ch-axis--x { text-anchor: middle; }")
+    assert css.index('.ch-axis--x[text-anchor="start"]') > middle  # after the rule it overrides
