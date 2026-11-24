@@ -366,11 +366,43 @@ def opening(t: mx.Trip, _lookup: dict) -> Choice | None:
 OVERNIGHTS = ((0, "overnight", "Held overnight"), (1, "same-day", "Closed the same day"))
 
 
+def session_opens(trips: list[mx.Trip]) -> list[dict]:
+    """The session opens his trades are read against, each with the exchanges whose profile
+    gives it, earliest first: what "the session's open" means on his own record. A share is read
+    against the cash-equity profiles, so it names every exchange they cover."""
+    by_time: dict[time, set[str]] = {}
+    for (exchange, symbol), profile in profiles.load_all(loader.PROFILE_DIR).items():
+        wanted = (symbol == profiles.SEGMENT_WILDCARD and profile.segment == "EQ"
+                  and any(is_share(t) for t in trips)) or any(
+            t.symbol == symbol and not is_share(t) and session_open(t) == profile.session_start for t in trips)
+        if wanted:
+            by_time.setdefault(profile.session_start, set()).add(exchange)
+    return [{"time": f"{start:%H:%M}", "exchanges": sorted(names)} for start, names in sorted(by_time.items())]
+
+
 def overnight(t: mx.Trip, _lookup: dict) -> Choice | None:
     """Options and futures closed on a later day than they were opened; shares are apart."""
     if is_share(t):
         return None
     return OVERNIGHTS[1] if t.closed_same_day else OVERNIGHTS[0]
+
+
+def held_days(t: mx.Trip, _lookup: dict) -> Choice | None:
+    """How many calendar days an option or a future held overnight was held, as the longest hold
+    on Your numbers counts them; a share and a same-day trade have none."""
+    if is_share(t) or t.closed_same_day:
+        return None
+    days = (t.exit_ts.date() - t.entry_ts.date()).days
+    return days, str(days), f"{days} day" if days == 1 else f"{days} days"
+
+
+BOOK_GROUP_OF = "the book each trade is in, as the verdict splits them"
+"""The lookup's key for each trade's book as ``mx.book_groups`` names it, "Other options" too."""
+
+
+def _book_group(t: mx.Trip, lookup: dict) -> Choice | None:
+    name = lookup.get(BOOK_GROUP_OF, {}).get(t.trip_id)
+    return (0, name, name) if name else None
 
 
 @dataclass(frozen=True)
@@ -401,6 +433,9 @@ FILTERS = (
     Filter("day_trades", "Trades that day", _day_third, only=frozenset({"risk"})),
     Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
     Filter("overnight", "Held overnight", overnight, only=frozenset({"risk"})),
+    # A worst day's book cell, "Other options" too, and the longest hold open exactly their trades.
+    Filter("book_group", "Book", _book_group, only=frozenset({"risk"}), quiet=True),
+    Filter("held_days", "Days held", held_days, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
     Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
@@ -418,6 +453,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
     lookup = {**expiries, HALF_OF: mx.half_of(behind), DAY_THIRD_OF: day_thirds(behind)[1],
+              BOOK_GROUP_OF: {t.trip_id: name for name, ts in mx.book_groups(behind) for t in ts},
               AFTER_OF: after_groups(key, ctx),
               NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {},
               **_previous_lookup(ctx)}
@@ -432,8 +468,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
             offered = [c for c in offered if c[1] == query.get(f.name)]
             if not offered:
                 continue
-        if len(offered) < 2 and not f.quiet:
-            continue
+        if len(offered) < 2 and not f.quiet and not query.get(f.name):
+            continue  # one choice narrows nothing, unless a link asked for it: then it still does
         wanted = query.get(f.name, "")
         if wanted not in {value for _, value, _ in offered}:
             wanted = ""
