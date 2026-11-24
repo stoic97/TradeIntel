@@ -58,7 +58,7 @@ def test_same_way_says_how_many_pairs_it_rests_on():
     said = text(fact_page("same-way", trips=_pairs()))
     assert ("After a loss, your next trade went the same way 60 of 100 times; after a win, 30 of 100."
             in said), said
-    assert "These rest on 60 pairs: 30 after a loss and 30 after a win." in said, said
+    assert "Counted over 60 pairs: 30 after a loss, 30 after a win." in said, said
 
 
 def test_same_way_says_a_spread_pair_is_left_out_and_how_many():
@@ -123,8 +123,8 @@ def test_with_too_few_days_the_page_says_how_many_and_how_many_it_needs():
     five = [t for t in _six_days() if t.trading_day != "2026-03-09"]
     said = text(fact_page("next-day", trips=five))
     assert "Not enough trades yet" in said
-    assert ("You closed trades on 5 days. The day after a big day needs 6: "
-            "your best 3 and your worst 3.") in said, said
+    assert ("You traded on 5 days. This needs at least 6: "
+            "your 3 best days and your 3 worst.") in said, said
     assert "On the days after your best days" not in said
 
 
@@ -151,4 +151,4 @@ def test_both_halves_of_the_same_way_line_read_of_100():
     said = text(fact_page("same-way", trips=_forty_days()))
     assert ("After a loss, your next trade went the same way 75 of 100 times; after a win, 50 of 100."
             in said), said
-    assert "These rest on 80 pairs: 40 after a loss and 40 after a win." in said, said
+    assert "Counted over 80 pairs: 40 after a loss, 40 after a win." in said, said
