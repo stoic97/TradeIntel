@@ -152,6 +152,9 @@
 .chapter-next + .chapter-next { margin-top: var(--space-3); }
 .chapter-next__line { margin-bottom: var(--space-3); }
 
+/* What you do next (chapter 3): the red swatch for "after your worst days". */
+.legend__swatch--red { background: var(--color-loss); }
+
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
    (components.css, .guess__option). Take away what a browser gives a button. */
@@ -528,5 +531,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
 
-/* What you do next (chapter 3): the red swatch for "after your worst days". */
-.legend__swatch--red { background: var(--color-loss); }
+/* TICKET-994: When you trade */
+.when { margin-top: var(--space-5); }
+.when__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.when__grid { display: block; width: 100%; max-width: 420px; height: auto; margin-top: var(--space-3); }
+.when__hour { font: 400 9px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.when__numbers { margin-top: var(--space-3); }
+
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }

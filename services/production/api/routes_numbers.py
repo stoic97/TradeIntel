@@ -28,4 +28,5 @@ def your_numbers(request: Request):
     year_chosen = any(p["current"] and p["label"].isdigit() for p in chosen.get("periods", []))
     view["calendar"] = N.calendar(trips, show_all=request.query_params.get("months") == "all",
                                   year_chosen=year_chosen)
+    view["when"] = N.when(trips, expiries, days=request.query_params.get("days", "all"))
     return page(request, "numbers.html", title="Your numbers", imp=imp, **view)
