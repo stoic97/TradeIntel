@@ -12,7 +12,7 @@
   {%- endif %}
   <h1 class="title reveal__title">{{ reveal_days.title }}</h1>
   <div class="reveal__dial">
-    <svg class="reveal__svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="{{ reveal_days.title }} as one slice of your whole result">
+    <svg class="reveal__svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="{% if view.short %}{{ reveal_days.title }} came to {{ Figure(worst_days.sum, 'rupees')|rupees }}{% else %}{{ reveal_days.title }} as one slice of your whole result{% endif %}">
       <path class="scope__outer" d="{{ view.outer }}"/>
       <path class="scope__tick scope__tick--minor" d="{{ view.ticks.minor }}"/><path class="scope__tick scope__tick--mid" d="{{ view.ticks.mid }}"/>
       <path class="scope__tick scope__tick--major" d="{{ view.ticks.major }}"/>
@@ -22,6 +22,9 @@
       <path class="scope__tick scope__tick--major" d="{{ view.edge_tick }}"/>
       <circle class="reveal__disc" cx="150" cy="150" r="56"/>
       <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ Figure(share.share_percent, "percent") }}%</text>
+      {%- elif view.short %}
+      <circle class="reveal__disc" cx="150" cy="150" r="56"/>
+      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ Figure(worst_days.sum, "rupees")|rupees }}</text>
       {%- else %}
       <circle class="reveal__disc reveal__disc--empty" cx="150" cy="150" r="56"/>
       {%- endif %}

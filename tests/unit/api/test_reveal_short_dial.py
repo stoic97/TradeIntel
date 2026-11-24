@@ -39,7 +39,7 @@ SIX = [t(f"2026-01-0{i + 5}", -100 * (5 - i)) for i in range(5)] + [t("2026-02-0
 
 def dial(trips) -> str:
     html = reveal(trips)
-    m = re.search(r'<svg class="reveal__svg".*?</svg>', html, re.S)
+    m = re.search(r'<svg class="reveal__svg".*?</svg>', html, re.DOTALL)
     assert m, "the reveal draws its dial"
     return m.group(0)
 

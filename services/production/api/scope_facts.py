@@ -1446,14 +1446,18 @@ def reveal_view(ctx: dict) -> dict:
     """
     rr = G.radii(REVEAL_C)
     share = ctx["share"]
+    # Every day he has is on the page below five: a share of 100% is true by construction and
+    # states nothing, so the dial draws no slice and says what those days came to instead.
+    short = len(ctx["worst_days"].days) < 5
     view = {
-        "shown": share.shown_as_percentage,
+        "shown": share.shown_as_percentage and not short,
+        "short": short,
         "outer": G.circle(REVEAL_C, REVEAL_C, rr["outer"]),
         "inner": G.circle(REVEAL_C, REVEAL_C, rr["inner"]),
         "ticks": G.ticks(REVEAL_C, REVEAL_C, rr, [0]),
         "circumference": REVEAL_SLICE_CIRCUMFERENCE,
     }
-    if share.shown_as_percentage:
+    if view["shown"]:
         fraction = _f(share.share_percent) / 100
         view["slice_length"] = G.fmt(float(REVEAL_SLICE_CIRCUMFERENCE) * fraction)
         view["edge_tick"] = G.radial(
