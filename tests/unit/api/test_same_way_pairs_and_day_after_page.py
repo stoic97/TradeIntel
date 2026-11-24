@@ -23,7 +23,7 @@ def text(html: str) -> str:
     """The page's main column as one line of words."""
     found = re.search(r"<main.*?</main>", html, flags=re.DOTALL)
     words = unescape(re.sub(r"<[^>]+>", " ", found.group(0) if found else html)).replace("\xa0", " ")
-    return " ".join(words.split()).replace(" ;", ";").replace(" .", ".").replace(" ,", ",")
+    return " ".join(words.split()).replace(" ;", ";").replace(" .", ".").replace(" ,", ",").replace(" :", ":")
 
 
 # ---------- Same way again over 30 pairs in each group ----------
