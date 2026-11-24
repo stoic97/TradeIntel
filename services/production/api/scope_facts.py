@@ -311,7 +311,7 @@ def _same_way_view(ctx: dict) -> dict:
             {"label": "After a loss", "same": nt.same_after_loss, "other": nt.other_after_loss, "href": loss_href},
             {"label": "After a win", "same": nt.same_after_win, "other": nt.other_after_win, "href": win_href},
         ],
-        "rests_on": Markup("These rest on {} {}: {} after a loss and {} after a win.").format(
+        "rests_on": Markup("Counted over {} {}: {} after a loss, {} after a win.").format(
             _w(loss_n + win_n, "pairs"), "pair" if loss_n + win_n == 1 else "pairs",
             _w(loss_n, "pairs"), _w(win_n, "pairs")),
         "no_direction": nt.no_direction,
@@ -344,8 +344,8 @@ def _next_day_too_few(ctx: dict) -> Markup:
     """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
     have = len({t.exit_ts.date() for t in ctx["trips"]})
     least = mx.BIG_DAYS_AT_LEAST
-    return Markup("You closed trades on {} {}. The day after a big day needs {}: "
-                  "your best {} and your worst {}.").format(
+    return Markup("You traded on {} {}. This needs at least {}: "
+                  "your {} best days and your {} worst.").format(
         _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
         _w(least, "days"), _w(least, "days"))
 
