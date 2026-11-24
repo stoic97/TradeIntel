@@ -117,3 +117,23 @@ def test_with_paise_the_readout_prints_the_rows_figure(demo, monkeypatch):
     in_the_period = [plain(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", first_row, re.DOTALL)][2]
     assert in_the_period == "+₹1"
     assert readout == "1 trade · +₹1 in the"
+
+
+# ---------- 7. the card's rows against a hand-worked case ----------
+# The home-card digests in test_charts_toolkit were re-taken from program output when the "In the
+# day" column became the difference of the closes as written. The rule they pin, worked by hand:
+#   2 Mar +100.40, ending at 100.40;  3 Mar -50.70, ending at 49.70;  4 Mar +20.90, ending at 70.60.
+#   Rows, newest first: 4 Mar 70 - 49 = +₹21, ended ₹70; 3 Mar 49 - 100 = −₹51, ended ₹49;
+#   2 Mar 100 - 0 = +₹100, ended ₹100. The column adds up to its last "Ended at": 21 - 51 + 100 = 70.
+WORKED = [paise_trip("w1", "2026-03-02", "100.40"), paise_trip("w2", "2026-03-03", "-50.70"),
+          paise_trip("w3", "2026-03-04", "20.90")]
+
+
+def test_the_cards_rows_match_a_hand_worked_record(demo, monkeypatch):
+    from services.production.mirror import loader
+    real = loader.load_for
+    monkeypatch.setattr(loader, "load_for", lambda sess, trader: (WORKED, real(sess, trader)[1]))
+    html = card(demo.get("/?tf=d").text)
+    rows = [[plain(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", r, re.DOTALL)][2:]
+            for r in re.findall(r'<tr class="hy-row">(.*?)</tr>', html, re.DOTALL)]
+    assert rows == [["+₹21", "+₹70"], ["−₹51", "+₹49"], ["+₹100", "+₹100"]]
