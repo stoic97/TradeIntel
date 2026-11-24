@@ -97,7 +97,10 @@ def test_the_fact_read_table_is_migrated():
     cols = {c["name"] for c in inspect(engine).get_columns("fact_read")}
     assert {"trader_id", "import_id", "fact_key", "period", "book", "opened_at"} <= cols
     migration = ROOT / "migrations/versions/0020_fact_reads.py"
-    assert "down_revision = '0015'" in migration.read_text(encoding="utf-8")
+    # It chains on the migration before it, main's head when it merges (the one-head rule);
+    # the number moves with main, so the test reads it instead of pinning it.
+    before = sorted(p.name[:4] for p in migration.parent.glob("[0-9]*.py") if p.name[:4] < "0020")[-1]
+    assert f"down_revision = '{before}'" in migration.read_text(encoding="utf-8")
 
 
 @pytest.fixture()
