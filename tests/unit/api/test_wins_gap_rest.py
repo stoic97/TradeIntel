@@ -123,4 +123,4 @@ def test_the_page_says_what_the_rate_and_the_lines_each_count(client, engine):
     text = _plain(_section(client))
     assert "WIDGETOIL options 46 of 100 · needs 33 of 100 · 13 of 100 above break-even" in text
     assert "Over all 90 same-day trades in this book." in text
-    assert "The lines count 80 of them: the years with 30 or more." in text
+    assert "The lines count 80 of them: only years with 30 or more trades." in text
