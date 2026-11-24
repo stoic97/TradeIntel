@@ -949,15 +949,21 @@ def _gaps(trades: list[Trip]) -> dict[str, int]:
     }
 
 
-def _flips(trades: list[Trip]) -> int:
-    """Calls to puts and back, between neighbouring trades on one underlying."""
-    return sum(
-        1
+def _switches(trades: list[Trip]) -> list[Trip]:
+    """The trades that switched from a call to a put or back, against the trade before them on
+    one underlying, in the order given."""
+    return [
+        cur
         for prev, cur in pairwise(trades)
         if call_or_put(prev) and call_or_put(cur)
         and call_or_put(prev) != call_or_put(cur)
         and book_of(prev.symbol) == book_of(cur.symbol)
-    )
+    ]
+
+
+def _flips(trades: list[Trip]) -> int:
+    """Calls to puts and back, between neighbouring trades on one underlying."""
+    return len(_switches(trades))
 
 
 def _size_rise(trades: list[Trip]) -> SizeRise | None:
@@ -1060,21 +1066,16 @@ def day_path(day_trips: list[Trip]) -> DayPath:
     """One day's trades as its running result, in exit order (ties by trip id).
 
     The one path every page draws a day with: the day page and each of the five worst days.
-    A switch is counted between neighbouring options in one book, as the run page counts it.
+    A switch is counted between neighbouring options in one book in the order they were opened,
+    as ``day_story`` and the run page count it, and ringed on the trade that switched.
     """
     ordered = sorted(day_trips, key=lambda t: (t.exit_ts, t.trip_id))
+    switched_ids = {t.trip_id for t in _switches(sorted(day_trips, key=lambda t: (t.entry_ts, t.trip_id)))}
     points: list[DayPoint] = []
     total = Decimal(0)
-    previous: Trip | None = None
     for t in ordered:
         total += t.net
-        side = call_or_put(t)
-        switched = bool(
-            previous is not None and side and call_or_put(previous)
-            and call_or_put(previous) != side and book_of(previous.symbol) == book_of(t.symbol)
-        )
-        points.append(DayPoint(t, t.exit_ts, _round(total), t.lots, side, switched))
-        previous = t
+        points.append(DayPoint(t, t.exit_ts, _round(total), t.lots, call_or_put(t), t.trip_id in switched_ids))
     highest = max(points, key=lambda p: p.running, default=None)
     lowest = min(points, key=lambda p: p.running, default=None)
     return DayPath(

@@ -3,7 +3,7 @@
     way back, and one question about the whole report. It names a cause and a cost only to
     say the product does neither (test_no_claims exempts it by name, from here down). -#}
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money %}
+{% from "_components.html" import money, worst_count %}
 {% block fact_title %}This report counts. It doesn't judge.{% endblock %}
 {% block head %}
     <p class="lead">Here is what your file showed, what this report doesn't do, and where to look next.</p>
@@ -16,7 +16,7 @@
       {%- if f.options %}
       <li class="mirror">Your option trades {{ "lost" if f.options.net < 0 else "made" }} {{ money(f.options_amount, signed=false) }}.{% if f.options.net < 0 and f.options.held_gain %} One {{ f.options.held_gain.symbol }} trade you held for <span class="num">{{ Figure(f.options.held_gain_days, "days")|count }}</span> days made {{ money(f.options.held_gain.net, signed=false) }}.{% endif %}</li>
       {%- elif not facts["worst-days"].state %}
-      <li class="mirror">Your five worst days came to {{ money(worst_days.sum) }}.</li>
+      <li class="mirror">Your {{ worst_count(worst_days.days|length) }} worst {{ "day" if worst_days.days|length == 1 else "days" }} came to {{ money(worst_days.sum) }}.</li>
       {%- endif %}
       {%- if not facts["run"].state %}
       <li class="mirror">Your longest run of consecutive losers was <span class="num">{{ Figure(run.length, "losses")|count }}</span> trades{% if run.crosses_days %}, running across <span class="num">{{ Figure(facts["run"].day_count, "days")|count }}</span> days{% endif %}.</li>
@@ -61,10 +61,10 @@
     <a class="step" href="{{ facts["run"].href }}">{{ f.flagged.run.day }} — <span class="num">{{ Figure(f.flagged.run.losses, "losses")|count }}</span> losses in a row{% if f.flagged.run.span %}, in {{ f.flagged.run.span }}{% else %}, across <span class="num">{{ Figure(f.flagged.run.day_count, "days")|count }}</span> days{% endif %}.</a>
     {%- endif %}
     {%- if not facts["worst-days"].state %}
-    <a class="step" href="{{ facts["worst-days"].href }}">Your five worst days — {{ money(worst_days.sum) }}.</a>
+    <a class="step" href="{{ facts["worst-days"].href }}">Your {{ worst_count(worst_days.days|length) }} worst {{ "day" if worst_days.days|length == 1 else "days" }} — {{ money(worst_days.sum) }}.</a>
     {%- endif %}
     {%- if f.flagged.worst %}
-    <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your five worst days: <span class="num">{{ Figure(f.flagged.worst.trades, "trades")|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
+    <a class="step" href="{{ ending.journal_href }}">Your journal for {{ f.flagged.worst.day }} — one of your {{ worst_count(worst_days.days|length) }} worst days: <span class="num">{{ Figure(f.flagged.worst.trades, "trades")|count }}</span> {{ "trade" if f.flagged.worst.trades == 1 else "trades" }}, {{ money(f.flagged.worst.net) }}.</a>
     {%- else %}
     <a class="step" href="{{ ending.journal_href }}">Your journals.</a>
     {%- endif %}
