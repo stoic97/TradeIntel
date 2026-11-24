@@ -110,7 +110,7 @@
     block - its axis and legend, which differ from fact to fact. -#}
 {% macro figure(number, caption, c) -%}
 <figure class="figure">
-    <figcaption class="figure__caption">Figure {{ Figure(number, "figure") }} · {{ caption }}</figcaption>
+    <figcaption class="figure__caption">{{ caption }}</figcaption>
     {{ chart(c) }}
     {%- if caller %}
     {{ caller() }}{% endif %}
