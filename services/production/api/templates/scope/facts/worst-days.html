@@ -20,7 +20,9 @@
     <p class="mirror">Those {{ worst_count(n) }} {{ days_word }} came to {{ money(worst_days.sum) }}.</p>
     <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
     {%- endif %}
-    <p class="body-small">A trade counts here on the day you opened it.</p>
+    {%- if f.counted_on %}
+    <p class="body-small">{{ f.counted_on }}</p>
+    {%- endif %}
 {% endblock %}
 {% block body %}{% endblock %}
 {% block evidence %}

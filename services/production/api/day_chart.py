@@ -1,7 +1,10 @@
 """A day's running result, drawn: the one component every page draws a day with.
 
-The day page draws it full width, with its axis, each trade as a dot sized by lots and ringed
-where the side switched between call and put, and the best and worst it stood marked. Each of
+The day page draws it full width, with its axis, each trade as a dot sized by lots where it
+closed, and the best and worst it stood marked. A dot is ringed where it switched between call
+and put from the trade opened before it: switches are counted in the order they were opened,
+as the "You switched ..." sentence counts them, so a ring can sit between two dots on one side,
+and the page says which order the rings mark. Each of
 the five worst days draws the same path small, as a line. The path itself is
 ``metrics.day_path``'s; nothing here is counted, and a sentence says the peak, the trough and
 the close in counts, never a cause.

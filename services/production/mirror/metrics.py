@@ -325,6 +325,11 @@ class JournalUnitDefault:
     state: s.ResultState
 
 
+WORST_DAYS_COUNT_ON = "opened"
+"""The day a trade counts on in the worst days and the sorted days: ``_by_day`` groups by
+``trading_day``, the day the trade was opened. The pages say so from this, not from a template."""
+
+
 def _by_day(trips: list[Trip]) -> dict[str, list[Trip]]:
     days: dict[str, list[Trip]] = {}
     for trip in trips:
@@ -342,6 +347,12 @@ def daily_series(trips: list[Trip]) -> list[DayNet]:
         DayNet(day, sum((t.net for t in day_trips), Decimal(0)), len(day_trips))
         for day, day_trips in _by_day(trips).items()
     ]
+
+
+def closes_on_a_later_day(trips: list[Trip]) -> bool:
+    """Whether any trade closed on a later day than the one it counts on. When none did, the
+    day it was opened and the day it closed are one day, and saying which is counted says nothing."""
+    return any(t.exit_ts.date().isoformat() != t.trading_day for t in trips)
 
 
 def five_worst_days(trips: list[Trip]) -> FiveWorstDays:
@@ -1041,14 +1052,18 @@ def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
 
 @dataclass(frozen=True)
 class DayPoint:
-    """One trade on a day's path: where the running result stood once it closed."""
+    """One trade on a day's path: where the running result stood once it closed.
+
+    The points run in the order the trades closed. ``switched`` is counted in the
+    order they were opened, as the "You switched ..." sentence counts it, so a ringed point can
+    sit between two points on the same side; the day page says which order its rings mark."""
 
     trip: Trip
     exit_ts: datetime  # when it closed, in the trade's own zone (the loader's)
     running: Decimal
     lots: int
     side: str | None  # "CE", "PE" or None
-    switched: bool  # an option on the other side from the option before it, in one book
+    switched: bool  # on the other side from the option opened before it, in one book
 
 
 @dataclass(frozen=True)
