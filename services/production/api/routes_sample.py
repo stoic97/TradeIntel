@@ -103,6 +103,12 @@ def sample_fact(request: Request, key: str):
     return _as_sample(request, lambda: routes_mirror.scope_fact(request, key))
 
 
+@router.get(PREFIX + "/day/{iso}", response_class=HTMLResponse)
+def sample_day(request: Request, iso: str):
+    """A day of the sample, as any report date opens it: its trades, read-only, no Journal."""
+    return _as_sample(request, lambda: routes_mirror.trading_day(request, iso))
+
+
 @router.get(PREFIX + "/fact/{key}/trades", response_class=HTMLResponse)
 def sample_fact_trades(request: Request, key: str):
     return _as_sample(request, lambda: routes_mirror.scope_fact_trades(request, key))
