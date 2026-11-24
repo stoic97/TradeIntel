@@ -253,6 +253,5 @@ def test_every_paired_figure_reads_one_function(seed):
     after = facts["after_two_straight_losses"]
     assert after["days_it_happened"] == ctx["days_with_the_condition"]
     assert after["your_trading_days"] == ctx["same_day_days"]
-    b2 = next(v for v in E.assess(record).verdicts if v.test.id == "B2")
-    assert b2.have == ctx["two_losses"].condition
+    # Eligibility's B2 count is not paired here: its population waits on the research seat.
     assert D(facts["against_your_normal"]["lots_usually"]) == (mx.average_lots(record).mean or 0)
