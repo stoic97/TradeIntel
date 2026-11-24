@@ -116,6 +116,7 @@ def test_the_journal_reads_its_history_facts_live():
 
 # ---------- 3, 4. trading days and the count after two straight losses ----------
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2): test_b2_every_round_trip.py; this pinned option (b), same-day trades only")
 def test_the_journal_counts_the_days_as_chapter_3_does():
     ctx = SF.record_context(RECORD)
     facts = sec.build(day("2026-03-02"), history=RECORD, fees_available=False, trips_with_a_stop=set())
@@ -124,6 +125,7 @@ def test_the_journal_counts_the_days_as_chapter_3_does():
     assert after["your_trading_days"] == ctx["same_day_days"] == 3  # 02, 03, 06 Mar
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2): test_b2_every_round_trip.py; this pinned option (b), same-day trades only")
 def test_chapter_3_names_the_days_it_counts():
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", chapter_page(3, RECORD)))
     assert "This happened on 1 of the 3 days you closed a same-day trade" in text
