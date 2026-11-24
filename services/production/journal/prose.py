@@ -40,9 +40,9 @@ def _count(n: int, *, capital: bool = True) -> str:
 
 
 def _lots(value: Decimal) -> str:
-    """Lots to one decimal place at most. Three is precision we do not have."""
-    rounded = value.quantize(Decimal("0.1"))
-    return f"{rounded:g}"
+    """Lots to one decimal place at most, rounded as every page rounds a size
+    (``formatting.lots``, half up): a usual of 1.25 is 1.3 here and in the size line alike."""
+    return formatting.lots(value)
 
 
 def _plural(n: Decimal | int, word: str) -> str:
