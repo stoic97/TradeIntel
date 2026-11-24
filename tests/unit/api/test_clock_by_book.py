@@ -242,9 +242,9 @@ def test_the_figure_is_an_hour_not_a_span():
 def test_a_table_row_has_all_its_figures():
     row = unescape(fact_page("clock", TRIPS))
     assert ">−₹5,500<" in row
-    assert ">25%<" in row
-    assert ">41.4%<" in row
-    assert ">16.7%<" in row
+    assert ">25 of 100<" in row  # a rate reads N of 100 (TICKET-1028)
+    assert ">41 of 100<" in row
+    assert ">17 of 100<" in row
 
 
 def test_per_trade_shows_at_any_count_and_win_rate_does_not():
