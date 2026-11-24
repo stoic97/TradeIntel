@@ -71,14 +71,18 @@ def label(period: str, frame: str) -> str:
     return date(int(year), int(month), 1).strftime("%b %Y")
 
 
+ALMOST_NOTHING = 4  # a period with under a quarter of his median period's trades (ruled 24 Nov)
+
+
 def latest_usual(candles) -> tuple[mx.Candle, bool]:
-    """The candle the card describes: the latest one, unless it holds fewer trades than his own
-    median candle, when it is the latest that holds at least that many. True when it is the
-    latest. His median, not a threshold of ours: a month with one trade at the end of a long
-    record says nothing about how he trades."""
+    """The candle the card describes: the latest one, unless it holds almost nothing (fewer
+    than a quarter of his own median candle's trades), when it is the latest that holds at
+    least his median. True when it is the latest. His median, not a count of ours: a month
+    with one trade at the end of a long record says nothing about how he trades, but a month
+    a little under his usual is still his latest month."""
     trades = sorted(c.trades for c in candles)
     median = trades[(len(trades) - 1) // 2]  # the lower middle: a count some candle really holds
-    if candles[-1].trades >= median:
+    if candles[-1].trades * ALMOST_NOTHING >= median:
         return candles[-1], True
     return next(c for c in reversed(candles) if c.trades >= median), False
 

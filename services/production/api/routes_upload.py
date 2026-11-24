@@ -350,6 +350,14 @@ def import_review(request: Request, import_id: int):
                                      and imp.trips_reconstructed > 0))
 
 
+def _headline_figures(trips: list[mx.Trip]) -> dict[str, Decimal]:
+    """Each book by its own name, then the five worst days. No options total beside the books:
+    with one option book it repeated that book's figure under a second label."""
+    out: dict[str, Decimal] = {book.label: book.net for book in mx.verdict(trips).books}
+    out["Your five worst days"] = mx.five_worst_days(trips).sum
+    return out
+
+
 def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list[dict]:
     """The rupee figures a re-read changed, before and now (TICKET-908).
 
@@ -359,14 +367,7 @@ def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list
     """
     def figures(imp: m.Import) -> dict[str, Decimal]:
         trips, _ = loader.load_for(sess, trader, imp)
-        verdict = mx.verdict(trips)
-        out: dict[str, Decimal] = {}
-        if verdict.options_trades:
-            out["Option trades"] = verdict.options_net
-        for book in verdict.books:  # each book by its own name; the stocks are a book of their own
-            out[book.label] = book.net
-        out["Your five worst days"] = mx.five_worst_days(trips).sum
-        return out
+        return _headline_figures(trips)
 
     was, now_ = figures(before), figures(now)
     labels = list(now_) + [label for label in was if label not in now_]
