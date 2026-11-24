@@ -3,7 +3,8 @@
 Pins the gate and the founder's ruling of 16 Nov 2026 (919 Q1: a; in Jira, not repeated here):
 
 * One factor, previous result: the most recent same-day trade exited before this entry, the
-  way b2_condition resolves its priors. Won (net > 0) or lost (net < 0); a level one is neither.
+  way b2_condition resolves its priors. Won or lost on its result before charges (founder, 24 Nov
+  2026, TICKET-919); a level one is neither. Every summed figure stays net.
 * Per book, on same-day trades. Until TICKET-918 the prior is read across books, as one argument.
 * On the record: the net of every trade after a win, and of every trade after a loss.
 * With only what was known then: in entry order, a trade counts when its state's earlier trades
@@ -30,12 +31,16 @@ from pathlib import Path
 
 import pytest
 from markupsafe import escape
+from sqlalchemy import select
 
 from services.production.api import findings as F
 from services.production.api import formatting
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.api import trade_list as TL
+from services.production.db import models as m
+from services.production.db.session import make_session
+from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle
 from services.shared.conditions.b2_condition import Obs
@@ -330,3 +335,82 @@ def test_a_rule_that_picked_nothing_says_so_and_draws_no_verdict():
     assert said == ("no trade after a win was opened while your earlier ones after a win,"
                     " 2 or more, were down overall")
     assert not p["win"]["then_words"] and "0 trades" not in said
+
+
+# Ruling, 24 Nov: the previous result is judged before charges; what is summed stays net.
+#   A 09:20-09:30 gross +100, net -50: a win before charges, a loss after them.
+#   B 09:40-09:50 gross -200, net -230: its previous result is A.
+def _charged(**gross: str) -> list[mx.Trip]:
+    return mx.load_trips([
+        {"trip_id": i, "symbol": "WIDGETOIL", "trading_day": "2026-03-02",
+         "entry_ts": f"2026-03-02T{opened}:00+05:30", "exit_ts": f"2026-03-02T{closed}:00+05:30",
+         "holding_seconds": 600, "net": net, "lots": 1, "risk_unit_source": "premium_paid",
+         **({"gross": gross[i]} if i in gross else {})}
+        for i, opened, closed, net in (("A", "09:20", "09:30", "-50"),
+                                       ("B", "09:40", "09:50", "-230"))
+    ])
+
+
+def test_the_previous_result_is_judged_before_charges():
+    trips = _charged(A="100", B="-200")
+    assert mx.previous_states(trips) == {"B": "win"}  # on net it is "loss"
+    (row,) = mx.previous_result_figures(trips)
+    assert (row.state, row.record_ids) == ("win", ("B",))
+    assert row.record_net == Decimal(-230)  # what is summed stays net
+
+
+def test_a_fixture_without_a_result_before_charges_is_judged_on_net():
+    assert mx.previous_states(_charged()) == {"B": "loss"}
+
+
+def test_the_loader_carries_the_result_before_charges_over_every_leg(client, engine):
+    # Two legs of one position: gross +300 -100 = +200, net +250 -140 = +110.
+    with make_session(engine) as sess:
+        trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "fx")).one()
+        imp = loader.current_import(sess, trader)
+        for leg, strike, gross, net in (("leg-1", 5100, 300, 250), ("leg-2", 5000, -100, -140)):
+            sess.add(m.Trip(
+                import_id=imp.id, trip_id=leg, position_id="P919", trading_day="2026-10-01",
+                exchange="MCX", symbol="WIDGETOIL", segment="OPT", direction="LONG",
+                option_type="CE", strike=Decimal(strike),
+                entry_ts=datetime(2026, 10, 1, 10, 0, tzinfo=IST),
+                exit_ts=datetime(2026, 10, 1, 10, 5, tzinfo=IST), quantity=100,
+                entry_price=Decimal(100), exit_price=Decimal(100), gross=Decimal(gross),
+                fees=Decimal(gross - net), net=Decimal(net), fees_available=True,
+                risk_unit_source=s.RiskUnitSourceV1.PREMIUM_PAID))
+        sess.commit()
+        trips, _ = loader.load_for(sess, trader)
+    (position,) = [t for t in trips if t.trip_id == "P919"]
+    assert position.net == Decimal(110)
+    assert getattr(position, "gross", None) == Decimal(200)
+
+
+# Review, 24 Nov: a set that is its whole pool is the only set of its size, so no draw can
+# differ from it and it is compared with nothing.
+def test_a_whole_pool_is_no_comparison():
+    chance = _module("services.production.api.chance")
+    LO = _module("services.shared.conditions.leave_out")
+    pool = [-40.0, 7.0, 3.0]
+    assert chance.inside(LO.band_of(pool, sum(pool), len(pool))) is False
+
+
+# 15 days, each 10:00 +100 and 10:10 +40 or -60 in turn. Every trade with a previous result is
+# after a win: 8 at +40 and 7 at -60 = -100 on 15 trades, which is the whole pool.
+WHOLE = [
+    t for d in range(1, 16) for t in (
+        trip(2 * d + 99, f"2026-04-{d:02d}", 100),
+        trip(2 * d + 100, f"2026-04-{d:02d}", 40 if d % 2 else -60, minute=10))
+]
+
+
+def test_the_page_draws_no_verdict_on_a_whole_pool(client, monkeypatch):
+    real = loader.load_for
+    monkeypatch.setattr(loader, "load_for", lambda *a, **kw: (WHOLE, real(*a, **kw)[1]))
+    page = client.get(S.fact_href("hidden"))
+    assert page.status_code == 200
+    got = {(a.get("data-previous"), a.get("data-figure")): said for a, said in _paras(page.text)}
+    assert set(got) == {("win", "record"), ("win", "then")}
+    said = got[("win", "record")]
+    assert said.startswith(f"{RECORD} {formatting.rupees(Decimal(-100))} net on 15 trades"
+                           " opened right after a win that day.")
+    assert CHANCE not in said
