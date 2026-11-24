@@ -12,12 +12,12 @@ ruling's words, not from the program's output.
 """
 from __future__ import annotations
 
-import pytest
-
 import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
+
+import pytest
 
 from services.production.api import scope_facts as SF
 from services.production.api import trade_list as TL

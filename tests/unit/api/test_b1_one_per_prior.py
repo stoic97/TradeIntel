@@ -44,12 +44,12 @@ def test_same_way_still_pairs_every_trade_with_its_previous():
 # is open; its previous is still a3, but it is not a3's next entry, so it is not a back-in observation.
 # After a loss:                 a2 (4), b2 (6)          -> 2 trades
 # After a win or a level trade: a3 (11), a4 (5), a6 (5) -> 3 trades; sorted 5, 5, 11 -> median 5
-import re  # noqa: E402
+import re
 
-from services.production.api import scope_facts as SF  # noqa: E402
-from services.production.api import trade_list as TL  # noqa: E402
-from tests.helpers.back_in_b1 import PAIRS  # noqa: E402
-from tests.helpers.scope_chapters import IMP  # noqa: E402
+from services.production.api import scope_facts as SF
+from services.production.api import trade_list as TL
+from tests.helpers.back_in_b1 import PAIRS
+from tests.helpers.scope_chapters import IMP
 
 
 def _words(markup) -> str:
