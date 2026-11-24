@@ -940,8 +940,8 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     if key == "math":
         needs = wins_needed(ctx)
         return _wedge(Figure(ctx["strike"].rate_percent, "trades",
-                             of=f"trades made money; needs {needs}" if needs else "trades made money"),
-                      phone=f"made money,\nneeds {needs}" if needs else None,
+                             of=f"made money; break-even {needs}" if needs else "trades made money"),
+                      phone=f"made money,\nbreak-even {needs}" if needs else None,
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
     if key == "run":
         n = ctx["run"].length
@@ -953,11 +953,11 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         lead = mx.lead_clock(ctx["clocks"])
         net = formatting.rupees(lead.largest.net)
         if worse(key, ctx, fig):
-            of, phone = (f"largest hour, {net}: more than its book",
+            of, phone = (f"your costliest hour, {net}: more than the whole book lost",
                          f"hour,\n{net}")
         else:
             book = formatting.rupees(lead.net)
-            of, phone = (f"largest hour, {net}; its book {book}",
+            of, phone = (f"largest hour, {net}; the whole book {book}",
                          f"hour,\n{net}")
         return _wedge(Figure(hour, "hour", of=of), phone=phone, shown=hour)
     if key == "down":
@@ -1149,7 +1149,7 @@ def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
     strike, even = ctx["strike"], ctx["break_even"]
     needs = wins_needed(ctx)
     wedge = _wedge(Figure(strike.rate_percent, "trades",
-                          of=f"trades made money; needs {needs}" if needs else "trades made money"),
+                          of=f"made money; break-even {needs}" if needs else "trades made money"),
                    phone="made money",  # the hub's phone wedge has one line of room (fit test)
                    shown=formatting.out_of_a_hundred(strike.rate_percent))
     wedge["worse"] = worse("math", ctx, figs["math"])
