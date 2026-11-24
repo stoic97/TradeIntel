@@ -378,4 +378,4 @@ def overnight(trips: list[mx.Trip]) -> dict:
     groups = [(n, ts, _trades(overnight=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OVERNIGHTS, strict=True)]
     return {"rows": _rows(groups), "shares": shares,
             "longest": (longest.exit_ts.date() - longest.entry_ts.date()).days if longest else None,
-            "longest_href": f"/mirror/day/{longest.trading_day}" if longest else None}
+            "longest_href": closed_day_href(longest.exit_ts.date().isoformat()) if longest else None}
