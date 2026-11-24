@@ -263,7 +263,7 @@ def _back_in_view(ctx: dict) -> dict:
     other_href = S.see_all_href("back-in", after="win-or-level")
     n_loss, n_other = len(nt.after_loss), len(nt.comparison)
     if not nt.back_in_enough:
-        line = Markup("{} {} came next after a loss and {} after a win or a level trade: too few "
+        line = Markup("{} {} came next after a loss and {} after a win or a flat trade: too few "
                       "to set side by side. Each needs {}.").format(
             _w(n_loss, "trades", opens=loss_href if n_loss else None),
             "trade" if n_loss == 1 else "trades",
@@ -273,14 +273,14 @@ def _back_in_view(ctx: dict) -> dict:
     else:
         m_loss, m_other = _minutes(nt.loss_median), _minutes(nt.comparison_median)
         line = Markup("After a loss your next trade came a median {} {} later; "
-                      "after a win or a level trade, {}.").format(
+                      "after a win or a flat trade, {}.").format(
             _w(m_loss, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes",
             _w(m_other, "minutes", opens=other_href))
     return {
         "line": line,
         "groups": [
             {"label": "After a loss", "trades": n_loss, "median": m_loss, "href": loss_href},
-            {"label": "After a win or a level trade", "trades": n_other, "median": m_other,
+            {"label": "After a win or a flat trade", "trades": n_other, "median": m_other,
              "href": other_href},
         ],
     }
@@ -1112,7 +1112,7 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
             n = len(nt.after_loss)
             return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
-                                 of="after a loss, too few"))
+                                 of=f"after a loss: too few to compare (needs {mx.B1_MINIMUM})"))
         m = _minutes(nt.loss_median)
         return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
     if key == "same-way":
@@ -1430,7 +1430,7 @@ def reveal_days(ctx: dict) -> dict:
     if n >= 5:
         title = "Your five worst days"
     elif n == 1:
-        title = "Your one trading day"
+        title = "Your only trading day"
     else:
         title = f"Your {word} trading days"
     return {"count": n, "word": word, "all_of_them": n < 5, "title": title}

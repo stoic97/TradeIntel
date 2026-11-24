@@ -186,7 +186,7 @@ opened, the same day. One filter for every fact that groups trades this way (You
 loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
 AFTERS = (("loss", "After a loss"), ("win", "After a win"),
-          ("win-or-level", "After a win or a level trade"))
+          ("win-or-level", "After a win or a flat trade"))
 """How fast you went back in reads B1's two groups (the founder's ruling of 24 Nov 2026): after a
 loss, and after a win or a level trade. Size and Same way again read loss and win only."""
 
