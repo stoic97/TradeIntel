@@ -126,3 +126,29 @@ def test_with_too_few_days_the_page_says_how_many_and_how_many_it_needs():
     assert ("You closed trades on 5 days. The day after a big day needs 6: "
             "your best 3 and your worst 3.") in said, said
     assert "On the days after your best days" not in said
+
+
+# ---------- The win half reads "of 100" too ----------
+# 40 days, each: a loss at 09:15, then y at 09:40 (after the loss), then z at 10:00 (after y, a win).
+# x is a bought call. y is a call on days 0-29 (same way) and a put on 30-39 (other way):
+#   after a loss 30 same, 10 other -> 30 / 40 = 75 of 100.
+# z follows y. Days 0-19: y call, z call -> same. Days 20-29: y call, z put -> other.
+#   Days 30-39: y put, z call -> other. After a win: 20 same, 20 other -> 20 / 40 = 50 of 100.
+
+def _forty_days() -> list:
+    out = []
+    for i in range(40):
+        iso = (date(2026, 1, 1) + timedelta(days=i)).isoformat()
+        y_kind = "CE" if i < 30 else "PE"
+        z_kind = "CE" if i < 20 or i >= 30 else "PE"
+        out += [trip(f"x{i}", iso, "09:15", "09:30", -10),
+                trip(f"y{i}", iso, "09:40", "09:50", 20, leg(y_kind, "Buy", 20)),
+                trip(f"z{i}", iso, "10:00", "10:10", -5, leg(z_kind, "Buy", -5))]
+    return out
+
+
+def test_both_halves_of_the_same_way_line_read_of_100():
+    said = text(fact_page("same-way", trips=_forty_days()))
+    assert ("After a loss, your next trade went the same way 75 of 100 times; after a win, 50 of 100."
+            in said), said
+    assert "These rest on 80 pairs: 40 after a loss and 40 after a win." in said, said
