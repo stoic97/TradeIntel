@@ -98,3 +98,9 @@ def test_every_traded_cell_still_opens_its_trades(demo):
     links = re.findall(r'<a href="([^"]+)" class="cal__day">', section)
     results = re.findall(r'class="cal__result', section)
     assert links and len(results) == len(links)  # one short figure per traded (linked) cell
+
+
+@pytest.mark.parametrize("net", [Decimal("0.40"), Decimal("-0.40"), Decimal(0)])
+def test_a_day_that_rounds_to_nothing_reads_a_bare_zero(net):
+    """Review: a day of plus or minus forty paise printed "+0" / "−0" while its title says ₹0."""
+    assert str(N._cell_short(net)) == "0"
