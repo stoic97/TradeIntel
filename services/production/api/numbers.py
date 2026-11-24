@@ -16,7 +16,8 @@ Days left to expiry are calendar days from that day to the contract's expiry, re
 the trade list reads it (``trade_list.left_bucket``), so a row and the list it opens agree.
 
 **Every row opens its trades.** Rows open the list of every trade with the matching filter
-(``/mirror/fact/risk/trades``); a day opens its day page when a trade was opened that day.
+(``/mirror/fact/risk/trades``). A day opens the trades he closed that day (``closed_day``), the
+ones its figure adds up: the day page lists the trades opened that day, which can be others.
 "Other options" pools several books and has no single filter, so it is plain text.
 """
 from __future__ import annotations
@@ -44,7 +45,7 @@ def _trades(**filters) -> str:
 
 
 def closed_day_href(iso: str) -> str:
-    """Every trade he closed on this date (TICKET-993), for a day on which nothing opened."""
+    """Every trade he closed on this date: the trades a day's figure on this page adds up."""
     return _trades(closed_day=iso)
 
 
@@ -69,15 +70,6 @@ def _rows(groups: list[tuple[str, list[mx.Trip], str | None]]) -> list[dict]:
 def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
     """Everything the page draws; the template computes nothing."""
     ordered = sorted(trips, key=lambda t: (t.exit_ts, t.trip_id))
-    opened_on = {t.trading_day for t in trips}
-
-    def day_href(iso: str) -> str | None:
-        return f"/mirror/day/{iso}" if iso in opened_on else None
-
-    def any_day_href(iso: str) -> str:
-        """A day's trades: its day page when one opened then, else the trades closed that day."""
-        return day_href(iso) or closed_day_href(iso)
-
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
     for t in ordered:  # in date order, so a tie goes to the earlier day
@@ -95,12 +87,12 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
                    "href": _trades(result="winners")},
         "loser": {"value": None if even.average_loser is None else -even.average_loser,
                   "count": strike.losses, "href": _trades(result="losers")},
-        "best_day": {"value": best[1], "day": best[0], "href": any_day_href(best[0])},
-        "worst_day": {"value": worst[1], "day": worst[0], "href": any_day_href(worst[0])},
+        "best_day": {"value": best[1], "day": best[0], "href": closed_day_href(best[0])},
+        "worst_day": {"value": worst[1], "day": worst[0], "href": closed_day_href(worst[0])},
         "months": {"made": sum(1 for c in months if c.net > 0), "of": len(months),
                    "href": _trades()},
         "per_day": {"value": (Decimal(len(trips)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
-                    "most": busiest[1], "day": busiest[0], "href": day_href(busiest[0])},
+                    "most": busiest[1], "day": busiest[0], "href": closed_day_href(busiest[0])},
     }
 
     left: dict[str, list[mx.Trip]] = {value: [] for value, _, _, _ in TL.LEFT_BUCKETS}
@@ -168,7 +160,6 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
     shown = {m.period for m in months}
     in_view = [c for p, c in days.items() if p[:7] in shown]
     scale = _percentile([abs(c.net) for c in in_view], SCALE_AT)
-    opened_on = {t.trading_day for t in trips}
     shut = _shut()
 
     blocks = []
@@ -186,7 +177,7 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
                 traded = c is not None and c.trades > 0
                 href = None
                 if traded:
-                    href = f"/mirror/day/{iso}" if iso in opened_on else closed_day_href(iso)
+                    href = closed_day_href(iso)
                 row.append({
                     "day": d.day, "iso": iso,
                     "net": c.net if traded else None,
