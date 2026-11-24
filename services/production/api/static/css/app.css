@@ -66,6 +66,15 @@
 .trade-filters .field__input { width: 100%; min-width: 0; }
 .trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
 .trade-filters__clear { margin-top: var(--space-3); }
+/* Trade lists: sort links, a pager, and one dense row per trade with the prices
+   behind a tap. The day page keeps its full rows. */
+.trade-sorts { margin: var(--space-3) 0; line-height: 2.2; }
+.trade-sorts__on { font-weight: 600; }
+.trade-pager { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-4) 0; }
+.trade-pager__range { color: var(--color-muted); margin: var(--space-2) 0; }
+.trades--dense .trade { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.trades--dense .trade__more summary { color: var(--color-action-blue); cursor: pointer; font-size: 0.8125rem; }
+.trades--dense .trade__more .trade__prices { margin-top: var(--space-1); }
 
 /* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
    phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
