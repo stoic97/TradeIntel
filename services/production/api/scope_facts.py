@@ -17,6 +17,8 @@ from collections import Counter
 from datetime import timedelta
 from decimal import Decimal
 
+from markupsafe import Markup
+
 from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
