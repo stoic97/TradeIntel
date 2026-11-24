@@ -26,7 +26,7 @@ from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 
 W = 358          # the kit's chart width; the SVG scales to the card, so a phone never scrolls
-BAR_H = 30
+BAR_H = 44        # the bar, then its axis labels underneath
 YEARS_H = 132
 LEFT, RIGHT, TOP, BOTTOM = 8, 34, 10, 22
 
@@ -65,13 +65,13 @@ def _bar_svg(book: str, win: int, need: int) -> Markup:
     lo, hi = sorted((win, need))
     side = "short" if need > win else "above"
     label = f"{book}: you won {win} of 100; break-even needs {need} of 100"
-    return Markup(
-        f'<svg class="wg-bar" viewBox="0 0 {W} {BAR_H}" width="100%" role="img" aria-label="{escape(label)}">'
-        f'<rect x="0" y="10" width="{W}" height="10" rx="2" class="wg-track"/>'
-        f'<rect x="{x(lo):.1f}" y="10" width="{x(hi) - x(lo):.1f}" height="10" class="wg-gap wg-gap--{side}"/>'
-        f'<line x1="{x(win):.1f}" x2="{x(win):.1f}" y1="4" y2="26" class="wg-win"/>'
-        f'<line x1="{x(need):.1f}" x2="{x(need):.1f}" y1="4" y2="26" class="wg-need"/>'
-        "</svg>")
+    return charts.rate_chart("wg-bar", W, BAR_H, label, (
+        f'<rect x="0" y="10" width="{W}" height="10" rx="2" class="wg-track"/>',
+        charts.rate_axis_across(0, 100, 25, x, top=4, bottom=26),
+        f'<rect x="{x(lo):.1f}" y="10" width="{x(hi) - x(lo):.1f}" height="10" class="wg-gap wg-gap--{side}"/>',
+        f'<line x1="{x(win):.1f}" x2="{x(win):.1f}" y1="4" y2="26" class="wg-win"/>',
+        f'<line x1="{x(need):.1f}" x2="{x(need):.1f}" y1="4" y2="26" class="wg-need"/>',
+    ))
 
 
 def _years_svg(book: str, points: list[dict], lo: int, hi: int, tick: int) -> Markup:
@@ -79,9 +79,7 @@ def _years_svg(book: str, points: list[dict], lo: int, hi: int, tick: int) -> Ma
     y = charts.rate_scale(lo, hi, y1, y0)  # upward: lo at the foot, hi at the top
     n = len(points)
     xs = [(x0 + x1) / 2] if n == 1 else [x0 + i * (x1 - x0) / (n - 1) for i in range(n)]
-    out = [(f'<svg class="wg-years" viewBox="0 0 {W} {YEARS_H}" width="100%" role="img" '
-            f'aria-label="{escape(book)}: win rate against break-even, by year">')]
-    out.append(charts.rate_axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=W))
+    out = [charts.rate_axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=W)]
     you = [(xs[i], y(p["win"])) for i, p in enumerate(points)]
     even = [(xs[i], y(p["need"])) for i, p in enumerate(points)]
     # A run of counted years draws as one line; a thin year between two breaks it, so no line
@@ -107,8 +105,7 @@ def _years_svg(book: str, points: list[dict], lo: int, hi: int, tick: int) -> Ma
         anchor = "" if n == 1 else ' text-anchor="start"' if i == 0 else ' text-anchor="end"' if i == n - 1 else ""
         out.append(f'<text x="{xs[i]:.1f}" y="{YEARS_H - 6}"{anchor} class="ch-axis ch-axis--x">'
                    f'{escape(p["year"])}</text>')
-    out.append("</svg>")
-    return Markup("".join(out))
+    return charts.rate_chart("wg-years", W, YEARS_H, f"{book}: win rate against break-even, by year", out)
 
 
 def view(book_math: list) -> dict:
@@ -122,7 +119,9 @@ def view(book_math: list) -> dict:
         line = Markup(" · ").join((_rate(w.win_percent), Markup("needs ") + _rate(w.break_even_percent),
                                    _gap_words(need - win)))
         bars.append({"book": w.label, "win": win, "need": need, "gap": need - win,
-                     "line": line, "svg": _bar_svg(w.label, win, need)})
+                     "line": line, "svg": _bar_svg(w.label, win, need),
+                     "counts": Markup("Over all ") + _count(w.trades, "trades")
+                     + Markup(" same-day {} in this book.").format("trade" if w.trades == 1 else "trades")})
         points, thin = [], []
         gap = False  # a thin year since the last counted one
         for yr in book.years:
@@ -140,7 +139,11 @@ def view(book_math: list) -> dict:
                             + Markup(" {}, too few").format("trade" if yr.trades == 1 else "trades"))
                 rows.append((w.label, yr.label, Figure(yr.trades, "trades"), "too few", ""))
         if points:
-            years.append({"book": w.label, "points": points, "thin": Markup("; ").join(thin)})
+            drawn = sum(yr.trades for yr in book.years if _counted(yr))
+            counts = (Markup("The lines count all of them.") if drawn == w.trades else
+                      Markup("The lines count ") + _count(drawn, "trades")
+                      + Markup(" of them: the years with 30 or more."))
+            years.append({"book": w.label, "points": points, "thin": Markup("; ").join(thin), "counts": counts})
     lo = hi = tick = 0
     if values:
         lo_d, hi_d, tick_d = charts.ticks(Decimal(min(values)), Decimal(max(values)))
