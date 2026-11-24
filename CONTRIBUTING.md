@@ -52,6 +52,10 @@ reviewer sees the test fail before it passes (SR-005). Both are kept.
 
 - Merge `main` into the branch and run `make test`. Paste its last line (`N passed …`) into
   the PR description. Green on today's `main` is the bar, not green on your branch.
+- A PR that adds a migration: its revision id is one no file on `main` uses, and its
+  `down_revision` is `main`'s head today. Check again after every merge of `main`; when
+  another migration lands first, re-point yours before review. Never renumber or edit a
+  migration already on `main`.
 - A change to a Mirror or Journal figure comes with a hand-calculated fixture or expected
   values, written from the spec, never from program output.
 - Screenshots go **in the PR**, dragged into its description. Never committed, never pushed to

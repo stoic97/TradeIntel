@@ -306,6 +306,20 @@ sha only on the first train, or after a deploy that skipped the train). The last
 decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
 line → **Path B**.
 
+Before either path, check that no new migration sits behind the live tag's head:
+
+    cd /srv/scope || exit 1
+    echo "live head: $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -oE '/[0-9]{4}_' | tr -d '/_' | sort | tail -1)"
+    git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions | while read -r f; do git show "$TAG:$f" | grep -E "^(revision|down_revision) =" | sed "s|^|$f: |"; done
+
+Expected: the first new migration's `down_revision` is the live head, each later one's is the
+one before it, and no new `revision` is a number at or below the live head. Anything else:
+stop, and do not deploy the tag. Why: a migration whose revision id the live database already
+counts as applied is skipped with no error, so its table never exists and the page that reads
+it fails; a `down_revision` behind the live head leaves two heads, and the app refuses to start
+(`alembic upgrade head` needs one). Fix it on `main` with a new tag; never edit a migration a
+tag has shipped.
+
 Production then sits on a detached HEAD at the tag. That is correct, and `git status
 --short` still reports local changes, so the guard above still works. Do not "fix" it
 with `git switch main`.
