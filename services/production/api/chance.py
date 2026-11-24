@@ -21,8 +21,8 @@ def inside(value) -> bool:
         return False
     if not isinstance(value, ChanceBand):
         raise NoComparison(f"the chance line needs the band it rests on, not {value!r}")
-    if value.size == 0:
-        return False  # a set of no trades was compared with nothing: no verdict (review, 18 Nov)
+    if value.size == 0 or value.size >= value.pool_size:
+        return False  # the only set of its size was compared with nothing (review, 18 and 24 Nov)
     return value.inside
 
 

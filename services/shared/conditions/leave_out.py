@@ -35,6 +35,7 @@ class ChanceBand:
     figure: float
     band: tuple[float, float]
     size: int
+    pool_size: int  # trades the sets are drawn from; a set of all of them is the only one
     draws: int = DRAWS
     seed: int = SEED
 
@@ -60,7 +61,7 @@ def _band(pool: tuple[float, ...], figure: float, size: int, draws: int,
           seed: int) -> ChanceBand:
     """Cached: every page of one report reads the same record, so it draws the same sets."""
     if size == 0:
-        return ChanceBand(figure, (0.0, 0.0), 0, draws, seed)
+        return ChanceBand(figure, (0.0, 0.0), 0, len(pool), draws, seed)
     values = np.asarray(pool, dtype=float)
     rng = np.random.default_rng(seed)
     chunk = max(1, draws // 10)  # draws per batch, to keep the shuffled table small
@@ -72,4 +73,4 @@ def _band(pool: tuple[float, ...], figure: float, size: int, draws: int,
         sums[done:done + n] = sets.sum(axis=1)
         done += n
     low, high = np.percentile(sums, BAND)
-    return ChanceBand(figure, (float(low), float(high)), size, draws, seed)
+    return ChanceBand(figure, (float(low), float(high)), size, len(pool), draws, seed)

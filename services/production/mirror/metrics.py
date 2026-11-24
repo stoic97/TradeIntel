@@ -96,6 +96,7 @@ class Trip:
     uncapped: bool = False  # can lose without limit, whatever it is measured against
     premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
     point_value: Decimal | None = None  # rupees a one-point move makes on one lot, today's (TICKET-907)
+    gross: Decimal | None = None  # result before charges; None in fixtures that don't give it
 
     @property
     def is_win(self) -> bool:
@@ -146,6 +147,7 @@ def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
             lots=int(row["lots"]),
             risk_unit_source=s.RiskUnitSourceV1(row["risk_unit_source"]),
             is_option=row.get("segment", "OPT") == "OPT",
+            gross=Decimal(str(row["gross"])) if row.get("gross") is not None else None,
         )
         for row in rows
     ]
@@ -2311,20 +2313,24 @@ class PreviousResult:
     minimum: int = THEN_MINIMUM
 
 
-def _result_of(net: Decimal) -> str:
-    return "win" if net > 0 else "loss" if net < 0 else "level"
+def _result_of(result: Decimal) -> str:
+    return "win" if result > 0 else "loss" if result < 0 else "level"
 
 
 def previous_states(trips: list[Trip], across_books: bool = True) -> dict[str, str]:
     """Each same-day trade's previous result that day, "win", "loss" or "level"; a trade with
-    none is left out. Until TICKET-918 rules, the prior is read across books (across_books)."""
+    none is left out. The result is read before charges (founder, 24 Nov 2026); net stands in
+    only for a fixture that gives no gross: the loader always does. Until TICKET-918 rules, the
+    prior is read across books (across_books)."""
     groups = [same_day_trips(trips)] if across_books else list(_same_day_by_book(trips).values())
     out: dict[str, str] = {}
     for group in groups:
         priors = previous_result.previous_of(b2_observations(group))
         for trip, prior in zip(group, priors, strict=True):
             if prior is not None:
-                out[trip.trip_id] = _result_of(group[prior].net)
+                before = group[prior]
+                out[trip.trip_id] = _result_of(
+                    before.net if before.gross is None else before.gross)
     return out
 
 
