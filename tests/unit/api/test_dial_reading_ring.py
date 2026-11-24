@@ -127,13 +127,13 @@ def test_opening_a_fact_page_marks_its_segment(reader):
     keys = [f.key for f in chapter.facts]
     before = _first_dial(client.get("/mirror/chapter/2").text)
     assert "opened" not in segments(before)
-    assert f"0 of {len(keys)} facts read" in before
+    assert f"0 of {len(keys)} read" in before
 
     assert client.get(f"/mirror/fact/{keys[0]}").status_code == 200
     after = _first_dial(client.get("/mirror/chapter/2").text)
     assert segments(after)[0] == "opened"
     assert segments(after)[1] == "current"  # the one to read next
-    assert f"1 of {len(keys)} facts read" in after
+    assert f"1 of {len(keys)} read" in after
 
 
 def test_the_hub_marks_a_chapter_once_every_fact_in_it_is_open(reader):
