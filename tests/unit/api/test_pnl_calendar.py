@@ -174,9 +174,10 @@ def test_a_chosen_year_shows_that_years_months():
 
 # ---------- 6. every traded cell opens its trades ----------
 
-def test_a_day_with_a_trade_opened_opens_its_day_page():
+def test_a_day_with_a_trade_opened_still_opens_the_trades_closed_that_day():
+    # The cell counts the trades closed that day; the day page lists those opened (TICKET-1022).
     view = record_view()
-    assert cells(view)["2026-02-03"]["href"] == "/mirror/day/2026-02-03"
+    assert cells(view)["2026-02-03"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03"
 
 
 def test_a_day_with_only_closings_opens_the_list_of_exactly_those_trades():
@@ -195,10 +196,11 @@ def test_a_day_with_no_trades_opens_nothing():
 def test_the_best_day_tile_reads_same_day_trades_and_opens_its_day():
     # 1026: the tiles read same-day trades, so t09 (opened 26 Feb, closed 27 Feb) is held past the
     # day and in no tile. Same-day days: 30 Jan +600 and 3 Feb +700, so the best day is 3 Feb.
+    # 1022 (on main): a day's figure on Your numbers opens the trades closed that day.
     v = N.build(RECORD, {}, gross=True)
     assert v["tiles"]["best_day"]["day"] == "2026-02-03"
-    assert v["tiles"]["best_day"]["href"] == "/mirror/day/2026-02-03"
-    assert v["tiles"]["worst_day"]["href"] == "/mirror/day/2026-02-02"
+    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03"
+    assert v["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02"
 
 
 def test_closed_day_is_a_filter_on_the_map():

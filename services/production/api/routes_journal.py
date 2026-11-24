@@ -46,6 +46,7 @@ from services.production.journal import (
     prose,
     recency,
     remember,
+    sections,
     wtp,
 )
 from services.production.journal import generate as gen
@@ -60,6 +61,11 @@ PER_TRIP_PROMPTS = (
     ("rationale", "What was the trade?"),
     ("stop_existed_at_entry", "Was the stop on the chart when you entered? yes / no"),
 )
+
+CHOICE_PROMPTS = tuple((name, fields.QUESTIONS[name], fields.CHOICES[name]) for name in fields.CHOICES)
+"""The three fixed trade questions, each answered by one tap: a chip is a submit button."""
+
+ANSWERED_ON_A_CARD = tuple(name for name, _ in PER_TRIP_PROMPTS) + tuple(fields.CHOICES)
 
 
 def _gate(request: Request, sess):
@@ -156,7 +162,8 @@ def journal_list(request: Request):
         if card:
             leaving.mark_shown(sess, trader)
             sess.commit()
-        return page(request, "journals.html", title="Your Journals",
+        said_after = sections.said_after(_record(sess, trader), fields.answers_by_trip(sess, trader))
+        return page(request, "journals.html", title="Your Journals", said_after=said_after,
                     latest=surface.latest, catch_up_count=surface.catch_up_count,
                     started=len(first),
                     reasons={j.id: " · ".join(f.label for f in _flags_on(j, flags))
@@ -291,7 +298,7 @@ def journal_page(request: Request, journal_id: int):
             t["trip_id"]: {
                 name: fields.current(sess, journal=journal, field=name,
                                      trip_id=t["trip_id"])
-                for name, _ in PER_TRIP_PROMPTS
+                for name in ANSWERED_ON_A_CARD
             }
             for t in trades
         }
@@ -318,7 +325,7 @@ def journal_page(request: Request, journal_id: int):
             journal=journal, paragraphs=paragraphs, rows=asked, answers=answers,
             rest_rows=rest,
             rest_answered=any(
-                answers[row["trip_id"]][name] for row in rest for name, _ in PER_TRIP_PROMPTS
+                answers[row["trip_id"]][name] for row in rest for name in ANSWERED_ON_A_CARD
             ),
             trades_heading=(
                 {1: "One trade worth a minute", 2: "Two trades worth a minute"}[len(asked)]
@@ -332,7 +339,8 @@ def journal_page(request: Request, journal_id: int):
             ),
             changed_ids=gen.changed_by_upload(sess, trader=trader),
             earlier_id=gen.earlier_with_other_trades(sess, journal),
-            prompts=PER_TRIP_PROMPTS, fees_available=bool(imp and imp.fees_available),
+            prompts=PER_TRIP_PROMPTS, choice_prompts=CHOICE_PROMPTS,
+            fees_available=bool(imp and imp.fees_available),
             # His record's count, not this Journal's upload: one left alone by a later
             # reading keeps its import, and that import's refusals may no longer be his.
             uncounted=current.trips_refused if current else 0,
@@ -354,6 +362,9 @@ def journal_field(
     planned_sl: str = Form(None),
     rationale: str = Form(None),
     stop_existed_at_entry: str = Form(None),
+    exit_how: str = Form(None),
+    target: str = Form(None),
+    planned: str = Form(None),
     csrf_token: str = Form(None),
 ):
     """One trade's answers, or one named field.
@@ -377,7 +388,8 @@ def journal_field(
         submitted[field] = value
     else:
         for name, given in (("planned_sl", planned_sl), ("rationale", rationale),
-                            ("stop_existed_at_entry", stop_existed_at_entry)):
+                            ("stop_existed_at_entry", stop_existed_at_entry),
+                            ("exit_how", exit_how), ("target", target), ("planned", planned)):
             if given is not None:
                 submitted[name] = given
     if not submitted:

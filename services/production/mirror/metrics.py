@@ -1033,6 +1033,106 @@ def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
     )
 
 
+@dataclass(frozen=True)
+class DayPoint:
+    """One trade on a day's path: where the running result stood once it closed."""
+
+    trip: Trip
+    exit_ts: datetime  # when it closed, in the trade's own zone (the loader's)
+    running: Decimal
+    lots: int
+    side: str | None  # "CE", "PE" or None
+    switched: bool  # an option on the other side from the option before it, in one book
+
+
+@dataclass(frozen=True)
+class DayPath:
+    """A day's running result, trade by trade as each closed. Counts only, no cause."""
+
+    points: tuple[DayPoint, ...]
+    started: datetime  # the first trade's entry: where the path starts, at zero
+    peak: DayPoint | None  # the highest it stood, if it was ever above zero
+    trough: DayPoint | None  # the lowest it stood, if it was ever below zero
+    close: Decimal
+
+
+def day_path(day_trips: list[Trip]) -> DayPath:
+    """One day's trades as its running result, in exit order (ties by trip id).
+
+    The one path every page draws a day with: the day page and each of the five worst days.
+    A switch is counted between neighbouring options in one book, as the run page counts it.
+    """
+    ordered = sorted(day_trips, key=lambda t: (t.exit_ts, t.trip_id))
+    points: list[DayPoint] = []
+    total = Decimal(0)
+    previous: Trip | None = None
+    for t in ordered:
+        total += t.net
+        side = call_or_put(t)
+        switched = bool(
+            previous is not None and side and call_or_put(previous)
+            and call_or_put(previous) != side and book_of(previous.symbol) == book_of(t.symbol)
+        )
+        points.append(DayPoint(t, t.exit_ts, _round(total), t.lots, side, switched))
+        previous = t
+    highest = max(points, key=lambda p: p.running, default=None)
+    lowest = min(points, key=lambda p: p.running, default=None)
+    return DayPath(
+        points=tuple(points),
+        started=min((t.entry_ts for t in day_trips), default=None),
+        peak=highest if highest is not None and highest.running > 0 else None,
+        trough=lowest if lowest is not None and lowest.running < 0 else None,
+        close=points[-1].running if points else Decimal(0),
+    )
+
+
+def day_neighbours(trips: list[Trip], iso: str) -> tuple[str | None, str | None]:
+    """The trading days before and after this one in the record; None at either end."""
+    days = sorted({t.trading_day for t in trips})
+    if iso not in days:
+        return None, None
+    i = days.index(iso)
+    return (days[i - 1] if i > 0 else None), (days[i + 1] if i + 1 < len(days) else None)
+
+
+@dataclass(frozen=True)
+class DayStory:
+    """A day told as the run page tells a run: switches, a size step after losses, re-entries."""
+
+    flips: int
+    size: SizeRise | None
+    back_in: BackIn | None
+
+
+def _size_rise_after_losses(trades: list[Trip]) -> SizeRise | None:
+    """The first rise in size, said only when losses came straight before it.
+
+    Within a run every earlier trade lost; within a day they need not have, so the count of
+    losses is the run of losses just before the rise, and none means nothing is said.
+    """
+    rise = _size_rise(trades)
+    if rise is None:
+        return None
+    losses = 0
+    for t in reversed(trades[:rise.losses_before]):
+        if not t.is_loss:
+            break
+        losses += 1
+    return SizeRise(losses_before=losses, steps=rise.steps) if losses else None
+
+
+def day_story(day_trips: list[Trip]) -> DayStory:
+    """The run page's facts for one day, in the order the trades were opened."""
+    ordered = sorted(day_trips, key=lambda t: (t.entry_ts, t.trip_id))
+    days = sorted({t.trading_day for t in ordered})
+    books = sorted({trade_book(t) for t in ordered})
+    return DayStory(
+        flips=_flips(ordered),
+        size=_size_rise_after_losses(ordered),
+        back_in=_back_in(_gaps(ordered), days, books),
+    )
+
+
 LOSS_SIZES_MINIMUM = 20
 """Below this, "one in twenty" is not something the file can say."""
 
