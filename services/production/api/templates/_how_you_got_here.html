@@ -1,0 +1,36 @@
+{#- Home's "How you got here" card (TICKET-987): the verdict above says how much; this says how.
+    Every figure is decided in how_you_got_here.build; the chart is its SVG. Chips are links
+    the server answers (#how keeps him on the card), so nothing here needs a script. -#}
+<section class="card hy-card" id="{{ how.anchor }}">
+  <h2 class="card-title">How you got here</h2>
+  {%- if how.enough %}
+  <p class="body-small hy-span">{{ how.first_day|day }} to {{ how.last_day|day }} · {{ "result before charges" if how.gross else "result" }}, closed trades only</p>
+  <nav class="hy-books" aria-label="Book">
+    {%- for b in how.books %}<a class="hy-chip{% if b.on %} hy-chip--on{% endif %}" href="{{ b.href }}"{% if b.on %} aria-current="true"{% endif %}>{{ b.name }}</a>{% endfor -%}
+  </nav>
+  <div class="hy-kpis">
+    <a class="hy-kpi" href="/mirror"><span class="hy-kpi__label">Result</span><span class="hy-kpi__fig num num--{{ how.total|tone }}">{{ Figure(how.total, "rupees")|rupees }}</span><span class="hy-kpi__note">{{ Figure(how.trades, "trades")|count }} {{ "trade" if how.trades == 1 else "trades" }}{% if how.gross %}, before charges{% endif %}</span></a>
+    <a class="hy-kpi" href="/mirror/fact/math"><span class="hy-kpi__label">Made money</span><span class="hy-kpi__fig num">{% if how.strike is none %}—{% else %}{{ Figure(how.strike, "percent")|out_of_a_hundred }}{% endif %}</span><span class="hy-kpi__note">{% if how.even is none %}needs a win and a loss{% else %}needed {{ Figure(how.even, "percent")|out_of_a_hundred }}{% endif %}</span></a>
+    <a class="hy-kpi" href="{{ '/mirror/day/' ~ how.drop_day if how.drop_day else '/mirror' }}"><span class="hy-kpi__label">Biggest drop</span><span class="hy-kpi__fig num num--{{ (0 - how.drop)|tone }}">{{ Figure(0 - how.drop, "rupees")|rupees }}</span><span class="hy-kpi__note">from <span class="hy-nowrap">{{ Figure(how.high, "rupees")|rupees }}</span></span></a>
+  </div>
+  <div class="hy-frame">
+    <p class="hy-readout"><span class="hy-readout__when">{{ how.last_label }} · {{ how.last_words }}{% if how.cut %} · showing your last {{ Figure(how.cut[0], how.frame ~ "s")|count }} of {{ Figure(how.cut[1], how.frame ~ "s")|count }}{% endif %}</span>
+      <span class="hy-readout__ohlc"><span><b>O</b> {{ Figure(how.last.open, "rupees")|rupees }}</span><span><b>H</b> {{ Figure(how.last.high, "rupees")|rupees }}</span><span><b>L</b> {{ Figure(how.last.low, "rupees")|rupees }}</span><span><b>C</b> {{ Figure(how.last.close, "rupees")|rupees }}</span></span>
+      <span class="hy-readout__net">{{ Figure(how.last.trades, "trades")|count }} {{ "trade" if how.last.trades == 1 else "trades" }} · <span class="num--{{ how.last.net|tone }}">{{ Figure(how.last.net, "rupees")|rupees }}</span> in the {{ how.frame }}</span></p>
+    {{ how.chart }}
+    <details class="hy-details">
+      <summary class="link">Every {{ how.frame }} as numbers</summary>
+      <table class="table hy-table"><thead><tr><th>{{ how.frame|capitalize }}</th><th class="table__num">Trades</th><th class="table__num">In the {{ how.frame }}</th><th class="table__num">Ended at</th></tr></thead><tbody>
+      {%- for r in how.rows %}<tr class="hy-row"><td><a class="link" href="{{ r.opens }}">{{ r.label }}</a></td><td class="table__num num">{{ Figure(r.candle.trades, "trades")|count }}</td><td class="table__num num num--{{ r.net_shown|tone }}">{{ Figure(r.net_shown, "rupees")|rupees }}</td><td class="table__num num num--{{ r.candle.close|tone }}">{{ Figure(r.candle.close, "rupees")|rupees }}</td></tr>{% endfor -%}
+      </tbody></table>
+    </details>
+  </div>
+  <nav class="hy-frames" aria-label="Timeframe">
+    {%- for f in how.frames %}<a class="hy-chip{% if f.on %} hy-chip--on{% endif %}" href="{{ f.href }}"{% if f.on %} aria-current="true"{% endif %}>{{ f.name }}</a>{% endfor -%}
+  </nav>
+  <p class="body-small hy-lead">Each candle is your running result over that stretch: the wick is the best and worst it reached. Bars underneath are trades taken. Tap a candle for its trades.</p>
+  <p class="hy-more"><a class="link" href="/numbers">All your numbers ›</a></p>
+  {%- else %}
+  <p class="body">Not enough trades yet.</p>
+  {%- endif %}
+</section>

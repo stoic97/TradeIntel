@@ -80,6 +80,22 @@ def _multi_leg(legs: tuple[ctr_v1.RoundTrip, ...]) -> Underlying:
     return TABLE[(kind, BOUGHT if lead > 0 else SOLD)]
 
 
+def of_legs(legs) -> Underlying:
+    """The same answer from a position's stored legs (TICKET-999): anything carrying ``segment``,
+    ``option_type``, ``direction``, ``strike``, ``quantity`` and ``expiry`` as the schema's enums,
+    which is how production reads legs back from its rows. One leg takes the table; two or more
+    take section 4.7.8."""
+    legs = tuple(legs)
+    if len(legs) != 1:
+        return _multi_leg(legs)
+    only = legs[0]
+    if only.segment is not Segment.OPT:
+        return TABLE[(None, only.direction)]
+    if only.option_type is None:
+        return Underlying.NONE
+    return TABLE[(only.option_type, only.direction)]
+
+
 def underlying_direction(trip: ctr_v1.RoundTrip | Position) -> Underlying:
     """One trip or one position: long, short, or none (section 4.7.7, 4.7.8)."""
     legs: tuple[ctr_v1.RoundTrip, ...] = trip.legs if isinstance(trip, Position) else (trip,)

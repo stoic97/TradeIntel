@@ -20,7 +20,7 @@ import subprocess
 from pathlib import Path
 
 DATA_EXTENSIONS = re.compile(
-    r"\.(csv|tsv|xlsx|xls|pdf|parquet|jsonl|db|sqlite\d*|zip)$", re.IGNORECASE
+    r"\.(csv|tsv|xlsx|xls|pdf|parquet|jsonl|db|sqlite\d*|zip|gz)$", re.IGNORECASE
 )
 ALLOWED = (
     "data/fixtures/",   # synthetic fixtures: no real trader's trades
@@ -59,6 +59,20 @@ def test_anything_under_data_is_ignored_unless_it_is_an_allowed_path():
     for path in ("data/fixtures/x.csv", "data/golden/x.json", "data/market/CROSSINGS.md",
                  "data/null_rate/recall-b2.meta.json"):
         assert not ignored(path), path
+
+
+def test_market_data_in_the_day_layout_is_ignored_and_only_its_notes_are_tracked():
+    """TICKET-997: the bars are the broker's data and the repository is public. A day file, a
+    manifest or an old single-file series is ignored; only the folder's README and CROSSINGS.md
+    are tracked."""
+    for path in ("data/market/NIFTY/2026/2026-03-02.csv.gz", "data/market/NIFTY/manifest.json",
+                 "data/market/CRUDEOIL/2019/2019-10-01.csv.gz", "data/market/crude_1m_current.csv",
+                 "data/market/crude_1m_current.json", "data/market/RELIANCE/2026/2026-11-19.csv.gz.part"):
+        assert ignored(path), path
+    for path in ("data/market/README.md", "data/market/CROSSINGS.md"):
+        assert not ignored(path), path
+    tracked = git("ls-files", "data/market").splitlines()
+    assert sorted(tracked) == ["data/market/CROSSINGS.md", "data/market/README.md"], tracked
 
 
 def test_a_contract_note_a_tsv_or_a_database_is_ignored_anywhere():

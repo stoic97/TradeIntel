@@ -36,12 +36,14 @@ from services.production.api import (
     routes_identity,
     routes_journal,
     routes_mirror,
+    routes_numbers,
     routes_replay,
     routes_reveal,
     routes_rules,
     routes_sample,
     routes_upload,
     version,
+    wins_gap,
 )
 from services.production.api.settings import Settings
 from services.production.db.session import make_engine, run_migrations
@@ -51,6 +53,7 @@ HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, every page
 dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
+wins_gap.register(TEMPLATES.env)  # the math page's gap bar and years
 findings.register(TEMPLATES.env)  # a finding's two labels, read only from a Finding
 door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
@@ -87,6 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_upload.router)
     app.include_router(routes_charges.router)
     app.include_router(routes_mirror.router)
+    app.include_router(routes_numbers.router)
     app.include_router(routes_sample.router)
     app.include_router(routes_reveal.router)
     app.include_router(routes_replay.router)

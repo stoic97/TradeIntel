@@ -2,7 +2,8 @@
     founder's ruling (scope_facts.worst_days_in_common); when nothing is shared the page says so
     and leads with the rupees. Every trade stays one tap away, and on its own list. -#}
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money, trades, button %}
+{% from "_components.html" import money, trades, button, chart %}
+{% from "scope/_story_lines.html" import story_lines %}
 {% block head %}
     {%- if f.in_common %}
     {%- for line in f.in_common %}
@@ -33,6 +34,9 @@
         <span class="day-block__net">{{ money(b.net) }}</span>
         <span class="body-small day-block__went">{{ b.went }}{% if b.vs_normal %} {{ b.vs_normal }}.{% endif %}</span>
       </summary>
+      {%- if b.story.flips_words or b.story.size_words or b.story.back_in %}
+      <div class="run__lines day-block__story">{{- story_lines(b.story) }}</div>
+      {%- endif %}
       {%- if sample %}
       {%- elif b.iso in (flagged_days or []) %}
       <p class="body-small day-block__flag">You told us this day looks wrong.</p>
@@ -50,6 +54,12 @@
       {{ trades(b.groups) }}
     </details>
     {%- endfor %}
+  </section>
+  <section class="worst-sorted" aria-labelledby="sorted-title">
+    <h2 class="heading" id="sorted-title">Your days, worst to best</h2>
+    <p class="body-small">Your days added up from worst to best. The dark stretch is your five worst days; where the line ends is your whole result.</p>
+    {{ chart(f.page_chart) }}
+    <details class="worst-sorted__table"><summary class="body-small">Every day as numbers</summary>{{ f.sorted_days_table }}</details>
   </section>
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
