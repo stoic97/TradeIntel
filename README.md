@@ -94,6 +94,7 @@ Layout follows `docs/methodology.md` section 5. A folder is created when its fir
 | `tests/` | pytest; `tests/conftest.py` sets the environment and a per-test SQLite |
 | `tests/unit/` | Unit tests by area; `tests/unit/repo/` holds the repo guards (no trader data, references, Makefile, this README) |
 | `tests/integration/` | Upload to stored trips, through every layer |
+| `tests/e2e/` | A trader's journey through the app: sign in, upload a tradebook, read the Mirror |
 | `tests/reproducibility/` | Every transformation run twice; hashes must match; pinned digests |
 | `tests/fixtures/` | Test fixtures: the Mirror contract, the frozen Mirror wording, the dial geometry |
 | `tests/helpers/` | What test files share; a test file never imports another test file |
