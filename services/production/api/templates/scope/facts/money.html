@@ -12,7 +12,7 @@
 {% block evidence %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">Your best five and worst five, by result. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">{% if f.held and f.held.count %}Your best five and worst five same-day trades, by result, and the <span class="num">{{ Figure(f.held.count, "positions")|count }}</span> {{ "position" if f.held.count == 1 else "positions" }} you held past the day. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }} in all.{% else %}Your best five and worst five, by result. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.{% endif %}</p>
     {% if f.found.same_day_count %}
     <div class="ranked-lists">
     {{ ranked_trades("Best five", f.best_rows) }}

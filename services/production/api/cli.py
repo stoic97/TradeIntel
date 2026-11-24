@@ -316,6 +316,19 @@ def cmd_market_sync(args: argparse.Namespace) -> None:
             print(f"    refused {day}: {why}")
 
 
+def cmd_bar_figures(args: argparse.Namespace) -> None:
+    """Work out every pending import's bar figures (TICKET-999). The timer runs it after
+    market-sync. Prints counts only."""
+    from services.production.market import bar_figures
+
+    engine = make_engine(args.db)
+    with make_session(engine) as sess:
+        counts = bar_figures.run(sess, now=datetime.now(UTC), code_version=code_version())
+        sess.commit()
+    done, waiting = counts.get(bar_figures.DONE, 0), counts.get(bar_figures.WAITING, 0)
+    print(f"bar-figures: {done} imports done, {waiting} waiting for days")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="scope", description=__doc__)
     parser.add_argument("--db", default=DEFAULT_DB)
@@ -359,6 +372,7 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("wrong-reports").set_defaults(func=cmd_wrong_reports)
 
     sub.add_parser("market-sync").set_defaults(func=cmd_market_sync)
+    sub.add_parser("bar-figures").set_defaults(func=cmd_bar_figures)
 
     args = parser.parse_args(argv)
     args.func(args)
