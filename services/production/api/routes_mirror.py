@@ -382,14 +382,16 @@ def _ending(request: Request, imp, fact: dict) -> dict:
         trader = reader(request, sess)
         worst = fact["flagged"]["worst"]
         opens = {} if worst is None else _journal_ids(sess, trader, {worst["iso"]})
+        sample = is_sample(request)  # a visitor has no Journal: no link to one
         earlier = sess.scalars(
             select(m.Import).join(m.Trip, m.Trip.import_id == m.Import.id)
             .where(m.Import.trader_id == trader.id, m.Import.id < imp.id)
             .order_by(m.Import.id.desc()).limit(1)
         ).first()
         return {
-            "journal_href": f"/journals/{opens[worst['iso']]}?from=not-told"
-            if worst and worst["iso"] in opens else "/journals",
+            "journal_href": None if sample else (
+                f"/journals/{opens[worst['iso']]}?from=not-told"
+                if worst and worst["iso"] in opens else "/journals"),
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
@@ -468,7 +470,8 @@ def trading_day(request: Request, iso: str):
     if not that_day:
         raise HTTPException(status_code=404)
     with make_session(request.app.state.engine) as sess:
-        opens = _journal_ids(sess, reader(request, sess), {iso})
+        # The sample's Journals are no visitor's to open, so its day page has no link to one.
+        opens = {} if is_sample(request) else _journal_ids(sess, reader(request, sess), {iso})
     before, after = mx.day_neighbours(trips, iso)
     return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
                 when=formatting.day(iso), count=len(that_day),

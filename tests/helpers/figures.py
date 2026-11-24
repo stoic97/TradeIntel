@@ -3,4 +3,5 @@
 
 from __future__ import annotations
 
-KIT_SHA = "4c258d3593d09dbd84e9478c44cab99a046ea679a47bfba4f6b82ae816eaa134"
+# The dial classes, added once for the four dial tickets (kit update, ruled 24 Nov 2026).
+KIT_SHA = "b753634d8d8551016a36dd29a8be183ab07064da07a6caabb9dee9e49dab6646"

@@ -7,7 +7,7 @@ Numbered 0020: 0016 trip_charge, 0017 broker_connection, 0018 challenge, 0019 af
 the chain lands differently.
 
 Revision ID: 0020
-Revises: 0017
+Revises: 0018
 """
 import sqlalchemy as sa
 from alembic import op
@@ -15,7 +15,7 @@ from alembic import op
 import services.production.db.types as dbtypes
 
 revision = '0020'
-down_revision = '0017'
+down_revision = '0018'
 branch_labels = None
 depends_on = None
 

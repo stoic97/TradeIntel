@@ -53,14 +53,14 @@ def dials(html: str) -> list[str]:
 # re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
 # views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["1337a013815fc05d60daec17ebd8bf70141cbfc5e5133fffecf89b3dc9994487",
-                "2d90544bf322d04babec32a745aa907a6886da2e8ea3ee227e769808e5075976"],
-    "/mirror/chapter/1": ["433fba89abf84d9c39564977e228d4dbe36d3a0fd732f01e4b2d0fbdeeba2a27",
+    "/mirror": ["2a16aecd4c8ca0759e5b6e74a83b583bc3ed6b65d0530530546e2d203056b666",
+                "4043ffb1a9976ef7dcff04b303cada5d4161a61c70f548cccfc052f428a946d1"],
+    "/mirror/chapter/1": ["34aa4af07256b9346efe5a00fe1bd4f899c1a30a84ae586f1f242fd2efb7b02e",
                           "fd6a1b3468fb431a53ab044bc5dafe70fc4e367998c59b1fc44134da7321b72e"],
     "/mirror/chapter/2": ["b6c918062c340106c08879967f725702f43e9e5159b0a8eb87706161e23ef779",
                           "39fe69032f7b69741e19e290360670836124d201b3a43c45fb0ae9ef7c01f302"],
-    "/mirror/chapter/3": ["3779667462bfb0fa671dfa7657976c3fb521497d45c77f8a21233f401455a6f7",
-                          "95c9988e4b01dce62086f17a9c0455febbe48706f42ec109c5af588fab43ffe0"],
+    "/mirror/chapter/3": ["fbe1ff84e18cdb683e6f6ea8196624d399f9f3af444bb89d657080860f4b49ca",
+                          "af2218a77d5bcf57c36d1f1ddc711160206251a9ac8e34cea7a2c1815a211c3b"],
     "/mirror/chapter/4": ["9d9e251ad138b1ff8ae132906b013a47bc5a23c063947e146a7015442e5b3fa1",
                           "30ca9d728d015b57316303eeb0aed23ffff42bbc433f83b76ed40bb3b3745656"],
 }
@@ -70,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "9224b880ab89b1d829e0a95a1a178dae6459d414512552236f544902dc58a24e",
+    (3, "desktop"): "c66c0416ae5dc9f3dddbc45228cb3e7e05e8261f9f88639503c0554d4d6b94f1",  # five wedges; back in under 30 a group reads its count and "too few" (24 Nov review)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
@@ -79,6 +79,7 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
+OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day"}  # What you do next (1006)
 
 
 def sha(text) -> str:
@@ -105,7 +106,8 @@ def later(monkeypatch):
 
 def test_every_fact_says_whether_it_sits_on_the_phone_dial():
     assert {f.key for c in S.CHAPTERS for f in c.facts if f.on_phone_dial} == ON_THE_PHONE_DIAL
-    assert all(f.on_phone_dial for c in S.CHAPTERS for f in c.facts)  # every fact on main stays on it
+    # every fact on main stays on it; the facts added since sit in the list under the dial
+    assert {f.key for c in S.CHAPTERS for f in c.facts if not f.on_phone_dial} == OFF_THE_PHONE_DIAL
 
 
 # ---------- nothing else moves ----------
@@ -123,6 +125,8 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
+        if path == "/mirror/chapter/3":  # What you do next (1006) sits in chapter 3's list
+            continue
         assert "scope__list" not in html, path
 
 

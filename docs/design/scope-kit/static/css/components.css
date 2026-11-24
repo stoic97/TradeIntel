@@ -165,6 +165,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .chart--on-navy .chart__axis { stroke: var(--color-muted); }
 .chart--on-navy .chart__stroke, .chart--on-navy .chart__dash { stroke: #FFFFFF; }
 .chart--on-navy .chart__hatch { fill: none; stroke: #FFFFFF; stroke-opacity: .5; }
+.chart__label { fill: var(--color-faint); font-family: var(--font-mono); font-size: 8px; }  /* a count under its bar in a dial mini */
+.chart--on-navy .chart__label { fill: var(--color-on-navy-soft); }
 .chart--not-enough { opacity: .5; }
 
 /* ---------- Data table ---------- */
@@ -294,13 +296,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope__progress-seg--current { stroke-opacity: 1; stroke-width: 5; }                          /* the one to read next: brightest */
 .scope__number { fill: var(--color-on-navy); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 .scope__figure { fill: var(--color-on-navy); font-family: var(--font-mono); font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-.scope__figure--s15 { font-size: 15px; } .scope__figure--s18 { font-size: 18px; } .scope__figure--s22 { font-size: 22px; } .scope__figure--s32 { font-size: 32px; }
+.scope__figure--s12 { font-size: 12px; } .scope__figure--s13 { font-size: 13px; } .scope__figure--s15 { font-size: 15px; } .scope__figure--s18 { font-size: 18px; } .scope__figure--s22 { font-size: 22px; } .scope__figure--s32 { font-size: 32px; }
 .scope__figure--tight { word-spacing: -0.45em; }
 .scope__figure-tail { fill: var(--color-on-navy); font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
 .scope__state { fill: var(--color-on-navy-soft); font-family: var(--font-mono); font-size: 11px; }
 .scope__state-hatch { fill: url(#scope-hatch); }
 .scope__hatch-line { stroke: var(--dial-line); stroke-opacity: .35; stroke-width: 1; }
 .scope__state-dashed { fill: none; stroke: var(--dial-line); stroke-opacity: .6; stroke-width: .75; stroke-dasharray: 3 3; }
+.scope__marked { fill: var(--dial-line); fill-opacity: .08; }                    /* worse than its own reference: one quiet fill per dial */
 .scope__leader { fill: none; stroke: var(--dial-line); stroke-opacity: .75; stroke-width: .75; }
 .scope__name { fill: var(--color-on-navy); font-size: var(--type-rim-name-size); font-weight: 500; }
 .scope--desktop .scope__name { font-size: 13px; }
