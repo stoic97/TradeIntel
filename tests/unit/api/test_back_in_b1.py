@@ -92,9 +92,9 @@ def test_the_back_in_list_holds_both_groups_and_each_opens():
 def test_under_thirty_a_group_the_page_says_too_few_and_compares_nothing():
     f = facts_of(PAIRS)["back-in"]
     assert words(f["line"]) == (
-        "2 trades came next after a loss and 4 after a win or a level trade: too few to set "
+        "2 trades came next after a loss and 4 after a win or a flat trade: too few to set "
         "side by side. Each needs 30.")
-    assert [g["label"] for g in f["groups"]] == ["After a loss", "After a win or a level trade"]
+    assert [g["label"] for g in f["groups"]] == ["After a loss", "After a win or a flat trade"]
     assert [g["trades"] for g in f["groups"]] == [2, 4]
     assert all(g["median"] is None for g in f["groups"])
     assert not f.get("page_chart")
@@ -126,7 +126,7 @@ def paired(n_loss: int, n_win: int, n_level: int) -> list:
 def test_twenty_nine_in_one_group_is_too_few():
     f = facts_of(paired(30, 20, 9))["back-in"]
     assert words(f["line"]) == (
-        "30 trades came next after a loss and 29 after a win or a level trade: too few to set "
+        "30 trades came next after a loss and 29 after a win or a flat trade: too few to set "
         "side by side. Each needs 30.")
     assert all(g["median"] is None for g in f["groups"])
     assert not f.get("page_chart")
@@ -139,7 +139,7 @@ def test_thirty_in_each_group_sets_them_side_by_side():
     assert (nt.loss_median, nt.comparison_median) == (D(10), D(20))
     f = facts_of(record)["back-in"]
     assert words(f["line"]) == (
-        "After a loss your next trade came a median 10 minutes later; after a win or a level "
+        "After a loss your next trade came a median 10 minutes later; after a win or a flat "
         "trade, 20.")
     assert [(g["trades"], g["median"]) for g in f["groups"]] == [(30, 10), (30, 20)]
     assert f.get("page_chart")
