@@ -147,7 +147,7 @@ def test_fewer_than_five_days_are_never_called_five(page_of):
         text = plain(main_of(client.get(href).text)).lower()
         assert "five days" not in text and "five worst" not in text, href  # "the five marks" is the ladder's
     text = plain(main_of(client.get("/mirror/fact/worst-days").text))
-    assert "Those 2 days came to" in text
+    assert "Your 2 worst days:" in text  # the share line this record draws (it has a losing day)
 
 
 # ---------- 6. the text table and the run-page sentences, on the page ----------
