@@ -17,13 +17,17 @@ marked out. Premium is not used as R here or anywhere (section 12).
 
 from __future__ import annotations
 
+import math
+from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from functools import lru_cache
 
 from services.production.api import formatting
 from services.production.api import scope_map as S
+from services.production.ctr.profiles import registry as profiles
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 
@@ -214,6 +218,110 @@ def _next_day(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+# ---------- The shape of your days, on Your numbers: three readers for its taps ----------
+
+DAY_THIRD_OF = "the third of his days by trades"
+"""The lookup's key for each trade's third of his days by how many trades he closed that day."""
+
+
+def _trades_label(lo: int, hi: int | None) -> str:
+    if hi is None:
+        return f"{lo} or more trades"
+    if lo == hi:
+        return f"{lo} trade" if lo == 1 else f"{lo} trades"
+    return f"{lo}–{hi} trades"
+
+
+def day_thirds(trips: list[mx.Trip]) -> tuple[list[tuple[str, str, int, int | None]], dict[str, Choice]]:
+    """His traded days in thirds by how many trades he closed that day, at his own cut points.
+
+    The cut points are the counts on the days a third and two thirds of the way up, his days in
+    order of trades. A day at a cut point stays with the days below it, so days with the same
+    count are never split; a third left empty by a tie is left out. A day is the day he closed
+    (the calendar's day). Returns each third (value, label, fewest, most) and each trade's.
+    """
+    per_day = Counter(t.exit_ts.date().isoformat() for t in trips)
+    if not per_day:
+        return [], {}
+    counts = sorted(per_day.values())
+    n = len(counts)
+    low, high = counts[math.ceil(n / 3) - 1], counts[math.ceil(2 * n / 3) - 1]
+    bounds: list[tuple[int, int | None]] = [(counts[0], low)]
+    if high > low:
+        bounds.append((low + 1, high))
+    if counts[-1] > high:
+        bounds.append((high + 1, None))
+    thirds = []
+    for lo, hi in bounds:
+        value = f"{lo}-plus" if hi is None else str(lo) if lo == hi else f"{lo}-{hi}"
+        thirds.append((value, _trades_label(lo, hi), lo, hi))
+
+    def third_of(count: int) -> int:
+        return next(i for i, (_, _, lo, hi) in enumerate(thirds) if count >= lo and (hi is None or count <= hi))
+
+    choice: dict[str, Choice] = {}
+    for t in trips:
+        place = third_of(per_day[t.exit_ts.date().isoformat()])
+        choice[t.trip_id] = (place, thirds[place][0], thirds[place][1])
+    return thirds, choice
+
+
+def _day_third(t: mx.Trip, lookup: dict) -> Choice | None:
+    return lookup.get(DAY_THIRD_OF, {}).get(t.trip_id)
+
+
+def is_share(t: mx.Trip) -> bool:
+    """A share or an ETF, as trade_book puts it in its own book."""
+    return not t.is_option and bool(t.lines) and t.lines[0].segment == "EQ"
+
+
+@lru_cache(maxsize=1)
+def _opens() -> tuple[dict[str, time], time | None]:
+    """Each instrument's session start from its profile, and the cash-equity segment's. A symbol
+    two profiles give different starts is left without one rather than guessed."""
+    starts: dict[str, set[time]] = {}
+    shares: set[time] = set()
+    for (_exchange, symbol), profile in profiles.load_all(loader.PROFILE_DIR).items():
+        if symbol == profiles.SEGMENT_WILDCARD:
+            if profile.segment == "EQ":
+                shares.add(profile.session_start)
+            continue
+        starts.setdefault(symbol, set()).add(profile.session_start)
+    one = {symbol: next(iter(s)) for symbol, s in starts.items() if len(s) == 1}
+    return one, (next(iter(shares)) if len(shares) == 1 else None)
+
+
+def session_open(t: mx.Trip) -> time | None:
+    """When his instrument's session opens (NSE 09:15, MCX 09:00), or None when no profile says."""
+    starts, shares = _opens()
+    return shares if is_share(t) else starts.get(t.symbol)
+
+
+OPENING_MINUTES = 30
+OPENINGS = ((0, "first-30", "First 30 minutes"), (1, "rest", "The rest"))
+
+
+def opening(t: mx.Trip, _lookup: dict) -> Choice | None:
+    """Opened within 30 minutes of its own session's start, or later. One open a day: an MCX
+    evening is the same session going on, not a second open."""
+    start = session_open(t)
+    if start is None:
+        return None
+    entry = t.entry_ts
+    cut = datetime.combine(entry.date(), start, entry.tzinfo) + timedelta(minutes=OPENING_MINUTES)
+    return OPENINGS[0] if entry < cut else OPENINGS[1]
+
+
+OVERNIGHTS = ((0, "overnight", "Held overnight"), (1, "same-day", "Closed the same day"))
+
+
+def overnight(t: mx.Trip, _lookup: dict) -> Choice | None:
+    """Options and futures closed on a later day than they were opened; shares are apart."""
+    if is_share(t):
+        return None
+    return OVERNIGHTS[1] if t.closed_same_day else OVERNIGHTS[0]
+
+
 @dataclass(frozen=True)
 class Filter:
     name: str  # its name in the URL
@@ -238,6 +346,10 @@ FILTERS = (
     Filter("days", "Expiry day or not", expiry_day_or_not, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
+    # The shape of your days: his days by how many trades, his first 30 minutes, overnight.
+    Filter("day_trades", "Trades that day", _day_third, only=frozenset({"risk"})),
+    Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
+    Filter("overnight", "Held overnight", overnight, only=frozenset({"risk"})),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
     Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
@@ -253,7 +365,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind),
+    lookup = {**expiries, HALF_OF: mx.half_of(behind), DAY_THIRD_OF: day_thirds(behind)[1],
               AFTER_OF: after_groups(key, ctx),
               NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {}}
     for f in FILTERS:

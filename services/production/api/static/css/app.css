@@ -254,6 +254,21 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .day-block__run { stroke: currentColor; stroke-width: 1.5; }
 .day-block__flag { margin: var(--space-3) 0; }
 .day-blocks__next, .chapter__next { margin-top: var(--space-6); }
+/* Days you can replay: a day's running result, the shared component (day_chart). */
+.day-nav { display: flex; gap: var(--space-2); margin: 0 0 var(--space-2); }
+.daychart-figure { margin: var(--space-4) 0; }
+.daychart { display: block; width: 100%; height: auto; max-width: 100%; }
+.daychart__run { stroke: var(--color-ink); stroke-width: 1.5; }
+.daychart__dot--gain { fill: var(--color-gain); }
+.daychart__dot--loss { fill: var(--color-loss); }
+.daychart__dot--level { fill: var(--color-faint); }
+.daychart__dot--switched { stroke: var(--color-ink); stroke-width: 1.5; }
+.daychart-figure__table .table, .worst-sorted__table .table { display: block; overflow-x: auto; max-width: 100%; }
+.worst-sorted { margin: var(--space-4) 0; }
+.worst-sorted svg { display: block; width: 100%; height: auto; }
+.day-block__story { margin: var(--space-2) 0; }
+.chart__rest { fill: none; stroke: var(--color-faint); stroke-width: 1.5; }
+.worst-sorted .chart__stroke, .story-card__chart .chart__stroke { stroke-width: 2; }
 
 /* TICKET-842: the line every page drawn from the demo tradebook carries. */
 .demo-line {
@@ -389,6 +404,24 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .report-filter__choice { color: var(--color-action-blue); text-decoration: none; }
 .report-filter__choice[aria-current="true"] { color: var(--color-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .report-filter__words { margin: var(--space-2) 0 0; padding: var(--space-2) var(--space-3); background: var(--color-surface); border-left: 3px solid var(--color-navy); }
+/* The report's page structure: the ladder as five marks, its words once a page, small books
+   folded, and the filter bar one line on a phone. */
+.ladder-row { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 0; }
+.ladder { display: flex; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
+.ladder__mark { color: var(--color-navy); line-height: 1; }
+.ladder__mark[data-reached="no"] { color: var(--color-faint); }
+.ladder__top { color: var(--color-muted); }
+.ladder-words { margin: var(--space-3) 0; }
+.ladder-words summary { cursor: pointer; color: var(--color-action-blue); }
+.ladder-words__list { margin: var(--space-2) 0 0; padding-left: var(--space-5); }
+.books-fold { margin: var(--space-4) 0; }
+.books-fold summary { cursor: pointer; color: var(--color-action-blue); }
+.report-filter__phone { display: none; }
+.report-filter__summary { cursor: pointer; color: var(--color-action-blue); padding: var(--space-2) 0; min-height: 44px; }
+@media (max-width: 599px) {
+  .report-filter__phone { display: block; }
+  .report-filter__desk { display: none; }
+}
 .home__book-years { display: block; }
 .replay__chart { width: 100%; height: auto; margin: var(--space-4) 0; color: var(--color-navy); }
 .rules__chips { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
@@ -411,6 +444,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .calendar__key { display: inline-block; width: 12px; height: 12px; margin-right: 4px; border-radius: 3px; vertical-align: middle; }
 .calendar__key--answered { width: 5px; height: 5px; border-radius: 50%; background: var(--color-ink); }
 .remember__actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }
+
+/* TICKET-1008: the journal's one-tap trade questions, and what he said after */
+.journal-chips { border: 0; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.journal-chips legend { width: 100%; margin-bottom: var(--space-1); }
+.journal-chip { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-hairline); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: 500 13px/1 var(--font-sans); cursor: pointer; }
+.journal-chip--on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-navy); }
+.said-after { margin-top: var(--space-5); }
+.said-after__question { margin-top: var(--space-3); }
+.said-after__line { margin: var(--space-1) 0; }
 
 /* /budget's number against his own losses (TICKET-907). One tick per same-day loss along the
    same scale the slider runs on, his biggest at the right-hand end. */
@@ -509,6 +551,17 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
+.shape__grid { width: 100%; table-layout: fixed; }
+.shape__grid th, .shape__grid td { padding: var(--space-2) var(--space-1); vertical-align: top; font-size: 13px; }
+.shape__grid th:first-child { width: 34%; text-align: left; }
+.shape__book { overflow-wrap: anywhere; font-weight: 500; }
+.shape__net { display: block; }
+.shape__cell { text-align: left; }
+.shape__tap { display: flex; flex-direction: column; gap: var(--space-1); min-height: 44px; }
+.shape__swatch { display: block; min-width: 20px; }
+.shape__state { color: var(--color-faint); }
+
 /* TICKET-993: Your calendar */
 .cal { margin-top: var(--space-5); }
 .cal__month { margin-top: var(--space-4); }
@@ -530,6 +583,14 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
+/* Your numbers on desktop: from 1024 px the calendar's months sit side by side and each traded
+   cell prints its day's result in short form. On a phone the figure stays hidden (the cell's
+   tone and its tap carry it); screen readers read the table under the calendar instead. */
+.cal__result { display: none; }
+@media (min-width: 1024px) {
+  .cal__months { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 var(--space-6); }
+  .cal__result { display: inline; font: 500 9px var(--font-mono); fill: var(--color-ink); text-anchor: end; }
+}
 
 /* TICKET-994: When you trade */
 .when { margin-top: var(--space-5); }

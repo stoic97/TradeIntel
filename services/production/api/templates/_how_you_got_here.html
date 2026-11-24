@@ -21,7 +21,7 @@
     <details class="hy-details">
       <summary class="link">Every {{ how.frame }} as numbers</summary>
       <table class="table hy-table"><thead><tr><th>{{ how.frame|capitalize }}</th><th class="table__num">Trades</th><th class="table__num">In the {{ how.frame }}</th><th class="table__num">Ended at</th></tr></thead><tbody>
-      {%- for r in how.rows %}<tr class="hy-row"><td><a class="link" href="{{ r.opens }}">{{ r.label }}</a></td><td class="table__num num">{{ Figure(r.candle.trades, "trades")|count }}</td><td class="table__num num num--{{ r.candle.net|tone }}">{{ Figure(r.candle.net, "rupees")|rupees }}</td><td class="table__num num num--{{ r.candle.close|tone }}">{{ Figure(r.candle.close, "rupees")|rupees }}</td></tr>{% endfor -%}
+      {%- for r in how.rows %}<tr class="hy-row"><td><a class="link" href="{{ r.opens }}">{{ r.label }}</a></td><td class="table__num num">{{ Figure(r.candle.trades, "trades")|count }}</td><td class="table__num num num--{{ r.net_shown|tone }}">{{ Figure(r.net_shown, "rupees")|rupees }}</td><td class="table__num num num--{{ r.candle.close|tone }}">{{ Figure(r.candle.close, "rupees")|rupees }}</td></tr>{% endfor -%}
       </tbody></table>
     </details>
   </div>

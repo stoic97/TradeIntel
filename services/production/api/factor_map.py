@@ -84,7 +84,7 @@ FACTORS: tuple[Factor, ...] = (
     F("Instrument", "Strike's distance from the market", K.AT_CLICK, S.NEEDS_BARS),
     # Clock
     F("Clock", "Hour you opened", K.AT_CLICK, S.WORKED_OUT, checks=("S1",),
-      filters=("hour",), facts=("clock",)),
+      filters=("hour", "opening"), facts=("clock",)),
     F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("opened",)),
     F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year", "closed_day")),
     F("Clock", "Around a scheduled release", K.BEFORE, S.HELD, checks=("S10",)),
@@ -96,7 +96,8 @@ FACTORS: tuple[Factor, ...] = (
     F("Sequence", "The day so far", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B12",)),
     F("Sequence", "Same strike again", K.AT_CLICK, S.IN_YOUR_FILE),
     F("Sequence", "Losing runs", K.ONLY_AFTER, S.WORKED_OUT, facts=("run",)),
-    F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, facts=("busiest",)),
+    F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, filters=("day_trades",),
+      facts=("busiest",)),
     F("Sequence", "Minutes since the last close, and its direction", K.AT_CLICK, S.WORKED_OUT,
       filters=("after",), facts=("back-in", "same-way")),
     F("Sequence", "The day after a best or worst day", K.BEFORE, S.WORKED_OUT,
@@ -109,7 +110,8 @@ FACTORS: tuple[Factor, ...] = (
     F("Size", "Size when the market is moving", K.AT_CLICK, S.NEEDS_BARS, checks=("R8",)),
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
-    F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",)),
+    F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
+      filters=("overnight",)),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,
