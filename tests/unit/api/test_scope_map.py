@@ -34,7 +34,7 @@ def test_the_chapters_and_facts_are_the_handoffs():
     assert [(c.number, c.name, [f.key for f in c.facts]) for c in S.CHAPTERS] == [
         (1, "Where your results came from", ["hidden", "worst-days", "money"]),
         (2, "Your patterns", ["math", "run", "clock"]),
-        (3, "Your behaviour", ["down", "busiest"]),
+        (3, "Your behaviour", ["down", "back-in", "same-way", "next-day", "busiest"]),  # 1006
         (4, "What we read", ["unread", "risk", "not-told"]),
     ]
     assert [c.feedback for c in S.CHAPTERS] == [True, True, True, False]  # 4 is the honest close
@@ -51,7 +51,7 @@ def test_every_fact_title_is_a_heading_the_mirror_already_uses():
     """Handoff 6: the Mirror's own headings, word for word."""
     mirror = mirror_sentences()
     for f in S.FACTS.values():
-        if f.key in ("share", "math", "run", "busiest", "hidden"):
+        if f.key in ("share", "math", "run", "busiest", "hidden", "back-in", "same-way", "next-day"):
             continue  # told inside another section's sentences, or a new title (D9)
         assert f.title in mirror, f.key
 

@@ -1,0 +1,8 @@
+{#- Home's challenge card: how far it has got, and the pull back. -#}
+<section class="card challenge__home">
+  <h2 class="card-title"><a class="link" href="/challenge">Your challenge</a></h2>
+  <p class="body">Day <span class="num">{{ Figure(challenge.progress.so_far, "days") }}</span> of <span class="num">{{ Figure(challenge.progress.length, "days") }}</span>: {{ challenge.progress.status }}.</p>
+  {%- if challenge.waiting %}
+  <p class="body"><a class="link" href="/upload">Upload today's file. Day {{ Figure(challenge.waiting, "day") }} of your challenge is waiting.</a></p>
+  {%- endif %}
+</section>
