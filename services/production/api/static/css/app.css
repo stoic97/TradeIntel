@@ -14,6 +14,12 @@
 /* A page draws both of the kit's dials and one shows. Below 1366 px the desktop dial would be
    scaled down until its 11 px words can't be read, so the phone's drawing, scaled up, stays. */
 .stage .scope.scope--desktop { display: none; }
+/* A chapter's facts the phone dial has no wedge for (TICKET-1002), under it in its own box. */
+.scope__list { list-style: none; margin: 12px 0 0; padding: 0; text-align: left; }
+.scope__list-row { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.scope__list-row a { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 44px; padding: 10px 4px; color: var(--color-on-navy); text-decoration: none; }
+.scope__list-title { font-weight: 600; }
+.scope__list-said { color: var(--color-on-navy-soft); }
 @media (min-width: 1366px) {
   .stage .scope:not(.scope--desktop) { display: none; }
   .stage .scope.scope--desktop { display: block; width: min(100%, var(--stage-desktop-w)); }
@@ -500,6 +506,17 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
+.shape__grid { width: 100%; table-layout: fixed; }
+.shape__grid th, .shape__grid td { padding: var(--space-2) var(--space-1); vertical-align: top; font-size: 13px; }
+.shape__grid th:first-child { width: 34%; text-align: left; }
+.shape__book { overflow-wrap: anywhere; font-weight: 500; }
+.shape__net { display: block; }
+.shape__cell { text-align: left; }
+.shape__tap { display: flex; flex-direction: column; gap: var(--space-1); min-height: 44px; }
+.shape__swatch { display: block; min-width: 20px; }
+.shape__state { color: var(--color-faint); }
+
 /* TICKET-993: Your calendar */
 .cal { margin-top: var(--space-5); }
 .cal__month { margin-top: var(--space-4); }
@@ -531,13 +548,6 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
 
-/* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
-.shape__grid { width: 100%; table-layout: fixed; }
-.shape__grid th, .shape__grid td { padding: var(--space-2) var(--space-1); vertical-align: top; font-size: 13px; }
-.shape__grid th:first-child { width: 34%; text-align: left; }
-.shape__book { overflow-wrap: anywhere; font-weight: 500; }
-.shape__net { display: block; }
-.shape__cell { text-align: left; }
-.shape__tap { display: flex; flex-direction: column; gap: var(--space-1); min-height: 44px; }
-.shape__swatch { display: block; min-width: 20px; }
-.shape__state { color: var(--color-faint); }
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }

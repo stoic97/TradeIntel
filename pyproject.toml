@@ -25,6 +25,7 @@ dependencies = [
   "argon2-cffi>=23,<26",        # password hashing (argon2id)
   "itsdangerous>=2.2,<3",       # signed session cookies and CSRF tokens
   "cryptography>=43,<50",       # raw-file encryption at rest
+  "fyers-apiv3>=3.1",
 ]
 
 [dependency-groups]
@@ -55,6 +56,9 @@ include = ["services*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+markers = [
+  "research_fit: runs an MCMC fit and asserts its diagnostics or a threshold. Outside the required CI check; the research-fits job runs these (TICKET-954).",
+]
 
 [tool.ruff]
 line-length = 100

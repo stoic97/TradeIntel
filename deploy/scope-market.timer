@@ -1,0 +1,19 @@
+# /etc/systemd/system/scope-market.timer
+#
+# Starts scope-market.service (TICKET-998) every ten minutes, so a login made on the admin page
+# is used within ten minutes, and once at 00:15 IST, after MCX's evening session has closed, so
+# the day just finished is added that night. A run with nothing new asks the broker for nothing.
+# systemd never starts a second run while one is still going.
+
+[Unit]
+Description=PlusEV Scope market sync, every ten minutes and after MCX closes
+
+[Timer]
+OnCalendar=*:0/10
+OnCalendar=*-*-* 00:15:00 Asia/Kolkata
+RandomizedDelaySec=30
+Persistent=false
+Unit=scope-market.service
+
+[Install]
+WantedBy=timers.target

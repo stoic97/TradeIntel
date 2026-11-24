@@ -270,7 +270,7 @@ def _hidden_cell(half, href: str, row: str):
         return _hidden_link(formatting.count(half.days), "days", href)
     if row == "green_days":
         return (_hidden_link(formatting.count(half.green_days), "days", href) + " ("
-                + _hidden_link(formatting.count(half.green_day_percent), "percent", href) + "%)")
+                + _hidden_link(formatting.out_of_a_hundred(half.green_day_percent), "percent", href) + ")")
     if row == "green_months":
         return (_hidden_link(formatting.count(half.green_months), "months", href) + " of "
                 + _hidden_link(formatting.count(half.months), "months", href))
@@ -283,10 +283,10 @@ def _hidden_cell(half, href: str, row: str):
     if half.math.win_percent is None:
         return NOT_ENOUGH_YET
     if row == "win":
-        return _hidden_link(str(half.math.win_percent), "percent", href) + "%"
+        return _hidden_link(formatting.out_of_a_hundred(half.math.win_percent), "percent", href)
     if half.math.break_even_percent is None:
         return "\u2014"
-    return _hidden_link(str(half.math.break_even_percent), "percent", href) + "%"
+    return _hidden_link(formatting.out_of_a_hundred(half.math.break_even_percent), "percent", href)
 
 
 def _hidden_view(ctx: dict) -> dict:
@@ -921,10 +921,29 @@ HUB_FACT = {1: "worst-days", 2: "math", 3: "busiest", 4: "risk"}
 """Which fact each chapter's hub wedge takes its figure from, and so what it opens."""
 
 
+def _list_row(f, fig: dict, item: dict) -> dict:
+    """A fact said under the phone dial (Fact.on_phone_dial), in its desktop wedge's own words."""
+    state = fig["state"]
+    return {
+        "key": f.key,
+        "title": f.title,
+        "href": S.fact_href(f.key),
+        "state": state,
+        "said": None if state else Figure(item["figure"], item.get("noun") or fig["noun"]),
+        "of": (item.get("label") or "").replace("\n", " "),
+        "finding": fig["finding"],
+    }
+
+
 def chapter_view(n: int, figs: dict[str, dict]) -> dict:
-    """The chapter's dial, for the dial macro: its facts as slices, its name in the centre."""
+    """The chapter's dial, for the dial macro: its facts as slices, its name in the centre.
+
+    On a phone the dial keeps the wedges main had for it: a fact off it
+    (``Fact.on_phone_dial``) is said in ``phone_list`` under the dial instead, and the desktop
+    dial draws every fact, in chapter order, from ``desktop_items``. A chapter with every fact on
+    its dial has neither, and is drawn as it always was."""
     c = S.chapter(n)
-    items = []
+    items, every, rows = [], [], []
     for f in c.facts:
         fig = figs[f.key]
         item = {
@@ -939,12 +958,19 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
                 item["chart"] = ""  # a share that is not a percentage draws no bar
             else:
                 item["mini"] = fig["mini"]
-        items.append(item)
-    return {
+        every.append(item)
+        if f.on_phone_dial:
+            items.append(item)
+        else:
+            rows.append(_list_row(f, fig, item))
+    view = {
         "kind": "chapter",
         "items": items,
         "centre": {"name": c.name, "scopeHref": S.home_href(tap=n)},
     }
+    if rows:
+        view.update(desktop_items=every, phone_list=rows)
+    return view
 
 
 WIDE_COUNT = 100
@@ -970,7 +996,8 @@ def _wedge(figure: Figure, phone: str | None = None, shown: str | None = None,
     """A wedge states a fact: cover its rim label and read it aloud, and it still says something
     (TICKET-880). So it is a figure with its noun, and what that figure is of. A phone's wedge
     has less room than a desktop's, so it can give the same fact in fewer words."""
-    item = {"figure": shown or figure.with_noun, "label": _lines(figure.of or ""), "state": ""}
+    item = {"figure": shown or figure.with_noun, "label": _lines(figure.of or ""), "state": "",
+            "noun": figure.noun}  # the noun its words are in, for a fact said under the phone dial
     if phone is not None:
         item["phone_label"] = _lines(phone)
     if phone_shown is not None:
