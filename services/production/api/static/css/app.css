@@ -530,6 +530,17 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
+.shape__grid { width: 100%; table-layout: fixed; }
+.shape__grid th, .shape__grid td { padding: var(--space-2) var(--space-1); vertical-align: top; font-size: 13px; }
+.shape__grid th:first-child { width: 34%; text-align: left; }
+.shape__book { overflow-wrap: anywhere; font-weight: 500; }
+.shape__net { display: block; }
+.shape__cell { text-align: left; }
+.shape__tap { display: flex; flex-direction: column; gap: var(--space-1); min-height: 44px; }
+.shape__swatch { display: block; min-width: 20px; }
+.shape__state { color: var(--color-faint); }
+
 /* TICKET-993: Your calendar */
 .cal { margin-top: var(--space-5); }
 .cal__month { margin-top: var(--space-4); }

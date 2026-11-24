@@ -23,6 +23,7 @@ ones its figure adds up: the day page lists the trades opened that day, which ca
 from __future__ import annotations
 
 import calendar as _calendar
+import math
 from collections import Counter
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -289,3 +290,104 @@ def when(trips: list[mx.Trip], expiries: dict, *, days: str = "all") -> dict:
         "table": charts.text_table(table, ["Day", "Hour", "Trades", "Result", "Made money"],
                                    caption="Every hour you opened trades in, as numbers"),
     }
+
+
+# ---------- The shape of your days: four sections, each its own function and include ----------
+
+WORST_SHARE = Decimal("0.1")
+WORST_AT_LEAST = 5
+"""His worst tenth of traded days, and never fewer than five (or all he has, if fewer)."""
+
+
+def _closed_days(trips: list[mx.Trip]) -> dict[str, list[mx.Trip]]:
+    """His trades by the day he closed them, as the calendar counts a day."""
+    days: dict[str, list[mx.Trip]] = {}
+    for t in sorted(trips, key=lambda t: (t.exit_ts, t.trip_id)):
+        days.setdefault(t.exit_ts.date().isoformat(), []).append(t)
+    return days
+
+
+def _state(net: Decimal) -> str:
+    return "made" if net > 0 else "lost" if net < 0 else "level"
+
+
+def worst_books(trips: list[mx.Trip]) -> dict:
+    """Your books on your worst days: each worst day, which of his books lost, made money or
+    didn't trade. The books are the verdict's split (``book_groups``); shown from two books."""
+    books = mx.book_groups(trips)
+    if len(books) < 2:
+        return {"shown": False}
+    book_of = {t.trip_id: name for name, ts in books for t in ts}
+    days = _closed_days(trips)
+    nets = {d: sum((t.net for t in ts), Decimal(0)) for d, ts in days.items()}
+    n = min(len(days), max(WORST_AT_LEAST, math.ceil(len(days) * WORST_SHARE)))
+    worst = sorted(days, key=lambda d: (nets[d], d))[:n]
+    rows, all_lost = [], 0
+    for d in worst:
+        cells = []
+        for name, _ in books:
+            ts = [t for t in days[d] if book_of[t.trip_id] == name]
+            if not ts:
+                cells.append({"book": name, "state": "none", "net": None, "trades": 0,
+                              "tone": charts.cell_tone(None, Decimal(1)), "href": None})
+                continue
+            net = sum((t.net for t in ts), Decimal(0))
+            cells.append({"book": name, "state": _state(net), "net": net, "trades": len(ts),
+                          "tone": charts.cell_tone(net, abs(net) or Decimal(1)),
+                          "href": None if name == mx.OTHER_OPTIONS else _trades(closed_day=d, book=name)})
+        traded = [c for c in cells if c["state"] != "none"]
+        all_lost += all(c["state"] == "lost" for c in traded)
+        rows.append({"day": d, "net": nets[d], "href": _trades(closed_day=d), "cells": cells})
+    return {"shown": True, "books": [name for name, _ in books], "days": rows, "count": n,
+            "all_lost": all_lost,
+            "line": f"On your {n} worst days, every book you traded lost on {all_lost}."}
+
+
+def day_trades(trips: list[mx.Trip]) -> dict:
+    """Your days by how many trades you took: his days in thirds at his own cut points, and for
+    each third its days, trades, result and how many of a hundred days made money."""
+    thirds, choice = TL.day_thirds(trips)
+    days = _closed_days(trips)
+    out = []
+    for place, (value, label, _lo, _hi) in enumerate(thirds):
+        mine = {d: ts for d, ts in days.items() if choice[ts[0].trip_id][0] == place}
+        nets = [sum((t.net for t in ts), Decimal(0)) for ts in mine.values()]
+        made = sum(1 for n in nets if n > 0)
+        out.append({"label": label, "value": value, "days": len(mine),
+                    "trades": sum(len(ts) for ts in mine.values()), "net": sum(nets, Decimal(0)),
+                    "rate": (Decimal(made * 100) / len(mine)).quantize(TENTH, ROUND_HALF_UP)
+                    if len(mine) >= MINIMUM else None,
+                    "href": _trades(day_trades=value)})
+    return {"thirds": out, "minimum": MINIMUM}
+
+
+def _split(trips: list[mx.Trip], read, choices) -> tuple[list[tuple[str, list[mx.Trip], str]], int]:
+    groups: dict[str, list[mx.Trip]] = {value: [] for _, value, _ in choices}
+    left_out = 0
+    for t in sorted(trips, key=lambda t: (t.entry_ts, t.trip_id)):
+        chosen = read(t, {})
+        if chosen is None:
+            left_out += 1
+        else:
+            groups[chosen[1]].append(t)
+    return [(label, groups[value], None) for _, value, label in choices], left_out
+
+
+def first_half_hour(trips: list[mx.Trip]) -> dict:
+    """Your first 30 minutes: trades opened within 30 minutes of their own session's open
+    (NSE 09:15, MCX 09:00), against the rest. A trade no profile gives an open for is apart."""
+    groups, left_out = _split(trips, TL.opening, TL.OPENINGS)
+    groups = [(n, ts, _trades(opening=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OPENINGS, strict=True)]
+    return {"rows": _rows(groups), "left_out": left_out}
+
+
+def overnight(trips: list[mx.Trip]) -> dict:
+    """Held overnight: options and futures closed on a later day than they were opened, against
+    same-day ones; shares are counted apart. The longest hold in calendar days."""
+    groups, shares = _split(trips, TL.overnight, TL.OVERNIGHTS)
+    held = groups[0][1]
+    longest = max(held, key=lambda t: ((t.exit_ts.date() - t.entry_ts.date()).days, t.trip_id), default=None)
+    groups = [(n, ts, _trades(overnight=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OVERNIGHTS, strict=True)]
+    return {"rows": _rows(groups), "shares": shares,
+            "longest": (longest.exit_ts.date() - longest.entry_ts.date()).days if longest else None,
+            "longest_href": closed_day_href(longest.exit_ts.date().isoformat()) if longest else None}
