@@ -231,6 +231,20 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .latest__when .body-small { display: block; }
 .latest__when { padding-block: var(--space-2); }
 
+/* The challenge: one cell a day, kept, broken, no trades or not in a file yet. Counts only. */
+.challenge__rules { margin: var(--space-3) 0; padding-left: var(--space-4); }
+.challenge__days { list-style: none; padding: 0; margin: var(--space-4) 0; display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.challenge__day { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2);
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-card); background: var(--color-page); }
+.challenge__day--kept { border-color: var(--color-gain); }
+.challenge__day--broken { border-color: var(--color-loss); border-width: 2px; }
+.challenge__day--no-trades { background: var(--color-surface); }
+.challenge__day--not-yet { color: var(--color-faint); border-style: dashed; }
+.challenge__chips { border: 0; padding: 0; margin: 0 0 var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.challenge__chips legend { margin-bottom: var(--space-2); }
+.challenge__card, .challenge__home { margin: var(--space-4) 0; }
+
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
 .import__days > summary { cursor: pointer; }
@@ -528,16 +542,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
 
-/* The challenge: one cell a day, kept, broken, no trades or not in a file yet. Counts only. */
-.challenge__rules { margin: var(--space-3) 0; padding-left: var(--space-4); }
-.challenge__days { list-style: none; padding: 0; margin: var(--space-4) 0; display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
-.challenge__day { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2);
-  border: 1px solid var(--color-hairline); border-radius: var(--radius-card); background: var(--color-page); }
-.challenge__day--kept { border-color: var(--color-gain); }
-.challenge__day--broken { border-color: var(--color-loss); border-width: 2px; }
-.challenge__day--no-trades { background: var(--color-surface); }
-.challenge__day--not-yet { color: var(--color-faint); border-style: dashed; }
-.challenge__chips { border: 0; padding: 0; margin: 0 0 var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.challenge__chips legend { margin-bottom: var(--space-2); }
-.challenge__card, .challenge__home { margin: var(--space-4) 0; }
+/* TICKET-994: When you trade */
+.when { margin-top: var(--space-5); }
+.when__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.when__grid { display: block; width: 100%; max-width: 420px; height: auto; margin-top: var(--space-3); }
+.when__hour { font: 400 9px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.when__numbers { margin-top: var(--space-3); }
+
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }

@@ -80,13 +80,13 @@ FACTORS: tuple[Factor, ...] = (
     # Instrument
     F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book",)),
     F("Instrument", "Premium paid", K.AT_CLICK, S.WORKED_OUT, filters=("price",)),
-    F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left")),
+    F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left", "days")),
     F("Instrument", "Strike's distance from the market", K.AT_CLICK, S.NEEDS_BARS),
     # Clock
     F("Clock", "Hour you opened", K.AT_CLICK, S.WORKED_OUT, checks=("S1",),
       filters=("hour",), facts=("clock",)),
-    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("closed", "closed_day")),
-    F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year",)),
+    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("opened",)),
+    F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year", "closed_day")),
     F("Clock", "Around a scheduled release", K.BEFORE, S.HELD, checks=("S10",)),
     # Sequence
     F("Sequence", "Trade number in the day", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B5",)),

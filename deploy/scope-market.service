@@ -21,6 +21,9 @@ WorkingDirectory=/srv/scope
 EnvironmentFile=/etc/scope/scope.env
 
 ExecStart=/srv/scope/.venv/bin/python -m services.production.api.cli market-sync
+# Then each import's bar figures (TICKET-999), worked out here and stored, never in a request.
+# A oneshot runs its ExecStart lines in order, under the same limits below.
+ExecStart=/srv/scope/.venv/bin/python -m services.production.api.cli bar-figures
 
 # It must never starve the app on a 512 MB, one-vCPU droplet: lower priority, half a CPU at
 # most, and killed rather than allowed past 200 MB. A run works one day at a time, so it needs
