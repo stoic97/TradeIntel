@@ -3,10 +3,10 @@
 One row per page per upload (and the period and book it was read through), written when the
 page is served. A new upload starts unread. No figure and no word of his: a page key and a time.
 
-Numbered 0018 because 0016 and 0017 are taken by open pull requests; renumbered at merge if
+Numbered 0020: 0016 trip_charge, 0017 broker_connection, 0018 challenge, 0019 after_exit_path are reserved; re-pointed at merge if
 the chain lands differently.
 
-Revision ID: 0018
+Revision ID: 0020
 Revises: 0015
 """
 import sqlalchemy as sa
@@ -14,7 +14,7 @@ from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0018'
+revision = '0020'
 down_revision = '0015'
 branch_labels = None
 depends_on = None

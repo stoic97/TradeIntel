@@ -96,7 +96,7 @@ def test_the_fact_read_table_is_migrated():
     run_migrations(engine)
     cols = {c["name"] for c in inspect(engine).get_columns("fact_read")}
     assert {"trader_id", "import_id", "fact_key", "period", "book", "opened_at"} <= cols
-    migration = ROOT / "migrations/versions/0018_fact_reads.py"
+    migration = ROOT / "migrations/versions/0020_fact_reads.py"
     assert "down_revision = '0015'" in migration.read_text(encoding="utf-8")
 
 
