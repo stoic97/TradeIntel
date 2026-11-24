@@ -144,6 +144,17 @@ def _shut() -> frozenset[date]:
     return known.closed if known else frozenset()
 
 
+def _cell_short(net: Decimal) -> Figure:
+    """A day's result short enough for a calendar cell on desktop: +1.8k, −620, 0. The chart
+    toolkit's short form without the rupee sign (the cell is small; the table says rupees)."""
+    text = charts.short(net).replace("₹", "")
+    if text.lstrip("−-") == "0":  # paise either side of nothing read as the title's ₹0
+        return Figure("0", "rupees", of="that day's result")
+    if net > 0:
+        text = "+" + text
+    return Figure(text, "rupees", of="that day's result")
+
+
 def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool = False) -> dict:
     """His calendar: a block a month, newest first, a cell a day he closed trades on.
 
@@ -185,6 +196,7 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
                     "tone": charts.cell_tone(c.net if traded else None, scale),
                     "href": href,
                     "closed": not traded and d.weekday() < 5 and d in shut,
+                    "short": _cell_short(c.net) if traded else None,
                 })
             weeks.append(row)
         blocks.append({"period": m.period, "label": date(year, month, 1).strftime("%b %Y"),

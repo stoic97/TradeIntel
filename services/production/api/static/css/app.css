@@ -551,6 +551,14 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-3 { background: color-mix(in srgb, var(--color-loss) 62%, transparent); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
+/* Your numbers on desktop: from 1024 px the calendar's months sit side by side and each traded
+   cell prints its day's result in short form. On a phone the figure stays hidden (the cell's
+   tone and its tap carry it); screen readers read the table under the calendar instead. */
+.cal__result { display: none; }
+@media (min-width: 1024px) {
+  .cal__months { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 var(--space-6); }
+  .cal__result { display: inline; font: 500 9px var(--font-mono); fill: var(--color-ink); text-anchor: end; }
+}
 
 /* TICKET-994: When you trade */
 .when { margin-top: var(--space-5); }
