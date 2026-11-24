@@ -78,16 +78,22 @@ def ticks(lo: Decimal, hi: Decimal) -> tuple[Decimal, Decimal, Decimal]:
 
 def axis(lo: Decimal, hi: Decimal, tick: Decimal, y: Callable[[Decimal], float], *, left: float,
          right: float, width: float, ref: tuple[Decimal, str] | None = None,
-         last: Decimal | None = None, p: str = "ch", ref_cls: str | None = None) -> tuple[Markup, Markup]:
+         last: Decimal | None = None, p: str = "ch", ref_cls: str | None = None,
+         hide_under_last: bool = False) -> tuple[Markup, Markup]:
     """The right-hand price axis, as two layers: what sits behind the marks (gridlines with their
     labels, the ₹0 line when ₹0 is in range, a dashed reference line with its label) and what
-    sits in front (the last value's tag, coloured by its sign)."""
+    sits in front (the last value's tag, coloured by its sign).
+
+    ``hide_under_last`` drops a gridline's label that the last value's 16 px tag would sit on
+    (the gridline itself stays), so the two never print over each other."""
     x0, x1 = left, width - right
     back = []
     v = lo
+    under = y(last) if (hide_under_last and last is not None) else None
     while v <= hi:
-        back.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>'
-                    f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{short(v)}</text>')
+        label = (f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{short(v)}</text>'
+                 if under is None or abs(y(v) - under) >= 16 else "")
+        back.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>' + label)
         v += tick
     if lo <= 0 <= hi:
         zero = y(Decimal(0))

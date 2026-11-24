@@ -1088,6 +1088,62 @@ def chart_call_put(trades: list, w: float, h: float) -> dict:
     return _chart(w, h, m)
 
 
+def _dot(x: float, y: float, r: float) -> str:
+    return f"M{fmt(x - r)} {fmt(y)}a{fmt(r)} {fmt(r)} 0 1 0 {fmt(2 * r)} 0a{fmt(r)} {fmt(r)} 0 1 0 {fmt(-2 * r)} 0Z"
+
+
+def chart_backin(after_loss: list, after_win: list, loss_median: float | None,
+                 win_median: float | None, w: float, h: float, mini: bool = False) -> dict:
+    """Minutes to the next trade: a dot each, after a loss (top, ink) and after a win (bottom),
+    each row's median a mark across it. Not the kit's: added for chapter 3's back-in."""
+    top = max([*after_loss, *after_win, 1])
+    r = 1.5 if mini else 2.5
+    pad = r + 0.5
+    m = {"ink": "", "faint": "", "stroke": "", "axis": f"M0 {fmt(h - 0.5)}H{js_str(w)}"}
+
+    def x(v):
+        return pad + (w - 2 * pad) * v / top
+
+    for role, values, med, y in (("ink", after_loss, loss_median, h * 0.3),
+                                 ("faint", after_win, win_median, h * 0.7)):
+        for v in values:
+            m[role] += _dot(x(v), y, r)
+        if med is not None:
+            m["stroke"] += f"M{fmt(x(med))} {fmt(y - h * 0.18)}V{fmt(y + h * 0.18)}"
+    return _chart(w, h, m)
+
+
+def chart_sameway(loss_same: int, loss_other: int, win_same: int, win_other: int,
+                  w: float, h: float, mini: bool = False) -> dict:
+    """The next trade the same way (ink) or the other way (light), after a loss (top) and after
+    a win (bottom), each row the whole width. Not the kit's: added for chapter 3's same-way."""
+    bh = h * 0.3
+    m = {"ink": "", "light": "", "axis": f"M0.5 0V{js_str(h)}"}
+    for same, other, y in ((loss_same, loss_other, h * 0.12), (win_same, win_other, h * 0.58)):
+        total = same + other
+        if not total:
+            continue
+        sw = w * same / total
+        if same:
+            m["ink"] += _r2(0, y, sw, bh)
+        if other:
+            m["light"] += _r2(sw, y, w - sw, bh)
+    return _chart(w, h, m)
+
+
+def chart_nextday(after_best: float, after_worst: float, other: float, w: float, h: float,
+                  mini: bool = False) -> dict:
+    """Trades a day on the day after his best days (ink), his worst days (red) and his other
+    next days (light). Not the kit's: added for chapter 3's next-day."""
+    top = max(after_best, after_worst, other, 1)
+    bh = h * 0.22
+    m = {"ink": _r2(0, h * 0.06, w * after_best / top, bh),
+         "red": _r2(0, h * 0.39, w * after_worst / top, bh),
+         "light": _r2(0, h * 0.72, w * other / top, bh),
+         "axis": f"M0.5 0V{js_str(h)}"}
+    return _chart(w, h, m)
+
+
 CHARTS = {
     "worst": chart_worst,
     "share": chart_share,
@@ -1101,6 +1157,10 @@ CHARTS = {
     "read": chart_read,
     "risk": chart_risk,
     "notold": chart_notold,
+    # Not the kit's: chapter 3's What you do next.
+    "backin": chart_backin,
+    "sameway": chart_sameway,
+    "nextday": chart_nextday,
 }
 
 

@@ -21,6 +21,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from services.production.api.app import create_app
+from services.production.mirror import guess as GUESS
 
 ROOT = Path(__file__).resolve().parents[2]
 TRADEBOOK = ROOT / "data" / "fixtures" / "demo" / "scope_demo_tradebook.csv"
@@ -189,10 +190,15 @@ def test_a_trader_signs_in_uploads_a_tradebook_and_reads_the_mirror():
 
     # On to his record: the question before it, the reveal, and the first page it shows.
     guess = trader.follow(review, r"^/guess$")
-    assert (guess.status, guess.at) == (200, "/guess"), (guess.status, guess.at)
-    answers = guess.form("/guess")["buttons"]
-    assert answers, "the question offers no answer"
-    reveal = trader.send(guess, "/guess", **dict(answers[:1]))
+    if GUESS.ready(production=False):
+        assert (guess.status, guess.at) == (200, "/guess"), (guess.status, guess.at)
+        answers = guess.form("/guess")["buttons"]
+        assert answers, "the question offers no answer"
+        reveal = trader.send(guess, "/guess", **dict(answers[:1]))
+    else:
+        # The guess is never asked on placeholder labels (TICKET-1027's gate): /guess goes
+        # straight on to the reveal until TR-009's words are written.
+        reveal = guess
     assert (reveal.status, reveal.at) == (200, "/mirror/reveal"), (reveal.status, reveal.at)
     shown = trader.follow(reveal, r"^/mirror/fact/")
     assert shown.status == 200 and shown.dwell, f"{shown.at} is not a page of the report"
