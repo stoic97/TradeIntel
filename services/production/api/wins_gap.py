@@ -142,7 +142,7 @@ def view(book_math: list) -> dict:
             drawn = sum(yr.trades for yr in book.years if _counted(yr))
             counts = (Markup("The lines count all of them.") if drawn == w.trades else
                       Markup("The lines count ") + _count(drawn, "trades")
-                      + Markup(" of them: the years with 30 or more."))
+                      + Markup(" of them: only years with 30 or more trades."))
             years.append({"book": w.label, "points": points, "thin": Markup("; ").join(thin), "counts": counts})
     lo = hi = tick = 0
     if values:
