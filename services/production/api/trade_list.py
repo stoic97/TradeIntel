@@ -131,10 +131,22 @@ def left_bucket(t: mx.Trip, expiries: dict) -> Choice | None:
     return None
 
 
-def closed_on(t: mx.Trip, _expiries: dict) -> Choice:
-    """The weekday he closed it, in the instrument's zone."""
-    day = t.exit_ts.weekday()
+def opened_on(t: mx.Trip, _expiries: dict) -> Choice:
+    """The weekday he opened it, in the instrument's zone: the decision's day (TICKET-994)."""
+    day = t.entry_ts.weekday()
     return day, WEEKDAYS[day].lower(), WEEKDAYS[day]
+
+
+EXPIRY_DAYS = ((0, "expiry", "Expiry day"), (1, "other", "Other days"))
+"""TICKET-994's chips: an option opened on its own contract's expiry, or any other day it was
+opened on. What _days_to_expiry can't read (shares, futures, an unread expiry) is in neither."""
+
+
+def expiry_day_or_not(t: mx.Trip, expiries: dict) -> Choice | None:
+    days = _days_to_expiry(t, expiries)
+    if days is None:
+        return None
+    return EXPIRY_DAYS[0] if days == 0 else EXPIRY_DAYS[1]
 
 
 def closed_day(t: mx.Trip, _expiries: dict) -> Choice:
@@ -183,7 +195,8 @@ FILTERS = (
     Filter("year", "Year", _year),
     # The Your numbers page opens every trade by the day it was closed and by the days its
     # contract had left then (TICKET-988); offered on that list only.
-    Filter("closed", "Day closed", closed_on, only=frozenset({"risk"})),
+    Filter("opened", "Day opened", opened_on, only=frozenset({"risk"})),
+    Filter("days", "Expiry day or not", expiry_day_or_not, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),

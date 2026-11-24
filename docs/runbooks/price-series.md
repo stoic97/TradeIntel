@@ -112,6 +112,27 @@ of minute bars, so the oldest days can't be fetched again once they age out. **K
 folder off the server** (the laptop that split it, or the off-box store), and refresh that copy when
 the series grows.
 
+## Bar figures, worked out off the web app (TICKET-999)
+
+Pages never read bars to work out a trade's figures. An upload adds one pending row
+(`bar_figure_job`); `scope-market.service` runs `cli bar-figures` after `cli market-sync`, under
+the same limits (`Nice=10`, `CPUQuota=50%`, `MemoryMax=200M`); pages read what it stored.
+
+- **Per trade** (`bar_trade_figure`), in underlying points in the trade's direction, from the close
+  of the entry minute: how far it went his way, how far against him, what he took, and the 30
+  minutes after he clicked. Or the reason it has none: no single direction, no series, a crude
+  contract month the near-month series doesn't follow, gold or silver (no month rule yet), or a day
+  not in yet. Counted, never dropped.
+- **Per underlying** (`bar_path_summary`): his median path, his middle half, up to 200 of his paths
+  chosen evenly, and the median and middle 95% of one random moment per trade (same month and hour,
+  at least 30 minutes from his entries, seeded from the trader and the import).
+- **A stock's day the store lacks** is asked for in `market_day_request`; the next sync fetches it
+  and the next run fills the trade in. A day the broker never serves ends as "the broker has no
+  bars for this day".
+- **Provenance** (`bar_figure_job.provenance`): the code version, the mapping version, and the
+  sha256 of every day file read.
+- "Delete everything" removes the job and the figures; the market files hold no trader data.
+
 ## Never in git
 
 The bars are the broker's data and the repository is public. `.gitignore` covers everything under

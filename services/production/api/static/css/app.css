@@ -409,6 +409,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .calendar__key--answered { width: 5px; height: 5px; border-radius: 50%; background: var(--color-ink); }
 .remember__actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }
 
+/* TICKET-1008: the journal's one-tap trade questions, and what he said after */
+.journal-chips { border: 0; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.journal-chips legend { width: 100%; margin-bottom: var(--space-1); }
+.journal-chip { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-hairline); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: 500 13px/1 var(--font-sans); cursor: pointer; }
+.journal-chip--on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-navy); }
+.said-after { margin-top: var(--space-5); }
+.said-after__question { margin-top: var(--space-3); }
+.said-after__line { margin: var(--space-1) 0; }
+
 /* /budget's number against his own losses (TICKET-907). One tick per same-day loss along the
    same scale the slider runs on, his biggest at the right-hand end. */
 .against { margin-top: var(--space-4); }
@@ -528,11 +537,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
 
-/* TICKET-1008: the journal's one-tap trade questions, and what he said after */
-.journal-chips { border: 0; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.journal-chips legend { width: 100%; margin-bottom: var(--space-1); }
-.journal-chip { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-hairline); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: 500 13px/1 var(--font-sans); cursor: pointer; }
-.journal-chip--on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-navy); }
-.said-after { margin-top: var(--space-5); }
-.said-after__question { margin-top: var(--space-3); }
-.said-after__line { margin: var(--space-1) 0; }
+/* TICKET-994: When you trade */
+.when { margin-top: var(--space-5); }
+.when__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.when__grid { display: block; width: 100%; max-width: 420px; height: auto; margin-top: var(--space-3); }
+.when__hour { font: 400 9px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.when__numbers { margin-top: var(--space-3); }
+
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }
