@@ -1100,7 +1100,12 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     if key == "down":
         return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
     if key == "back-in":
-        m = _minutes(ctx["next_trades"].loss_median)
+        nt = ctx["next_trades"]
+        if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
+            n = len(nt.after_loss)
+            return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
+                                 of="after a loss, too few"))
+        m = _minutes(nt.loss_median)
         return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
     if key == "same-way":
         return _wedge(Figure(fig["figure"], "trades", of="the same way after a loss"), shown=fig["figure"])
