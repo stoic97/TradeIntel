@@ -72,6 +72,7 @@ def load_record(request: Request):
         try:
             trips, imp = loader.load_for(sess, trader)
             new_days = None if is_sample(request) or imp is None else _new_days(sess, imp)
+            earlier = not (is_sample(request) or imp is None) and _earlier_upload(sess, imp)
         except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
@@ -83,13 +84,19 @@ def load_record(request: Request):
             return None, (trips, imp, SF.record_context(trips))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
-        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked)
+        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
         return None, (shown, imp, SF.record_context(shown))
+
+
+def _earlier_upload(sess, imp) -> bool:
+    """Whether an upload came before this one. With none, "since your last upload" has nothing to
+    be since, and the page must not say his last upload added no new days."""
+    return persist.earlier_reading(sess, imp) is not None
 
 
 def _new_days(sess, imp) -> set[str] | None:
