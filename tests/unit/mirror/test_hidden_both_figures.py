@@ -394,6 +394,27 @@ def test_a_whole_pool_is_no_comparison():
     assert chance.inside(LO.band_of(pool, sum(pool), len(pool))) is False
 
 
+# Founder, 24 Nov (919 Q1: b): when every random set gives the same sum there is no chance line.
+#   3 of ten at -100: every set is -300, so the band is one value.
+#   3 of ten, nine at -100 and one a hair lower: the sums differ, so the comparison stands.
+def test_a_band_of_one_value_is_no_comparison():
+    chance = _module("services.production.api.chance")
+    LO = _module("services.shared.conditions.leave_out")
+    for figure in (-100.0, -0.1):  # a whole rupee, and a value no float holds exactly
+        pool = [figure] * 10
+        band = LO.band_of(pool, sum(pool[:3]), 3)
+        assert band.size < band.pool_size and band.band[0] == band.band[1]
+        assert chance.inside(band) is False
+
+
+def test_a_band_whose_ends_barely_differ_is_still_compared():
+    chance = _module("services.production.api.chance")
+    LO = _module("services.shared.conditions.leave_out")
+    band = LO.band_of([-100.0] * 9 + [-100.0000000001], -300.0, 3)
+    assert 0 < band.band[1] - band.band[0] < 1e-9  # no tolerance: differing at all is enough
+    assert chance.inside(band) is True
+
+
 # 15 days, each 10:00 +100 and 10:10 +40 or -60 in turn. Every trade with a previous result is
 # after a win: 8 at +40 and 7 at -60 = -100 on 15 trades, which is the whole pool.
 WHOLE = [
