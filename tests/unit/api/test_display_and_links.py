@@ -253,3 +253,47 @@ def test_the_guess_is_never_asked_with_placeholder_labels(demo):
     r = demo.get("/guess", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/mirror/reveal"
     assert "[guess" not in demo.get("/mirror/reveal").text
+
+
+# ---------- review (24 Nov): line 5's rule, line 12's rows, line 14's stored guess ----------
+
+def test_a_latest_month_a_little_under_his_usual_is_still_the_one_described():
+    """Months of 10, 10 and 8 trades: 8 is under his median month (10) but not "almost nothing",
+    so the card keeps the latest month and its own words. The old rule moved off it."""
+    from services.production.api import how_you_got_here as HY
+    trips = ([trip(f"j{i}", f"2026-01-{5 + i:02d}") for i in range(10)]
+             + [trip(f"f{i}", f"2026-02-{2 + i:02d}") for i in range(10)]
+             + [trip(f"m{i}", f"2026-03-{2 + i:02d}") for i in range(8)])
+    view = HY.build(trips, None, None, "m")
+    assert view["last_label"] == "Mar 2026"
+    assert view["last"].trades == 8
+
+
+def test_a_latest_month_with_almost_nothing_moves_to_the_last_month_of_trading():
+    """Almost nothing, ruled 24 Nov: under a quarter of his median month. 10, 10, 2: 2 < 2.5."""
+    from services.production.api import how_you_got_here as HY
+    trips = ([trip(f"j{i}", f"2026-01-{5 + i:02d}") for i in range(10)]
+             + [trip(f"f{i}", f"2026-02-{2 + i:02d}") for i in range(10)]
+             + [trip(f"m{i}", f"2026-03-{2 + i:02d}") for i in range(2)])
+    assert HY.build(trips, None, None, "m")["last_label"] == "Feb 2026"
+
+
+def test_what_moved_labels_each_row_by_its_own_book_and_never_a_total_beside_it():
+    from services.production.api import routes_upload
+    headline = getattr(routes_upload, "_headline_figures", None)
+    assert headline is not None, "no _headline_figures(trips) to read the rows from"
+    rows = headline([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")])
+    assert "Option trades" not in rows
+    books = mx.verdict([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")]).books
+    assert [label for label in rows if label != "Your five worst days"] == [b.label for b in books]
+
+
+def test_a_stored_placeholder_guess_is_never_printed_on_the_reveal(app, demo):
+    from services.production.mirror import guess as GU
+    with make_session(app.state.engine) as sess:
+        trader = sess.scalars(select(m.Trader).where(m.Trader.login_id == "visitor")).one()
+        imp = sess.scalars(select(m.Import).where(m.Import.trader_id == trader.id)).first()
+        GU.record(sess, trader=trader, answer="option-3", import_id=imp.id)
+        sess.commit()
+    html = demo.get("/mirror/reveal").text
+    assert "[guess" not in html and "TR-009" not in html
