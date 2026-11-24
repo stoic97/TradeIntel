@@ -435,24 +435,34 @@ file (`git log --oneline <last tag>..$SHA -- deploy/Caddyfile`); if it does, thi
 The staging block reads its user and bcrypt hash from `/etc/caddy/staging-auth.env`, which
 systemd hands Caddy through `caddy.service.d/staging-auth.conf`. A plain `caddy validate` in
 a root shell has neither, so it checks a different config from the one the reload loads. Load
-the file first, as below. If the file or the drop-in is missing, do staging's first install
-(the header of `deploy/refresh-staging.sh`) before this.
+the file first, as below. bash's `.` expands `$` and a bcrypt hash is full of them
+(`$2a$14$…`), so the hash must sit in single quotes in that file (`SCOPE_STAGING_HASH='…'`);
+systemd strips the quotes and reads the same value, and the block refuses an unquoted one. If
+the file or the drop-in is missing, do staging's first install (the header of
+`deploy/refresh-staging.sh`) before this.
+
+Fill `SHA=` in every block. Each block stops at once if it is empty, if git cannot show the
+file at that sha, or if what it wrote is empty.
 
     cd /srv/scope || exit 1
     SHA=
+    test -n "$SHA" || exit 1
     curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
-    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next
+    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || exit 1
+    test -s /tmp/Caddyfile.next || exit 1
     cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA"
     test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf && echo "staging auth: present"
+    grep -q "^SCOPE_STAGING_HASH='" /etc/caddy/staging-auth.env || exit 1
     ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) && echo "VALID"
 
 Go on only after `staging auth: present` and `VALID`:
 
     cd /srv/scope || exit 1
     SHA=
+    test -n "$SHA" || exit 1
     install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile
     diff <(git show "$SHA:deploy/Caddyfile") /etc/caddy/Caddyfile && echo "matches $SHA"
-    systemctl reload caddy && sleep 2
+    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy && sleep 2
     curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
     curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
 
@@ -462,6 +472,7 @@ production answers anything else, put the old file back at once:
 
     cd /srv/scope || exit 1
     SHA=
+    test -n "$SHA" || exit 1
     cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && systemctl reload caddy
 
 Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the

@@ -24,7 +24,8 @@
 #       caddy hash-password            # prompts twice, prints the hash
 #       mkdir -p /etc/systemd/system/caddy.service.d
 #       install -m 600 -o root -g root /dev/null /etc/caddy/staging-auth.env
-#       # write two lines into it:  SCOPE_STAGING_USER=<user>   SCOPE_STAGING_HASH=<hash>
+#       # write two lines into it:  SCOPE_STAGING_USER=<user>   SCOPE_STAGING_HASH='<hash>'
+#       # (the hash in single quotes: bash's . would expand the $ in it; systemd strips the quotes)
 #       printf '[Service]\nEnvironmentFile=/etc/caddy/staging-auth.env\n' \
 #           > /etc/systemd/system/caddy.service.d/staging-auth.conf
 #       systemctl daemon-reload && systemctl restart caddy
