@@ -84,6 +84,22 @@ LABELS: dict[str, Finding] = {f.key: f for f in (
 """One row per fact the report decides. A new fact without a row stops in scope_facts."""
 
 
+FIGURE_LABELS: dict[str, Finding] = {f.key: f for f in (
+    Finding("hidden.record", K.ONLY_AFTER, R.SEEN),  # a state's trades over the whole record
+    Finding("hidden.then", K.AT_CLICK, R.SEEN),      # chosen at the click from earlier trades
+)}
+"""A fact's own figures, where its page shows more than one (TICKET-919). Rung SEEN until
+TICKET-909's bar: a figure chosen from earlier trades is not yet a finding that held."""
+
+
+def of_figure(key: str) -> Finding:
+    """The labelled finding for one of a fact's figures, or ``Unlabelled`` if it has none."""
+    finding = FIGURE_LABELS.get(key)
+    if not isinstance(finding, Finding):
+        raise Unlabelled(f"the figure {key!r} has no labels: add it to findings.FIGURE_LABELS")
+    return finding
+
+
 def of(key: str) -> Finding:
     """The labelled finding for a fact, or ``Unlabelled`` if it has none."""
     finding = LABELS.get(key)

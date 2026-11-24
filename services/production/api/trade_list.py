@@ -205,6 +205,8 @@ differently, so one shared map would open trades a page didn't count."""
 
 
 def after_groups(key: str, ctx: dict) -> dict:
+    if key == "hidden":
+        return {i: r.state for r in ctx.get("previous_result", ()) for i in r.record_ids}
     if key == "back-in":
         return ctx["next_trades"].back_in_group_of if "next_trades" in ctx else {}
     source = AFTER_SOURCE.get(key, "next_trades")
@@ -222,6 +224,30 @@ def _next_day(t: mx.Trip, lookup: dict) -> Choice | None:
         if group == value:
             return place, value, label
     return None
+
+
+PREVIOUS_OF = "previous result that day"
+"""The lookup's key for each same-day trade's previous result that day (TICKET-919), read from
+the record that decided the hiding page's figures, never worked out again here."""
+
+CHOSEN = "opened while earlier ones were down"
+"""The lookup's key for the trades the figure from only what was known then counted."""
+
+THENS = (("yes", "Opened while earlier ones were down"), ("no", "The others"))
+
+
+def _previous_lookup(ctx: dict) -> dict:
+    rows = ctx.get("previous_result", ())
+    return {PREVIOUS_OF: {i: r.state for r in rows for i in r.record_ids},
+            CHOSEN: {i for r in rows for i in r.then_ids}}
+
+
+def _then(t: mx.Trip, lookup: dict) -> Choice | None:
+    if t.trip_id not in lookup.get(PREVIOUS_OF, {}):
+        return None
+    place = 0 if t.trip_id in lookup.get(CHOSEN, set()) else 1
+    value, label = THENS[place]
+    return place, value, label
 
 
 PAGE_SIZE = 100
@@ -376,8 +402,9 @@ FILTERS = (
     Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
     Filter("overnight", "Held overnight", overnight, only=frozenset({"risk"})),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
-    Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way"})),
+    Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
+    Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
 )
 
 
@@ -392,7 +419,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     drawn, shown = [], list(behind)
     lookup = {**expiries, HALF_OF: mx.half_of(behind), DAY_THIRD_OF: day_thirds(behind)[1],
               AFTER_OF: after_groups(key, ctx),
-              NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {}}
+              NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {},
+              **_previous_lookup(ctx)}
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
