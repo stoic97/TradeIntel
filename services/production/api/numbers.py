@@ -77,7 +77,7 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
 
     def tile_href(iso: str) -> str:
         """The trades a tile counts: closed that day and, when the tiles read same-day trades,
-        closed the day they opened too (the ruling of 24 Nov on 1022's rule)."""
+        closed the day they opened too (the ruling of 24 Nov 2026: a tile opens the trades it counts)."""
         return _trades(closed_day=iso, same_day="yes") if same is not ordered else closed_day_href(iso)
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
