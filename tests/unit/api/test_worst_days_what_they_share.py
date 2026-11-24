@@ -242,13 +242,13 @@ def test_a_block_is_collapsed_and_opens_on_its_trades():
     "First trade −₹300, then 1 more trade; 1 lost.",
 ])
 def test_a_block_says_the_day_at_a_glance(words):
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
+    summary = re.search(r"<details class=\"day-block\".*?<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
                         flags=re.DOTALL).group(0)
     assert words in readable(summary)
 
 
 def test_a_block_draws_its_running_result():
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
+    summary = re.search(r"<details class=\"day-block\".*?<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
                         flags=re.DOTALL).group(0)
     assert '<svg class="day-block__line"' in summary and "<polyline" in summary
 

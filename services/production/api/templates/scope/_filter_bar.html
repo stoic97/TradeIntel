@@ -1,11 +1,24 @@
 {#- The report's year and book filter (TICKET-904). Each choice is a link through
     /mirror/filter, which remembers it and comes back here; the words under it say what the
-    page is filtered to, so no figure can be read as the whole record. -#}
-<nav class="report-filter" aria-label="Which trades this report reads">
+    page is filtered to, so no figure can be read as the whole record. On a phone the choices
+    fold into one line that opens to them; on a wider screen they show as rows. No script. -#}
+{%- macro rows() %}
   <p class="report-filter__row"><span class="label label--plain">Period</span>
     {%- for p in report_filter.periods %} <a class="report-filter__choice" href="{{ p.href }}"{% if p.current %} aria-current="true"{% endif %}>{{ Figure(p.label, "period") }}</a>{% endfor %}</p>
   <p class="report-filter__row"><span class="label label--plain">Book</span>
     {%- for b in report_filter.books %} <a class="report-filter__choice" href="{{ b.href }}"{% if b.current %} aria-current="true"{% endif %}>{{ b.label }}</a>{% endfor %}</p>
+{%- endmacro %}
+<nav class="report-filter" aria-label="Which trades this report reads">
+  <details class="report-filter__phone">
+    <summary class="report-filter__summary body-small">{{ report_filter.current }}</summary>
+    {{- rows() }}
+  </details>
+  <div class="report-filter__desk">
+    {{- rows() }}
+  </div>
+  {%- if report_filter.dropped %}
+  <p class="body report-filter__words" role="status">{{ report_filter.dropped }}</p>
+  {%- endif %}
   {%- if report_filter.words %}
   <p class="body report-filter__words" role="status">{{ report_filter.words }} <a class="link" href="{{ report_filter.clear }}">Show everything</a></p>
   {%- endif %}

@@ -144,3 +144,33 @@ def build(
             "days": _days_held(longest),
         }
     return facts
+
+
+# ---------- Said after the trade ----------
+
+def said_after(trips: list[Trip], answers: dict[str, dict[str, str]]) -> list[dict[str, Any]]:
+    """His answers to the three fixed trade questions, counted the way planned_sl is: for each
+    answer, its trades and how many of them lost, and the rate that made money once 30 trades
+    carry it (the report's own minimum); and how many of his trades were answered at all.
+
+    "Don't remember" is counted as an answer and is never rated. Nothing here ranks one answer
+    above another or says what an answer means. Counted when read, never stored in a Journal's
+    facts: a new key there would make every Journal a new version at the next upload.
+    """
+    from services.production.journal import fields as fl
+
+    out = []
+    for field, choices in fl.CHOICES.items():
+        given = {t.trip_id: answers.get(t.trip_id, {}).get(field) for t in trips}
+        rows = []
+        for value, label in choices:
+            group = [t for t in trips if given[t.trip_id] == value]
+            rate = None
+            if value != fl.DONT_REMEMBER and len(group) >= mx.CLOCK_MINIMUM_TRADES:
+                rate = mx.strike_rate(group).rate_percent
+            rows.append({"value": value, "label": label, "trades": len(group),
+                         "losses": sum(1 for t in group if t.is_loss), "rate": rate})
+        out.append({"field": field, "question": fl.QUESTIONS[field],
+                    "answered": sum(1 for v in given.values() if v), "of": len(trips),
+                    "rows": rows})
+    return out
