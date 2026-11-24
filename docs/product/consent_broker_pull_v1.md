@@ -18,7 +18,7 @@ The words live in `services/production/accounts/consent.py` (`BROKER_PULL`, `bro
 - Grant and withdrawal are new rows, as for every consent. Each row stores the exact words shown and its own `terms_version`.
 - A grant counts only against its own text's version (`consent.version_in_force`). Before this change every purpose was compared with the diagnosis text's version, which would have shown a broker grant as "on an older text" and sent the trader back to the consent screen.
 - The diagnosis text stays at version `1`; nobody is asked to agree to it again.
-- New table `broker_connection` (migration `0016`): trader, broker, encrypted key, time. It exists only for the length of a fetch (Pawan, 16 Nov): the key is deleted when the fetch ends, and also on disconnect and by `/delete`; `deletion.py` names it, `nothing_remains` checks it.
+- New table `broker_connection` (migration `0017`): trader, broker, encrypted key, time. It exists only for the length of a fetch (Pawan, 16 Nov): the key is deleted when the fetch ends, and also on disconnect and by `/delete`; `deletion.py` names it, `nothing_remains` checks it.
 - Not built here: the connect and disconnect pages, the subscriber check (no subscriber flag exists in the code yet), and the fetching itself.
 
 ## What today's consent says that a scheduled pull would contradict
