@@ -744,6 +744,10 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         and two_losses.comparison_mean is not None
     )
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
+    # The card names each group's days beside its words, in the bars' order (the kit's chart
+    # itself is byte for byte, so the dates can't go inside it).
+    out["money"]["best_days"] = [formatting.day(t.trading_day) for t in ctx["best"]]
+    out["money"]["worst_days"] = [formatting.day(t.trading_day) for t in ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
     options = mx.option_result(trips)
     out["not-told"].update(
@@ -897,9 +901,13 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                              of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
-        best = formatting.rupees(ctx["best"][0].net)
+        net = ctx["best"][0].net
+        best = formatting.rupees(net)
+        # Five digits and up run into a phone dial's centre ring: the toolkit's short form there
+        # (₹11.5k). The desktop wedge and the page keep the whole figure.
+        phone_best = charts.short(net) if abs(net) >= 10 * charts.THOUSAND else best.removeprefix("+")
         return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
-                      phone="best\ntrade", phone_shown=best.removeprefix("+"))
+                      phone="best\ntrade", phone_shown=phone_best)
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))

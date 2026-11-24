@@ -182,6 +182,8 @@ def in_file(factor: Factor, *, enough: frozenset[str], short: frozenset[str],
     if any(c in short for c in factor.checks) or any(
             fact_states.get(k) == "not-enough" for k in factor.facts):
         return InFile.NOT_ENOUGH
+    if factor.status is Status.IN_YOUR_FILE:
+        return InFile.YES  # his tradebook carries it, which is what its status says
     if factor.checks or factor.facts or factor.filters:
         return InFile.NO
     return InFile.YES  # read from every trade's own time and contract

@@ -355,8 +355,10 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
         ]
     else:
         days = sorted({t.trading_day for t in shown})
+        # A list of one day names it by its date: "Day 1" says nothing on a page about that day.
         parts = [
-            (f"Day {i} · {formatting.day(d)}", [t for t in shown if t.trading_day == d])
+            (f"Day {i} · {formatting.day(d)}" if len(days) > 1 else formatting.day(d),
+             [t for t in shown if t.trading_day == d])
             for i, d in enumerate(days, start=1)
         ]
     gaps = mx.run_story(ctx["trips"], ctx["run"].trip_ids).gaps if key == "run" and shown else {}

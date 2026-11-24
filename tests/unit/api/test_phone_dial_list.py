@@ -53,7 +53,7 @@ def dials(html: str) -> list[str]:
 ON_MAIN = {
     "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
+    "/mirror/chapter/1": ["15c151598bedff98a253625918f1a078d3e3700de7108ffb1126f78176ef1882",  # phone: 1027 shortens a five-digit best trade
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],

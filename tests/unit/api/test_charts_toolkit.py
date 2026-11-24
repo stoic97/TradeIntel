@@ -252,18 +252,20 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # each row's "In the <period>" figure became the difference of the closes as written, so the
 # column adds up to its own "Ended at". That column is left out of the digest (its own test is
 # test_figures_agree); everything else on the card is still pinned byte for byte, and these
-# digests are main's own with the column left out. The demo file is synthetic.
+# digests are main's own with the column left out. Moved once more, on purpose, by 1027 (month
+# names on the month view, the axis label under the last tag dropped, the count label ending
+# inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
 BEFORE = {
-    "all/d": "3b036ca93081bbf9d8c882f43e35ca52e1f2e92a3bff59fae2e781a98bb44dbf",
-    "all/w": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
-    "all/m": "349e561911eadedeffac461a70489223c5e8fe0b7c3a643e71f7e8fe017073d0",
-    "crude-options/d": "69f4355dc0f5d7a3ad4e189b83588b269b2ac9d4a2a027378d3ff03c6f28628a",
-    "crude-options/w": "3d60ff3d23c3c9a1478345c70eafeeda73778ecfc4284dda75c44cae1fe6a8ab",
-    "crude-options/m": "1dd60a894996bd51ca7daa93531287fb6b6b8fecdc49f2b3e578941030e9f54b",
-    "nifty-options/d": "7105cf9f38709c962606f21f47a848f0ed3a1eef3aca585d992134fc64007a9f",
-    "nifty-options/w": "cb305676a84a4ce42ee4ee2f2a08f2df91df6a62f15c3e9358e8ea1907acd674",
-    "nifty-options/m": "bb398663d8c2e8ea2c5326f5de419983a46a448b9dfe66955e8d5f4fbc9598fd",
-    "default": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
+    "all/d": "e287da87940cff9d824ec32a386a0ccdec17f5f3b01d5cd09eee24caf6b38744",
+    "all/w": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
+    "all/m": "e66a7eb232301f16e1cb2dfdfc0162ba242badb516c58b862b741c60cc1f788c",
+    "crude-options/d": "cfb163d1f14e4347d8575d56858343c28c967e8c34a82cfed606bd8d33eb023a",
+    "crude-options/w": "86ea4597ce490b0ed2bda139fdd6d088f6e97b67a5e08a3deabb708220850caa",
+    "crude-options/m": "7c01166d3e486a5b3b43d7e97a827c103950ee94abf5a5ca65597c1c29fb303a",
+    "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
+    "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
+    "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
+    "default": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
 }
 
 
