@@ -6,7 +6,7 @@ it rounds a rupee the way every other chart does. Each bar is a link to the trad
 
 Decided here:
 
-* **The jolt line** ("Your average winner is ₹A. Each trade pays ₹C in charges.") shows only
+* **The jolt line** ("Over the N trades whose charges we have: your average winner made ₹A after charges, and the average trade paid ₹C in charges.") shows only
   with 30 or more trades in the waterfall (``mx.CLOCK_MINIMUM_TRADES``, the report's own
   minimum). Both figures are over the same trades, the waterfall's: its charges over its
   trades, and ``mx.break_even``'s average winner over those trades. A trade left out of the
@@ -82,7 +82,7 @@ def view(wf: W.Waterfall, ctx: dict) -> dict:
         # Both figures over the waterfall's own trades: the line compares them.
         priced = set(wf.included)
         winner = mx.break_even([t for t in ctx["trips"] if t.trip_id in priced]).average_winner
-        jolt = {"winner": winner, "per_trade": wf.per_trade}
+        jolt = {"winner": winner, "per_trade": wf.per_trade, "trades": len(priced)}
     return {
         "waterfall": wf,
         "before": wf.before,

@@ -16,7 +16,7 @@
       <li class="wf-row wf-row--total"><a class="wf-step" href="{{ f.all_href }}"><span class="wf-step__label">After charges</span> <span class="num num--{{ f.after|tone }}">{{ Figure(f.after, "rupees")|rupees }}</span></a></li>
     </ol>
     {%- if f.jolt %}
-    <p class="mirror wf-jolt">{% if f.jolt.winner is not none %}Your average winner is {{ Figure(f.jolt.winner, "rupees")|rupees(signed=false) }}. {% endif %}Each trade pays {{ Figure(f.jolt.per_trade, "rupees")|rupees(signed=false) }} in charges.</p>
+    <p class="mirror wf-jolt">Over the <span class="num">{{ Figure(f.jolt.trades, "trades")|count }}</span> {{ "trade" if f.jolt.trades == 1 else "trades" }} whose charges we have{% if f.jolt.winner is not none %}: your average winner made {{ Figure(f.jolt.winner, "rupees")|rupees(signed=false) }} after charges, and the average trade paid {% else %}, the average trade paid {% endif %}{{ Figure(f.jolt.per_trade, "rupees")|rupees(signed=false) }} in charges.</p>
     {%- endif %}
     {%- if f.left_out %}
     <p class="body wf-left-out"><span class="num">{{ Figure(f.left_out, "trades")|count }}</span> {{ "trade is" if f.left_out == 1 else "trades are" }} not in this: {{ "its" if f.left_out == 1 else "their" }} result is before charges.</p>

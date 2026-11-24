@@ -44,7 +44,7 @@ NAMES = {
     "SEBI": "SEBI fee",
     "STAMP": "Stamp duty",
     "GST": "GST",
-    "IPFT": "IPFT",
+    "IPFT": "IPFT (investor protection fund charge)",
     "tradebook": "Charges in your tradebook",
     "file": "Charges from your charges file",
 }
