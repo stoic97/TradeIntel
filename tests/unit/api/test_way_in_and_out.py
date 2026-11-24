@@ -100,8 +100,9 @@ def test_each_count_on_what_we_can_check_names_the_checks(client, says):
     assert re.search(says, words(client.get("/eligibility").text))
 
 
-def test_the_consent_ledger_says_version_not_a_bare_number(client):
-    assert re.search(r"granted version \S+", words(client.get("/settings/consent").text))
+def test_the_consent_ledger_says_which_wording_not_a_bare_number(client):
+    """1027: a row says current or earlier wording; the version string isn't the trader's to read."""
+    assert re.search(r"granted (current|earlier) wording", words(client.get("/settings/consent").text))
 
 
 def test_the_nine_pm_count_on_the_reveal_is_a_count_of_days():
