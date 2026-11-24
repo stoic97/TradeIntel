@@ -17,6 +17,9 @@
   <figure class="daychart-figure">
     {{ path.svg }}
     <figcaption class="body">{{ path.said }}</figcaption>
+    {%- if path.closed_later %}
+    <p class="body-small"><span class="num">{{ Figure(path.closed_later, "trades")|count }}</span> of them closed on a later day. Your numbers counts each trade on the day it closed.</p>
+    {%- endif %}
     <details class="daychart-figure__table"><summary class="body-small">The day as numbers</summary>{{ path.table }}</details>
   </figure>
   {%- endif %}

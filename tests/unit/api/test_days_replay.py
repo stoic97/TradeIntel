@@ -164,8 +164,7 @@ def demo(engine):
 
 
 def _days(client) -> list[str]:
-    html = client.get("/numbers").text
-    return sorted(set(re.findall(r'href="/mirror/day/(\d{4}-\d{2}-\d{2})"', html)))
+    return _opened_days(client)  # not from /numbers: its day links open the closed-day list
 
 
 def test_the_day_page_draws_the_day_and_links_its_neighbours(demo):

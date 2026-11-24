@@ -58,15 +58,27 @@ def _money(value: Decimal, *, signed: bool) -> Markup:
         formatting._FIGURE_FILTERS["rupees"](figure, signed=signed))
 
 
+def _opened_on(path: mx.DayPath) -> str:
+    """The day the page is: the day he opened these trades (definitions section 1)."""
+    return path.points[0].trip.trading_day if path.points else ""
+
+
+def _when(moment, day: str) -> str:
+    """A close on the day itself reads 09:30; a close on a later day carries its date, 5 Mar 09:20."""
+    if not day or moment.date().isoformat() == day:
+        return moment.strftime("%H:%M")
+    return f"{moment.day} {moment:%b %H:%M}"
+
+
 def _said(path: mx.DayPath) -> Markup:
     """"Up ₹500 at 09:30 at best; down ₹800 at 10:00 at worst; finished −₹700." Counts only."""
     parts: list[Markup] = []
     if path.peak is not None:
         parts.append(Markup("up {} at {} at best").format(
-            _money(path.peak.running, signed=False), path.peak.exit_ts.strftime("%H:%M")))
+            _money(path.peak.running, signed=False), _when(path.peak.exit_ts, _opened_on(path))))
     if path.trough is not None:
         parts.append(Markup("down {} at {} at worst").format(
-            _money(-path.trough.running, signed=False), path.trough.exit_ts.strftime("%H:%M")))
+            _money(-path.trough.running, signed=False), _when(path.trough.exit_ts, _opened_on(path))))
     parts.append(Markup("finished {}").format(_money(path.close, signed=True)))
     sentence = Markup("; ").join(parts) + Markup(".")
     return Markup(str(sentence)[0].upper()) + Markup(str(sentence)[1:])
@@ -86,7 +98,8 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
         return TOP + float((hi - Decimal(v)) / span) * (h - TOP - BOTTOM)
 
     x = _x_of(path, w)
-    ref = (path.peak.running, f"best {path.peak.exit_ts:%H:%M}") if path.peak is not None else None
+    day = _opened_on(path)
+    ref = (path.peak.running, f"best {_when(path.peak.exit_ts, day)}") if path.peak is not None else None
     back, front = charts.axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=w, ref=ref,
                               last=path.close)
     tag_y = y(path.close)  # an axis label the close's tag would sit on is left out
@@ -107,7 +120,7 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
         ty = y(path.trough.running)
         trough = (f'<line x1="{LEFT}" x2="{w - RIGHT}" y1="{ty:.1f}" y2="{ty:.1f}" class="ch-ref"/>'
                   f'<text x="{w - RIGHT - 2}" y="{ty + 12:.1f}" class="ch-tag" text-anchor="end">'
-                  f'worst {path.trough.exit_ts:%H:%M}</text>')
+                  f'worst {_when(path.trough.exit_ts, day)}</text>')
     svg = Markup(
         f'<svg class="daychart" data-daypath viewBox="0 0 {w} {h}" width="{w}" height="{h}" '
         f'role="img" aria-label="Your running result through the day, trade by trade">'
@@ -116,11 +129,12 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
         f'{"".join(dots)}{front}</svg>'
     )
     rows = [
-        (p.exit_ts.strftime("%H:%M"), _instrument(p.trip), Figure(p.trip.net, "rupees"),
+        (_when(p.exit_ts, day), _instrument(p.trip), Figure(p.trip.net, "rupees"),
          Figure(p.running, "rupees"))
         for p in path.points
     ]
     table = charts.text_table(rows, ("Closed", "Trade", "Result", "Running result"),
                               caption="The day, trade by trade, as each closed")
-    return {"svg": svg, "said": _said(path), "table": table,
+    closed_later = sum(1 for p in path.points if day and p.exit_ts.date().isoformat() != day)
+    return {"svg": svg, "said": _said(path), "table": table, "closed_later": closed_later,
             "switched": sum(p.switched for p in path.points)}
