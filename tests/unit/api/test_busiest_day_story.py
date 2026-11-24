@@ -463,7 +463,7 @@ def test_one_trade_after_two_straight_losses_is_one_trade():
 
 
 def test_a_fact_in_a_state_keeps_its_dash_on_the_dial():
-    assert dial_figures([]) == {"After two straight losses": "—", "After you closed": "—", "Your busiest day": "—"}
+    assert dial_figures([]) == {"After two straight losses": "—", "Your busiest day": "—"}
 
 
 def test_the_card_and_home_keep_their_own_figures():
