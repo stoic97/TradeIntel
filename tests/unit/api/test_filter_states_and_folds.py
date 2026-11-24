@@ -79,7 +79,7 @@ def test_a_later_upload_with_no_new_days_and_a_book_chosen(reader, monkeypatch):
     asked(reader, RF.SINCE, "NIFTY options")
     line = filter_line(reader.get("/mirror").text)
     assert line.startswith("Your last upload added no new days, so this shows every day in NIFTY options.")
-    assert "everything" not in line
+    assert "shows everything" not in line  # the words line under it keeps its "Show everything" link
 
 
 def test_a_different_file_that_added_no_new_days(reader, monkeypatch):
