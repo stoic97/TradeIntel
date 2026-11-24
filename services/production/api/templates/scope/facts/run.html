@@ -2,6 +2,7 @@
     run itself. Every line is a fact counted from this run; a line that is not true of it is
     not said. The re-entry count is that day's only, by ruling. -#}
 {% extends "scope/fact.html" %}
+{% from "scope/_story_lines.html" import story_lines %}
 {% from "_components.html" import figure, money, trade, button %}
 {% block fact_title %}{% if f.story %}{{ f.story.lead }}: {{ f.story.when }}, {{ f.story.what }}, {{ money(f.story.net) }}.{% else %}{{ fact.title }}{% endif %}{% endblock %}
 {% block head %}
@@ -22,15 +23,7 @@
   {% endcall %}
   {%- if f.story.flips_words or f.story.size_words or f.story.back_in %}
   <div class="run__lines">
-    {%- if f.story.flips_words %}
-    <p class="mirror">You switched between calls and puts {{ f.story.flips_words }}. Both lost.</p>
-    {%- endif %}
-    {%- if f.story.size_words %}
-    <p class="mirror">{{ f.story.size_words }}</p>
-    {%- endif %}
-    {%- if f.story.back_in %}
-    <p class="mirror"><span class="num">{{ Figure(f.story.back_in.within, "times")|count }}</span> of <span class="num">{{ Figure(f.story.back_in.of, "times")|count }}</span> {{ "time" if f.story.back_in.of == 1 else "times" }}, you were back in within 2 minutes.</p>
-    {%- endif %}
+    {{- story_lines(f.story, all_lost=True) }}
   </div>
   {%- endif %}
   <div class="run__lines">
