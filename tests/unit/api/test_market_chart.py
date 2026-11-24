@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 
 from services.production.accounts import auth
 from services.production.accounts.consent import CURRENT as CONSENT_TEXT
-from services.production.api import day_chart as DC
+from services.production.api import market_chart as DC
 from services.production.api.app import create_app
 from services.production.db import models as m
 from services.production.db.session import make_engine, make_session, run_migrations

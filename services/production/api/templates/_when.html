@@ -1,0 +1,30 @@
+{#- When you trade (TICKET-994): weekday x hour, by when he opened the trade. Cells toned by their
+    result through the chart toolkit and hatched under five trades; no figure in a cell and no
+    cell called best or worst. Chips are links the server answers. -#}
+{%- set w = when %}
+<section class="when" id="when">
+  <h2 class="card-title numbers__heading">When you trade</h2>
+  <p class="body-small numbers__thin">By when you opened the trade.</p>
+  <nav class="when__chips" aria-label="Which days">
+    {%- for c in w.chips %}<a class="hy-chip{% if c.on %} hy-chip--on{% endif %}" href="{{ c.href }}"{% if c.on %} aria-current="true"{% endif %}>{{ c.label }}</a>{% endfor -%}
+  </nav>
+  {%- if w.left_out %}
+  <p class="body-small numbers__thin"><span class="num">{{ Figure(w.left_out, "trades")|count }}</span> {{ "trade is" if w.left_out == 1 else "trades are" }} under All days only: shares, futures, and options whose expiry isn't in your file.</p>
+  {%- endif %}
+  {%- for b in w.blocks %}
+  <svg class="when__grid" viewBox="0 0 {{ b.width }} {{ b.height }}" role="img" aria-label="Your trades by weekday and hour opened">
+    {%- for col in b.columns %}<text x="{{ col.x }}" y="10" class="when__hour">{{ Figure(col.hour, "hour") }}</text>{% endfor %}
+    {%- for r in b.rows %}<text x="0" y="{{ r.y + 14 }}" class="when__day">{{ r.short }}</text>
+      {%- for c in r.cells %}
+      {%- if c.href %}<a href="{{ c.href }}" class="when__cell"><title>{{ r.weekday }}, {{ Figure(c.hour, "hour") }}:00: {{ Figure(c.trades, "trades")|count }} {{ "trade" if c.trades == 1 else "trades" }}, {{ Figure(c.net, "rupees")|rupees }}</title>{% endif -%}
+      <rect x="{{ c.x }}" y="{{ c.y }}" width="{{ w.cell_w }}" height="{{ w.cell_h }}" rx="3" class="{{ c.tone }}"/>{% if c.hatch %}{{ c.hatch }}{% endif %}
+      {%- if c.href %}</a>{% endif %}
+      {%- endfor %}
+    {%- endfor %}
+  </svg>
+  {%- endfor %}
+  <details class="when__numbers">
+    <summary class="link">Every hour as numbers</summary>
+    {{ w.table }}
+  </details>
+</section>

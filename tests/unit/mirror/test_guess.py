@@ -17,6 +17,13 @@ from services.production.mirror import guess as GU
 TOKEN = re.compile(r'name="csrf_token" value="([^"]+)"')
 
 
+@pytest.fixture(autouse=True)
+def labels_written(monkeypatch):
+    """These walk the guess itself, as it will run once TR-009's labels are written: with the
+    placeholders in, it is never asked (test_ready_is_never_on_placeholder_labels)."""
+    monkeypatch.setattr(GU, "PLACEHOLDER", False)
+
+
 def guess(client, answer: str):
     token = TOKEN.search(client.get("/guess").text).group(1)
     return client.post(
@@ -87,6 +94,11 @@ def test_until_the_labels_are_frozen_production_skips_the_guess(client, engine, 
 def test_ready_is_live_only_once_frozen():
     assert GU.ready(production=False)
     assert GU.ready(production=True) is GU.FROZEN
+
+
+def test_ready_is_never_on_placeholder_labels(monkeypatch):
+    monkeypatch.setattr(GU, "PLACEHOLDER", True)
+    assert not GU.ready(production=False) and not GU.ready(production=True)
 
 
 def test_the_reveal_goes_back_to_the_days_and_not_on_to_the_number(client):

@@ -6,12 +6,25 @@
 {% set nav = "scope" %}
 {% block content %}
   <p class="body-small"><a class="link link--back" href="/mirror">‹ Scope</a></p>
+  {%- if before or after %}
+  <p class="body-small day-nav">{% if before %}<a class="link" href="/mirror/day/{{ before[0] }}">‹ {{ before[1] }}</a>{% endif %}{% if before and after %} · {% endif %}{% if after %}<a class="link" href="/mirror/day/{{ after[0] }}">{{ after[1] }} ›</a>{% endif %}</p>
+  {%- endif %}
   <p class="label label--plain">One trading day</p>
   <h1 class="title">{{ when }}</h1>
-  <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day, every one of them.</p>
+  <p class="body"><span class="num">{{ Figure(count, "trades")|count }}</span> {{ "trade" if count == 1 else "trades" }} opened this day.</p>
   {%- if journal_href %}
   <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
   {%- endif %}
-  {%- if chart %}{% include "scope/_day_chart.html" %}{% endif %}
+  {%- if path %}
+  <figure class="daychart-figure">
+    {{ path.svg }}
+    <figcaption class="body">{{ path.said }}</figcaption>
+    {%- if path.closed_later %}
+    <p class="body-small"><span class="num">{{ Figure(path.closed_later, "trades")|count }}</span> of them closed on a later day. Your numbers counts each trade on the day it closed.</p>
+    {%- endif %}
+    <details class="daychart-figure__table"><summary class="body-small">The day as numbers</summary>{{ path.table }}</details>
+  </figure>
+  {%- endif %}
+  {%- if chart %}{% include "scope/_market_chart.html" %}{% endif %}
   {{ trades(groups) }}
 {% endblock %}

@@ -284,7 +284,7 @@ def test_a_run_across_days_says_the_date_it_started():
 
 def test_figure_one_is_the_run_as_a_timeline_not_the_strip():
     html = fact_page("run", trips=EVENING)
-    assert "Figure 1 · The run, trade by trade" in readable(html)
+    assert "The run, trade by trade" in readable(html)  # no "Figure 1" (TICKET-1028)
     assert "chart__put" in html and "chart__ink" in html and "chart__stroke" in html
 
 
@@ -340,7 +340,7 @@ def test_the_axis_says_when_and_the_line_says_where_it_went():
 
 def test_a_marker_legend_appears_only_for_what_is_drawn():
     def legend(trips):
-        return page_of(trips).split("Figure 1")[1].split("trades behind")[0]
+        return page_of(trips).split("The run, trade by trade")[1].split("trades behind")[0]
 
     assert "call" in legend(EVENING)
     assert "call" not in legend([trip("a", DAY, "09:00:00", "09:10:00", -100, segment="FUT")])

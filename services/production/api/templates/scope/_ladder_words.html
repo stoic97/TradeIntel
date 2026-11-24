@@ -1,0 +1,10 @@
+{#- The ladder's five rungs in words, once on a page: what the marks beside each finding mean.
+    The words are findings.LADDER's, through the ladder_words global; none are written here. -#}
+<details class="ladder-words">
+  <summary class="body-small">What the five marks mean</summary>
+  <ol class="ladder-words__list">
+  {%- for name, says in ladder_words %}
+    <li class="body-small"><strong>{{ name }}</strong> &mdash; {{ says }}</li>
+  {%- endfor %}
+  </ol>
+</details>
