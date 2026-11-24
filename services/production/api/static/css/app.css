@@ -536,3 +536,7 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
 .when__numbers { margin-top: var(--space-3); }
+
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }
