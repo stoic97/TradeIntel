@@ -42,7 +42,7 @@ FIXTURE = Path("tests/fixtures/mirror_contract")
 HISTORY = DOWN + one_day([40, 20], "2026-09-02")
 NOT_DOWN = "Trades taken when not down"
 SAYS = (
-    "Table 1 compares your trades opened right after two straight losses, "
+    "This table compares your trades opened right after two straight losses, "
     "your other trades opened once at least two earlier trades that day had closed, "
     "and your trades opened when fewer than two earlier trades that day had closed."
 )
@@ -54,9 +54,9 @@ IDS = ["card"]
 
 
 def section(page: str) -> str:
-    """Everything between Table 1's label and Table 2's."""
-    found = re.search(r"Table 1</(?:p|span)>(.*?)Table 2</", page, re.DOTALL)
-    assert found, "Table 1 is not followed by Table 2"
+    """Everything between the first table's label and the second's (named in words, TICKET-1028)."""
+    found = re.search(r"Trades by what came before them</(?:p|span)>(.*?)Made money and size</", page, re.DOTALL)
+    assert found, "the first table is not followed by the second"
     return found[1]
 
 

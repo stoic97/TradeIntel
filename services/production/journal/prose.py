@@ -152,8 +152,8 @@ def _the_behaviour(facts: dict[str, Any]) -> str:
     return (
         f"{_count(count)} {were} opened when the two trades before {them} had both "
         f"closed at a loss. Across everything you have uploaded that has happened "
-        f"on {_count(days, capital=False)} of {_count(total, capital=False)} "
-        f"trading {_plural(total, 'day')}."
+        f"on {_count(days, capital=False)} of the {_count(total, capital=False)} "
+        f"{_plural(total, 'day')} you closed a same-day trade."
     )
 
 

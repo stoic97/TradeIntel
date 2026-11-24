@@ -9,8 +9,10 @@ positions, all same-day:
     16 Oct  +50, +50                                  day  +100
 
 Against 400: one trade past it, 100 beyond. Against 500: none ("more than" is strict).
-Running total 1500 -> 1100 -> 1200: deepest fall 400, 14 Oct to 15 Oct.
-On capital 1,00,000, 400 is 0.4%: shown as 1%, never 0% for a part that is really there.
+Running total, trade by trade in exit order (1025: one definition with Home's biggest drop):
+200, 1500 (14 Oct); 1000 after the -500 at 11:00, then 1100 (15 Oct); 1150, 1200 (16 Oct).
+Deepest fall 500, 14 Oct to 15 Oct (day by day it read 400).
+On capital 1,00,000, 500 is 0.5%: shown as 1%, never 0% for a part that is really there.
 """
 
 from __future__ import annotations
@@ -128,7 +130,7 @@ def test_his_worst_day_as_a_share_of_his_capital(with_capital):
 def test_his_deepest_fall_as_a_share_of_his_capital(with_capital):
     page = text(with_capital.get("/budget").text)
     assert re.search(
-        r"Your deepest fall, from 14 Oct \d{4} to 15 Oct \d{4}, was ₹400\. "
+        r"Your deepest fall, from 14 Oct \d{4} to 15 Oct \d{4}, was ₹500\. "
         r"That is 1% of your capital\.",
         page,
     )

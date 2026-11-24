@@ -812,6 +812,33 @@ def chart_worst(daily_net: list, w: float, h: float) -> dict:
     return _chart(w, h, m)
 
 
+def chart_worst_sorted(nets: list, cumulative: list, w: float, h: float) -> dict:
+    """Every trading day added up from worst to best, as one running total. The five worst
+    days' stretch is drawn in ink, the rest light, so their share of the whole is the shape
+    itself, and where the line ends is the whole result.
+
+    Not the kit's and not in CHARTS, which are held to the JavaScript byte for byte: the Scope's
+    own, written the same way, as paths by role. The dial's mini still draws ``chart_worst``.
+    """
+    n = len(cumulative)
+    if not n:
+        return _chart(w, h, {})
+    top, bottom = max([0, *cumulative]), min([0, *cumulative])
+    spread = (top - bottom) or 1
+
+    def y(v: float) -> str:
+        return fmt(4 + (top - v) / spread * (h - 8))
+
+    def x(i: int) -> str:
+        return fmt(i / n * w)
+
+    points = [(x(0), y(0))] + [(x(i + 1), y(c)) for i, c in enumerate(cumulative)]
+    cut = min(5, n)
+    worst = "M" + "L".join(f"{px} {py}" for px, py in points[:cut + 1])
+    rest = "M" + "L".join(f"{px} {py}" for px, py in points[cut:]) if n > cut else ""
+    return _chart(w, h, {"axis": f"M0 {y(0)}H{js_str(w)}", "rest": rest, "stroke": worst})
+
+
 def chart_share(share: float, w: float, h: float, mini: bool = False) -> dict:
     """The five worst days as a share of the whole result, with a bracket for the whole."""
     bh, y0 = (h * 0.7, h * 0.15) if mini else (h * 0.42, h * 0.08)
@@ -1142,25 +1169,3 @@ def trade_strip(fill_times: list, width: float, height: float | None = None) -> 
         "fillDelays": [i * 40 for i in range(len(xs))],
         "barDelay": len(xs) * 40 + 160,
     }
-
-
-DAY_LINE_W, DAY_LINE_H = 120, 32
-
-
-def day_line(running) -> str:
-    """A day's running result as a small line, first trade to last, with zero marked."""
-    values = [float(v) for v in running]
-    low, high = min(0.0, *values), max(0.0, *values)
-    spread = (high - low) or 1.0
-    steps = max(len(values) - 1, 1)
-
-    def y(v: float) -> str:
-        return fmt((high - v) / spread * (DAY_LINE_H - 4) + 2)
-
-    points = " ".join(f"{fmt(i / steps * DAY_LINE_W)},{y(v)}" for i, v in enumerate(values))
-    return (
-        f'<svg class="day-block__line" viewBox="0 0 {DAY_LINE_W} {DAY_LINE_H}" '
-        f'width="{DAY_LINE_W}" height="{DAY_LINE_H}" aria-hidden="true">'
-        f'<line class="day-block__zero" x1="0" x2="{DAY_LINE_W}" y1="{y(0.0)}" y2="{y(0.0)}"/>'
-        f'<polyline class="day-block__run" fill="none" points="{points}"/></svg>'
-    )

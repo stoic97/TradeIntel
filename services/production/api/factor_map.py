@@ -80,13 +80,13 @@ FACTORS: tuple[Factor, ...] = (
     # Instrument
     F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book",)),
     F("Instrument", "Premium paid", K.AT_CLICK, S.WORKED_OUT, filters=("price",)),
-    F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left")),
+    F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left", "days")),
     F("Instrument", "Strike's distance from the market", K.AT_CLICK, S.NEEDS_BARS),
     # Clock
     F("Clock", "Hour you opened", K.AT_CLICK, S.WORKED_OUT, checks=("S1",),
-      filters=("hour",), facts=("clock",)),
-    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("closed", "closed_day")),
-    F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year",)),
+      filters=("hour", "opening"), facts=("clock",)),
+    F("Clock", "Weekday", K.AT_CLICK, S.WORKED_OUT, filters=("opened",)),
+    F("Clock", "Month and year", K.ONLY_AFTER, S.WORKED_OUT, filters=("year", "closed_day")),
     F("Clock", "Around a scheduled release", K.BEFORE, S.HELD, checks=("S10",)),
     # Sequence
     F("Sequence", "Trade number in the day", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B5",)),
@@ -96,7 +96,8 @@ FACTORS: tuple[Factor, ...] = (
     F("Sequence", "The day so far", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B12",)),
     F("Sequence", "Same strike again", K.AT_CLICK, S.IN_YOUR_FILE),
     F("Sequence", "Losing runs", K.ONLY_AFTER, S.WORKED_OUT, facts=("run",)),
-    F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, facts=("busiest",)),
+    F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, filters=("day_trades",),
+      facts=("busiest",)),
     # Size
     F("Size", "Lots", K.AT_CLICK, S.WORKED_OUT, checks=("R1",)),
     F("Size", "Change from the last trade", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R2",)),
@@ -105,7 +106,8 @@ FACTORS: tuple[Factor, ...] = (
     F("Size", "Size when the market is moving", K.AT_CLICK, S.NEEDS_BARS, checks=("R8",)),
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
-    F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",)),
+    F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
+      filters=("overnight",)),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,
