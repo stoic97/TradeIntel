@@ -6,13 +6,13 @@ market file but what the worker worked out. Older rows stay empty until their im
 out again.
 
 Revision ID: 0019
-Revises: 0017
+Revises: 0018
 """
 import sqlalchemy as sa
 from alembic import op
 
 revision = '0019'
-down_revision = '0017'
+down_revision = '0018'
 branch_labels = None
 depends_on = None
 
