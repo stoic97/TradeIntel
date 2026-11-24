@@ -534,6 +534,58 @@ class MarketDayRequest(Base):
     updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
 
 
+class BarFigureJob(Base):
+    """One import's bar figures, to be worked out off the web app (TICKET-999). The upload adds it
+    as pending, a cheap insert; ``cli bar-figures`` works it out, leaves it waiting while a day it
+    needs isn't in, and marks it done. ``provenance`` names the code and every day file read."""
+
+    __tablename__ = "bar_figure_job"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"), unique=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    state: Mapped[str] = mapped_column(String(16))
+    waiting_days: Mapped[int] = mapped_column(Integer, default=0)
+    requested_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+    provenance: Mapped[str | None] = mapped_column(Text)
+
+
+class BarTradeFigure(Base):
+    """One trade's bar figures (TICKET-999), in underlying points in its direction, or the reason
+    it has none. Points are Decimal text; ``path`` is the 30 minutes after he clicked, as JSON."""
+
+    __tablename__ = "bar_trade_figure"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_id: Mapped[str] = mapped_column(String(64))
+    underlying: Mapped[str | None] = mapped_column(String(40))
+    reason: Mapped[str | None] = mapped_column(Text)
+    way: Mapped[str | None] = mapped_column(String(32))
+    against: Mapped[str | None] = mapped_column(String(32))
+    took: Mapped[str | None] = mapped_column(String(32))
+    path: Mapped[str | None] = mapped_column(Text)
+    short: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class BarPathSummary(Base):
+    """An import's after-you-clicked paths for one underlying, beside random moments (TICKET-999):
+    medians, his middle half, the random middle 95%, and up to 200 of his paths, as JSON."""
+
+    __tablename__ = "bar_path_summary"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    underlying: Mapped[str] = mapped_column(String(40))
+    measured: Mapped[int] = mapped_column(Integer)
+    randoms: Mapped[int] = mapped_column(Integer)
+    his_median: Mapped[str] = mapped_column(Text)
+    his_q25: Mapped[str] = mapped_column(Text)
+    his_q75: Mapped[str] = mapped_column(Text)
+    random_median: Mapped[str] = mapped_column(Text)
+    random_lo: Mapped[str] = mapped_column(Text)
+    random_hi: Mapped[str] = mapped_column(Text)
+    faint: Mapped[str] = mapped_column(Text)
+
+
 INSERT_ONLY_TABLES = frozenset(
     mapper.class_.__tablename__
     for mapper in Base.registry.mappers

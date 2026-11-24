@@ -77,3 +77,13 @@ def test_the_smoke_pass_covers_what_every_train_needs():
                   "Running deploy:", "There is nothing at this address.", "Delete everything", "Sign out"):
         assert words in smoke, words
     assert "never a trader's" in smoke
+
+
+def test_a_trains_results_read_from_one_jira_query_and_the_labels_need_no_setup():
+    """TICKET-1014: the deployer sees a train's Pass without opening every ticket. Jira makes a
+    label the first time it is used, so the first tester's Pass is what creates `uat-pass`."""
+    uat = TRAIN[TRAIN.index("### b. UAT on staging"):TRAIN.index("### c. ")]
+    assert "labels in (uat-pass, uat-fail)" in uat
+    assert "needs-yes" in uat
+    assert "first time it is used" in uat
+    assert "never add `uat-pass` to test" in uat.lower()

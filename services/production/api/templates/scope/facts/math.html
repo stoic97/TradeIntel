@@ -20,7 +20,7 @@
     <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Winners {{ Figure(strike.wins, "trades")|count }}</span><span><span class="legend__swatch legend__swatch--faint"></span>Losers {{ Figure(strike.losses, "trades")|count }}</span><span>Level {{ Figure(strike.scratches, "trades")|count }}</span></div>
   {% endcall %}
   <p class="body table-note">There are two ways to break even, and they are one sum solved two ways: a higher win rate at these sizes, or a bigger average winner at this win rate. This page shows both and does not pick one.</p>
-  <p class="table-label">Table 1 · Each book, same-day trades</p>
+  <p class="table-label">Each book, same-day trades</p>
   {% set rows = [] %}{% for book in book_math %}{% if rows.append(book.whole) %}{% endif %}{% endfor %}
   {{ math_table(rows, "Book") }}
   <h2 class="heading math__book">How long you hold</h2>
@@ -29,7 +29,7 @@
   {% set w = book.whole %}
   <h2 class="heading math__book">{{ w.label }}</h2>
   {% if w.break_even_percent is not none %}
-  <p class="body">Break even at a win rate of <span class="num">{{ Figure(w.break_even_percent, "percent") }}</span>%{% if w.more_winners is not none %}, about <span class="num">{{ Figure(w.more_winners, "winners")|count }}</span> more {{ "winner" if w.more_winners == 1 else "winners" }} in <span class="num">{{ Figure(w.decided, "trades")|count }}</span>{% endif %}. Or at an average winner of {{ Figure(w.winner_needed, "rupees")|rupees(signed=false) }}, {{ Figure(w.winner_gap, "rupees")|rupees }} on your {{ Figure(w.average_winner, "rupees")|rupees(signed=false) }}.</p>
+  <p class="body">Break even at <span class="num">{{ Figure(w.break_even_percent, "percent")|out_of_a_hundred }}</span>{% if w.more_winners is not none %}, about <span class="num">{{ Figure(w.more_winners, "winners")|count }}</span> more {{ "winner" if w.more_winners == 1 else "winners" }} in <span class="num">{{ Figure(w.decided, "trades")|count }}</span>{% endif %}. Or at an average winner of {{ Figure(w.winner_needed, "rupees")|rupees(signed=false) }}, {{ Figure(w.winner_gap, "rupees")|rupees }} on your {{ Figure(w.average_winner, "rupees")|rupees(signed=false) }}.</p>
   {% endif %}
   {% if w.losers_median_seconds is not none %}<p class="body">Losers were open a median <span class="num">{{ Figure(w.losers_median_seconds, "seconds")|minutes }}</span> min and lost a median {{ Figure(w.median_loser, "rupees")|rupees(signed=false) }}.</p>{% endif %}
   {% if w.winners_median_seconds is not none %}<p class="body">Winners were open a median <span class="num">{{ Figure(w.winners_median_seconds, "seconds")|minutes }}</span> min and made a median {{ Figure(w.median_winner, "rupees")|rupees(signed=false) }}.</p>{% endif %}
