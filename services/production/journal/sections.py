@@ -50,12 +50,12 @@ def history_facts(history: list[Trip]) -> dict[str, dict[str, Any]]:
     can be older than his record. The page reads them live through ``with_history``, and so
     does every sentence beside them: one usual size and one count of days on one page.
 
-    The days the behaviour happened are counted on same-day trades, the trades chapter 3 and
-    the finding bar read (a position held past the day has not closed when the next trade
-    opens), over the days he closed a same-day trade, the days chapter 3 counts (855).
+    The days the behaviour happened are counted on every round trip, as chapter 3, the finding
+    bar and Eligibility count it (definitions_v1 section 2), over the days he closed a same-day
+    trade. Every such day is one of those: the two losses before it closed that day.
     """
     day_counts = mx.day_counts(history)
-    condition = mx.two_straight_losses(mx.same_day_trips(history))
+    condition = mx.two_straight_losses(history)
     condition_ids = set(condition.condition_trip_ids)
     return {
         "against_your_normal": {

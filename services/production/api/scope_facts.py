@@ -56,11 +56,12 @@ def record_context(trips: list[mx.Trip]) -> dict:
     against the rest, on strike rate and average lots.
     """
     same_day = mx.same_day_trips(trips)
-    # Chapter 3 reads the same trades as Chapter 2 [TICKET-855]: a position held past the day
-    # moves none of its figures.
-    two_losses = mx.two_straight_losses(same_day)
-    after = mx.subset(same_day, two_losses.condition_trip_ids)
-    rest = mx.complement(same_day, two_losses.condition_trip_ids)
+    # After two straight losses counts every round trip, as definitions_v1 section 2 and the
+    # research B2 test do: a trade opened straight after two closed losses is in, however long
+    # it is held. Eligibility counts the same trades, so the pages say one figure.
+    two_losses = mx.two_straight_losses(trips)
+    after = mx.subset(trips, two_losses.condition_trip_ids)
+    rest = mx.complement(trips, two_losses.condition_trip_ids)
     return {
         "worst_days": mx.five_worst_days(trips),
         "share": mx.share_of_losses(trips),
@@ -911,15 +912,14 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["hidden"].update(_hidden_view(ctx))
     out["math"]["lead_lines"] = _break_even_lines(ctx)
     two_losses = ctx["two_losses"]
-    same_day = mx.same_day_trips(trips)
-    check = mx.post_loss_check(same_day) if same_day else None
+    check = mx.post_loss_check(trips) if trips else None
     out["down"]["post_loss_level"] = check.level if check else None
     out["down"]["post_loss_needs"] = None if check is None or check.level != "not_enough" else {
         "condition": max(0, b2_shuffle.MIN_CONDITION - check.n_condition),
         "comparison": max(0, b2_shuffle.MIN_COMPARISON - check.n_comparison),
     }
     out["down"]["post_loss_sentence"] = (
-        mx.post_loss_sentence_may_show(same_day)
+        mx.post_loss_sentence_may_show(trips)
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
