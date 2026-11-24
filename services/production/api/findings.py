@@ -103,6 +103,48 @@ def rung(value) -> str:
     return _labelled(value).rung.value
 
 
+@dataclass(frozen=True)
+class Step:
+    """One rung of the ladder as a page draws it: its words, and whether it is reached."""
+
+    key: str
+    name: str
+    says: str
+    reached: bool
+    state: str
+
+
+NOT_YET_REACHED = "Not reached"
+
+LADDER: tuple[tuple[str, Rung | None, str, str], ...] = (
+    ("SEEN", Rung.SEEN, "Seen", "it appears in your file."),
+    ("WOULD_YOU_HAVE_KNOWN", Rung.WOULD_YOU_HAVE_KNOWN, "Would you have known?",
+     "it still holds when picked using only earlier trades."),
+    ("SET_AS_YOUR_RULE", None, "Set as a rule",
+     "you set it as a rule, by tapping, dated, before it was tested on anything new."),
+    ("RUN_FORWARD", Rung.RUN_FORWARD, "Run forward",
+     "followed or broken, trade by trade. Charges and trade count first."),
+    ("VERDICT", None, "Verdict",
+     ('only at a sample size stated at the start, and "not enough trades" is a proper '
+      "answer.")),
+)
+"""The ladder from a finding to a rule, in the trader's words (TICKET-925, ruled 13 Nov).
+
+Five rungs in order. ``Rung`` labels three of them (TICKET-917); no label reaches the other
+two yet, so every page draws them as not yet reached. The words are here and nowhere else:
+a template reads them through the ``ladder`` filter and writes none of its own."""
+
+
+def ladder(value) -> tuple[Step, ...]:
+    """All five rungs for a finding: those up to its label reached, the rest not yet."""
+    finding = _labelled(value)
+    top = next(i for i, row in enumerate(LADDER) if row[1] is finding.rung)
+    return tuple(
+        Step(key, name, says, i <= top, "" if i <= top else NOT_YET_REACHED)
+        for i, (key, _label, name, says) in enumerate(LADDER))
+
+
 def register(env) -> None:
-    """The two filters a template reads labels through."""
-    env.filters.update(known=known, rung=rung)
+    """The filters a template reads the labels and the ladder through."""
+    env.filters.update(known=known, rung=rung, ladder=ladder)
+    env.globals["ladder_words"] = tuple((name, says) for _key, _label, name, says in LADDER)

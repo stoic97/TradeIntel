@@ -32,7 +32,7 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from services.production import demo
-from services.production.api import admin_ladder, formatting
+from services.production.api import admin_ladder, admin_market, formatting
 from services.production.api import scope_map as SM
 from services.production.ctr.intake import pipeline
 from services.production.db import models as m
@@ -41,6 +41,7 @@ from services.production.journal import leaving as LC
 from services.production.journal import wtp as WTP
 from services.production.mirror import feedback as FB
 from services.production.mirror import guess as GU
+from services.production.prices import layer as prices_layer
 from services.shared.schemas import scope_v1 as s
 
 NOT_RECORDED = "—"
@@ -51,6 +52,7 @@ ZONE = ZoneInfo("Asia/Kolkata")
 NEVER = datetime.min.replace(tzinfo=UTC)
 UNKNOWN_VERSION = "unknown"
 VIEW_ACTION = "admin_view"
+MARKET_SAID = admin_market.SAID
 MIRROR_LINE = "mirror_line"
 FILE_REAL, FILE_DEMO, FILE_NONE = "real", "demo", "none"
 DUPLICATE_FLAGS = (s.RowFlag.SUSPECTED_DUPLICATE, s.RowFlag.DUPLICATE_FILL_ID,
@@ -107,15 +109,26 @@ def _tallies(sess: Session) -> dict:
     deletions were three statements and are now one.
     """
     is_view = m.AdminAction.action == VIEW_ACTION
-    views, last_view, last_read, deleted, last_deleted = sess.execute(
+    last_run = select(m.MarketSyncRun).order_by(m.MarketSyncRun.id.desc()).limit(1).subquery()
+    (views, last_view, last_read, deleted, last_deleted, token_expires, run_at, run_result, run_summary,
+     waiting) = sess.execute(
         select(func.count().filter(is_view), func.max(m.AdminAction.at).filter(is_view),
                func.max(m.AdminAction.at).filter(m.AdminAction.action == "wrong_reports"),
                select(func.count()).select_from(m.DeletionRecord).scalar_subquery(),
-               select(func.max(m.DeletionRecord.completed_at)).scalar_subquery())
+               select(func.max(m.DeletionRecord.completed_at)).scalar_subquery(),
+               # The Market data card (TICKET-998): its reads ride this one statement too.
+               select(m.MarketToken.expires_at).limit(1).scalar_subquery(),
+               select(last_run.c.finished_at).scalar_subquery(),
+               select(last_run.c.result).scalar_subquery(),
+               select(last_run.c.summary).scalar_subquery(),
+               select(func.count()).select_from(m.MarketDayRequest)
+               .where(m.MarketDayRequest.status == "waiting").scalar_subquery())
         .select_from(m.AdminAction)
     ).one()
     return {"views": views, "last_view": last_view, "last_read": last_read,
-            "deleted": deleted, "last_deleted": last_deleted}
+            "deleted": deleted, "last_deleted": last_deleted,
+            "market": {"expires": token_expires, "run_at": run_at, "run_result": run_result,
+                       "run_summary": run_summary, "waiting": waiting}}
 
 
 def _trail(sess: Session, accounts: list[tuple], tally: dict) -> tuple[list[dict], dict]:
@@ -154,7 +167,6 @@ class _Reader:
     fact_ms: dict[str, int] = field(default_factory=dict)  # each fact read, and for how long
     furthest_chapter: int = 0
     dwell_ms: int = 0
-    drawer_opens: int = 0
     chapters: dict[int, str] = field(default_factory=dict)
     said_wrong: bool = False
     report: str | None = None
@@ -209,15 +221,14 @@ def _read_imports(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
     return read
 
 
-def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
-    """Drawer opens per fact, while filling in what each reader read."""
+def _read_dwell(sess: Session, real: dict[int, _Reader]) -> None:
+    """What each reader read, and for how long."""
     rows = sess.execute(
         select(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key, m.DwellEvent.event,
                func.count(), func.sum(m.DwellEvent.duration_ms), func.max(m.DwellEvent.at))
         .group_by(m.DwellEvent.trader_id, m.DwellEvent.surface, m.DwellEvent.key,
                   m.DwellEvent.event)
     ).all()
-    drawers: dict[str, int] = {}
     for trader_id, surface, key, kind, times, total_ms, last in rows:
         reader = real.get(trader_id)
         if reader is None:
@@ -228,12 +239,10 @@ def _read_dwell(sess: Session, real: dict[int, _Reader]) -> dict[str, int]:
             continue
         reader.furthest_chapter = max(reader.furthest_chapter, CHAPTER_OF[fact])
         if kind == "drawer_open":
-            reader.drawer_opens += times
-            drawers[fact] = drawers.get(fact, 0) + times
-        elif kind == "view":
+            continue
+        if kind == "view":
             reader.fact_ms[fact] = reader.fact_ms.get(fact, 0) + (total_ms or 0)
             reader.dwell_ms += total_ms or 0
-    return drawers
 
 
 def _read_answers(sess: Session, real: dict[int, _Reader]) -> list[tuple]:
@@ -569,6 +578,21 @@ def _health_from(reader: _Reader):
     return reader.latest_read or reader.latest_any
 
 
+def _times(n: int, one: str, many: str, flagged: str = "refused") -> str | None:
+    return f"{formatting.count(n)} {one if n == 1 else many} {flagged}" if n else None
+
+
+def _issues(reader: _Reader, duplicates: dict[int, int]) -> tuple[str, int]:
+    """Files refused, rows refused and duplicates, in words, and how many in all. Empty when
+    there are none, so a real problem stands out in its column."""
+    latest = _health_from(reader)
+    rows = max(0, latest.rows_in - latest.rows_parsed - latest.rows_excluded) if latest else 0
+    repeats = duplicates.get(latest.id, 0) if latest else 0
+    said = (_times(reader.uploads_refused, "file", "files"), _times(rows, "row", "rows"),
+            _times(repeats, "duplicate", "duplicates", "flagged"))
+    return ", ".join(s for s in said if s), reader.uploads_refused + rows + repeats
+
+
 def _row(reader: _Reader, *, duplicates: dict[int, int],
          guess_on: bool, leaving_on: bool, feedback_chapters: list[int]) -> dict:
     latest = _health_from(reader)
@@ -576,6 +600,7 @@ def _row(reader: _Reader, *, duplicates: dict[int, int],
         "href": f"/admin/traders/{reader.id}",
         "name": _name(reader.name),
         "login_id": _name(reader.login_id),
+        "issues": _issues(reader, duplicates)[0],
         "file": reader.file,
         "journey": _journey(reader),
         "files_uploaded": reader.own_files,
@@ -592,7 +617,6 @@ def _row(reader: _Reader, *, duplicates: dict[int, int],
         "reads_differently": _reads_differently(reader),
         "facts_read": f"{len(reader.fact_ms)} of {len(SM.FACTS)}",
         "minutes": _span(reader.dwell_ms),
-        "drawer_opens": reader.drawer_opens,
         "chapters": [reader.chapters.get(n, NOT_RECORDED) for n in feedback_chapters],
         "report": reader.report or NOT_RECORDED,
         "journals_written": reader.journals_written,
@@ -637,10 +661,21 @@ def _fact_table(group_real: list[_Reader], group_demo: list[_Reader]) -> dict:
     return {"chapters": chapters, "covers": _covers(len(group_real), len(group_demo))}
 
 
-def _most_opened(drawers: dict[str, int]) -> str:
-    if not drawers:
-        return NOT_RECORDED
-    return SM.FACTS[max(drawers, key=lambda key: drawers[key])].title
+SORTS = {
+    "name": (lambda r, _d: r.name.lower(), False),
+    "file": (lambda r, _d: r.file, False),
+    "journey": (lambda r, _d: sum(step["done"] for step in _journey(r)), True),
+    "facts": (lambda r, _d: len(r.fact_ms), True),
+    "minutes": (lambda r, _d: r.dwell_ms, True),
+    "issues": (lambda r, d: _issues(r, d)[1], True),
+    "activity": (lambda r, _d: _last_seen(r), True),
+}
+"""What the table can sort by, and whether the most comes first. A plain link says which."""
+
+
+def _sort_links(all_columns: bool) -> dict[str, str]:
+    start = "/admin?columns=all&sort=" if all_columns else "/admin?sort="
+    return {key: f"{start}{key}" for key in SORTS}
 
 
 def _left_out(count: int) -> str:
@@ -652,7 +687,8 @@ def _left_out(count: int) -> str:
 
 
 def build(sess: Session, *, running_version: str, production: bool, now: datetime | None = None,
-          last_looked: datetime | None = None, admin_ids: frozenset[str] = frozenset()) -> dict:
+          last_looked: datetime | None = None, sort: str | None = None,
+          all_columns: bool = False, admin_ids: frozenset[str] = frozenset()) -> dict:
     """Everything the page draws, written out: the template computes nothing (T7)."""
     accounts = sess.execute(
         select(m.Trader.id, m.Trader.display_name, m.Trader.login_id, m.Trader.created_at,
@@ -685,7 +721,7 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
             .group_by(m.ImportRow.import_id)
         ) if import_id in latest_ids
     }
-    drawers = _read_dwell(sess, real)
+    _read_dwell(sess, real)
     answer_lines = _read_answers(sess, real)
     _read_journals(sess, real)
     _read_active_days(sess, real)
@@ -702,10 +738,11 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
                   + _feed_of_reading(sess, real) + _feed_of_joining(sess, real, accounts))
 
     guess_on, leaving_on = GU.ready(production), LC.ready(production)
+    by, most_first = SORTS.get(sort, SORTS["activity"])
     feedback_chapters = [c.number for c in SM.CHAPTERS if c.feedback]
     rows = [_row(r, duplicates=duplicates, guess_on=guess_on,
                  leaving_on=leaving_on, feedback_chapters=feedback_chapters)
-            for r in sorted(real.values(), key=_last_seen, reverse=True)]
+            for r in sorted(real.values(), key=lambda r: by(r, duplicates), reverse=most_first)]
     on_real = [r for r in real.values() if r.file == FILE_REAL]
     on_demo = [r for r in real.values() if r.file == FILE_DEMO]
     trail, admin_views = _trail(sess, accounts, tally)
@@ -720,6 +757,10 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
         "running_version": running_version,
         "fact_total": len(SM.FACTS),
         "feedback_chapters": feedback_chapters,
+        "all_columns": all_columns,
+        "sort_links": _sort_links(all_columns),
+        "guess_on": guess_on,
+        "leaving_on": leaving_on,
         "features_off": [name for name, on in (("guess", guess_on), ("leaving card", leaving_on))
                          if not on],
         "cards": {
@@ -736,13 +777,14 @@ def build(sess: Session, *, running_version: str, production: bool, now: datetim
         "told": _told(sess, real, feedback_chapters, tally["last_read"]),
         "fact_table": _fact_table(on_real, on_demo),
         "quiet": {
-            "most_opened": _most_opened(drawers),
             "wtp": wtp_answers,
             "wtp_asked": wtp_asked,
             "deletions": deleted,
             "last_deletion": _when(last_deleted),
             "consent_declines": declines,
         },
+        "market": admin_market.build(root=prices_layer.market_dir(), now=now or datetime.now(UTC),
+                                     **tally["market"]),
         "dev_left_out": _left_out(sum(1 for a in accounts if a.development_data)),
         "dev_accounts": [{"name": _name(a.display_name), "login_id": _name(_shown_id(a.login_id)),
                           "joined": _when(a.created_at)}

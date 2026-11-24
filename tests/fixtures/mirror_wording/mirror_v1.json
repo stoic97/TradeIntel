@@ -50,7 +50,7 @@
         "Average lots",
         "After two straight losses",
         "Every other trade",
-        "This happened on [N] of your [N] trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run."
+        "This happened on [N] of the [N] days you closed a same-day trade. A trade still open when the next one started does not count as closed. A scratch trade ends the run."
       ]
     },
     {

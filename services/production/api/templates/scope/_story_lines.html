@@ -1,0 +1,13 @@
+{#- The run page's three lines, said the same way for a run and for each of the five worst days
+    (scope_facts._story_words). "Both lost." is true only of a run, where every trade lost. -#}
+{% macro story_lines(story, all_lost=False) -%}
+    {%- if story.flips_words %}
+    <p class="mirror">You switched between calls and puts {{ story.flips_words }}.{% if all_lost %} Both lost.{% endif %}</p>
+    {%- endif %}
+    {%- if story.size_words %}
+    <p class="mirror">{{ story.size_words }}</p>
+    {%- endif %}
+    {%- if story.back_in %}
+    <p class="mirror"><span class="num">{{ Figure(story.back_in.within, "times")|count }}</span> of <span class="num">{{ Figure(story.back_in.of, "times")|count }}</span> {{ "time" if story.back_in.of == 1 else "times" }}, you were back in within 2 minutes.</p>
+    {%- endif %}
+{%- endmacro %}

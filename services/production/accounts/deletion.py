@@ -127,14 +127,17 @@ def delete_trader(
     for model in (m.LeavingCardAnswer, m.LeavingCardShown):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
+    # His bar figures (TICKET-999). The market files hold no trader data and stay.
+    _delete_where(sess, m.BarFigureJob, m.BarFigureJob.trader_id == trader_id, removed)
     if import_ids:
-        for model in (m.Trip, m.OpenPosition, m.SkippedTrip, m.ImportRow):
+        for model in (m.BarTradeFigure, m.BarPathSummary, m.Trip, m.OpenPosition, m.SkippedTrip,
+                      m.ImportRow):
             _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
 
     for model in (m.TradingDayVersion, m.RiskBudgetDeclaration, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ConsentEvent,
-                  m.ChargeStatement, m.RawFile):
+                  m.ChargeStatement, m.BrokerConnection, m.RawFile):
         _delete_where(sess, model, model.trader_id == trader_id, removed)
 
     _delete_where(sess, m.Trader, m.Trader.id == trader_id, removed)
@@ -193,8 +196,9 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
     if feedback_ids:
         _delete_where(sess, m.ChapterFeedbackReason,
                       m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
-    for model in (m.ChapterFeedback, m.ReportFeedback, m.GuessAnswer, m.Trip,
-                  m.OpenPosition, m.SkippedTrip, m.ImportRow):
+    for model in (m.ChapterFeedback, m.ReportFeedback, m.GuessAnswer, m.BarFigureJob,
+                  m.BarTradeFigure, m.BarPathSummary, m.Trip, m.OpenPosition, m.SkippedTrip,
+                  m.ImportRow):
         _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.TradingDayVersion,
                   (m.TradingDayVersion.trader_id == trader.id)
@@ -237,7 +241,7 @@ def nothing_remains(sess: Session, store: FileStore, trader_id: int) -> list[str
     so the drill checks the same list twice rather than two different ones.
     """
     found: list[str] = []
-    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.RawFile, m.Import,
+    for model in (m.ConsentEvent, m.RiskBudgetDeclaration, m.ChargeStatement, m.BrokerConnection, m.RawFile, m.Import,
                   m.TradingDayVersion, m.Journal, m.WtpAnswer, m.WtpAsked, m.DwellEvent,
                   m.RuleDeclaration, m.AdherenceEvent, m.PreTradeNote, m.ChapterFeedback,
                   m.ReportFeedback, m.GuessAnswer, m.LeavingCardShown, m.LeavingCardAnswer,

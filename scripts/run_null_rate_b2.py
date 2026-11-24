@@ -1,3 +1,6 @@
+# Who runs it: the research seat, by hand.
+# When: TICKET-897 Stage A, step 5.
+# Writes: docs/phase0/null-rate-b2.json (recall-b2.json with --planted); rows to data/null_rate/.
 """Step E: how often does B2 fire on a trader with nothing planted? (R-Spec §6.2)
 
 Runs B2 end to end over corpus A's null histories and reports the false-positive

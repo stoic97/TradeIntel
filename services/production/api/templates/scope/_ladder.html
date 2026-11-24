@@ -1,0 +1,15 @@
+{#- The ladder from a finding to a rule (TICKET-925), as five marks: one per rung, filled where
+    the finding has got to. Each mark names its rung for a screen reader; the rungs' words are on
+    the page once, in scope/_ladder_words.html. Which are reached, and every word, come from
+    findings.ladder, read from the finding's own label; nothing is decided or worded here.
+    New copy (D9). -#}
+{%- set steps = f.finding|ladder %}
+{%- set reached = steps|selectattr("reached")|list %}
+<div class="ladder-row">
+  {%- if reached %}<span class="ladder__top body-small">{{ reached[-1].name }}</span>{% endif %}
+  <ol class="ladder" data-ladder="{{ f.finding.key }}">
+  {%- for step in steps %}
+    <li class="ladder__mark ladder__rung" data-rung="{{ step.key }}" data-reached="{{ "yes" if step.reached else "no" }}"><span class="ladder__dot" aria-hidden="true">{{ "●" if step.reached else "○" }}</span><span class="visually-hidden">{{ step.name }}{% if step.state %}: {{ step.state }}{% endif %}.</span></li>
+  {%- endfor %}
+  </ol>
+</div>

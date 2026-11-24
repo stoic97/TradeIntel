@@ -9,8 +9,11 @@ data/*
 !data/fixtures/
 !data/golden/
 !data/market/
+# Market data (TICKET-997): the bars are the broker's data and this repository is public. The
+# day files, their manifests and any old single-file series stay on the machine that holds them.
 data/market/*
 !data/market/CROSSINGS.md
+!data/market/README.md
 # A synthetic research run (planted signal, fixed seed; scripts/run_null_rate_b2.py).
 # Kept while the research seat wants it; remove these two lines to stop tracking it.
 !data/null_rate/

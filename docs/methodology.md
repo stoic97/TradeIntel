@@ -16,6 +16,8 @@ This document is the destination. It is written for a team of ten with cloud inf
 | **1** | Phase 1 — first paying subscribers | §6 README rule · §9 import-linter in CI · §11 `develop` branch and PR template · §12 CI gates (lint, type, unit, reproducibility, hash, boundaries) · §13 coverage targets · §14 managed secret store, separate from the fund's · §15 the deletion service · faithfulness suite on the composer |
 | **2** | Phase 2 — team of ten | §12 nightly Research Gate · `infra/` as Terraform · quarterly secret audit · everything else |
 
+**Target state paths.** Not built yet; only stage 0 is enforced (see the stage table above). Target state: `../../docs/research/README.md`, `.github/workflows/hash-check.yml`, `.github/workflows/import-boundaries.yml`, `.github/workflows/research-gate.yml`, `services/production/agent/`, `services/production/ctr/ingestion/`, `services/production/ctr/reconstruction/`, `services/production/deletion/`, `services/production/registry/`, `services/shared/lineage/credit_chain.py`, `services/shared/schemas/evidence_object_v1.py`, `WALL.md`, `framework_v1.yaml.sha256`, `hash-check.yml`, `import-boundaries.yml`, `infra/`, `infra/config/`, `web/`, `web/src/`.
+
 **Two corrections to the text below, applied on adoption:** the hash command on macOS is `shasum -a 256` (Linux: `sha256sum`); the Makefile uses the portable form. The pre-registration file lives at `services/research/prereg/framework_v1.yaml`, as Research Specification §13.1 names it.
 
 ---
