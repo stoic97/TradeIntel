@@ -14,6 +14,12 @@
 /* A page draws both of the kit's dials and one shows. Below 1366 px the desktop dial would be
    scaled down until its 11 px words can't be read, so the phone's drawing, scaled up, stays. */
 .stage .scope.scope--desktop { display: none; }
+/* A chapter's facts the phone dial has no wedge for (TICKET-1002), under it in its own box. */
+.scope__list { list-style: none; margin: 12px 0 0; padding: 0; text-align: left; }
+.scope__list-row { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.scope__list-row a { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 44px; padding: 10px 4px; color: var(--color-on-navy); text-decoration: none; }
+.scope__list-title { font-weight: 600; }
+.scope__list-said { color: var(--color-on-navy-soft); }
 @media (min-width: 1366px) {
   .stage .scope:not(.scope--desktop) { display: none; }
   .stage .scope.scope--desktop { display: block; width: min(100%, var(--stage-desktop-w)); }
@@ -245,6 +251,14 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .day-block__run { stroke: currentColor; stroke-width: 1.5; }
 .day-block__flag { margin: var(--space-3) 0; }
 .day-blocks__next, .chapter__next { margin-top: var(--space-6); }
+/* Your process: rows stack; a figure's link keeps a 44 px tap target without moving the text. */
+.process__row { margin: var(--space-6) 0; padding-top: var(--space-4); border-top: 1px solid var(--color-hairline); }
+.process__line, .process-preview p { line-height: 1.7; overflow-wrap: anywhere; }
+.process__line a, .process-preview a { display: inline-block; padding: 10px 0; margin: -10px 0; }
+.process__note { color: var(--color-muted); }
+.process-preview { margin: var(--space-4) 0; }
+.process-preview__name { font-weight: 600; margin-right: var(--space-1); }
+.home__process { margin: var(--space-2) 0 var(--space-4); }
 
 /* TICKET-842: the line every page drawn from the demo tradebook carries. */
 .demo-line {
@@ -522,11 +536,15 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .cal__swatch--loss-4 { background: color-mix(in srgb, var(--color-loss) 90%, transparent); }
 .cal__numbers { margin-top: var(--space-3); }
 
-/* Your process: rows stack; a figure's link keeps a 44 px tap target without moving the text. */
-.process__row { margin: var(--space-6) 0; padding-top: var(--space-4); border-top: 1px solid var(--color-hairline); }
-.process__line, .process-preview p { line-height: 1.7; overflow-wrap: anywhere; }
-.process__line a, .process-preview a { display: inline-block; padding: 10px 0; margin: -10px 0; }
-.process__note { color: var(--color-muted); }
-.process-preview { margin: var(--space-4) 0; }
-.process-preview__name { font-weight: 600; margin-right: var(--space-1); }
-.home__process { margin: var(--space-2) 0 var(--space-4); }
+/* TICKET-994: When you trade */
+.when { margin-top: var(--space-5); }
+.when__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.when__grid { display: block; width: 100%; max-width: 420px; height: auto; margin-top: var(--space-3); }
+.when__hour { font: 400 9px var(--font-mono); fill: var(--color-faint); text-anchor: middle; }
+.when__day { font: 400 10px var(--font-mono); fill: var(--color-faint); }
+.when__cell:focus rect, .when__cell:hover rect { stroke: var(--color-action-blue); stroke-width: 1.5; }
+.when__numbers { margin-top: var(--space-3); }
+
+/* Rates read "N of 100" in the wins-and-losses tables: a year and a rate keep to one line. */
+.math__table td.table__num { white-space: nowrap; }
+.math__table[data-table="years"] td.table__text:first-child { overflow-wrap: normal; }

@@ -257,6 +257,9 @@ def write_reading(
     )
     sess.add(imp)
     sess.flush()
+    # Its bar figures are worked out off the web app (TICKET-999): one pending row, nothing read.
+    sess.add(m.BarFigureJob(import_id=imp.id, trader_id=trader.id, state="pending", waiting_days=0,
+                            requested_at=now))
 
     for row in plan.rows:
         sess.add(

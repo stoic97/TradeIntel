@@ -12,11 +12,11 @@
     <div class="figure__axis"><span>{{ c.first_hour }}</span><span>one bar per hour</span><span>{{ c.last_hour }}</span></div>
   {% endcall %}
   {%- endif %}
-  <p class="table-label">Table {{ Figure(c.number, "table") }}</p>
+  <p class="table-label">{{ c.book }}, hour by hour</p>
   <table class="table clock-book__table">
     <thead><tr><th>Hour you opened</th><th class="table__num">Result</th><th class="table__num">Trades</th><th class="table__num">₹ per trade</th><th class="table__num">Win rate</th></tr></thead>
     <tbody>
-      {% for hour in c.hours %}<tr><td><a href="{{ hour.href }}">{{ hour.label }}{% if hour.small_sample %} — few trades{% endif %}</a></td><td class="table__num num--{{ hour.net|tone }}">{{ Figure(hour.net, "rupees")|rupees }}</td><td class="table__num">{{ Figure(hour.trades, "trades")|count }}</td><td class="table__num num--{{ hour.per_trade|tone }}">{{ Figure(hour.per_trade, "rupees")|rupees }}</td><td class="table__num">{% if hour.win_rate is none %}—{% else %}{{ Figure(hour.win_rate, "percent") }}%{% endif %}</td></tr>{% endfor %}
+      {% for hour in c.hours %}<tr><td><a href="{{ hour.href }}">{{ hour.label }}{% if hour.small_sample %} — few trades{% endif %}</a></td><td class="table__num num--{{ hour.net|tone }}">{{ Figure(hour.net, "rupees")|rupees }}</td><td class="table__num">{{ Figure(hour.trades, "trades")|count }}</td><td class="table__num num--{{ hour.per_trade|tone }}">{{ Figure(hour.per_trade, "rupees")|rupees }}</td><td class="table__num">{% if hour.win_rate is none %}—{% else %}{{ Figure(hour.win_rate, "percent")|out_of_a_hundred }}{% endif %}</td></tr>{% endfor %}
     </tbody>
   </table>
   {%- if c.other %}
