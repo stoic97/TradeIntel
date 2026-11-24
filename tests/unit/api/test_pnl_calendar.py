@@ -199,8 +199,9 @@ def test_the_best_day_tile_reads_same_day_trades_and_opens_its_day():
     # 1022 (on main): a day's figure on Your numbers opens the trades closed that day.
     v = N.build(RECORD, {}, gross=True)
     assert v["tiles"]["best_day"]["day"] == "2026-02-03"
-    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03"
-    assert v["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02"
+    # The ruling of 24 Nov on PR #208: the tile's link adds the same-day filter.
+    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03&same_day=yes"
+    assert v["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02&same_day=yes"
 
 
 def test_closed_day_is_a_filter_on_the_map():
