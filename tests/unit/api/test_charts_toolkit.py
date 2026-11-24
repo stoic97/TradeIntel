@@ -247,26 +247,31 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 
 # ---------- 2. the home card draws through it, byte for byte ----------
 
-# sha256 of the card's HTML for every book and timeframe on the demo file. Taken on 987's branch
-# before the card used the toolkit; moved once, on purpose, by 1027 (month names on the month
-# view, the axis label under the last tag dropped, the count label ending inside the chart).
-# The demo file is synthetic.
+# sha256 of the card's HTML for every book and timeframe on the demo file, taken on 987's
+# branch before the card used the toolkit, then re-taken on main when 1025 changed one column:
+# each row's "In the <period>" figure became the difference of the closes as written, so the
+# column adds up to its own "Ended at". That column is left out of the digest (its own test is
+# test_figures_agree); everything else on the card is still pinned byte for byte, and these
+# digests are main's own with the column left out. Moved once more, on purpose, by 1027 (month
+# names on the month view, the axis label under the last tag dropped, the count label ending
+# inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
 BEFORE = {
-    "all/d": "ab1f11ca46297c068972c86d1b4490de6ad9d46420f70a06c4d73167d754ee2c",
-    "all/w": "59b59bd1b2d0be59e0d85a922a48a458b1b72d7a62bec9d0cab3df38ffa0e107",
-    "all/m": "dfabb8fd74f44ddc8e525d8867d3398715c3475380e3fb55447e87228b43a3ed",
-    "crude-options/d": "f2fc5b836dcc0324d371ed1207d78f8a014bc30668312399812bdae78b63c5db",
-    "crude-options/w": "9daa605c4d05e55dc4295d182a5713349891ff09994c43ef933976d39c310ae9",
-    "crude-options/m": "43fc51f65e294b1acc24867f85cfdabfcecf5dcaf899a7f264d0a20d629a1119",
-    "nifty-options/d": "56419e9b26544ec808a068fc544f8f2ea4d0aee3b3ac40404e7832fd3233779d",
-    "nifty-options/w": "fb1d1fb874e1f2451d78de7d575a1c2d07ac6b337df027118cbb35e26ed5f45c",
-    "nifty-options/m": "c3be4c59c3086e103110c6d1ddcfa5cd4181eac58087deb28e68d2a2152e0bd7",
-    "default": "59b59bd1b2d0be59e0d85a922a48a458b1b72d7a62bec9d0cab3df38ffa0e107",
+    "all/d": "e287da87940cff9d824ec32a386a0ccdec17f5f3b01d5cd09eee24caf6b38744",
+    "all/w": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
+    "all/m": "e66a7eb232301f16e1cb2dfdfc0162ba242badb516c58b862b741c60cc1f788c",
+    "crude-options/d": "cfb163d1f14e4347d8575d56858343c28c967e8c34a82cfed606bd8d33eb023a",
+    "crude-options/w": "86ea4597ce490b0ed2bda139fdd6d088f6e97b67a5e08a3deabb708220850caa",
+    "crude-options/m": "7c01166d3e486a5b3b43d7e97a827c103950ee94abf5a5ca65597c1c29fb303a",
+    "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
+    "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
+    "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
+    "default": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
 }
 
 
 def _card(html):
-    return re.search(r'<section[^>]*id="how".*?</section>', html, re.DOTALL).group(0)
+    card = re.search(r'<section[^>]*id="how".*?</section>', html, re.DOTALL).group(0)
+    return re.sub(r'(<tr class="hy-row">(?:<td.*?</td>){2})<td.*?</td>', r"\1", card)
 
 
 def test_the_home_card_draws_through_the_toolkit():

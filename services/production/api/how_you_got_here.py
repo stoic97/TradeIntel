@@ -225,7 +225,11 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         else f"the latest {frame} with your usual number of trades",
         "cut": (len(shown_candles), len(every)) if len(every) > WINDOW else None,
         "chart": chart(run, frame, opens),
-        "rows": [{"label": label(c.period, frame), "candle": c, "opens": f"/mirror/day/{opens[c.period]}"}
+        # Each row's figure is the difference of the closes as written, so the column adds up to
+        # its own "Ended at": rounding each period on its own left a few rupees unaccounted.
+        "rows": [{"label": label(c.period, frame), "candle": c,
+                  "net_shown": Decimal(formatting.whole(c.close) - formatting.whole(c.open)),
+                  "opens": f"/mirror/day/{opens[c.period]}"}
                  for c in reversed(shown_candles)],
     })
     return view

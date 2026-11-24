@@ -17,9 +17,7 @@ from collections import Counter
 from datetime import timedelta
 from decimal import Decimal
 
-from markupsafe import Markup
-
-from services.production.api import charts, dial, findings, formatting
+from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
@@ -83,6 +81,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "loss_sizes": mx.loss_sizes(same_day),
         "premium_paid": mx.premium_by_book(same_day),
         "book_math": mx.math_by_book(same_day),
+        "book_row_minimum": mx.BOOK_ROW_MINIMUM,
         "book_halves": mx.book_halves(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
@@ -90,6 +89,9 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "rest_strike": mx.strike_rate(rest),
         "rest_lots": mx.average_lots(rest),
         "days_with_the_condition": len({t.trading_day for t in after}),
+        # The days it could happen on: days he closed a same-day trade, the trades chapter 3
+        # reads (855), named as such wherever the count is said, the Journal's included.
+        "same_day_days": len({t.trading_day for t in same_day}),
     }
 
 
@@ -101,7 +103,11 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
     if kind == "worst":
-        return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
+        if mini:  # the dial's mini is the kit's chart, held to it byte for byte
+            return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
+        days = days_worst_to_best(trips)
+        return G.chart_worst_sorted([_f(d["net"]) for d in days],
+                                    [_f(d["cumulative"]) for d in days], w, h)
     if kind == "share":
         share = ctx["share"]
         if not share.shown_as_percentage:
@@ -192,8 +198,8 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(f"{formatting.count(ctx['run'].length)} trades", "trades")
     if key == "clock":  # the hour with the largest result across the books: what happened there
         return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
-    if key == "down":
-        return Figure(_trades_said(ctx["two_losses"].population), "trades")
+    if key == "down":  # the trades right after two losses: the fact, as its wedge counts it
+        return Figure(_trades_said(ctx["two_losses"].condition), "trades")
     if key == "busiest":
         return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
@@ -299,7 +305,7 @@ def _hidden_view(ctx: dict) -> dict:
     for r in ctx["book_halves"]:
         every = S.see_all_href("hidden", book=r.book)
         if r.state is not COUNTED:
-            books.append({"book": r.book, "counted": False,
+            books.append({"book": r.book, "counted": False, "n": r.trades,
                           "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
             continue
         halves = (
@@ -320,7 +326,7 @@ def _hidden_view(ctx: dict) -> dict:
                              "cells": ["", "", change]})
                 rows.append({"label": "Whole days shuffled between the halves: p",
                              "control": "net-per-trade", "cells": ["", "", checked]})
-        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
+        books.append({"book": r.book, "counted": True, "n": r.trades, "columns": HIDDEN_COLUMNS, "rows": rows})
     return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 
@@ -409,6 +415,24 @@ def _flips_words(flips: int) -> str | None:
     if not flips:
         return None
     return "once" if flips == 1 else f"{formatting.count(flips)} times"
+
+
+def _story_words(story) -> dict:
+    """The run page's three lines, from a run or a day: switches, a size step, re-entries.
+    The run page and each of the five worst days say them through ``scope/_story_lines.html``."""
+    return {"flips_words": _flips_words(story.flips), "size_words": _size_words(story.size),
+            "back_in": story.back_in}
+
+
+def days_worst_to_best(trips: list) -> list[dict]:
+    """Every trading day, worst to best (ties: earlier date first), with the running total
+    of the days so far. The last total is the record's result: the shape is the share."""
+    out, total = [], Decimal(0)
+    for d in sorted(mx.daily_series(trips), key=lambda d: (d.net, d.trading_day)):
+        total += d.net
+        out.append({"iso": d.trading_day, "day": formatting.day(d.trading_day), "net": d.net,
+                    "cumulative": total})
+    return out
 
 
 def _timeline_x(moments: list) -> dict:
@@ -658,7 +682,8 @@ def _day_block(block: mx.DayBlock, ctx: dict) -> dict:
         "span": _day_span(block),
         "net": block.net,
         "went": _day_went(block),
-        "line": Markup(G.day_line(block.running)),
+        "line": day_chart.mini(mx.day_path(only)),  # the day page's path, drawn small
+        "story": _story_words(mx.day_story(only)),
         "vs_normal": f"{times}× your normal day's trades" if times else None,
         "groups": S.groups("worst-days", ctx, only=only),
     }
@@ -750,7 +775,13 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         }
         for d in ctx["worst_days"].days
     ]
+    sorted_days = days_worst_to_best(trips)
     out["worst-days"].update(
+        sorted_days_table=charts.text_table(
+            [(d["day"], Figure(d["net"], "rupees"), Figure(d["cumulative"], "rupees"))
+             for d in sorted_days],
+            ("Day", "Result", "Running total, worst day first"),
+            caption="Your days, worst to best"),
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
         all_trades_href=S.see_all_href("worst-days"),
