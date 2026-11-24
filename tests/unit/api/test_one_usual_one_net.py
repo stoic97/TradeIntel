@@ -81,10 +81,12 @@ def card(html: str) -> str:
 def test_the_readout_and_the_row_beside_it_print_one_net(demo, query):
     html = card(demo.get(f"/{query}").text)
     readout = plain(re.search(r'<span class="hy-readout__net">.*?</span> in the', html, re.DOTALL).group(0))
-    first_row = re.search(r'<tr class="hy-row">(.*?)</tr>', html, re.DOTALL).group(1)
-    cells = [plain(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", first_row, re.DOTALL)]
-    in_the_period = cells[2]
-    assert in_the_period in readout, (query, readout, in_the_period)
+    # The readout's period is not always the newest row (TICKET-1027's latest_usual): its own row.
+    when = plain(re.search(r'<span class="hy-readout__when">(.*?)</span>', html, re.DOTALL).group(1)).split(" · ")[0]
+    rows = {cells[0]: cells for cells in ([plain(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", r, re.DOTALL)]
+                                          for r in re.findall(r'<tr class="hy-row">(.*?)</tr>', html, re.DOTALL))}
+    in_the_period = rows[when][2]
+    assert in_the_period in readout, (query, when, readout, in_the_period)
 
 
 def paise_trip(tid: str, day: str, net: str) -> mx.Trip:
