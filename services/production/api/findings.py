@@ -77,6 +77,7 @@ LABELS: dict[str, Finding] = {f.key: f for f in (
     Finding("same-way", K.AT_CLICK, R.SEEN),       # the last trade's result, and its direction
     Finding("next-day", K.BEFORE, R.SEEN),         # yesterday's result, known before the session
     Finding("busiest", K.ONLY_AFTER, R.SEEN),      # the busiest day, known once it is over
+    Finding("after-close", K.ONLY_AFTER, R.SEEN),  # the half hour after he closed, counted
     Finding("unread", K.ONLY_AFTER, R.SEEN),       # what the file held, known on reading it
     Finding("risk", K.AT_CLICK, R.SEEN),           # a trade's size against his number
     Finding("not-told", K.ONLY_AFTER, R.SEEN),

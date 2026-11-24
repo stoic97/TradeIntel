@@ -58,8 +58,9 @@ ON_MAIN = {
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
     "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          # Desktop: three more wedges since What you do next (1006); the phone dial is main's.
-                          "35d0991922d1320e1c2f6cf116129fa5fe77129da1bf3cbac9e8dfb9c5d5e0ef"],
+                          # Desktop: three more wedges since What you do next (1006), and a sixth for After
+                          # you closed; the phone dial is main's.
+                          "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
                           "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
 }
@@ -69,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "c66c0416ae5dc9f3dddbc45228cb3e7e05e8261f9f88639503c0554d4d6b94f1",  # five wedges; back in under 30 a group reads its count and "too few" (24 Nov review)
+    (3, "desktop"): "9704f56d35308a4edd16a6935792372428c21f4f0dc4d5c3afb853d6c6c44892",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
@@ -78,7 +79,8 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
-OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day"}  # What you do next (1006)
+OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
+                      "after-close"}  # After you closed: added after the phone dial was sized
 
 
 def sha(text) -> str:

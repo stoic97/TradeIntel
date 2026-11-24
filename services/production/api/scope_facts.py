@@ -19,6 +19,7 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
+from services.production.api import after_closed as ACL
 from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
@@ -41,6 +42,7 @@ CARD_H = {
     "backin": 84,
     "sameway": 56,
     "nextday": 70,
+    "after-close": 84,
 }
 INDIA_OFFSET = timedelta(hours=5, minutes=30)
 NOT_TOLD = 4
@@ -110,6 +112,8 @@ def _f(value) -> float:
 def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
+    if kind == "after-close":  # stored figures only; not a kit chart, so not in G.CHARTS
+        return ACL.geometry(ACL.view(ctx), w, h, mini=mini)
     if kind == "worst":
         if mini:  # the dial's mini is the kit's chart, held to it byte for byte
             return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
@@ -175,6 +179,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 
 
 def _state(key: str, ctx: dict) -> str:
+    if key == "after-close" and not ACL.view(ctx)["enough"]:
+        return "not-enough"  # under 30 measured losing trades, or none worked out yet
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
     if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
@@ -345,6 +351,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "after-close":
+        return ACL.figure(ACL.view(ctx))
     if key == "hidden":
         return Figure(f"{formatting.count(_counted_days(ctx))} days", "days")
     if key == "worst-days":
@@ -1058,7 +1066,15 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(_clock_view(ctx))
+    out["after-close"].update(after_close_page(ctx))
     return out
+
+
+def after_close_page(ctx: dict, pick: str | None = None) -> dict:
+    """The after-you-closed page for one underlying: its view and its chart at the page's size.
+    The route passes the chip the trader picked."""
+    v = ACL.view(ctx, pick)
+    return {"view": v, "page_chart": ACL.geometry(v)}
 
 
 def _zone_words(trip: mx.Trip) -> str:
@@ -1186,6 +1202,11 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         measured, _, whole = fig["figure"].removesuffix(" trades").partition(" of ")
         return _wedge(Figure(measured, "trades", of=f"of {whole} trades have a risk figure"),
                       phone=f"of {whole}\ntrades", shown=measured)
+    if key == "after-close":
+        v = ACL.view(ctx)
+        return _wedge(Figure(formatting.count(v["came_back"]), "trades",
+                             of=f"of {formatting.count(v['losers'])} losing trades came back past your entry"),
+                      phone="came back\nafter you closed", shown=formatting.count(v["came_back"]))
     if key == "not-told":
         return _wedge(Figure(NOT_TOLD, "things", of="we have not told you"), phone="not told",
                       phone_shown=f"{NOT_TOLD} items")
