@@ -352,7 +352,7 @@ def card_sentences(page: str, number: int) -> list[str]:
 
 def test_the_busiest_page_says_none_of_its_cards_sentences():
     page = readable(fact_page("busiest", DAY))
-    said = card_sentences(chapter_page(3, DAY), 2)
+    said = card_sentences(chapter_page(3, DAY), 5)  # down, then what you do next, then busiest
     assert len(said) == 2
     for sentence in said:
         assert sentence not in page, sentence
@@ -495,7 +495,7 @@ def test_the_way_into_chapter_four_uses_its_real_title():
 
 def test_the_down_page_has_one_way_on():
     """TICKET-903: one next step, the spine's, and no jump to chapter 4 beside it."""
-    assert S.next_step("down")["label"] == "Next: Your busiest day"
+    assert S.next_step("down")["label"] == f"Next: {S.FACTS['back-in'].title}"
     assert "Chapter 4: What we read" not in readable(fact_page("down", DOWN))
 
 
@@ -531,7 +531,8 @@ def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):
 def test_a_fact_in_a_state_still_goes_on():
     """TICKET-903: the way on is scope_map's, so a page in a state has it as surely as any."""
     assert S.next_step("busiest")["href"] == S.fact_href("unread")
-    assert S.next_step("down")["href"] == S.fact_href("busiest")
+    assert S.next_step("down")["href"] == S.fact_href("back-in")
+    assert S.next_step("next-day")["href"] == S.fact_href("busiest")
 
 
 def test_the_opening_card_sentence_is_untouched():

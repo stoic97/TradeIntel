@@ -103,7 +103,9 @@ def test_a_record_not_yet_walked_through_lands_on_its_import_check(client, engin
     assert landing(engine) == f"/imports/{the_import(engine)}"
 
 
-def test_once_he_has_guessed_he_lands_home(client, engine):
+def test_once_he_has_guessed_he_lands_home(client, engine, monkeypatch):
+    from services.production.mirror import guess as GU
+    monkeypatch.setattr(GU, "PLACEHOLDER", False)  # the guess as it will run once TR-009's labels are written
     token = TOKEN.search(client.get("/guess").text).group(1)
     client.post("/guess", data={"answer": "option-1", "csrf_token": token})
     assert landing(engine) == "/"
