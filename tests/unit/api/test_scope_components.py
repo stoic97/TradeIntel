@@ -223,6 +223,9 @@ def test_a_figure_is_the_kits():
     fragment = FIGURE.search((SCREENS / "16-f01-worst-days.html").read_text())[0]
     c = G.chart_worst([-300, -8000, -200, -2000], 350, 96)
     want = kit(fragment, worst_days_chart=c, first_day="01 Sep", last_day="04 Sep")
+    # The one deliberate difference from the kit's snapshot (TICKET-1028): a figure is not named
+    # by its number, so the caption is the kit's caption without its "Figure 1 · " prefix.
+    want = re.sub(r"(<figcaption[^>]*>)Figure \d+ · ", r"\1", want)
     axis_and_legend = fragment.split("</svg>", 1)[1].rsplit("</figure>", 1)[0]
     got = ours(
         '{% from "_components.html" import figure %}'

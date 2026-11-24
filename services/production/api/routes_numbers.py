@@ -24,4 +24,13 @@ def your_numbers(request: Request):
     with make_session(request.app.state.engine) as sess:
         expiries = loader.expiries_for(sess, imp)
     view = N.build(trips, expiries, gross=not imp.fees_available)
+    chosen = getattr(request.state, "report_filter", None) or {}
+    year_chosen = any(p["current"] and p["label"].isdigit() for p in chosen.get("periods", []))
+    view["calendar"] = N.calendar(trips, show_all=request.query_params.get("months") == "all",
+                                  year_chosen=year_chosen)
+    view["when"] = N.when(trips, expiries, days=request.query_params.get("days", "all"))
+    view["worst_books"] = N.worst_books(trips)
+    view["day_trades"] = N.day_trades(trips)
+    view["first_half_hour"] = N.first_half_hour(trips)
+    view["overnight"] = N.overnight(trips)
     return page(request, "numbers.html", title="Your numbers", imp=imp, **view)

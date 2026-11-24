@@ -20,6 +20,7 @@
     {% block gross %}{% if not imp.fees_available %}{{ gross_line() }}{% endif %}{% endblock %}
     {{ uncounted_line(imp.trips_refused) }}
     {% include "scope/_ladder.html" %}
+    {% include "scope/_ladder_words.html" %}
   </div>
   {% if not f.state %}{% block body %}{% endblock %}{% endif %}
   {% block evidence %}

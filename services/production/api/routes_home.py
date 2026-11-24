@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from services.production.api import days_worth_a_look as worth
 from services.production.api import door, formatting
+from services.production.api import how_you_got_here as how
 from services.production.api import scope_map as SM
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, landing_for, page
@@ -74,4 +75,8 @@ def home(request: Request):
             latest=latest,
             days_heading="Days worth a look" if named else "Latest Journals",
             continue_step=SM.continue_step(read_pages(sess, trader)),
+            # Home is the whole record (TICKET-904): the card reads every trade, not the
+            # report's filter, and its own chips choose a book and a timeframe.
+            how=how.build(trips, imp, request.query_params.get("book"),
+                          request.query_params.get("tf")),
         )

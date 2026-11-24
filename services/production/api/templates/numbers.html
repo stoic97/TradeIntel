@@ -59,8 +59,17 @@
     </div>
   </div>
 
-  <h2 class="card-title numbers__heading">By the day you closed the trade</h2>
-  {{ table(weekdays) }}
+  {% include "_calendar.html" %}
+
+  {% include "_when.html" %}
+
+  {% include "_worst_books.html" %}
+
+  {% include "_day_trades.html" %}
+
+  {% include "_opening.html" %}
+
+  {% include "_overnight.html" %}
 
   <h2 class="card-title numbers__heading">By how close to expiry you closed</h2>
   <p class="body-small numbers__thin">Days left on the contract when you closed it.{% if no_expiry %} <span class="num">{{ Figure(no_expiry, "trades")|count }}</span> {{ "trade has" if no_expiry == 1 else "trades have" }} no contract expiry in the file and {{ "is" if no_expiry == 1 else "are" }} left out.{% endif %}</p>
