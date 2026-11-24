@@ -8,7 +8,9 @@ Decided here:
 
 * **The jolt line** ("Your average winner is ₹A. Each trade pays ₹C in charges.") shows only
   with 30 or more trades in the waterfall (``mx.CLOCK_MINIMUM_TRADES``, the report's own
-  minimum). The average winner is the one the report already uses (``ctx["break_even"]``).
+  minimum). Both figures are over the same trades, the waterfall's: its charges over its
+  trades, and ``mx.break_even``'s average winner over those trades. A trade left out of the
+  waterfall is in neither.
 * **Nothing says what he would have made** without charges. The bars show what happened, in
   order: before charges, each charge, after charges.
 """
@@ -75,9 +77,11 @@ def view(wf: W.Waterfall, ctx: dict) -> dict:
     """Everything the page draws; the template computes nothing."""
     if not wf.included:
         return {"waterfall": wf, "rows": [], "jolt": None, "left_out": wf.left_out}
-    winner = ctx["break_even"].average_winner
     jolt = None
     if len(wf.included) >= JOLT_MINIMUM:
+        # Both figures over the waterfall's own trades: the line compares them.
+        priced = set(wf.included)
+        winner = mx.break_even([t for t in ctx["trips"] if t.trip_id in priced]).average_winner
         jolt = {"winner": winner, "per_trade": wf.per_trade}
     return {
         "waterfall": wf,
