@@ -218,6 +218,15 @@ def test_the_longest_hold_is_named_in_days_across_a_weekend():
     assert view["longest"] == 3
 
 
+def test_the_longest_hold_opens_the_trades_closed_the_day_it_ended_not_a_day_page():
+    """Review, 24 Nov: on Your numbers a day opens the trades closed that day, never the day page
+    (the day page lists the trades opened that day). e1 ended Mon 9 Feb, with f1 f2 f3: 4 trades."""
+    href = fn("overnight")(RECORD)["longest_href"]
+    assert "/mirror/day/" not in href
+    assert _query(href) == {"closed_day": "2026-02-09"}
+    assert _listed(href) == 4
+
+
 def test_the_overnight_rows_open_exactly_their_trades():
     rows = fn("overnight")(RECORD)["rows"]
     assert _query(rows[0]["href"]) == {"overnight": "overnight"}
