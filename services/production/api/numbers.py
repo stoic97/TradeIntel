@@ -74,6 +74,11 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
     # The tiles are trading figures: same-day trades only. A position held past the day is said
     # on its own line (``held``) and mixed into none of them (the ruling of 23 Nov 2026).
     same = [t for t in ordered if t.closed_same_day] or ordered
+
+    def tile_href(iso: str) -> str:
+        """The trades a tile counts: closed that day and, when the tiles read same-day trades,
+        closed the day they opened too (the ruling of 24 Nov on 1022's rule)."""
+        return _trades(closed_day=iso, same_day="yes") if same is not ordered else closed_day_href(iso)
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
     for t in same:  # in date order, so a tie goes to the earlier day
@@ -92,12 +97,12 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
                    "href": _trades(result="winners")},
         "loser": {"value": None if even.average_loser is None else -even.average_loser,
                   "count": strike.losses, "href": _trades(result="losers")},
-        "best_day": {"value": best[1], "day": best[0], "href": closed_day_href(best[0])},
-        "worst_day": {"value": worst[1], "day": worst[0], "href": closed_day_href(worst[0])},
+        "best_day": {"value": best[1], "day": best[0], "href": tile_href(best[0])},
+        "worst_day": {"value": worst[1], "day": worst[0], "href": tile_href(worst[0])},
         "months": {"made": sum(1 for c in months if c.net > 0), "of": len(months),
                    "href": _trades()},
         "per_day": {"value": (Decimal(len(same)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
-                    "most": busiest[1], "day": busiest[0], "href": closed_day_href(busiest[0])},
+                    "most": busiest[1], "day": busiest[0], "href": tile_href(busiest[0])},
     }
 
     left: dict[str, list[mx.Trip]] = {value: [] for value, _, _, _ in TL.LEFT_BUCKETS}

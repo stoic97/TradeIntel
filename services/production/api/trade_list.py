@@ -273,6 +273,15 @@ def opening(t: mx.Trip, _lookup: dict) -> Choice | None:
     return OPENINGS[0] if entry < cut else OPENINGS[1]
 
 
+SAME_DAYS = ((0, "yes", "Closed the day it opened"), (1, "no", "Held past its day"))
+
+
+def same_day(t: mx.Trip, _lookup: dict) -> Choice:
+    """Whether the trade closed on the day it opened: every trade, shares included. The Your
+    numbers day tiles count only these (the 23 Nov held ruling), so their links choose it."""
+    return SAME_DAYS[0] if t.closed_same_day else SAME_DAYS[1]
+
+
 OVERNIGHTS = ((0, "overnight", "Held overnight"), (1, "same-day", "Closed the same day"))
 
 
@@ -307,6 +316,7 @@ FILTERS = (
     Filter("days", "Expiry day or not", expiry_day_or_not, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
+    Filter("same_day", "Closed the day it opened", same_day, only=frozenset({"risk"}), quiet=True),
     # The shape of your days: his days by how many trades, his first 30 minutes, overnight.
     Filter("day_trades", "Trades that day", _day_third, only=frozenset({"risk"})),
     Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
