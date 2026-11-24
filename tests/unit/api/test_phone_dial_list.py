@@ -53,16 +53,16 @@ def dials(html: str) -> list[str]:
 # re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
 # views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["2a16aecd4c8ca0759e5b6e74a83b583bc3ed6b65d0530530546e2d203056b666",
-                "4043ffb1a9976ef7dcff04b303cada5d4161a61c70f548cccfc052f428a946d1"],
-    "/mirror/chapter/1": ["34aa4af07256b9346efe5a00fe1bd4f899c1a30a84ae586f1f242fd2efb7b02e",
-                          "fd6a1b3468fb431a53ab044bc5dafe70fc4e367998c59b1fc44134da7321b72e"],
-    "/mirror/chapter/2": ["b6c918062c340106c08879967f725702f43e9e5159b0a8eb87706161e23ef779",
-                          "39fe69032f7b69741e19e290360670836124d201b3a43c45fb0ae9ef7c01f302"],
-    "/mirror/chapter/3": ["fbe1ff84e18cdb683e6f6ea8196624d399f9f3af444bb89d657080860f4b49ca",
-                          "af2218a77d5bcf57c36d1f1ddc711160206251a9ac8e34cea7a2c1815a211c3b"],
-    "/mirror/chapter/4": ["9d9e251ad138b1ff8ae132906b013a47bc5a23c063947e146a7015442e5b3fa1",
-                          "30ca9d728d015b57316303eeb0aed23ffff42bbc433f83b76ed40bb3b3745656"],
+    "/mirror": ["5d48d407e0c2f56a1a01fcb520be818fd2a037cdde5f3d40a0bff4d08acdb160",
+                "0776faa6e2906da1fe4ddb0f48a9e72189a93db331233d81b9588c0baa9b7ddf"],
+    "/mirror/chapter/1": ["dfbfc3322175cd50920dc7576da54b9c46e9ef836eb52df2fe45eac53bb4fc86",
+                          "5289d114a13dce81088a2ea4952d6622ab5dfbb41b3653ce4b50081ad76a860b"],
+    "/mirror/chapter/2": ["fc7f8bb02be93ddac8151d0c857e28212cac4d8fa4e1dea79bc4670041b05e0b",
+                          "2fe1e8a6febd5659416c46cef21948d0d98c33b33451b90c2babb0289868fe91"],
+    "/mirror/chapter/3": ["91e5f1c28847aecf17b22d72d638ae6be696927eecd5a987d58bc8317288ff32",
+                          "34ef5a73843bc27acbc96e3169b122c03a0f343551497bd3e69d1b8ddaeb49b9"],
+    "/mirror/chapter/4": ["7cd97ae999cd6a4ae3855a1e0c2b16bbbf9c1943ae2cbd462d6f90bb35fb8a4b",
+                          "f3d930b722966a9ea5677198f62c4570de8baf32515efbb50dac0d6c7e63de96"],
 }
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
