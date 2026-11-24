@@ -7,6 +7,7 @@ result as a line. Every trade here is made up, and every figure is worked by han
 """
 from __future__ import annotations
 
+import dataclasses
 import importlib
 import importlib.util
 import re
@@ -185,3 +186,47 @@ def test_the_worst_days_page_draws_the_sorted_chart(demo):
     html = demo.get("/mirror/fact/worst-days").text
     assert "Your days, worst to best" in html
     assert "data-daypath" in html  # each worst day's line is the shared component
+
+
+# ---------- review: a day is the day he opened; Your numbers counts the day he closed ----------
+# A trade opened 4 Mar 15:10 and closed 5 Mar 09:20, worked by hand: running -200 (c1), -300 (c2),
+# +200 (h1, +500, closed the next morning). It belongs to 4 Mar's page, as the five worst days
+# count it (opened day); its time carries its date, and the page says it closed later.
+HELD = dataclasses.replace(trip("h1", "2026-03-04", "15:10", "15:20", 500, "CE", 75),
+                           exit_ts=datetime(2026, 3, 5, 9, 20, tzinfo=IST))
+DAY_C_HELD = [RECORD[-2], RECORD[-1], HELD]
+
+
+def test_a_trade_closed_on_a_later_day_carries_its_date_and_is_counted():
+    view = mod("services.production.api.day_chart").view(need(mx, "day_path")(DAY_C_HELD))
+    assert "finished <span class=\"num\">+₹200</span>" in str(view["said"])
+    assert view.get("closed_later") == 1
+    assert "5 Mar 09:20" in str(view["table"])
+    assert "10:10" in str(view["table"])  # same-day closes keep a bare time
+
+
+def test_a_day_with_no_late_close_says_nothing_about_it():
+    view = mod("services.production.api.day_chart").view(need(mx, "day_path")(DAY_A))
+    assert view.get("closed_later") == 0
+
+
+def _opened_days(client) -> list[str]:
+    """The demo's days, from the record itself: never from /numbers, whose links (since
+    Your numbers counts the day a trade closed) open the closed-day list, not this page."""
+    from services.production.db import models as m
+    from services.production.db.session import make_session
+    from services.production.mirror import loader
+    with make_session(client.app.state.engine) as session:
+        trips, _ = loader.load_for(session, session.query(m.Trader).one())
+    return sorted({t.trading_day for t in trips})
+
+
+def test_the_day_page_walks_from_the_first_day_to_the_last(demo):
+    days = _opened_days(demo)
+    assert len(days) >= 2
+    first = demo.get(f"/mirror/day/{days[0]}").text
+    last = demo.get(f"/mirror/day/{days[-1]}").text
+    nav = lambda html: re.search(r'<p class="body-small day-nav".*?</p>', html, re.DOTALL).group(0)
+    assert "‹" not in nav(first) and f'href="/mirror/day/{days[1]}"' in nav(first)
+    assert "›" not in nav(last) and f'href="/mirror/day/{days[-2]}"' in nav(last)
+    assert '<svg class="daychart' in first
