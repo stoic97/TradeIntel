@@ -4,8 +4,9 @@ The most recent trade that day exited before this one's entry, resolved the way 
 resolves its priors: exited strictly before the entry, so a trade still open never counts
 however it ends, and nothing carries across the day boundary. B2's own definition is
 pre-registered and is not touched; this reads one prior where B2 reads two. Which trades go in
-together (every book, or one) is the caller's: until TICKET-918 rules, the Mirror passes every
-book. Plain Python: production may not import research (methodology Rule 5).
+together (every book, or one) is the caller's: the Mirror passes every book, by the founder's
+ruling of 24 Nov 2026 (TICKET-918). Plain Python: production may not import research
+(methodology Rule 5).
 """
 
 from __future__ import annotations

@@ -2320,8 +2320,8 @@ def _result_of(result: Decimal) -> str:
 def previous_states(trips: list[Trip], across_books: bool = True) -> dict[str, str]:
     """Each same-day trade's previous result that day, "win", "loss" or "level"; a trade with
     none is left out. The result is read before charges (founder, 24 Nov 2026); net stands in
-    only for a fixture that gives no gross: the loader always does. Until TICKET-918 rules, the
-    prior is read across books (across_books)."""
+    only for a fixture that gives no gross: the loader always does. The prior is read across all
+    books by the founder's ruling of 24 Nov 2026 (TICKET-918; across_books)."""
     groups = [same_day_trips(trips)] if across_books else list(_same_day_by_book(trips).values())
     out: dict[str, str] = {}
     for group in groups:
