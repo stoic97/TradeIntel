@@ -50,3 +50,42 @@ def test_it_is_logged():
 def test_the_first_install_note_validates_with_the_credentials_loaded():
     validate = [line for line in STAGING_SCRIPT.splitlines() if "caddy validate" in line]
     assert validate and all(LOAD in line for line in validate), validate
+
+
+# ---------- review, 24 Nov: what a paste must refuse ----------
+
+def _blocks(s: str) -> list[str]:
+    """Each indented command block in the section, as one string."""
+    out, cur = [], []
+    for line in s.splitlines():
+        if line.startswith("    "):
+            cur.append(line.strip())
+        elif cur:
+            out.append("\n".join(cur)); cur = []
+    if cur:
+        out.append("\n".join(cur))
+    return out
+
+
+def test_every_block_that_uses_sha_stops_when_it_is_unfilled():
+    for block in _blocks(section()):
+        if "$SHA" in block:
+            assert 'test -n "$SHA" || exit 1' in block, block
+
+
+def test_a_failed_git_show_stops_the_paste_before_anything_is_validated():
+    s = section()
+    assert '> /tmp/Caddyfile.next || exit 1' in s
+    assert "test -s /tmp/Caddyfile.next || exit 1" in s
+
+
+def test_the_bcrypt_hash_is_single_quoted_so_bash_reads_it_as_systemd_does():
+    s = section()
+    assert "grep -q \"^SCOPE_STAGING_HASH='\" /etc/caddy/staging-auth.env || exit 1" in s
+    assert "SCOPE_STAGING_HASH='<hash>'" in STAGING_SCRIPT
+
+
+def test_the_installed_file_is_validated_before_the_reload():
+    s = section()
+    live = "caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy"
+    assert live in s
