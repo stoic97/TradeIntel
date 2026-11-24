@@ -138,10 +138,11 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_down(_f(tl.condition_mean), _f(tl.comparison_mean), w, h, mini)
     if kind == "backin":
         nt = ctx["next_trades"]
+        if not nt.back_in_enough:
+            return None  # under 30 in a group, nothing is set side by side (B1's minimum)
         return G.chart_backin([_f(nt.minutes[t.trip_id]) for t in nt.after_loss],
-                              [_f(nt.minutes[t.trip_id]) for t in nt.after_win],
-                              None if nt.loss_median is None else _f(nt.loss_median),
-                              None if nt.win_median is None else _f(nt.win_median), w, h, mini)
+                              [_f(nt.minutes[t.trip_id]) for t in nt.comparison],
+                              _f(nt.loss_median), _f(nt.comparison_median), w, h, mini)
     if kind == "sameway":
         nt = ctx["next_trades"]
         return G.chart_sameway(nt.same_after_loss, nt.other_after_loss, nt.same_after_win,
@@ -254,22 +255,34 @@ def _next_day_rows(da) -> list[dict]:
 
 
 def _back_in_view(ctx: dict) -> dict:
+    """B1, as the founder ruled it on 24 Nov 2026: after a loss against after a win or a level
+    trade. Under 30 in either group the page says how many and that they are too few, and
+    compares nothing."""
     nt = ctx["next_trades"]
-    loss_href, win_href = S.see_all_href("back-in", after="loss"), S.see_all_href("back-in", after="win")
-    m_loss, m_win = _minutes(nt.loss_median), _minutes(nt.win_median)
-    line = Markup("After a loss your next trade came a median {} {} later; ").format(
-        _w(m_loss or 0, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes")
-    if m_win is None:
-        line += Markup("after a win, no trade came next.")
+    loss_href = S.see_all_href("back-in", after="loss")
+    other_href = S.see_all_href("back-in", after="win-or-level")
+    n_loss, n_other = len(nt.after_loss), len(nt.comparison)
+    if not nt.back_in_enough:
+        line = Markup("{} {} came next after a loss and {} after a win or a level trade: too few "
+                      "to set side by side. Each needs {}.").format(
+            _w(n_loss, "trades", opens=loss_href if n_loss else None),
+            "trade" if n_loss == 1 else "trades",
+            _w(n_other, "trades", opens=other_href if n_other else None),
+            _w(mx.B1_MINIMUM, "trades"))
+        m_loss = m_other = None
     else:
-        line += Markup("after a win, {}.").format(_w(m_win, "minutes", opens=win_href))
+        m_loss, m_other = _minutes(nt.loss_median), _minutes(nt.comparison_median)
+        line = Markup("After a loss your next trade came a median {} {} later; "
+                      "after a win or a level trade, {}.").format(
+            _w(m_loss, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes",
+            _w(m_other, "minutes", opens=other_href))
     return {
         "line": line,
         "groups": [
-            {"label": "After a loss", "trades": len(nt.after_loss), "median": m_loss, "href": loss_href},
-            {"label": "After a win", "trades": len(nt.after_win), "median": m_win, "href": win_href},
+            {"label": "After a loss", "trades": n_loss, "median": m_loss, "href": loss_href},
+            {"label": "After a win or a level trade", "trades": n_other, "median": m_other,
+             "href": other_href},
         ],
-        "scratch": nt.scratch,
     }
 
 
@@ -354,7 +367,10 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
     if key == "down":  # the trades right after two losses: the fact, as its wedge counts it
         return Figure(_trades_said(ctx["two_losses"].condition), "trades")
     if key == "back-in":
-        return Figure(_minutes_said(ctx["next_trades"].loss_median), "minutes")
+        nt = ctx["next_trades"]
+        if not nt.back_in_enough:
+            return Figure(_trades_said(len(nt.after_loss)), "trades")
+        return Figure(_minutes_said(nt.loss_median), "minutes")
     if key == "same-way":
         nt = ctx["next_trades"]
         after_loss = nt.same_after_loss + nt.other_after_loss

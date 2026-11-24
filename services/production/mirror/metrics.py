@@ -16,7 +16,7 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from functools import lru_cache
@@ -2277,7 +2277,12 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
 # ---------- What you do next: chapter 3's three order facts ----------
 # Counts and his own medians. A trade's previous is the same-day trade that closed most recently
 # before it opened (b2's "resolved": exited before this entry, so an overlapping trade is never
-# previous); a trade after one that finished level is in neither group, and counted.
+# previous). Same way again: a trade after one that finished level is in neither group, and
+# counted. How fast you went back in is the registered B1 row (post_loss_latency, the founder's
+# ruling of 24 Nov 2026): after a loss against after a win or a level trade, 30 in each group.
+
+B1_MINIMUM = 30
+"""Trades in each of B1's groups before the two are set side by side (B1's n_min, 30/30)."""
 
 
 @dataclass(frozen=True)
@@ -2295,6 +2300,23 @@ class NextTrades:
     other_after_win: int
     no_direction: int              # pairs with a trade of no single direction, left out
     way_ids: frozenset[str]        # next trades whose pair has both directions
+    after_level: tuple[Trip, ...] = ()       # the trades that came next, after a level trade
+    back_in_group_of: dict[str, str] = field(default_factory=dict)  # B1: "loss" or "win-or-level"
+
+    @property
+    def comparison(self) -> tuple[Trip, ...]:
+        """B1's comparison group: the trades after a win or a level trade."""
+        return self.after_win + self.after_level
+
+    @property
+    def comparison_median(self) -> Decimal | None:
+        group = self.comparison
+        return median([self.minutes[t.trip_id] for t in group]) if group else None
+
+    @property
+    def back_in_enough(self) -> bool:
+        """Both of B1's groups hold its minimum, so the two may be set side by side."""
+        return len(self.after_loss) >= B1_MINIMUM and len(self.comparison) >= B1_MINIMUM
 
     @property
     def state(self) -> s.ResultState:
@@ -2316,8 +2338,8 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     by_day: dict[str, list[Trip]] = {}
     for t in same_day:
         by_day.setdefault(t.trading_day, []).append(t)
-    loss, win, minutes, group = [], [], {}, {}
-    scratch = no_dir = 0
+    loss, win, level, minutes, group, back_in = [], [], [], {}, {}, {}
+    no_dir = 0
     way = {("loss", True): 0, ("loss", False): 0, ("win", True): 0, ("win", False): 0}
     way_ids = set()
     for members in by_day.values():
@@ -2326,13 +2348,14 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
             if not closed:
                 continue
             prev = max(closed, key=lambda p: (p.exit_ts, p.trip_id))
+            minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
+            back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
             if prev.is_scratch:
-                scratch += 1
+                level.append(t)
                 continue
             g = "loss" if prev.is_loss else "win"
             (loss if g == "loss" else win).append(t)
             group[t.trip_id] = g
-            minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
             a, b = _direction(prev), _direction(t)
             if a is None or b is None:
                 no_dir += 1
@@ -2343,9 +2366,9 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     def mid(group_trips):
         return median([minutes[t.trip_id] for t in group_trips]) if group_trips else None
 
-    return NextTrades(tuple(loss), tuple(win), scratch, minutes, group, mid(loss), mid(win),
+    return NextTrades(tuple(loss), tuple(win), len(level), minutes, group, mid(loss), mid(win),
                       way[("loss", True)], way[("loss", False)], way[("win", True)], way[("win", False)],
-                      no_dir, frozenset(way_ids))
+                      no_dir, frozenset(way_ids), tuple(level), back_in)
 
 
 BIG_DAYS_AT_LEAST = 3

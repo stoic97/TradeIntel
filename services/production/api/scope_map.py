@@ -273,7 +273,7 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)
     if key == "back-in":
-        return mx.subset(trips, list(ctx["next_trades"].group_of))
+        return mx.subset(trips, list(ctx["next_trades"].back_in_group_of))
     if key == "same-way":
         return mx.subset(trips, list(ctx["next_trades"].way_ids))
     if key == "next-day":

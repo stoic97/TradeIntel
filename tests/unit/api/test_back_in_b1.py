@@ -101,3 +101,14 @@ def test_thirty_in_each_group_sets_them_side_by_side():
         "trade, 20.")
     assert [(g["trades"], g["median"]) for g in f["groups"]] == [(30, 10), (30, 20)]
     assert f.get("page_chart")
+
+
+def test_same_way_again_still_reads_loss_and_win_and_its_list_is_whole():
+    # Carried from test_what_you_do_next's after-filter test, whose back-in half the ruling
+    # superseded: Same way again is not changed by it, and keeps the after filter's loss and win.
+    ctx = SF.record_context(PAIRS)
+    every = TL.listing("same-way", ctx, {}, {})["shown"]
+    by_loss = TL.listing("same-way", ctx, {"after": "loss"}, {})["shown"]
+    by_win = TL.listing("same-way", ctx, {"after": "win"}, {})["shown"]
+    assert every == 3  # a6 has no single direction
+    assert 0 < by_loss < 3 and 0 < by_win < 3 and by_loss + by_win == 3

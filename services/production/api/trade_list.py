@@ -184,7 +184,10 @@ AFTER_OF = "the last trade's result before each trade"
 opened, the same day. One filter for every fact that groups trades this way (Your size after a
 loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
-AFTERS = (("loss", "After a loss"), ("win", "After a win"))
+AFTERS = (("loss", "After a loss"), ("win", "After a win"),
+          ("win-or-level", "After a win or a level trade"))
+"""How fast you went back in reads B1's two groups (the founder's ruling of 24 Nov 2026): after a
+loss, and after a win or a level trade. Size and Same way again read loss and win only."""
 
 
 def _after(t: mx.Trip, lookup: dict) -> Choice | None:
@@ -201,6 +204,8 @@ differently, so one shared map would open trades a page didn't count."""
 
 
 def after_groups(key: str, ctx: dict) -> dict:
+    if key == "back-in":
+        return ctx["next_trades"].back_in_group_of if "next_trades" in ctx else {}
     source = AFTER_SOURCE.get(key, "next_trades")
     return ctx[source].group_of if source in ctx else {}
 

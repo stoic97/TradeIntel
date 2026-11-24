@@ -114,6 +114,7 @@ def test_same_way_counts_and_a_spread_left_out():
     assert nt.no_direction == 1
 
 
+@pytest.mark.skip(reason="superseded by the founder's ruling of 24 Nov 2026 (TICKET-1006): back in is B1, after a loss against after a win or a level trade, 30 each; see test_back_in_b1.py. Assertion kept as it was.")
 def test_the_back_in_line():
     figs = facts_of(PAIRS)
     assert words(figs["back-in"]["line"]) == (
@@ -201,6 +202,7 @@ def listed(key, record, **query) -> int:
     return TL.listing(key, SF.record_context(record), {k: str(v) for k, v in query.items()}, {})["shown"]
 
 
+@pytest.mark.skip(reason="superseded by the founder's ruling of 24 Nov 2026 (TICKET-1006): back in is B1, after a loss against after a win or a level trade, 30 each; see test_back_in_b1.py. Assertion kept as it was.")
 def test_the_after_filter_opens_each_group():
     assert listed("back-in", PAIRS) == 4
     assert listed("back-in", PAIRS, after="loss") == 2
