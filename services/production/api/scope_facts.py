@@ -1422,6 +1422,20 @@ REVEAL_C = 150  # the reveal's dial: 300 x 300, the outer ring at 149.5 (kit scr
 REVEAL_SLICE_CIRCUMFERENCE = "622.04"  # 2 pi x 99, the slice's radius, as the kit writes it
 
 
+def reveal_days(ctx: dict) -> dict:
+    """How many days the reveal is about, from his file: his five worst, or every day he has
+    when he has fewer than five. The page never says "five" about days he does not have."""
+    n = len(ctx["worst_days"].days)
+    word = _number(n)
+    if n >= 5:
+        title = "Your five worst days"
+    elif n == 1:
+        title = "Your one trading day"
+    else:
+        title = f"Your {word} trading days"
+    return {"count": n, "word": word, "all_of_them": n < 5, "title": title}
+
+
 def reveal_view(ctx: dict) -> dict:
     """The reveal's dial (handoff 7): the five worst days as one white slice from twelve
     o'clock to their share, the share in the centre. Its bezel and ring are the
@@ -1432,14 +1446,18 @@ def reveal_view(ctx: dict) -> dict:
     """
     rr = G.radii(REVEAL_C)
     share = ctx["share"]
+    # Every day he has is on the page below five: a share of 100% is true by construction and
+    # states nothing, so the dial draws no slice and says what those days came to instead.
+    short = len(ctx["worst_days"].days) < 5
     view = {
-        "shown": share.shown_as_percentage,
+        "shown": share.shown_as_percentage and not short,
+        "short": short,
         "outer": G.circle(REVEAL_C, REVEAL_C, rr["outer"]),
         "inner": G.circle(REVEAL_C, REVEAL_C, rr["inner"]),
         "ticks": G.ticks(REVEAL_C, REVEAL_C, rr, [0]),
         "circumference": REVEAL_SLICE_CIRCUMFERENCE,
     }
-    if share.shown_as_percentage:
+    if view["shown"]:
         fraction = _f(share.share_percent) / 100
         view["slice_length"] = G.fmt(float(REVEAL_SLICE_CIRCUMFERENCE) * fraction)
         view["edge_tick"] = G.radial(
