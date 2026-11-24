@@ -100,6 +100,7 @@ def test_consent_purpose_has_the_thesis_six_plus_engine_testing():
         "PUBLISHED_RESEARCH",
         "THIRD_PARTY_SUMMARY",
         "MARKETING",
+        "BROKER_PULL",
         "ENGINE_TESTING",
     }
 

@@ -43,6 +43,42 @@ NOT_THIS_PERIOD = {
 }
 
 
+def history_facts(history: list[Trip]) -> dict[str, dict[str, Any]]:
+    """The facts a Journal states against his whole history, decided in one place.
+
+    A Journal keeps its version when only these move (``NOT_THIS_PERIOD``), so what it stored
+    can be older than his record. The page reads them live through ``with_history``, and so
+    does every sentence beside them: one usual size and one count of days on one page.
+
+    The days the behaviour happened are counted on same-day trades, the trades chapter 3 and
+    the finding bar read (a position held past the day has not closed when the next trade
+    opens), over the days he closed a same-day trade, the days chapter 3 counts (855).
+    """
+    day_counts = mx.day_counts(history)
+    condition = mx.two_straight_losses(mx.same_day_trips(history))
+    condition_ids = set(condition.condition_trip_ids)
+    return {
+        "against_your_normal": {
+            "your_normal_day": str(day_counts.normal_day),
+            "lots_usually": str(mx.average_lots(history).mean or "0"),
+        },
+        "after_two_straight_losses": {
+            "days_it_happened": len({t.trading_day for t in history if t.trip_id in condition_ids}),
+            "your_trading_days": len({t.trading_day for t in mx.same_day_trips(history)}),
+        },
+    }
+
+
+def with_history(facts: dict[str, Any], history: list[Trip]) -> dict[str, Any]:
+    """A stored Journal's facts with its whole-history facts read from his record now."""
+    live = history_facts(history)
+    out = dict(facts)
+    for name, values in live.items():
+        if name in out:
+            out[name] = {**out[name], **values}
+    return out
+
+
 def own_facts(facts: dict[str, Any]) -> dict[str, Any]:
     """The stored facts about this period alone."""
     return {
@@ -73,16 +109,11 @@ def build(
     losses = sum(1 for t in trips if t.is_loss)
     scratches = sum(1 for t in trips if t.is_scratch)
 
-    # The day against his own normal day, from the whole history he has uploaded.
-    day_counts = mx.day_counts(history)
+    # Against his whole history: one helper, so the page reads it live (with_history).
+    against = history_facts(history)
 
-    # The behaviour, by the shared definition, today and across everything he has.
+    # The behaviour, by the shared definition, today.
     today_condition = mx.two_straight_losses(trips)
-    history_condition = mx.two_straight_losses(history)
-    condition_ids = set(history_condition.condition_trip_ids)
-    days_with_it = len({
-        t.trading_day for t in history if t.trip_id in condition_ids
-    })
 
     hours = sorted({t.entry_ts.hour for t in trips})
 
@@ -111,15 +142,13 @@ def build(
         },
         "against_your_normal": {
             "trades_today": len(trips),
-            "your_normal_day": str(day_counts.normal_day),
             "lots_today": str(mx.average_lots(trips).mean or "0"),
-            "lots_usually": str(mx.average_lots(history).mean or "0"),
+            **against["against_your_normal"],
         },
         "after_two_straight_losses": {
             "today": today_condition.condition,
             "today_net": str(today_condition.condition_net),
-            "days_it_happened": days_with_it,
-            "your_trading_days": len(day_counts.counts),
+            **against["after_two_straight_losses"],
         },
         "planned_sl": {
             # Only losses with NO stop recorded. Counting every loss would tell a
@@ -144,3 +173,33 @@ def build(
             "days": _days_held(longest),
         }
     return facts
+
+
+# ---------- Said after the trade ----------
+
+def said_after(trips: list[Trip], answers: dict[str, dict[str, str]]) -> list[dict[str, Any]]:
+    """His answers to the three fixed trade questions, counted the way planned_sl is: for each
+    answer, its trades and how many of them lost, and the rate that made money once 30 trades
+    carry it (the report's own minimum); and how many of his trades were answered at all.
+
+    "Don't remember" is counted as an answer and is never rated. Nothing here ranks one answer
+    above another or says what an answer means. Counted when read, never stored in a Journal's
+    facts: a new key there would make every Journal a new version at the next upload.
+    """
+    from services.production.journal import fields as fl
+
+    out = []
+    for field, choices in fl.CHOICES.items():
+        given = {t.trip_id: answers.get(t.trip_id, {}).get(field) for t in trips}
+        rows = []
+        for value, label in choices:
+            group = [t for t in trips if given[t.trip_id] == value]
+            rate = None
+            if value != fl.DONT_REMEMBER and len(group) >= mx.CLOCK_MINIMUM_TRADES:
+                rate = mx.strike_rate(group).rate_percent
+            rows.append({"value": value, "label": label, "trades": len(group),
+                         "losses": sum(1 for t in group if t.is_loss), "rate": rate})
+        out.append({"field": field, "question": fl.QUESTIONS[field],
+                    "answered": sum(1 for v in given.values() if v), "of": len(trips),
+                    "rows": rows})
+    return out
