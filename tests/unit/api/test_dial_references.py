@@ -64,7 +64,7 @@ def test_the_break_even_is_worked_by_hand():
 def test_wins_say_what_they_need(phone):
     math = chapter(2, trips_from(EVEN))["Your wins and losses"]
     assert math["figure"] == "40 of 100"
-    assert "needs 40" in said(math, phone)
+    assert "break-even 40" in said(math, phone)
 
 
 def test_under_thirty_trades_no_rate_is_needed():
@@ -113,9 +113,9 @@ def test_the_clock_says_its_hour_against_its_book():
     words = said(TWO["The clock"])
     assert formatting.rupees(lead.largest.net) in words
     worse = lead.largest.net < 0 and lead.largest.net < lead.net
-    assert ("more than its book" in words) is worse
+    assert ("more than the whole book lost" in words) is worse
     if not worse:
-        assert f"its book {formatting.rupees(lead.net)}" in words
+        assert f"the whole book {formatting.rupees(lead.net)}" in words
 
 
 def test_the_busiest_day_says_the_usual_day():
@@ -149,7 +149,7 @@ def test_the_hub_wins_wedge_says_what_it_needs():
     """The hub's phone wedge has one line of room (test_hub_answers' fit), so there the mark and
     the chapter's own dial carry it; the desktop hub says it."""
     items = hub_items(trips_from(EVEN))
-    assert "needs 40" in said(items[1])
+    assert "break-even 40" in said(items[1])
     assert said(items[1], phone=True) == "made money"
 
 
@@ -206,7 +206,7 @@ def test_the_demo_says_its_references_and_marks_one_wedge_at_most(demo):
     for path, html in demo.items():
         for svg in re.findall(r"<svg class=\"scope__svg\".*?</svg>", html, flags=re.DOTALL):
             assert svg.count('class="scope__marked"') <= 1, path
-    assert "needs" in demo["/mirror/chapter/2"]
+    assert "break-even" in demo["/mirror/chapter/2"]
     assert "the other" in demo["/mirror/chapter/1"]
     assert "usually" in demo["/mirror/chapter/3"]
     assert 'class="scope__marked"' in demo["/mirror/chapter/1"]

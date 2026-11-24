@@ -192,7 +192,7 @@ def test_the_wedges_carry_the_short_form_of_the_four_answers():
     assert words[0] == ("5 days", f"lost {share.share_percent}% of all you lost")
     # TICKET-1035: each says what it is read against
     assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent),
-                        f"trades made money; needs {SF.wins_needed(CTX)}")
+                        f"made money; break-even {SF.wins_needed(CTX)}")
     assert words[2] == (f"{CTX['days'].busiest_trips} trades",
                         f"on your busiest day; usually {CTX['days'].normal_day}")
     assert words[3] == ("no number", "is set yet")
