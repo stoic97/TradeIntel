@@ -12,12 +12,16 @@ the close in counts, never a cause.
 from __future__ import annotations
 
 import re
+from datetime import datetime, time
 from decimal import Decimal
+from functools import lru_cache
 
 from markupsafe import Markup
 
 from services.production.api import charts, formatting
 from services.production.api.figures import Figure
+from services.production.ctr.profiles import registry as profiles
+from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 
 W, H = 350, 150  # the fact page's width; tall enough for a day's swing on a phone
@@ -25,14 +29,38 @@ LEFT, RIGHT, TOP, BOTTOM = 8, 54, 12, 12  # RIGHT holds the price axis and the c
 MINI_W, MINI_H = 120, 32  # as the worst-days block drew its line before
 
 
+@lru_cache(maxsize=1)
+def _closes() -> dict[str, time]:
+    """Each symbol's session close from its profile; a symbol two profiles disagree on has none."""
+    ends: dict[str, set[time]] = {}
+    for (_exchange, symbol), profile in profiles.load_all(loader.PROFILE_DIR).items():
+        if symbol != profiles.SEGMENT_WILDCARD:
+            ends.setdefault(symbol, set()).add(profile.session_end)
+    return {symbol: next(iter(e)) for symbol, e in ends.items() if len(e) == 1}
+
+
+def _later(p: mx.DayPoint, day: str) -> bool:
+    """Closed on a later day than the day the page is."""
+    return bool(day) and p.exit_ts.date().isoformat() != day
+
+
 def _x_of(path: mx.DayPath, w: float):
+    """Time across the day. The axis ends at the last close of the day; when a trade closes on a
+    later day, it ends at his instrument's session close instead, and that trade is drawn at the
+    right edge (marked), so one overnight hold cannot squeeze the day's own dots to the left."""
     start = path.started
-    end = max([p.exit_ts for p in path.points] + [start])
+    day = _opened_on(path)
+    own = [p.exit_ts for p in path.points if not _later(p, day)]
+    end = max(own + [start])
+    if len(own) < len(path.points):
+        close = _closes().get(path.points[0].trip.symbol)
+        if close is not None:
+            end = max(end, datetime.combine(start.date(), close, start.tzinfo))
     span = (end - start).total_seconds() or 1.0
     inner = w - LEFT - RIGHT
 
     def x(moment) -> float:
-        return LEFT + (moment - start).total_seconds() / span * inner
+        return LEFT + min((moment - start).total_seconds(), span) / span * inner
     return x
 
 
@@ -100,8 +128,8 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
     def y(v: Decimal) -> float:
         return TOP + float((hi - Decimal(v)) / span) * (h - TOP - BOTTOM)
 
-    x = _x_of(path, w)
     day = _opened_on(path)
+    x = _x_of(path, w)
     ref = (path.peak.running, f"best {_when(path.peak.exit_ts, day)}") if path.peak is not None else None
     back, front = charts.axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=w, ref=ref,
                               last=path.close)
@@ -118,6 +146,11 @@ def view(path: mx.DayPath, w: float = W, h: float = H) -> dict:
         cls = f"daychart__dot daychart__dot--{tone}" + (" daychart__dot--switched" if p.switched else "")
         r = 2.5 + 2.5 * (max(p.lots, 1) / most)
         dots.append(f'<circle class="{cls}" cx="{x(p.exit_ts):.1f}" cy="{y(p.running):.1f}" r="{r:.1f}"/>')
+        if _later(p, day):  # closed on a later day: drawn at the edge, and said when
+            ex, ey = x(p.exit_ts), y(p.running)
+            dots.append(f'<g class="daychart__later"><title>closed {_when(p.exit_ts, day)}</title>'
+                        f'<path d="M{ex - 3:.1f},{ey - r - 7:.1f} L{ex:.1f},{ey - r - 3:.1f} '
+                        f'L{ex + 3:.1f},{ey - r - 7:.1f}"/></g>')  # a caret above, clear of the close's tag
     trough = ""
     if path.trough is not None:
         ty = y(path.trough.running)

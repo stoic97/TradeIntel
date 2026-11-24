@@ -310,6 +310,7 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .daychart__dot--loss { fill: var(--color-loss); }
 .daychart__dot--level { fill: var(--color-faint); }
 .daychart__dot--switched { stroke: var(--color-ink); stroke-width: 1.5; }
+.daychart__later path { fill: none; stroke: var(--color-ink); stroke-width: 1.5; }
 .daychart-figure__table .table, .worst-sorted__table .table { display: block; overflow-x: auto; max-width: 100%; }
 .worst-sorted { margin: var(--space-4) 0; }
 .worst-sorted svg { display: block; width: 100%; height: auto; }

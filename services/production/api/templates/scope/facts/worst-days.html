@@ -15,10 +15,10 @@
     <p class="mirror">They don't share a book, an hour or a size.</p>
     {%- endif %}
     {%- if share.shown_as_percentage %}
-    <p class="mirror">Your {{ worst_count(n) }} worst {{ days_word }}: {{ money(worst_days.sum) }}. Your other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days: {{ money(share.other_days_net) }}.</p>
+    <p class="mirror">Your {{ worst_count(n) }} worst {{ days_word }}: {{ money(worst_days.sum) }}.{% if share.other_days_count %} Your other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days: {{ money(share.other_days_net) }}.{% endif %}</p>
     {%- else %}
     <p class="mirror">Those {{ worst_count(n) }} {{ days_word }} came to {{ money(worst_days.sum) }}.</p>
-    <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
+    <p class="mirror">Your result for the whole period was {{ money(share.total) }}.{% if share.other_days_count %} The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.{% endif %}</p>
     {%- endif %}
     {%- if f.counted_on %}
     <p class="body-small">{{ f.counted_on }}</p>
