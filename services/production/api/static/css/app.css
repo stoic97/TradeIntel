@@ -66,6 +66,15 @@
 .trade-filters .field__input { width: 100%; min-width: 0; }
 .trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
 .trade-filters__clear { margin-top: var(--space-3); }
+/* Trade lists: sort links, a pager, and one dense row per trade with the prices
+   behind a tap. The day page keeps its full rows. */
+.trade-sorts { margin: var(--space-3) 0; line-height: 2.2; }
+.trade-sorts__on { font-weight: 600; }
+.trade-pager { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-4) 0; }
+.trade-pager__range { color: var(--color-muted); margin: var(--space-2) 0; }
+.trades--dense .trade { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.trades--dense .trade__more summary { color: var(--color-action-blue); cursor: pointer; font-size: 0.8125rem; }
+.trades--dense .trade__more .trade__prices { margin-top: var(--space-1); }
 
 /* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
    phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
@@ -134,6 +143,24 @@
 .math__table td.table__text { overflow-wrap: anywhere; }
 .math__under { display: block; color: var(--color-faint); }
 .math__secondary { margin-top: var(--space-4); color: var(--color-faint); }
+
+/* Your win rate against break-even (the math page): a bar per book, the years on one scale. */
+.wins-gap { margin: var(--space-6) 0; }
+.wg-book { margin: var(--space-3) 0; }
+.wg-book__name { font-weight: 600; margin-right: var(--space-1); }
+.wg-bar, .wg-years { display: block; width: 100%; height: auto; }
+.wg-track { fill: var(--color-surface); }
+.wg-gap--short { fill: var(--color-faint); fill-opacity: .35; }
+.wg-gap--above { fill: var(--color-faint); fill-opacity: .2; }
+.wg-win { stroke: var(--color-ink); stroke-width: 2.5; }
+.wg-need { stroke: var(--color-ink); stroke-width: 2; stroke-dasharray: 3 2; }
+.wg-you { fill: none; stroke: var(--color-ink); stroke-width: 2; }
+.wg-even { fill: none; stroke: var(--color-faint); stroke-width: 2; stroke-dasharray: 4 3; }
+.wg-band { fill: var(--color-faint); fill-opacity: .15; stroke: none; }
+.wg-you-dot { fill: var(--color-ink); }
+.wg-even-dot { fill: var(--color-page); stroke: var(--color-faint); stroke-width: 1.5; }
+.wg-years__title { margin-top: var(--space-4); }
+.wg-figures { margin-top: var(--space-3); }
 
 /* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
    kit draws the figure there. */
