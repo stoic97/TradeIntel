@@ -53,11 +53,11 @@ def dials(html: str) -> list[str]:
 # TICKET-1035 (each wedge says its reference; the worst one is marked).
 ON_MAIN = {
     "/mirror": ["4dc4d7bcd2a4994688fdcac075024102cd1bdd189bd9c25b89ff88c1533840e0",
-                "050bbbe0a5b4384db3c105f52bb26d3f1a0e4dc4b9e1be87725674ef57ac9d6a"],
+                "c4f3c085500933b994281bd76c1bc5ce99047e9c9911ba0ca2e2289a53b7ab20"],
     "/mirror/chapter/1": ["f7a7fc91dee5aba033a7bbf7c9a1febd2e8b14bd3a46fa958b3e3b2d03bbef34",
                           "74e7aa9b1c711bf4b5ee147a5fc585dae57b9abe666b106839fd28c147336190"],
-    "/mirror/chapter/2": ["dc836d57f0a3b891db56ba3672604b114931ea541bc21a3d062b090dc6ccaa65",
-                          "328bf1a460346108458b6fe96cf506177d0fcadea699269ace9ed6485b66c131"],
+    "/mirror/chapter/2": ["4bb023d6b0a3674e0a647840c58feb8c819eb999728e5bd5ef7530a4aadb47a0",
+                          "dff3e1ae3d005b1137d8cc33cc4018c019484316d123128481ed5b8fa64a190c"],
     "/mirror/chapter/3": ["ec1e44153358053ebbdc2302a63e69c1af5279767872739ee205e2c80f174bb9",
                           "6ec89f603be2313c3b691c87bdcaf8624c329b6e582b150a7d05b8c3a29b6761"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
@@ -66,8 +66,8 @@ ON_MAIN = {
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "52ec9f907b95c22a1a27c3c5fb7efe51c1633f62e67880ddb2dea8b8b5ef457b",
     (1, "desktop"): "4f9c3e8f4e90a927761ca74dbd266ee0c02677bf59c2595c92840fb6062b9153",
-    (2, "phone"): "73f43c3c75f70b63a424c670ef7dd4036e2fef6a7d5a2754362fdc2e4b3ed596",
-    (2, "desktop"): "8f46fd6cf9e56520d022fbf504d5c0e9bd3bb40127db883567e959c2852b9d24",
+    (2, "phone"): "8dfcd1ba0df79e74fd02bbe46c6d58dcc06bc7d3d9ee1edee69060035f0d9cf3",
+    (2, "desktop"): "e3b4350da9755c98108888b85665ee914a8929519c83a2b97b7ed0f99a88357d",
     (3, "phone"): "c3cbe5d67525418c62a6c66fa7eeef14c270188bb01f6999996e923bd59c699e",
     (3, "desktop"): "0f53ca78b62ead39ad8aab8de3de47ff62eae03951965e66d9c08dda94e71701",
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
