@@ -1,0 +1,8 @@
+{#- Books under the minimum, folded into one row that opens to them, as the clock page folds its
+    small books: a book with a handful of trades doesn't push the main books down the page. -#}
+{%- macro books_fold(count, minimum) -%}
+<details class="books-fold">
+  <summary class="body-small"><span class="num">{{ Figure(count, "books") }}</span> smaller {{ "book" if count == 1 else "books" }}, under <span class="num">{{ Figure(minimum, "trades") }}</span> same-day trades{{ "" if count == 1 else " each" }}</summary>
+  {{ caller() }}
+</details>
+{%- endmacro %}

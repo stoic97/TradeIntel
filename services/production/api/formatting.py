@@ -27,6 +27,12 @@ MINUS = "\u2212"
 RUPEE = "\u20b9"
 
 
+def whole(value) -> int:
+    """Whole rupees as the rupee filters write them (cut toward zero), for a figure built from
+    written figures: a column that must add up to the total it sits beside."""
+    return _whole(value)
+
+
 def _whole(value) -> int:
     """Whole units, cut toward zero. Floats go through str so 0.1 stays 0.1."""
     if isinstance(value, float):
