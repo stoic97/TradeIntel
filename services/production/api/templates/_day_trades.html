@@ -2,7 +2,7 @@
     No third is said to be better than another. -#}
 <section class="shape" id="day-trades">
   <h2 class="card-title numbers__heading">Your days by how many trades you took</h2>
-  <p class="body-small numbers__thin">Your days in three groups, cut where your own days fall. A day is the day you closed.</p>
+  <p class="body-small numbers__thin">{% if day_trades.thirds|length == 3 %}Your days in three groups, cut where your own days fall. {% endif %}A day is the day you closed.</p>
   <table class="table numbers__table">
     <thead><tr><th></th><th class="table__num">Days</th><th class="table__num">Trades</th><th class="table__num">Days that made money</th><th class="table__num">Result</th></tr></thead>
     <tbody>

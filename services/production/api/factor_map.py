@@ -78,7 +78,7 @@ FACTORS: tuple[Factor, ...] = (
     F("Cost", "Charges per round trip", K.BEFORE, S.WORKED_OUT,
       sources=("services.production.charges.record",), needs_charges=True),
     # Instrument
-    F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book",)),
+    F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book", "book_group")),
     F("Instrument", "Premium paid", K.AT_CLICK, S.WORKED_OUT, filters=("price",)),
     F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left", "days")),
     F("Instrument", "Strike's distance from the market", K.AT_CLICK, S.NEEDS_BARS),
@@ -107,7 +107,7 @@ FACTORS: tuple[Factor, ...] = (
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
     F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
-      filters=("overnight",)),
+      filters=("overnight", "held_days")),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,
