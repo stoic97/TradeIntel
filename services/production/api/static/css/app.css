@@ -123,6 +123,12 @@
 .money-hook { margin: var(--space-6) 0; }
 .money-hook > * + * { margin-top: var(--space-2); }
 .money-hook__lead { font-family: var(--font-serif); font-size: 18px; line-height: 26px; font-weight: 600; }
+/* A signed figure stays with its sign: "+" never ends a line before "₹47,602". */
+.nowrap { white-space: nowrap; }
+
+/* The best and worst five's days, one line per group above the bars (the kit's grid had a column
+   per date, which put ten dates in a row that no bar lines up with). */
+.money-days { grid-template-columns: 1fr; text-align: left; gap: var(--space-1); }
 .next-chapter { margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--color-hairline); }
 .next-chapter__hook { margin-bottom: var(--space-4); font-family: var(--font-serif); font-size: 16px; line-height: 24px; }
 .next-chapter__figure { white-space: nowrap; }
@@ -178,6 +184,9 @@
 .chapter-next { margin-top: var(--space-10); }
 .chapter-next + .chapter-next { margin-top: var(--space-3); }
 .chapter-next__line { margin-bottom: var(--space-3); }
+
+/* What you do next (chapter 3): the red swatch for "after your worst days". */
+.legend__swatch--red { background: var(--color-loss); }
 
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
@@ -257,6 +266,20 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .scope-card__split .num { color: inherit; }
 .latest__when .body-small { display: block; }
 .latest__when { padding-block: var(--space-2); }
+
+/* The challenge: one cell a day, kept, broken, no trades or not in a file yet. Counts only. */
+.challenge__rules { margin: var(--space-3) 0; padding-left: var(--space-4); }
+.challenge__days { list-style: none; padding: 0; margin: var(--space-4) 0; display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.challenge__day { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2);
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-card); background: var(--color-page); }
+.challenge__day--kept { border-color: var(--color-gain); }
+.challenge__day--broken { border-color: var(--color-loss); border-width: 2px; }
+.challenge__day--no-trades { background: var(--color-surface); }
+.challenge__day--not-yet { color: var(--color-faint); border-style: dashed; }
+.challenge__chips { border: 0; padding: 0; margin: 0 0 var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.challenge__chips legend { margin-bottom: var(--space-2); }
+.challenge__card, .challenge__home { margin: var(--space-4) 0; }
 
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }

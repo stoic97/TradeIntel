@@ -1,7 +1,7 @@
-{#- A list of Journals (kit screens 18 and 18c): each period, its version, whether it
+{#- A list of Journals (kit screens 18 and 18c): each period, whether it changed, whether it
     is unread. `latest` is the list. -#}
   <div class="journal-index">
     {%- for j in latest %}
-    <a class="journal-index__row" href="/journals/{{ j.id }}"><span class="num journal-index__date">{{ j.period_start|day }}{% if j.period_end != j.period_start %} – {{ j.period_end|day }}{% endif %}</span>{% if j.id in changed_ids %}<span class="num num--label">version {{ j.version_no }}</span>{% endif %}{% if not j.opened_at %}<span class="tag">unread</span>{% endif %}{% if reasons and reasons.get(j.id) %}<span class="body-small">{{ reasons[j.id] }}</span>{% endif %}<span class="journal-index__go" aria-hidden="true">›</span></a>
+    <a class="journal-index__row" href="/journals/{{ j.id }}"><span class="num journal-index__date">{{ j.period_start|day }}{% if j.period_end != j.period_start %} – {{ j.period_end|day }}{% endif %}</span>{% if j.id in changed_ids %}<span class="num num--label">updated</span>{% endif %}{% if not j.opened_at %}<span class="tag">unread</span>{% endif %}{% if reasons and reasons.get(j.id) %}<span class="body-small">{{ reasons[j.id] }}</span>{% endif %}<span class="journal-index__go" aria-hidden="true">›</span></a>
     {%- endfor %}
   </div>
