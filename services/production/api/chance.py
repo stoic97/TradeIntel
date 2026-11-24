@@ -21,8 +21,11 @@ def inside(value) -> bool:
         return False
     if not isinstance(value, ChanceBand):
         raise NoComparison(f"the chance line needs the band it rests on, not {value!r}")
-    if value.size == 0 or value.size >= value.pool_size:
-        return False  # the only set of its size was compared with nothing (review, 18 and 24 Nov)
+    if (value.size == 0 or value.size >= value.pool_size
+            or value.band[0] == value.band[1]):
+        # The only set of its size was compared with nothing (review, 18 and 24 Nov); so
+        # was a figure whose band is one value (founder, 24 Nov, 919 Q1: b).
+        return False
     return value.inside
 
 
