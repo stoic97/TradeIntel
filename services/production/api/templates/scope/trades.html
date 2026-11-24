@@ -16,6 +16,7 @@
       {%- for filter in listing.filters %}
       <label class="field"><span class="field__label">{{ filter.label }}</span><select class="field__input" name="{{ filter.name }}"><option value="">All</option>{% for c in filter.choices %}<option value="{{ c.value }}"{% if c.selected %} selected{% endif %}>{{ c.label }}</option>{% endfor %}</select></label>
       {%- endfor %}
+      {%- if listing.sort %}<input type="hidden" name="sort" value="{{ listing.sort }}">{% endif %}
       <div class="trade-filters__go">{{ button("Show trades", kind="secondary", block=true) }}</div>
     </form>
     {%- endif %}

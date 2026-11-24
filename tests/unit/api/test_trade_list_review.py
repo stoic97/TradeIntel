@@ -61,5 +61,5 @@ def test_a_bad_page_value_on_the_page_is_not_a_server_error(client, engine):
 def test_the_filter_form_carries_the_chosen_sort(client, engine):
     few(client)
     html = client.get("/mirror/fact/risk/trades?sort=newest").text
-    form = re.search(r'<form class="trade-filters".*?</form>', html, re.S).group(0)
+    form = re.search(r'<form class="trade-filters".*?</form>', html, re.DOTALL).group(0)
     assert re.search(r'<input type="hidden" name="sort" value="newest"\s*/?>', form)

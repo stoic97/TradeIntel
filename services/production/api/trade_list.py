@@ -266,7 +266,10 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
         sort = DEFAULT_SORT
     pages = max(1, -(-len(shown) // PAGE_SIZE))
     raw_page = query.get("page", "1")
-    page = min(max(int(raw_page), 1), pages) if str(raw_page).isdigit() else 1
+    # Only plain ASCII digits of a sensible length are a page; "²", "1.5", a 5,000-digit number
+    # or anything else opens page 1, as a stale filter does, never a server error.
+    raw_page = str(raw_page)
+    page = min(max(int(raw_page), 1), pages) if raw_page.isascii() and raw_page.isdigit() and len(raw_page) <= 6 else 1
     start = (page - 1) * PAGE_SIZE
 
     def href(**changes) -> str:
@@ -304,7 +307,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
         "shown": len(shown),
         "total": len(behind),
         "groups": groups,
-        "clear_href": S.see_all_href(key),
+        "clear_href": S.see_all_href(key, **({"sort": sort} if sort != DEFAULT_SORT else {})),
+        "sort": sort if sort != DEFAULT_SORT else "",  # the filter form carries it, so a filter keeps the sort
         "sorts": [{"value": v, "label": SORT_LABELS[v], "on": v == sort,
                    "href": href(sort=v if v != DEFAULT_SORT else None, page=None)} for v in SORT_KEYS],
         "page": page,
