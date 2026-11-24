@@ -5,13 +5,13 @@ minute, less the exit's close, in the trade's direction, as JSON. Points only; n
 market file but what the worker worked out. Older rows stay empty until their import is worked
 out again.
 
-Revision ID: 0016
+Revision ID: 0019
 Revises: 0015
 """
 import sqlalchemy as sa
 from alembic import op
 
-revision = '0016'
+revision = '0019'
 down_revision = '0015'
 branch_labels = None
 depends_on = None
