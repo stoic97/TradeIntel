@@ -128,6 +128,11 @@
 </a>
 {%- endmacro %}
 
+{#- The worst days counted: "five", or how many there are when his record has fewer days. -#}
+{% macro worst_count(n) -%}
+{%- if n == 5 %}five{% else %}<span class="num">{{ Figure(n, "days")|count }}</span>{% endif -%}
+{%- endmacro %}
+
 {% macro trades_behind(n) -%}
 <span class="num">{{ Figure(n, "checks")|count }}</span> {{ "trade" if n == 1 else "trades" }} behind this
 {%- endmacro %}

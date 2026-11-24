@@ -61,8 +61,7 @@ def _counted(row: mx.MathRow) -> bool:
 
 
 def _bar_svg(book: str, win: int, need: int) -> Markup:
-    def x(v):
-        return v * W / 100
+    x = charts.rate_scale(0, 100, 0, W)  # the bar runs the whole rate scale, 0 to 100 of 100
     lo, hi = sorted((win, need))
     side = "short" if need > win else "above"
     label = f"{book}: you won {win} of 100; break-even needs {need} of 100"
@@ -77,17 +76,12 @@ def _bar_svg(book: str, win: int, need: int) -> Markup:
 
 def _years_svg(book: str, points: list[dict], lo: int, hi: int, tick: int) -> Markup:
     x0, x1, y0, y1 = LEFT, W - RIGHT, TOP, YEARS_H - BOTTOM
-    def y(v):
-        return y1 - (v - lo) * (y1 - y0) / ((hi - lo) or 1)
+    y = charts.rate_scale(lo, hi, y1, y0)  # upward: lo at the foot, hi at the top
     n = len(points)
     xs = [(x0 + x1) / 2] if n == 1 else [x0 + i * (x1 - x0) / (n - 1) for i in range(n)]
     out = [(f'<svg class="wg-years" viewBox="0 0 {W} {YEARS_H}" width="100%" role="img" '
             f'aria-label="{escape(book)}: win rate against break-even, by year">')]
-    v = lo
-    while v <= hi:
-        out.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="ch-grid"/>'
-                   f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="ch-axis">{v}</text>')
-        v += tick
+    out.append(charts.rate_axis(lo, hi, tick, y, left=LEFT, right=RIGHT, width=W))
     you = [(xs[i], y(p["win"])) for i, p in enumerate(points)]
     even = [(xs[i], y(p["need"])) for i, p in enumerate(points)]
     # A run of counted years draws as one line; a thin year between two breaks it, so no line
