@@ -44,8 +44,8 @@ def test_every_fact_counts_the_trades_behind_it(key):
 
 
 def test_on_the_fixture_every_fact_is_counted():
-    # After you closed reads stored bar figures, which a fixture without market data has none of.
-    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "after-close": "not-enough"}
+    # Same way again needs each trade's legs; After you closed needs stored bar figures. The fixture has neither.
+    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "same-way": "not-enough", "after-close": "not-enough"}
 
 
 # ---------- States: never hidden, never an all-clear ----------
@@ -89,9 +89,11 @@ def test_a_chapter_in_states_still_draws(n):
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_the_dial_has_a_slice_per_fact_in_slice_order(n):
     view = SF.chapter_view(n, FIGS)
-    assert [i["name"] for i in view["items"]] == [f.title for f in S.chapter(n).facts]
+    # On desktop every fact has its wedge; a fact off the phone dial (1006) is in its list there.
+    assert [i["name"] for i in view.get("desktop_items", view["items"])] == [f.title for f in S.chapter(n).facts]
+    assert [i["name"] for i in view["items"]] == [f.title for f in S.chapter(n).facts if f.on_phone_dial]
     assert view["centre"] == {"name": S.chapter(n).name, "scopeHref": S.home_href(tap=n)}
-    svg = str(dial.scope_dial(view))
+    svg = str(dial.scope_dial(view, "desktop"))
     assert svg.count('<a class="scope__slice') == len(S.chapter(n).facts)
     # Each wedge opens the trades behind its figure (TICKET-905); one with none is plain.
     for f in S.chapter(n).facts:

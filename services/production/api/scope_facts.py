@@ -17,6 +17,8 @@ from collections import Counter
 from datetime import timedelta
 from decimal import Decimal
 
+from markupsafe import Markup
+
 from services.production.api import after_closed as ACL
 from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
@@ -37,6 +39,9 @@ CARD_H = {
     "run": 40,
     "clock": 84,
     "busy": 84,
+    "backin": 84,
+    "sameway": 56,
+    "nextday": 70,
     "after-close": 84,
 }
 INDIA_OFFSET = timedelta(hours=5, minutes=30)
@@ -70,6 +75,8 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "money_found": mx.money_found(trips),
         "past_number": mx.trades_past_number(trips),
         "two_losses": two_losses,
+        "next_trades": mx.next_trades(same_day),
+        "day_after": mx.day_after(trips),
         "strike": mx.strike_rate(same_day),
         "break_even": mx.break_even(same_day),
         "lots": mx.average_lots(trips),
@@ -133,6 +140,20 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     if kind == "down":
         tl = ctx["two_losses"]
         return G.chart_down(_f(tl.condition_mean), _f(tl.comparison_mean), w, h, mini)
+    if kind == "backin":
+        nt = ctx["next_trades"]
+        if not nt.back_in_enough:
+            return None  # under 30 in a group, nothing is set side by side (B1's minimum)
+        return G.chart_backin([_f(nt.minutes[t.trip_id]) for t in nt.after_loss],
+                              [_f(nt.minutes[t.trip_id]) for t in nt.comparison],
+                              _f(nt.loss_median), _f(nt.comparison_median), w, h, mini)
+    if kind == "sameway":
+        nt = ctx["next_trades"]
+        return G.chart_sameway(nt.same_after_loss, nt.other_after_loss, nt.same_after_win,
+                               nt.other_after_win, w, h, mini)
+    if kind == "nextday":
+        rows = _next_day_rows(ctx["day_after"])
+        return G.chart_nextday(*(_f(r["per_day"] or 0) for r in rows), w, h, mini)
     if kind == "busy":
         days = ctx["days"]
         return G.chart_busy(days.counts, _f(days.normal_day), w, h)
@@ -171,11 +192,156 @@ def _state(key: str, ctx: dict) -> str:
         "math": "holding",  # both a winner and a loser, or there is nothing to balance
         "run": "run",
         "down": "two_losses",
+        "back-in": "next_trades",
+        "next-day": "day_after",
         "busiest": "days",
     }.get(key)
+    if key == "same-way" and ctx["next_trades"].way_state is not COUNTED:
+        return "not-enough"
     if metric and ctx[metric].state is not COUNTED:
         return "not-enough"
     return ""
+
+
+# ---------- What you do next (chapter 3): counts and his own medians, never a claim ----------
+
+NEXT_DAY_GROUPS = (("best", "After your best days"), ("worst", "After your worst days"),
+                   ("other", "Your other days"))
+
+
+def _minutes(m: Decimal | None) -> int | None:
+    return None if m is None else int(m.quantize(Decimal(1), rounding="ROUND_HALF_UP"))
+
+
+def _minutes_said(m: Decimal | None) -> str:
+    n = _minutes(m)
+    return f"{formatting.count(n)} {'minute' if n == 1 else 'minutes'}"
+
+
+def _rate(part: int, whole: int) -> Decimal:
+    return Decimal(part) * 100 / Decimal(whole)
+
+
+def _plain(value: Decimal | None) -> str:
+    """A count when whole, else to one decimal: trades a day and lots are averages."""
+    if value is None:
+        return ""
+    if value == value.to_integral_value():
+        return formatting.count(int(value))
+    return formatting.lots(value)
+
+
+def _w(value, noun: str, how: str = "count", opens: str | None = None) -> Markup:
+    """A figure in a sentence, written through its filter and opening its trades."""
+    written = formatting._FIGURE_FILTERS[how](Figure(value, noun, opens=opens))
+    return Markup('<span class="num">{}</span>').format(written)
+
+
+def _amount(value: Decimal, noun: str, opens: str | None = None) -> Markup:
+    if value == value.to_integral_value():
+        return _w(int(value), noun, "count", opens)
+    return _w(value, noun, "lots", opens)
+
+
+def _next_day_rows(da) -> list[dict]:
+    rows = []
+    for g, label in NEXT_DAY_GROUPS:
+        trips, days = da.groups[g], da.days_in[g]
+        lots = mx.average_lots(list(trips)).mean
+        rows.append({
+            "group": g, "label": label, "trades": len(trips), "days": days,
+            "per_day": Decimal(len(trips)) / days if days else None,
+            "lots": Decimal(lots) if lots is not None else None,
+            "won": sum(t.is_win for t in trips),
+            "rate": _rate(sum(t.is_win for t in trips), len(trips))
+            if len(trips) >= mx.CLOCK_MINIMUM_TRADES else None,
+            "href": S.see_all_href("next-day", next_day=g) if trips else None,
+        })
+    return rows
+
+
+def _back_in_view(ctx: dict) -> dict:
+    """B1, as the founder ruled it on 24 Nov 2026: after a loss against after a win or a level
+    trade. Under 30 in either group the page says how many and that they are too few, and
+    compares nothing."""
+    nt = ctx["next_trades"]
+    loss_href = S.see_all_href("back-in", after="loss")
+    other_href = S.see_all_href("back-in", after="win-or-level")
+    n_loss, n_other = len(nt.after_loss), len(nt.comparison)
+    if not nt.back_in_enough:
+        line = Markup("{} {} came next after a loss and {} after a win or a level trade: too few "
+                      "to set side by side. Each needs {}.").format(
+            _w(n_loss, "trades", opens=loss_href if n_loss else None),
+            "trade" if n_loss == 1 else "trades",
+            _w(n_other, "trades", opens=other_href if n_other else None),
+            _w(mx.B1_MINIMUM, "trades"))
+        m_loss = m_other = None
+    else:
+        m_loss, m_other = _minutes(nt.loss_median), _minutes(nt.comparison_median)
+        line = Markup("After a loss your next trade came a median {} {} later; "
+                      "after a win or a level trade, {}.").format(
+            _w(m_loss, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes",
+            _w(m_other, "minutes", opens=other_href))
+    return {
+        "line": line,
+        "groups": [
+            {"label": "After a loss", "trades": n_loss, "median": m_loss, "href": loss_href},
+            {"label": "After a win or a level trade", "trades": n_other, "median": m_other,
+             "href": other_href},
+        ],
+    }
+
+
+def _same_way_view(ctx: dict) -> dict:
+    nt = ctx["next_trades"]
+    loss_n = nt.same_after_loss + nt.other_after_loss
+    win_n = nt.same_after_win + nt.other_after_win
+    loss_href, win_href = S.see_all_href("same-way", after="loss"), S.see_all_href("same-way", after="win")
+    least = mx.CLOCK_MINIMUM_TRADES
+    if loss_n >= least and win_n >= least:
+        line = Markup("After a loss, your next trade went the same way {} times; after a win, {}.").format(
+            _w(_rate(nt.same_after_loss, loss_n), "trades", "out_of_a_hundred", loss_href),
+            _w(int(_rate(nt.same_after_win, win_n).quantize(Decimal(1), rounding="ROUND_HALF_UP")),
+               "of 100", opens=win_href))
+    else:
+        line = Markup("After a loss, your next trade went the same way {} of {} times; ").format(
+            _w(nt.same_after_loss, "trades", opens=loss_href if loss_n else None), _w(loss_n, "trades"))
+        if win_n:
+            line += Markup("after a win, {} of {}.").format(
+                _w(nt.same_after_win, "trades", opens=win_href), _w(win_n, "trades"))
+        else:
+            line += Markup("after a win, no trade came next.")
+        line += Markup(" Too few for a rate: a rate needs 30 trades in each group.")
+    return {
+        "line": line,
+        "groups": [
+            {"label": "After a loss", "same": nt.same_after_loss, "other": nt.other_after_loss, "href": loss_href},
+            {"label": "After a win", "same": nt.same_after_win, "other": nt.other_after_win, "href": win_href},
+        ],
+        "no_direction": nt.no_direction,
+        "scratch": nt.scratch,
+    }
+
+
+def _next_day_view(ctx: dict) -> dict:
+    da = ctx["day_after"]
+    rows = _next_day_rows(da)
+    best, worst, other = rows
+
+    def part(r, full: bool) -> Markup:
+        if not r["days"]:
+            return Markup("no day")
+        out = Markup("{} trades a day" if full else "{}").format(_amount(r["per_day"], "trades a day", r["href"]))
+        if r["lots"] is not None:
+            out += Markup(" at {} lots" if full else " at {}").format(_amount(r["lots"], "lots"))
+        return out
+
+    line = (Markup("On the days after your best days you took ") + part(best, True)
+            + Markup("; after your worst days, ") + part(worst, False)
+            + Markup("; usually ") + part(other, False) + Markup("."))
+    return {"line": line, "rows": rows,
+            "best_days": [formatting.day(d) for d in da.best],
+            "worst_days": [formatting.day(d) for d in da.worst]}
 
 
 def _trades_said(n: int) -> str:
@@ -208,6 +374,20 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
     if key == "down":  # the trades right after two losses: the fact, as its wedge counts it
         return Figure(_trades_said(ctx["two_losses"].condition), "trades")
+    if key == "back-in":
+        nt = ctx["next_trades"]
+        if not nt.back_in_enough:
+            return Figure(_trades_said(len(nt.after_loss)), "trades")
+        return Figure(_minutes_said(nt.loss_median), "minutes")
+    if key == "same-way":
+        nt = ctx["next_trades"]
+        after_loss = nt.same_after_loss + nt.other_after_loss
+        if after_loss >= mx.CLOCK_MINIMUM_TRADES:
+            return Figure(formatting.out_of_a_hundred(_rate(nt.same_after_loss, after_loss)), "trades")
+        return Figure(f"{formatting.count(nt.same_after_loss)} of {formatting.count(after_loss)}", "trades")
+    if key == "next-day":
+        best = _next_day_rows(ctx["day_after"])[0]
+        return Figure(f"{_plain(best['per_day'])} a day", "trades a day")
     if key == "busiest":
         return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
@@ -751,7 +931,17 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
+    if not out["back-in"]["state"]:
+        out["back-in"].update(_back_in_view(ctx))
+    if not out["same-way"]["state"]:
+        out["same-way"].update(_same_way_view(ctx))
+    if not out["next-day"]["state"]:
+        out["next-day"].update(_next_day_view(ctx))
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
+    # The card names each group's days beside its words, in the bars' order (the kit's chart
+    # itself is byte for byte, so the dates can't go inside it).
+    out["money"]["best_days"] = [formatting.day(t.trading_day) for t in ctx["best"]]
+    out["money"]["worst_days"] = [formatting.day(t.trading_day) for t in ctx["worst"]]
     out["money"]["held"] = ctx["held_past_day"]
     options = mx.option_result(trips)
     out["not-told"].update(
@@ -913,9 +1103,13 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                              of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
-        best = formatting.rupees(ctx["best"][0].net)
+        net = ctx["best"][0].net
+        best = formatting.rupees(net)
+        # Five digits and up run into a phone dial's centre ring: the toolkit's short form there
+        # (₹11.5k). The desktop wedge and the page keep the whole figure.
+        phone_best = charts.short(net) if abs(net) >= 10 * charts.THOUSAND else best.removeprefix("+")
         return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
-                      phone="best\ntrade", phone_shown=best.removeprefix("+"))
+                      phone="best\ntrade", phone_shown=phone_best)
     if key == "math":
         return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
                       shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
@@ -929,6 +1123,18 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
                       phone="largest\nhour", shown=hour)
     if key == "down":
         return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
+    if key == "back-in":
+        nt = ctx["next_trades"]
+        if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
+            n = len(nt.after_loss)
+            return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
+                                 of="after a loss, too few"))
+        m = _minutes(nt.loss_median)
+        return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
+    if key == "same-way":
+        return _wedge(Figure(fig["figure"], "trades", of="the same way after a loss"), shown=fig["figure"])
+    if key == "next-day":
+        return _wedge(Figure(fig["figure"], "trades", of="trades after your best days"), shown=fig["figure"])
     if key == "busiest":
         on_day = fig["busiest_date"].replace(" ", chr(0xA0))  # a date holds together
         return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}"),
