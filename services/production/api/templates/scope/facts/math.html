@@ -27,6 +27,8 @@
   {%- if small %}
   {% call books_fold(small|length, book_row_minimum) %}{{ math_table(small, "Book", "small-books") }}{% endcall %}
   {%- endif %}
+  {%- set wg = wins_gap(book_math) %}
+  {%- if wg.bars %}{% include "scope/_wins_gap.html" %}{% endif %}
   <h2 class="heading math__book">How long you hold</h2>
   <p class="body">Each median is worked out on its own, so these figures do not describe any one trade.</p>
   {% for book in book_math if book.years %}
