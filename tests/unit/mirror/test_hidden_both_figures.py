@@ -280,7 +280,7 @@ def test_the_chance_line_cannot_be_written_without_its_band():  # gate 2
         with pytest.raises(refused):
             inside(not_a_band)
     assert inside(None) is False
-    assert inside(LO.band_of([-100.0] * 10, -300.0, 3)) is True
+    assert inside(LO.band_of([-100.0] * 10, -300.0, 3)) is False  # every set sums to -300
     source = HIDDEN.read_text(encoding="utf-8")
     assert CHANCE in source
     for said in re.finditer(re.escape(CHANCE), source):
