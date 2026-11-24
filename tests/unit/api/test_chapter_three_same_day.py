@@ -18,6 +18,8 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+import pytest
+
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as S
 from services.production.mirror import metrics as mx
@@ -39,15 +41,18 @@ HELD = [held(5000, "2026-09-01", "09:50"),
 FILE = sorted(SAME_DAY + HELD, key=lambda t: t.entry_ts)
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_the_not_down_row_counts_same_day_trades_only():
     tl = SF.record_context(FILE)["two_losses"]
     assert (tl.outside, tl.outside_net, tl.outside_mean) == (4, Decimal(-240), Decimal(-60))
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_held_positions_move_nothing_in_table_one():
     assert SF.record_context(FILE)["two_losses"] == SF.record_context(SAME_DAY)["two_losses"]
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_held_positions_move_nothing_in_table_two():
     with_held, without = SF.record_context(FILE), SF.record_context(SAME_DAY)
     for key in ("after_strike", "after_lots", "rest_strike", "rest_lots",
@@ -55,6 +60,7 @@ def test_held_positions_move_nothing_in_table_two():
         assert with_held[key] == without[key], key
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_chapter_two_and_chapter_three_describe_the_same_trades():
     ctx = SF.record_context(FILE)
     tl, strike = ctx["two_losses"], ctx["strike"]
@@ -62,6 +68,7 @@ def test_chapter_two_and_chapter_three_describe_the_same_trades():
     assert tl.population + tl.outside == strike.wins + strike.losses + strike.scratches
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_the_sentence_gate_is_asked_about_same_day_trades_only(monkeypatch):
     asked = []
     monkeypatch.setattr(mx, "post_loss_sentence_may_show",
@@ -81,10 +88,12 @@ def test_the_trades_behind_the_busiest_day_are_same_day():
     assert [t.trip_id for t in behind] == [t.trip_id for t in DOWN]
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_chapter_three_renders_the_same_with_or_without_held_positions():
     assert chapter_page(3, FILE) == chapter_page(3, SAME_DAY)
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_the_two_fact_pages_render_the_same_with_or_without_held_positions():
     for key in ("down", "busiest"):
         assert fact_page(key, FILE) == fact_page(key, SAME_DAY), key

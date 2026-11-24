@@ -93,6 +93,7 @@ def test_a_history_of_only_held_positions_has_no_strike_rate():
     assert figs["math"]["state"] == "not-enough"
 
 
+@pytest.mark.skip(reason="superseded by option (a), every round trip (definitions_v1 section 2), for after two straight losses: test_b2_every_round_trip.py; this pinned the 855 same-day reading (option (b))")
 def test_chapter_three_compares_the_same_same_day_trades():
     """TICKET-855: after two losses against the rest reads the same five winners as this fact."""
     ctx = SF.record_context(HELD)

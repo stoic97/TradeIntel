@@ -57,9 +57,10 @@ ON_MAIN = {
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          # Desktop: three more wedges since What you do next (1006); the phone dial is main's.
-                          "35d0991922d1320e1c2f6cf116129fa5fe77129da1bf3cbac9e8dfb9c5d5e0ef"],
+    "/mirror/chapter/3": ["c593f06f594847d2cf7ec54877572728fdf18343245c581f5f96f8634211acf9",
+                          # Desktop: three more wedges since What you do next (1006). Both re-taken when
+                          # after two straight losses counted every round trip (option (a), 1025).
+                          "462941f4ced2b02be55cf5d89a64d09615ffda900fe0db868c62ee1643ee5fbd"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
                           "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
 }
