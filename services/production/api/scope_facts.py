@@ -1181,8 +1181,8 @@ def reading_states(keys: list[str], read: frozenset[str]) -> list[str]:
 
 
 def read_line(done: int, total: int) -> str:
-    """"1 of 3 facts read": what the ring says, in words."""
-    fig = Figure(done, "facts read")
+    """"1 of 3 read": what the ring says, in words."""
+    fig = Figure(done, "read")
     return f"{fig.value} of {total} {fig.noun}"
 
 
