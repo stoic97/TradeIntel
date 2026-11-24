@@ -148,6 +148,8 @@ def _cell_short(net: Decimal) -> Figure:
     """A day's result short enough for a calendar cell on desktop: +1.8k, −620, 0. The chart
     toolkit's short form without the rupee sign (the cell is small; the table says rupees)."""
     text = charts.short(net).replace("₹", "")
+    if text.lstrip("−-") == "0":  # paise either side of nothing read as the title's ₹0
+        return Figure("0", "rupees", of="that day's result")
     if net > 0:
         text = "+" + text
     return Figure(text, "rupees", of="that day's result")
