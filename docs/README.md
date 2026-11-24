@@ -38,6 +38,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [phase0/recall-b2-prereg.md](phase0/recall-b2-prereg.md) | B2 recall: the predictions, written before the run | live | research seat | 2026-11-20 |
 | [process_standing_rules.md](process_standing_rules.md) | The standing rules, SR-001 onward | live | founder | 2026-11-20 |
 | [product/broker_connector_note_v1.md](product/broker_connector_note_v1.md) | The first read-only broker connector: what the APIs expose (TICKET-901, started) | live | founder | 2026-11-20 |
+| [product/consent_broker_pull_v1.md](product/consent_broker_pull_v1.md) | The consent for a standing, read-only broker pull: the wording, the ledger note, and what deletion removes (TICKET-896, wording pending D9) | live | founder, engineering | 2026-11-21 |
 | [product/definitions_v1.md](product/definitions_v1.md) | Definitions: trading day, the B2 rule, the Journal unit, the import states | live | founder | 2026-11-20 |
 | [product/reconciliation_v1.md](product/reconciliation_v1.md) | Why an outside FIFO count differs from Scope's (TICKET-788) | live | founder | 2026-11-20 |
 | [product/scope_testing_register_v1.md](product/scope_testing_register_v1.md) | The testing register, TR-001 to TR-014. Each open item is moving to a Jira ticket (TICKET-934) | live | founder | 2026-11-20 |

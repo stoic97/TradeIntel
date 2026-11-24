@@ -241,7 +241,6 @@ TARGET_STATE = (
     "services/production/registry/",
     "services/shared/lineage/credit_chain.py",
     "services/shared/schemas/evidence_object_v1.py",
-    "tests/e2e/",
     "WALL.md",
     "framework_v1.yaml.sha256",
     "hash-check.yml",
