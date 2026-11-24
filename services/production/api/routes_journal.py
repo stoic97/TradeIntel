@@ -50,6 +50,7 @@ from services.production.journal import (
     wtp,
 )
 from services.production.journal import generate as gen
+from services.production.journal import sections as sec
 from services.production.mirror import loader
 from services.production.mirror import metrics as mx
 
@@ -265,9 +266,14 @@ def journal_page(request: Request, journal_id: int):
         gen.mark_opened(sess, journal)
         sess.commit()
 
+        # Its whole-history facts read from his record now, so the paragraph and the size
+        # sentence below state one usual size and one count of days (sections.with_history).
+        record = _record(sess, trader)
+        stored = json.loads(journal.sections)
+        facts = sec.with_history(stored, record) if record else stored
         paragraphs = [
             para.strip()
-            for para in prose.render(json.loads(journal.sections)).split("\n\n")
+            for para in prose.render(facts).split("\n\n")
             if para.strip()
         ]
         trips = trips_of(sess, trader, journal)
@@ -279,7 +285,6 @@ def journal_page(request: Request, journal_id: int):
             for n, t in enumerate(trades, start=1)
         ]
 
-        record = _record(sess, trader)
         sized = {t.trip_id: t.lots for t in record if t.is_option}
         for trade in trades:
             trade["lots"] = sized.get(trade["trip_id"])
@@ -328,7 +333,8 @@ def journal_page(request: Request, journal_id: int):
             ),
             flags=_flags_on(journal, worth.flags_by_day(record)),
             size_line=(
-                asking.size_line(journal.period_start, trades, mx.average_lots(record).mean)
+                asking.size_line(journal.period_start, trades,
+                                 Decimal(facts["against_your_normal"]["lots_usually"]) or None)
                 if one_day else None
             ),
             changed_ids=gen.changed_by_upload(sess, trader=trader),

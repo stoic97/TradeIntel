@@ -209,7 +209,8 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
         "months": blocks, "cut": cut, "all_href": "?months=all#calendar", "scale": scale,
         "letters": WEEKDAY_LETTERS,
         "table": charts.text_table(rows, ["Day", "Trades", "Result"],
-                                   caption="Every day you closed a trade, as numbers"),
+                                   caption=("Every day you closed a trade in the months shown, as numbers"
+                                            if cut else "Every day you closed a trade, as numbers")),
     }
 
 

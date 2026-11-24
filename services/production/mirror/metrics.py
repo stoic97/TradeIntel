@@ -1767,26 +1767,45 @@ def _candles(points: list[tuple[date, Decimal]], timeframe: str) -> tuple[Candle
     return tuple(out)
 
 
-def running_result(trips: list[Trip], book: str = "All") -> RunningResult:
-    """The running result of these trips, in exit order (ties by trip id)."""
+def _running_points(trips: list[Trip]) -> list[tuple[date, Decimal]]:
+    """His result after each closed trade, in exit order (ties by trip id)."""
     points: list[tuple[date, Decimal]] = []
     running = Decimal(0)
     for trip in sorted(trips, key=lambda t: (t.exit_ts, t.trip_id)):
         running += trip.net
         points.append((trip.exit_ts.date(), running))
+    return points
 
+
+def biggest_drop(trips: list[Trip]) -> Drop:
+    """The largest fall of his running result from a high to any later point, trade by trade
+    in exit order. The one definition of "biggest drop": Home's card and What you risk's
+    "deepest fall" both read it, so the two pages never print two amounts for one drop."""
     top, top_day = Decimal(0), None
-    high = Mark(Decimal(0), None)
     drop = Drop(Decimal(0), None, None)
+    for day, value in _running_points(trips):
+        if value > top:
+            top, top_day = value, day.isoformat()
+        if top - value > drop.value:
+            drop = Drop(top - value, top_day, day.isoformat())
+    return drop
+
+
+def running_result(trips: list[Trip], book: str = "All") -> RunningResult:
+    """The running result of these trips, in exit order (ties by trip id)."""
+    points = _running_points(trips)
+    running = points[-1][1] if points else Decimal(0)
+
+    top = Decimal(0)
+    high = Mark(Decimal(0), None)
     lowest = Mark(Decimal(0), None)
     for day, value in points:
         if value > top:
-            top, top_day = value, day.isoformat()
-            high = Mark(value, top_day)
-        if top - value > drop.value:
-            drop = Drop(top - value, top_day, day.isoformat())
+            top = value
+            high = Mark(value, day.isoformat())
         if lowest.day is None or value < lowest.value:
             lowest = Mark(value, day.isoformat())
+    drop = biggest_drop(trips)
 
     return RunningResult(
         book=book, trades=len(points), total=running,
@@ -2027,17 +2046,13 @@ class Fall:
 
 
 def deepest_fall(trips: list[Trip]) -> Fall | None:
-    """Day by day through daily_series, the one place a day's net is decided (TICKET-907)."""
-    peak, peak_day, level = Decimal(0), None, Decimal(0)
-    deepest: Fall | None = None
-    for day in daily_series(trips):
-        level += day.net
-        if level > peak:
-            peak, peak_day = level, day.trading_day
-        drop = peak - level
-        if drop > 0 and (deepest is None or drop > deepest.amount):
-            deepest = Fall(amount=drop, from_day=peak_day, to_day=day.trading_day)
-    return deepest
+    """The biggest drop as What you risk words it: ``biggest_drop``, so it is the amount and the
+    days Home's card shows. Day by day it read lower than the card whenever a day rose and fell
+    within itself; one definition now decides both (see biggest_drop)."""
+    drop = biggest_drop(trips)
+    if not drop.value or drop.to_day is None:
+        return None
+    return Fall(amount=drop.value, from_day=drop.from_day, to_day=drop.to_day)
 
 
 @dataclass(frozen=True)

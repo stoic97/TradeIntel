@@ -180,7 +180,6 @@ def scope_chapter(request: Request, n: int):
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
                 next_step=SM.chapter_step(n),
-                trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
 
@@ -306,7 +305,6 @@ def scope_fact(request: Request, key: str):
                 spine=SM.spine(key, _read_pages(request)), answers=SF.short_answers(figs),
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
-                trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **journals,
                 **context)
 

@@ -248,23 +248,28 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # ---------- 2. the home card draws through it, byte for byte ----------
 
 # sha256 of the card's HTML for every book and timeframe on the demo file, taken on 987's
-# branch before the card used the toolkit. The demo file is synthetic.
+# branch before the card used the toolkit, then re-taken on main when 1025 changed one column:
+# each row's "In the <period>" figure became the difference of the closes as written, so the
+# column adds up to its own "Ended at". That column is left out of the digest (its own test is
+# test_figures_agree); everything else on the card is still pinned byte for byte, and these
+# digests are main's own with the column left out. The demo file is synthetic.
 BEFORE = {
-    "all/d": "0de84ee2fe1ba980a63acc449b528b569520aad70285d1ec92a6d714f64a9ac7",
-    "all/w": "123d83ce13e6a879dfaed25ab6c0ed2db83ca382943515de8eb1f691949a885c",
-    "all/m": "390f2b1a586a1609e2524712306efb923329d2eea598af42b6c782055f8742f6",
-    "crude-options/d": "e96f4538e617eacc15866359fdd8dd0a2a94dfab138e9d3755a629ccdcc1cb23",
-    "crude-options/w": "1f78c57df264b611cee51957b7ebe5fcf77a545b7bf7eae2bc192a531dc246c7",
-    "crude-options/m": "fa1fbfc2e0a2b9dd6ce93fd48fb242be8d964bf69e2182730529fba87cad7c84",
-    "nifty-options/d": "2baa3f20b843f313e3daf8f37d63f0720d7480be6db6e0124080602383ce4cdd",
-    "nifty-options/w": "e0f80c18007b68f7a7287f8f418323ff215973801d2aa0cdc3d506a51c822314",
-    "nifty-options/m": "d254898f74f3c04018606d957a4668db370c9d9ab0006bc0d903d0ceaf1a3230",
-    "default": "123d83ce13e6a879dfaed25ab6c0ed2db83ca382943515de8eb1f691949a885c",
+    "all/d": "3b036ca93081bbf9d8c882f43e35ca52e1f2e92a3bff59fae2e781a98bb44dbf",
+    "all/w": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
+    "all/m": "349e561911eadedeffac461a70489223c5e8fe0b7c3a643e71f7e8fe017073d0",
+    "crude-options/d": "69f4355dc0f5d7a3ad4e189b83588b269b2ac9d4a2a027378d3ff03c6f28628a",
+    "crude-options/w": "3d60ff3d23c3c9a1478345c70eafeeda73778ecfc4284dda75c44cae1fe6a8ab",
+    "crude-options/m": "1dd60a894996bd51ca7daa93531287fb6b6b8fecdc49f2b3e578941030e9f54b",
+    "nifty-options/d": "7105cf9f38709c962606f21f47a848f0ed3a1eef3aca585d992134fc64007a9f",
+    "nifty-options/w": "cb305676a84a4ce42ee4ee2f2a08f2df91df6a62f15c3e9358e8ea1907acd674",
+    "nifty-options/m": "bb398663d8c2e8ea2c5326f5de419983a46a448b9dfe66955e8d5f4fbc9598fd",
+    "default": "831e77203c800717e086a66dd6fe755b86e5bad9481e32afe856ed5dcfb4e653",
 }
 
 
 def _card(html):
-    return re.search(r'<section[^>]*id="how".*?</section>', html, re.DOTALL).group(0)
+    card = re.search(r'<section[^>]*id="how".*?</section>', html, re.DOTALL).group(0)
+    return re.sub(r'(<tr class="hy-row">(?:<td.*?</td>){2})<td.*?</td>', r"\1", card)
 
 
 def test_the_home_card_draws_through_the_toolkit():

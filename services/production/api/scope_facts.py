@@ -89,6 +89,9 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "rest_strike": mx.strike_rate(rest),
         "rest_lots": mx.average_lots(rest),
         "days_with_the_condition": len({t.trading_day for t in after}),
+        # The days it could happen on: days he closed a same-day trade, the trades chapter 3
+        # reads (855), named as such wherever the count is said, the Journal's included.
+        "same_day_days": len({t.trading_day for t in same_day}),
     }
 
 
@@ -195,8 +198,8 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(f"{formatting.count(ctx['run'].length)} trades", "trades")
     if key == "clock":  # the hour with the largest result across the books: what happened there
         return Figure(f"{_hour_words(mx.lead_clock(ctx['clocks']).largest.hour)} hour", "hour")
-    if key == "down":
-        return Figure(_trades_said(ctx["two_losses"].population), "trades")
+    if key == "down":  # the trades right after two losses: the fact, as its wedge counts it
+        return Figure(_trades_said(ctx["two_losses"].condition), "trades")
     if key == "busiest":
         return Figure(f"{ctx['days'].busiest_vs_normal}×", "times your normal day")
     if key == "unread":
