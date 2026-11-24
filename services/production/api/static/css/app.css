@@ -141,13 +141,13 @@
 .wg-book__name { font-weight: 600; margin-right: var(--space-1); }
 .wg-bar, .wg-years { display: block; width: 100%; height: auto; }
 .wg-track { fill: var(--color-surface); }
-.wg-gap--short { fill: var(--color-loss); fill-opacity: .35; }
-.wg-gap--above { fill: var(--color-gain); fill-opacity: .35; }
+.wg-gap--short { fill: var(--color-faint); fill-opacity: .35; }
+.wg-gap--above { fill: var(--color-faint); fill-opacity: .2; }
 .wg-win { stroke: var(--color-ink); stroke-width: 2.5; }
 .wg-need { stroke: var(--color-ink); stroke-width: 2; stroke-dasharray: 3 2; }
 .wg-you { fill: none; stroke: var(--color-ink); stroke-width: 2; }
 .wg-even { fill: none; stroke: var(--color-faint); stroke-width: 2; stroke-dasharray: 4 3; }
-.wg-band { fill: var(--color-loss); fill-opacity: .12; stroke: none; }
+.wg-band { fill: var(--color-faint); fill-opacity: .15; stroke: none; }
 .wg-you-dot { fill: var(--color-ink); }
 .wg-even-dot { fill: var(--color-page); stroke: var(--color-faint); stroke-width: 1.5; }
 .wg-years__title { margin-top: var(--space-4); }

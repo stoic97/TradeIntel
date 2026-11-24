@@ -90,16 +90,29 @@ def _years_svg(book: str, points: list[dict], lo: int, hi: int, tick: int) -> Ma
         v += tick
     you = [(xs[i], y(p["win"])) for i, p in enumerate(points)]
     even = [(xs[i], y(p["need"])) for i, p in enumerate(points)]
-    if n > 1:
-        band = " ".join(f"{a:.1f},{b:.1f}" for a, b in you + even[::-1])
+    # A run of counted years draws as one line; a thin year between two breaks it, so no line
+    # claims a rate for a year that had too few trades.
+    runs, start = [], 0
+    for i in range(1, n + 1):
+        if i == n or points[i].get("after_thin"):
+            runs.append((start, i))
+            start = i
+    for a, b in runs:
+        if b - a < 2:
+            continue
+        yo, ev = you[a:b], even[a:b]
+        band = " ".join(f"{px:.1f},{py:.1f}" for px, py in yo + ev[::-1])
         out.append(f'<polygon points="{band}" class="wg-band"/>')
-        out.append(f'<polyline points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in even)}" class="wg-even"/>')
-        out.append(f'<polyline points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in you)}" class="wg-you"/>')
+        out.append(f'<polyline points="{" ".join(f"{px:.1f},{py:.1f}" for px, py in ev)}" class="wg-even"/>')
+        out.append(f'<polyline points="{" ".join(f"{px:.1f},{py:.1f}" for px, py in yo)}" class="wg-you"/>')
     for (xe, ye), (xy, yy) in zip(even, you, strict=True):
         out.append(f'<circle cx="{xe:.1f}" cy="{ye:.1f}" r="3" class="wg-even-dot"/>'
                    f'<circle cx="{xy:.1f}" cy="{yy:.1f}" r="3" class="wg-you-dot"/>')
     for i, p in enumerate(points):
-        out.append(f'<text x="{xs[i]:.1f}" y="{YEARS_H - 6}" class="ch-axis ch-axis--x">{escape(p["year"])}</text>')
+        # the outer two labels hang inward, so neither runs past the drawing's edge
+        anchor = "" if n == 1 else ' text-anchor="start"' if i == 0 else ' text-anchor="end"' if i == n - 1 else ""
+        out.append(f'<text x="{xs[i]:.1f}" y="{YEARS_H - 6}"{anchor} class="ch-axis ch-axis--x">'
+                   f'{escape(p["year"])}</text>')
     out.append("</svg>")
     return Markup("".join(out))
 
@@ -117,14 +130,18 @@ def view(book_math: list) -> dict:
         bars.append({"book": w.label, "win": win, "need": need, "gap": need - win,
                      "line": line, "svg": _bar_svg(w.label, win, need)})
         points, thin = [], []
+        gap = False  # a thin year since the last counted one
         for yr in book.years:
             if _counted(yr):
-                p = {"year": yr.label, "win": _shown(yr.win_percent), "need": _shown(yr.break_even_percent)}
+                p = {"year": yr.label, "win": _shown(yr.win_percent), "need": _shown(yr.break_even_percent),
+                     "after_thin": gap and bool(points)}
+                gap = False
                 points.append(p)
                 values += [p["win"], p["need"]]
                 rows.append((w.label, yr.label, Figure(yr.trades, "trades"),
                              Figure(yr.win_percent, "percent"), Figure(yr.break_even_percent, "percent")))
             else:
+                gap = True
                 thin.append(Markup("{}: ").format(yr.label) + _count(yr.trades, "trades")
                             + Markup(" {}, too few").format("trade" if yr.trades == 1 else "trades"))
                 rows.append((w.label, yr.label, Figure(yr.trades, "trades"), "too few", ""))

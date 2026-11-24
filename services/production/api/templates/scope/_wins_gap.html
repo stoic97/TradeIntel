@@ -11,7 +11,7 @@
   {%- endfor %}
   {%- if wg.years %}
   <h3 class="card-title wg-years__title">Year by year</h3>
-  <p class="body-small">The solid line is the rate you won at, the dashed line the rate you needed, of 100. Every book on the same scale.</p>
+  <p class="body-small">Solid line: you win. Dashed line: break even at. Both of 100, every book on the same scale; a year with too few trades breaks the line.</p>
   {%- for y in wg.years %}
   <div class="wg-book">
     <p class="body wg-book__name">{{ y.book }}</p>
