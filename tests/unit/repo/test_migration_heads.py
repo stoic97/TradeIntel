@@ -13,8 +13,8 @@ CONTRIBUTING = Path("CONTRIBUTING.md").read_text(encoding="utf-8")
 
 def _ids(path: Path) -> tuple[str, str | None]:
     text = path.read_text(encoding="utf-8")
-    rev = re.search(r"^revision = ['\"]([^'\"]+)['\"]", text, re.M)
-    down = re.search(r"^down_revision = (?:['\"]([^'\"]+)['\"]|None)", text, re.M)
+    rev = re.search(r"^revision = ['\"]([^'\"]+)['\"]", text, re.MULTILINE)
+    down = re.search(r"^down_revision = (?:['\"]([^'\"]+)['\"]|None)", text, re.MULTILINE)
     assert rev and down, f"{path.name} names no revision or down_revision"
     return rev.group(1), down.group(1)
 
