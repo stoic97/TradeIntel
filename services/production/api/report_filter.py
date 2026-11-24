@@ -70,7 +70,7 @@ def books(trips: list[mx.Trip]) -> list[str]:
 def valid(f: ReportFilter, trips: list[mx.Trip], new_days: set[str] | None) -> ReportFilter:
     """The filter, with anything his file doesn't hold dropped back to All."""
     period = f.period
-    if period not in (ALL, SINCE, *years(trips)) or (period == SINCE and new_days is None):
+    if period not in (ALL, SINCE, *years(trips)) or (period == SINCE and not new_days):
         period = ALL
     book = f.book if f.book in books(trips) else None
     return ReportFilter(period, book)
@@ -104,7 +104,9 @@ def dropped(asked: ReportFilter, f: ReportFilter) -> str | None:
     """What the page says when the filter it was given can't apply and fell back to All, so a
     whole record is never read as the choice he made."""
     if asked.period == SINCE and f.period != SINCE:
-        return "There are no new days since an earlier upload, so this shows everything."
+        if f.book:  # the book stays chosen, so the page is that book's every day, not everything
+            return f"Your last upload added no new days, so this shows every day in {f.book}."
+        return "Your last upload added no new days, so this shows everything."
     if asked.period not in (ALL, SINCE) and f.period == ALL:
         return "That year isn't in this file, so this shows every year."
     if asked.book and f.book is None:

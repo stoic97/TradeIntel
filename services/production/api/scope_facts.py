@@ -300,7 +300,7 @@ def _hidden_view(ctx: dict) -> dict:
     for r in ctx["book_halves"]:
         every = S.see_all_href("hidden", book=r.book)
         if r.state is not COUNTED:
-            books.append({"book": r.book, "counted": False,
+            books.append({"book": r.book, "counted": False, "n": r.trades,
                           "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
             continue
         halves = (
@@ -321,7 +321,7 @@ def _hidden_view(ctx: dict) -> dict:
                              "cells": ["", "", change]})
                 rows.append({"label": "Whole days shuffled between the halves: p",
                              "control": "net-per-trade", "cells": ["", "", checked]})
-        books.append({"book": r.book, "counted": True, "columns": HIDDEN_COLUMNS, "rows": rows})
+        books.append({"book": r.book, "counted": True, "n": r.trades, "columns": HIDDEN_COLUMNS, "rows": rows})
     return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 
