@@ -25,7 +25,7 @@ After two straight losses you averaged <span class="opening-figure">{{ money(two
 {#- Your wins and losses' first line: the gap, from the page's own two figures. -#}
 {% macro math_gap(gap) -%}
 {%- if gap -%}
-Your winners are bigger than your losers ({{ Figure(gap.winner, "rupees")|rupees(signed=false) }} against {{ Figure(gap.loser, "rupees")|rupees(signed=false) }}). At this size you need <span class="num">{{ Figure(gap.more, "winners")|count }}</span> more winners in every 100 to break even.
+Your winners are bigger than your losers ({{ Figure(gap.winner, "rupees")|rupees(signed=false) }} against {{ Figure(gap.loser, "rupees")|rupees(signed=false) }}). At this size you need <span class="num">{{ Figure(gap.more, "winners")|count }}</span> more {{ "winner" if gap.more == 1 else "winners" }} in every 100 to break even.
 {%- endif -%}
 {%- endmacro %}
 

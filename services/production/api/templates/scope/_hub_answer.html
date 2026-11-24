@@ -7,7 +7,7 @@
 Not enough trades yet.
 {%- elif c.number == 1 -%}
   {%- if a.five_vs_rest -%}
-Your five worst days: {{ money(a.worst_sum) }}. Your other <span class="num">{{ Figure(a.other_count, "days")|count }}</span> days: {{ money(a.other_net) }}.{{ " " }}
+Your five worst days: {{ money(a.worst_sum) }}. Your other <span class="num">{{ Figure(a.other_count, "days")|count }}</span> {{ "day" if a.other_count == 1 else "days" }}: {{ money(a.other_net) }}.{{ " " }}
   {%- endif -%}
   {%- if a.share.shown_as_percentage -%}
 {{ a.days_word }} of your <span class="num">{{ Figure(a.share.trading_day_count, "days")|count }}</span> trading days carried <span class="num">{{ Figure(a.share.share_percent, "percent") }}</span>% of your losses — {{ money(a.worst_loss, signed=false) }}.

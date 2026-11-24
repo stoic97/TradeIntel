@@ -13,6 +13,7 @@ its slice and its card - never hidden - and its figure is a dash.
 
 from __future__ import annotations
 
+import functools
 from collections import Counter
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -23,7 +24,9 @@ from services.production.api import dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
+from services.production.ctr.profiles import registry as profile_registry
 from services.production.mirror import metrics as mx
+from services.production.mirror.loader import PROFILE_DIR
 from services.shared.conditions import b2_shuffle, multiplicity
 from services.shared.market.series import EVENING_OPENS
 from services.shared.schemas import scope_v1 as s
@@ -844,6 +847,15 @@ def _chart_of(clock: mx.BookClock, w: float, h: float) -> dict:
     return G.chart_clock([_f(hr.net) for hr in clock.hours], few, w, h)
 
 
+@functools.cache
+def _mcx_symbols() -> frozenset[str]:
+    """The symbols whose instrument profile is on MCX: only there is 17:00 an exchange session."""
+    return frozenset(
+        p.symbol for p in (profile_registry.load_one(f) for f in sorted(PROFILE_DIR.glob("*.yaml")))
+        if p.exchange == "MCX"
+    )
+
+
 def _evening(clock: mx.BookClock) -> dict | None:
     """A book's trades opened from 17:00, when MCX's evening session opens (series.EVENING_OPENS:
     the exchange's time, not a threshold of ours), against the book's whole result. A sum of the
@@ -865,8 +877,10 @@ def _clock_view(ctx: dict) -> dict:
     A history with no book that size leads with its biggest, so the page is never only a toggle.
     """
     zones: dict[str, set[str]] = {}
+    symbols: dict[str, set[str]] = {}
     for t in mx.same_day_trips(ctx["trips"]):
         zones.setdefault(mx.trade_book(t), set()).add(_zone_words(t))
+        symbols.setdefault(mx.trade_book(t), set()).add(t.symbol)
     views = []
     for number, c in enumerate(ctx["clocks"], start=1):
         hours = [
@@ -893,7 +907,9 @@ def _clock_view(ctx: dict) -> dict:
                 "largest": c.largest,
                 "largest_label": _hour_words(c.largest.hour),
                 "costliest": c.largest.net < 0,
-                "evening": _evening(c),
+                # MCX's evening session is the only one rolled up: a book whose every trade is on
+                # MCX. Any other book's "from 17:00" would be our threshold, not its exchange's.
+                "evening": _evening(c) if symbols.get(c.book, set()) <= _mcx_symbols() else None,
                 "other": c.larger_per_trade,
                 "other_label": _hour_words(c.larger_per_trade.hour) if c.larger_per_trade else "",
                 "hides_a_rate": any(
@@ -1109,7 +1125,7 @@ def _answer_one(ctx: dict) -> dict:
         "at_least": int(least) if least >= 2 else None,
         # The line that leads chapter 1 when it holds: the five worst days lost more than the
         # other days moved all together.
-        "five_vs_rest": (worst.sum < 0 and worst.sum < share.other_days_net),
+        "five_vs_rest": (worst.sum < 0 and share.other_days_count > 0 and worst.sum < share.other_days_net),
         "other_count": share.other_days_count,
         "other_net": share.other_days_net,
         "wedge": wedge,
