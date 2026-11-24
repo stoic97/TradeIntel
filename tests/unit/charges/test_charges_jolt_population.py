@@ -98,11 +98,17 @@ def _text(client) -> str:
 def test_the_average_winner_and_each_trade_s_charges_are_over_the_same_trades(client, engine):
     _store(engine, _record())
     text = _text(client)
-    assert "Your average winner is ₹444. Each trade pays ₹55 in charges." in text
+    assert ("Over the 30 trades whose charges we have: your average winner made ₹444 after charges, "
+            "and the average trade paid ₹55 in charges.") in text
 
 
 def test_a_trade_left_out_of_the_waterfall_is_not_in_the_average_winner(client, engine):
     _store(engine, _record())
     text = _text(client)
-    assert "Your average winner is ₹658" not in text
+    assert "made ₹658" not in text
     assert "2 trades are not in this: their result is before charges." in text
+
+
+def test_the_ipft_step_is_named_in_full():
+    from services.production.charges import waterfall
+    assert waterfall.NAMES["IPFT"] == "IPFT (investor protection fund charge)"

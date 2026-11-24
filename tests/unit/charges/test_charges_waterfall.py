@@ -205,7 +205,7 @@ def _mixed(n: int) -> str:
 def test_the_jolt_line_shows_at_thirty_trades(client, engine):
     store(engine, _mixed(30), pl.ChargesInput())
     text = re.sub(r"<[^>]+>", "", page(client))
-    assert "Your average winner is" in text and "Each trade pays" in text and "in charges." in text
+    assert "your average winner made" in text and "the average trade paid" in text and "in charges." in text
 
 
 def test_the_jolt_line_does_not_show_at_twenty_nine(client, engine):
