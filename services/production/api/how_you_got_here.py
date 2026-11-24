@@ -212,4 +212,7 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
                   "opens": f"/mirror/day/{opens[c.period]}"}
                  for c in reversed(shown_candles)],
     })
+    # The readout says the last period's result as its row does, so the two never stand a rupee
+    # apart: one figure, the difference of the closes as written.
+    view["last_net"] = view["rows"][0]["net_shown"]
     return view
