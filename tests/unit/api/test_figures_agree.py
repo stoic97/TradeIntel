@@ -129,11 +129,23 @@ def test_chapter_3_names_the_days_it_counts():
     assert "This happened on 1 of the 3 days you closed a same-day trade" in text
 
 
-@pytest.mark.skip(reason="pending research seat: B2's population on Eligibility is ruled by the research "
-                         "seat (definitions_v1.md section 2 counts every round trip); review of 24 Nov")
 def test_eligibility_counts_b2_on_the_trades_the_finding_bar_tests():
+    """Ruling A, 24 Nov: the two counts stay different. Eligibility counts every round trip
+    (definitions_v1.md section 2); chapter 3 counts same-day trades only.
+
+    Worked by hand on RECORD, in opening order, a trade counting when the two trades closed
+    before it opened are both losses:
+      a5 (19:00 on 02 Mar): a2 -1500 and a3 -300 closed before it           -> counts; same day
+      a4 (18:30 on 02 Mar): a2 and a3 closed before it, held to 03 Mar      -> counts; held overnight
+      d3 (10:00 on 06 Mar): d1 -100 and d2 -100 closed before it, held to 09 Mar -> counts; held overnight
+    Every trade: 3 (a4, a5, d3). Same-day trades only: 1 (a5). They differ by 2, which is exactly
+    the two trades opened after two losses and held past the day.
+    """
     b2 = next(v for v in E.assess(RECORD).verdicts if v.test.id == "B2")
-    assert b2.have == SF.record_context(RECORD)["two_losses"].condition == 1
+    same_day = SF.record_context(RECORD)["two_losses"].condition
+    held_overnight = {t.trip_id for t in RECORD if t.exit_ts.date() != t.entry_ts.date()}
+    assert (b2.have, same_day) == (3, 1)
+    assert b2.have - same_day == len({"a4", "d3"} & held_overnight) == 2
 
 
 # ---------- 5. a headline is the figure its first sentence explains ----------
