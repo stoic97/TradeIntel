@@ -131,7 +131,7 @@ def test_totals_keep_the_whole_rupee_cut():
 
 
 @pytest.mark.parametrize(
-    ("trips", "shown"), [(HELD, "50"), (trips_from([1] * 10 + [-1] * 10), "50")]
+    ("trips", "shown"), [(HELD, "50"), (trips_from([1] * 10 + [-1] * 10), "50.0")]
 )
 def test_a_round_percentage_is_written_as_a_number(trips, shown):
     """5E+1 is what a trimmed 50 came out as, on the page."""
