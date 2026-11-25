@@ -116,3 +116,30 @@ def test_no_counted_days_never_reaches_the_reveal(client, monkeypatch):
     text = r.text.lower()
     assert "zero" not in text
     assert "worst days" not in text and "worst day" not in text
+
+
+def moved_rows(before_trips, now_trips):
+    """What a re-read lists as moved, through the route's own _what_moved."""
+    before, now = object(), object()
+    by_import = {before: before_trips, now: now_trips}
+    from services.production.api import routes_upload
+    original = routes_upload.loader.load_for
+    routes_upload.loader.load_for = lambda sess, trader, imp: (by_import[imp], None)
+    try:
+        return up._what_moved(None, None, before, now)
+    finally:
+        routes_upload.loader.load_for = original
+
+
+def test_the_worst_days_row_keeps_its_place_when_the_count_changes():
+    """4 counted days, then 5: the worst days' sum moved from -1000 to -1500. One row, not a
+    row removed and another added."""
+    rows = [r for r in moved_rows(FOUR, FIVE) if "worst" in r["label"]]
+    assert len(rows) == 1, [r["label"] for r in rows]
+    (row,) = rows
+    assert row["label"] == "Your five worst days"
+    assert row["was"] == Decimal(-1000) and row["now"] == Decimal(-1500)
+
+
+def test_a_row_that_did_not_move_is_not_listed_whatever_the_count():
+    assert [r for r in moved_rows(FIVE, SEVEN) if "worst" in r["label"]] == []
