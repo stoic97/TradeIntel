@@ -70,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "931aa33f58d216b255557bb54a897b47f3d26c8a5ba69a2ba4e8e3ac587622ab",
     (2, "desktop"): "0c7ee0b8895cff7363196ac50e73f43624f2ad28797586055603096f22c45beb",
     (3, "phone"): "1a8dc2d67ff6e8570a6b50557c1ebb1de57e799742c5a6bc97f8699c6f04b63c",
-    (3, "desktop"): "1ec81fa1bdbbbb702f980315493e672351b814ba36b28f8fe9515e74e1d73c81",
+    (3, "desktop"): "44feb8de19c28ad45d465df1f4506b87d61166882e928a1cb049d9eb769d4c64",
     (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
     (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }

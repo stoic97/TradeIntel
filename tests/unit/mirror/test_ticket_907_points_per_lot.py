@@ -1,4 +1,4 @@
-"""TICKET-907 (FB-0168; C2 ruled by Pawan, 17 Nov): the number in points per lot, one line per book.
+"""TICKET-907 (FB-0168; C2 ruled 17 Nov): the number in points per lot, one line per book.
 
 A point on one lot is worth the instrument profile's currency_per_point at today's lot
 (MCX_CRUDEOIL 100, MCX_CRUDEOILM 10, NSE_NIFTY 65); the loader puts it on each trip as
