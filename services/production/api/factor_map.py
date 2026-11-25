@@ -78,7 +78,7 @@ FACTORS: tuple[Factor, ...] = (
     F("Cost", "Charges per round trip", K.BEFORE, S.WORKED_OUT,
       sources=("services.production.charges.record",), needs_charges=True),
     # Instrument
-    F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book",)),
+    F("Instrument", "Book", K.AT_CLICK, S.WORKED_OUT, filters=("book", "book_group")),
     F("Instrument", "Premium paid", K.AT_CLICK, S.WORKED_OUT, filters=("price",)),
     F("Instrument", "Days to expiry", K.AT_CLICK, S.WORKED_OUT, filters=("dte", "left", "days")),
     F("Instrument", "Strike's distance from the market", K.AT_CLICK, S.NEEDS_BARS),
@@ -91,13 +91,17 @@ FACTORS: tuple[Factor, ...] = (
     # Sequence
     F("Sequence", "Trade number in the day", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B5",)),
     F("Sequence", "Last trade's result", K.AT_CLICK, S.WORKED_OUT, checks=("B2",),
-      facts=("down",)),
+      facts=("down",), filters=("after", "then")),
     F("Sequence", "Time since the last close", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B1",)),
     F("Sequence", "The day so far", K.AT_CLICK, S.IN_YOUR_FILE, checks=("B12",)),
     F("Sequence", "Same strike again", K.AT_CLICK, S.IN_YOUR_FILE),
     F("Sequence", "Losing runs", K.ONLY_AFTER, S.WORKED_OUT, facts=("run",)),
     F("Sequence", "Busiest day", K.ONLY_AFTER, S.WORKED_OUT, filters=("day_trades",),
       facts=("busiest",)),
+    F("Sequence", "Minutes since the last close, and its direction", K.AT_CLICK, S.WORKED_OUT,
+      filters=("after",), facts=("back-in", "same-way")),
+    F("Sequence", "The day after a best or worst day", K.BEFORE, S.WORKED_OUT,
+      filters=("next_day",), facts=("next-day",)),
     # Size
     F("Size", "Lots", K.AT_CLICK, S.WORKED_OUT, checks=("R1",)),
     F("Size", "Change from the last trade", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R2",)),
@@ -107,7 +111,7 @@ FACTORS: tuple[Factor, ...] = (
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
     F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
-      filters=("overnight", "same_day")),
+      filters=("overnight", "held_days", "same_day")),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,
@@ -129,6 +133,9 @@ FACTORS: tuple[Factor, ...] = (
     F("Market before entry", "The last 15 minutes", K.AT_CLICK, S.NEEDS_BARS),
     F("Market before entry", "The market's regime", K.AT_CLICK, S.NEEDS_BARS,
       checks=("S5",)),
+    # Market after exit
+    F("Market after exit", "The half hour after you closed", K.ONLY_AFTER, S.NEEDS_BARS,
+      sources=("services.production.api.after_closed",), facts=("after-close",)),
     # Plan
     F("Plan", "Your stop", K.BEFORE, S.NOT_IN_ANY_FILE, checks=("R7",)),
     F("Plan", "Your target", K.BEFORE, S.NOT_IN_ANY_FILE),
@@ -182,6 +189,8 @@ def in_file(factor: Factor, *, enough: frozenset[str], short: frozenset[str],
     if any(c in short for c in factor.checks) or any(
             fact_states.get(k) == "not-enough" for k in factor.facts):
         return InFile.NOT_ENOUGH
+    if factor.status is Status.IN_YOUR_FILE:
+        return InFile.YES  # his tradebook carries it, which is what its status says
     if factor.checks or factor.facts or factor.filters:
         return InFile.NO
     return InFile.YES  # read from every trade's own time and contract

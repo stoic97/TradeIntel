@@ -128,6 +128,11 @@
 </a>
 {%- endmacro %}
 
+{#- The worst days counted: "five", or how many there are when his record has fewer days. -#}
+{% macro worst_count(n) -%}
+{%- if n == 5 %}five{% else %}<span class="num">{{ Figure(n, "days")|count }}</span>{% endif -%}
+{%- endmacro %}
+
 {% macro trades_behind(n) -%}
 <span class="num">{{ Figure(n, "checks")|count }}</span> {{ "trade" if n == 1 else "trades" }} behind this
 {%- endmacro %}
@@ -157,12 +162,14 @@
     gap: the words for how long since the last trade closed, on a run's rows only. after:
     the trade after a run, which is not one of the trades behind the fact. rank: its place on
     a ranked list. -#}
-{% macro trade(t, after=false, rank=none) -%}
+{% macro trade(t, after=false, rank=none, dense=false) -%}
 <article class="trade{% if after %} trade--after{% endif %}">
       <div class="trade__label">{% if rank %}<span class="trade__rank">{{ Figure(rank, "rank") }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ Figure(t.qty, "units")|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ Figure(t.held_seconds, "seconds")|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ Figure(t.net, "rupees")|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
+      {%- if dense %}<details class="trade__more"><summary>Prices</summary>{% endif %}
       <div class="trade__prices">{{ Figure(t.entry_price, "rupees")|price }} → {{ Figure(t.exit_price, "rupees")|price }}{% if t.get("paid") %} · Paid {{ Figure(t.paid, "rupees")|rupees(signed=false) }} · {{ Figure(t.result_percent, "percent")|signed_percent }} of premium{% endif %}</div>
+      {%- if dense %}</details>{% endif %}
       {%- endif %}
       {%- if t.get("gap") %}
       <div class="trade__gap">{{ t.gap }}</div>
@@ -192,8 +199,8 @@
 
 {#- Every trade behind a fact, grouped by day - never a sample. group: title, trade_count,
     net, trades. -#}
-{% macro trades(groups) -%}
-<div class="trades">
+{% macro trades(groups, dense=false) -%}
+<div class="trades{% if dense %} trades--dense{% endif %}">
   {%- for group in groups %}
   <section class="trades__group">
     <div class="trades__head">
@@ -201,7 +208,7 @@
       <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Result</span></div>
     </div>
     {%- for t in group.trades %}
-    {{ trade(t) }}
+    {{ trade(t, dense=dense) }}
     {%- endfor %}
   </section>
   {%- endfor %}

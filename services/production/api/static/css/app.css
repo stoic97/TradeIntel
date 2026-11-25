@@ -66,6 +66,15 @@
 .trade-filters .field__input { width: 100%; min-width: 0; }
 .trade-filters__go { grid-column: 1 / -1; margin-top: var(--space-4); }
 .trade-filters__clear { margin-top: var(--space-3); }
+/* Trade lists: sort links, a pager, and one dense row per trade with the prices
+   behind a tap. The day page keeps its full rows. */
+.trade-sorts { margin: var(--space-3) 0; line-height: 2.2; }
+.trade-sorts__on { font-weight: 600; }
+.trade-pager { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-4) 0; }
+.trade-pager__range { color: var(--color-muted); margin: var(--space-2) 0; }
+.trades--dense .trade { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.trades--dense .trade__more summary { color: var(--color-action-blue); cursor: pointer; font-size: 0.8125rem; }
+.trades--dense .trade__more .trade__prices { margin-top: var(--space-1); }
 
 /* One clock per book (TICKET-821); the kit draws one clock. Five columns have to fit a 390 px
    phone, so the hour may wrap ("11:00 — few trades") and the numbers keep their width. */
@@ -114,6 +123,12 @@
 .money-hook { margin: var(--space-6) 0; }
 .money-hook > * + * { margin-top: var(--space-2); }
 .money-hook__lead { font-family: var(--font-serif); font-size: 18px; line-height: 26px; font-weight: 600; }
+/* A signed figure stays with its sign: "+" never ends a line before "₹47,602". */
+.nowrap { white-space: nowrap; }
+
+/* The best and worst five's days, one line per group above the bars (the kit's grid had a column
+   per date, which put ten dates in a row that no bar lines up with). */
+.money-days { grid-template-columns: 1fr; text-align: left; gap: var(--space-1); }
 .next-chapter { margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--color-hairline); }
 .next-chapter__hook { margin-bottom: var(--space-4); font-family: var(--font-serif); font-size: 16px; line-height: 24px; }
 .next-chapter__figure { white-space: nowrap; }
@@ -135,6 +150,24 @@
 .math__under { display: block; color: var(--color-faint); }
 .math__secondary { margin-top: var(--space-4); color: var(--color-faint); }
 
+/* Your win rate against break-even (the math page): a bar per book, the years on one scale. */
+.wins-gap { margin: var(--space-6) 0; }
+.wg-book { margin: var(--space-3) 0; }
+.wg-book__name { font-weight: 600; margin-right: var(--space-1); }
+.wg-bar, .wg-years { display: block; width: 100%; height: auto; }
+.wg-track { fill: var(--color-surface); }
+.wg-gap--short { fill: var(--color-faint); fill-opacity: .35; }
+.wg-gap--above { fill: var(--color-faint); fill-opacity: .2; }
+.wg-win { stroke: var(--color-ink); stroke-width: 2.5; }
+.wg-need { stroke: var(--color-ink); stroke-width: 2; stroke-dasharray: 3 2; }
+.wg-you { fill: none; stroke: var(--color-ink); stroke-width: 2; }
+.wg-even { fill: none; stroke: var(--color-faint); stroke-width: 2; stroke-dasharray: 4 3; }
+.wg-band { fill: var(--color-faint); fill-opacity: .15; stroke: none; }
+.wg-you-dot { fill: var(--color-ink); }
+.wg-even-dot { fill: var(--color-page); stroke: var(--color-faint); stroke-width: 1.5; }
+.wg-years__title { margin-top: var(--space-4); }
+.wg-figures { margin-top: var(--space-3); }
+
 /* The sentence a chapter-3 fact opens with sits straight under its title (TICKET-832); the
    kit draws the figure there. */
 .fact__title + .mirror { margin-top: var(--space-3); }
@@ -151,6 +184,9 @@
 .chapter-next { margin-top: var(--space-10); }
 .chapter-next + .chapter-next { margin-top: var(--space-3); }
 .chapter-next__line { margin-bottom: var(--space-3); }
+
+/* What you do next (chapter 3): the red swatch for "after your worst days". */
+.legend__swatch--red { background: var(--color-loss); }
 
 /* The guess's options are buttons in one form, because a guess is stored and a link
    anyone could send must not be able to store one; the kit draws them as links
@@ -230,6 +266,20 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .scope-card__split .num { color: inherit; }
 .latest__when .body-small { display: block; }
 .latest__when { padding-block: var(--space-2); }
+
+/* The challenge: one cell a day, kept, broken, no trades or not in a file yet. Counts only. */
+.challenge__rules { margin: var(--space-3) 0; padding-left: var(--space-4); }
+.challenge__days { list-style: none; padding: 0; margin: var(--space-4) 0; display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.challenge__day { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2);
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-card); background: var(--color-page); }
+.challenge__day--kept { border-color: var(--color-gain); }
+.challenge__day--broken { border-color: var(--color-loss); border-width: 2px; }
+.challenge__day--no-trades { background: var(--color-surface); }
+.challenge__day--not-yet { color: var(--color-faint); border-style: dashed; }
+.challenge__chips { border: 0; padding: 0; margin: 0 0 var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.challenge__chips legend { margin-bottom: var(--space-2); }
+.challenge__card, .challenge__home { margin: var(--space-4) 0; }
 
 /* Every day of an upload behind a toggle (TICKET-815); the kit lists them in the open. */
 .import__days { margin-top: var(--space-4); }
@@ -512,6 +562,8 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .ch-tag { font: 500 10px var(--font-mono); fill: var(--color-faint); }
 .ch-axis { font: 400 10px var(--font-mono); fill: var(--color-faint); }
 .ch-axis--x { text-anchor: middle; }
+.ch-axis--x[text-anchor="start"] { text-anchor: start; }  /* an edge label keeps its own anchor: a class outranks the attribute */
+.ch-axis--x[text-anchor="end"] { text-anchor: end; }
 .ch-last--loss { fill: var(--color-loss); }
 .ch-last--gain { fill: var(--color-gain); }
 .ch-last--plain { fill: var(--color-ink); }
@@ -547,6 +599,20 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__fill--loss { background: var(--color-loss); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* after you closed: the half hour after each exit, stored figures only */
+.after-close .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
+.after-close .chip { text-decoration: none; }
+.after-close .chip--on { background: var(--color-ink); color: var(--color-page); }
+.acl-chart { width: 100%; height: auto; display: block; }
+.chart__acl-grid { fill: none; stroke: var(--color-hairline); stroke-width: .5; }
+.chart__acl-zero { fill: none; stroke: var(--color-muted); stroke-width: .75; }
+.chart__acl-winners { fill: none; stroke: var(--color-muted); stroke-width: 1.25; stroke-dasharray: 4 3; }
+.chart__acl-losers { fill: none; stroke: var(--color-action-blue); stroke-width: 2; }
+.acl-axis { font-family: var(--font-mono); font-size: 10px; fill: var(--color-muted); }
+.acl-swatch--losers { background: var(--color-action-blue); }
+.acl-swatch--winners { background: var(--color-muted); }
+.acl-table { margin-top: var(--space-3); }
 
 /* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
 .shape__grid { width: 100%; table-layout: fixed; }

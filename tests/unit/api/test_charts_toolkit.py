@@ -252,20 +252,22 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # each row's "In the <period>" figure became the difference of the closes as written, so the
 # column adds up to its own "Ended at". That column is left out of the digest (its own test is
 # test_figures_agree); everything else on the card is still pinned byte for byte, and these
-# digests are main's own with the column left out. The demo file is synthetic.
-# Re-pinned for 1026: the card now says "same-day trades" beside needed, and names the demo's one
-# held position in its Result note; made money and needed read same-day trades. Nothing else moved.
+# digests are main's own with the column left out. Moved once more, on purpose, by 1027 (month
+# names on the month view, the axis label under the last tag dropped, the count label ending
+# inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
+# Re-taken again for 1026 on main merged in: the card says "same-day trades" beside needed and
+# names the demo's one held position in its Result note.
 BEFORE = {
-    "all/d": "c84a1caaf6eaaffdb900a3030884fca62d674ce28ddeb3a845c33734544afd82",
-    "all/w": "5f4dc015b8f0807205ef97c557abfcffb4224bc3c5ba71efec01bb6097735c67",
-    "all/m": "e070b62e5301d63fd5516936023ab8a017de4e565ad516eccc9eb09761eb3280",
-    "crude-options/d": "9d4d3fbc870908682886b0ab65202e903d82e01947fe6a8f85df862c0180023d",
-    "crude-options/w": "ef1513d9ab6e25e0177d5e516aaf65602edbb2d1cc7f9f16d4a6a8c4d4590a2c",
-    "crude-options/m": "b49027c54493aaf3fa9935d765df99f47622a1b90c1cfbd2ec1af421c94a589f",
-    "nifty-options/d": "75ba5c0e8133ab4e12686fe6a676ce0eaf9abb0d8760e14ea7a6adc497a40ccf",
-    "nifty-options/w": "1d2be52f7022617bcacde45937fcfdb4279577b59c71fa97a1a51bf4c864a70a",
-    "nifty-options/m": "8c3ac17bda5fc8428c705f87e561afd14b30292db559b4bccdd3341339ccc374",
-    "default": "5f4dc015b8f0807205ef97c557abfcffb4224bc3c5ba71efec01bb6097735c67",
+    "all/d": "0531fbcdaedd319385b306e84fb5131fb22bd392e8253b1ef4415bf9d81cc23d",
+    "all/w": "e7029e2e369d1728a3202d4729684e5b627ecc18587f57056a9dea73651092d4",
+    "all/m": "ad9164ada4a2ad506ddaa992f44afdb5e9271b829ac69ee44ecaf05818e861b8",
+    "crude-options/d": "dad1ce48807bba90d60a473e6400d9032a637ee19bed0045678da3072e6067a4",
+    "crude-options/w": "912cba45e6b3e5c8fe1efb4c1e393a26b2cbc9c85b6a2488501ca38251d4308f",
+    "crude-options/m": "4d698fcea99b62324ad52f84603a79e62c30a70fdb63da968bfc9fe5902358b9",
+    "nifty-options/d": "2deaa58feb9958fb686ba34d44410397c66297ee992972123849bccaa1f8bdd9",
+    "nifty-options/w": "c597625be1b2faa662164b62d1f4a5b8c5dccaed8f369d99c048698c9343866e",
+    "nifty-options/m": "741ba5d96ecf6c7eafa1ccdf5b8639eea41c0981325d7ac834b5f04ae4e3d141",
+    "default": "e7029e2e369d1728a3202d4729684e5b627ecc18587f57056a9dea73651092d4",
 }
 
 

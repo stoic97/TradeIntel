@@ -16,7 +16,7 @@
   <div class="hy-frame">
     <p class="hy-readout"><span class="hy-readout__when">{{ how.last_label }} · {{ how.last_words }}{% if how.cut %} · showing your last {{ Figure(how.cut[0], how.frame ~ "s")|count }} of {{ Figure(how.cut[1], how.frame ~ "s")|count }}{% endif %}</span>
       <span class="hy-readout__ohlc"><span><b>O</b> {{ Figure(how.last.open, "rupees")|rupees }}</span><span><b>H</b> {{ Figure(how.last.high, "rupees")|rupees }}</span><span><b>L</b> {{ Figure(how.last.low, "rupees")|rupees }}</span><span><b>C</b> {{ Figure(how.last.close, "rupees")|rupees }}</span></span>
-      <span class="hy-readout__net">{{ Figure(how.last.trades, "trades")|count }} {{ "trade" if how.last.trades == 1 else "trades" }} · <span class="num--{{ how.last.net|tone }}">{{ Figure(how.last.net, "rupees")|rupees }}</span> in the {{ how.frame }}</span></p>
+      <span class="hy-readout__net">{{ Figure(how.last.trades, "trades")|count }} {{ "trade" if how.last.trades == 1 else "trades" }} · <span class="num--{{ how.last_net|tone }}">{{ Figure(how.last_net, "rupees")|rupees }}</span> in the {{ how.frame }}</span></p>
     {{ how.chart }}
     <details class="hy-details">
       <summary class="link">Every {{ how.frame }} as numbers</summary>

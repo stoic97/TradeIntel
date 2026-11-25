@@ -1,0 +1,10 @@
+{#- After you closed, as a card: how many of his measured losing trades the market
+    came back past the entry on, within 30 minutes of the exit. Stored figures only. -#}
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">On <span class="num">{{ Figure(f.view.came_back, "trades")|count }}</span> of <span class="num">{{ Figure(f.view.losers, "trades")|count }}</span> losing trades in {{ f.view.underlying }}, the market came back past your entry within 30 minutes of you closing.</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>0</span><span>Minutes after you closed</span><span>{{ Figure(30, "minutes")|count }}</span></span>
+  <span class="legend"><span><span class="legend__swatch acl-swatch--losers"></span>Losing trades</span><span><span class="legend__swatch acl-swatch--winners"></span>Trades that made money</span></span></span>
+  {%- endif %}
+{% endcall %}

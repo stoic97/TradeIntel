@@ -331,8 +331,11 @@ def worst_books(trips: list[mx.Trip]) -> dict:
     book_of = {t.trip_id: name for name, ts in books for t in ts}
     days = _closed_days(trips)
     nets = {d: sum((t.net for t in ts), Decimal(0)) for d, ts in days.items()}
-    n = min(len(days), max(WORST_AT_LEAST, math.ceil(len(days) * WORST_SHARE)))
-    worst = sorted(days, key=lambda d: (nets[d], d))[:n]
+    losing = [d for d in days if nets[d] < 0]  # a day he made money or finished level is never worst
+    n = min(len(losing), max(WORST_AT_LEAST, math.ceil(len(days) * WORST_SHARE)))
+    if not n:
+        return {"shown": False}
+    worst = sorted(losing, key=lambda d: (nets[d], d))[:n]
     rows, all_lost = [], 0
     for d in worst:
         cells = []
@@ -345,13 +348,12 @@ def worst_books(trips: list[mx.Trip]) -> dict:
             net = sum((t.net for t in ts), Decimal(0))
             cells.append({"book": name, "state": _state(net), "net": net, "trades": len(ts),
                           "tone": charts.cell_tone(net, abs(net) or Decimal(1)),
-                          "href": None if name == mx.OTHER_OPTIONS else _trades(closed_day=d, book=name)})
+                          "href": _trades(closed_day=d, book_group=name)})
         traded = [c for c in cells if c["state"] != "none"]
         all_lost += all(c["state"] == "lost" for c in traded)
         rows.append({"day": d, "net": nets[d], "href": _trades(closed_day=d), "cells": cells})
     return {"shown": True, "books": [name for name, _ in books], "days": rows, "count": n,
-            "all_lost": all_lost,
-            "line": f"On your {n} worst days, every book you traded lost on {all_lost}."}
+            "all_lost": all_lost}
 
 
 def day_trades(trips: list[mx.Trip]) -> dict:
@@ -389,7 +391,7 @@ def first_half_hour(trips: list[mx.Trip]) -> dict:
     (NSE 09:15, MCX 09:00), against the rest. A trade no profile gives an open for is apart."""
     groups, left_out = _split(trips, TL.opening, TL.OPENINGS)
     groups = [(n, ts, _trades(opening=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OPENINGS, strict=True)]
-    return {"rows": _rows(groups), "left_out": left_out}
+    return {"rows": _rows(groups), "left_out": left_out, "opens": TL.session_opens(trips)}
 
 
 def overnight(trips: list[mx.Trip]) -> dict:
@@ -401,4 +403,5 @@ def overnight(trips: list[mx.Trip]) -> dict:
     groups = [(n, ts, _trades(overnight=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OVERNIGHTS, strict=True)]
     return {"rows": _rows(groups), "shares": shares,
             "longest": (longest.exit_ts.date() - longest.entry_ts.date()).days if longest else None,
-            "longest_href": closed_day_href(longest.exit_ts.date().isoformat()) if longest else None}
+            "longest_href": _trades(held_days=(longest.exit_ts.date() - longest.entry_ts.date()).days)
+            if longest else None}
