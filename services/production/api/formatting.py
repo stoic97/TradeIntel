@@ -149,11 +149,13 @@ def out_of_a_hundred(rate) -> str:
 
 def out_of_a_hundred_beside(rate, other) -> str:
     """A rate with the rate it is read against: a win rate and its break-even. Two that print
-    the same whole number would read as equal, so that tie, decided by what is printed, shows
-    one decimal on both ("45.0 of 100", "45.3 of 100"). Everything else is written as
-    out_of_a_hundred writes it."""
+    the same whole number although they differ would read as equal, so that tie, decided by
+    what is printed, shows one decimal on both ("45.0 of 100", "45.3 of 100"). An exact tie
+    hides nothing and stays whole, as does everything else: written as out_of_a_hundred
+    writes it."""
     other = getattr(other, "value", other)
-    if other is not None and out_of_a_hundred(rate) == out_of_a_hundred(other):
+    if (other is not None and out_of_a_hundred(rate) == out_of_a_hundred(other)
+            and Decimal(str(rate)) != Decimal(str(other))):
         return f"{Decimal(str(rate)).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)} of 100"
     return out_of_a_hundred(rate)
 
