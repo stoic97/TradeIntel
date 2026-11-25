@@ -56,7 +56,12 @@ def test_a_page_draws_the_dial_the_kit_draws(key):
         view["items"][0]["mini"] = G.chart_read(40, 40, dial.MINI_W, dial.MINI_H, True)
         view["items"][2]["mini"] = G.chart_notold(dial.MINI_W, dial.MINI_H, True)
         want = G.render_dial_svg(
-            G.build_dial(case["view"], "phone", dial.OPTS),
+            G.build_dial(  # each mini as wide as its wedge clears, as the page draws it (TICKET-1036)
+                {**case["view"], "items": dial.fitted(case["view"]["items"],
+                                                      G.SIZES["phone"]["figSizesChapter"])},
+                "phone",
+                dial.OPTS,
+            ),
             {
                 "read": G.render_chart(view["items"][0]["mini"]),
                 "notold": G.render_chart(view["items"][2]["mini"]),
@@ -77,9 +82,13 @@ def test_the_desktop_dial_is_marked_for_the_desktop_stage():
 def test_each_slice_draws_its_own_mini_chart():
     view = with_minis(raw(CASES["chapter_1_phone"]["view"]))
     html = page(view)
-    assert html.count('<g class="scope__mini chart chart--on-navy" transform="translate(') == 3
+    # A wedge that clears only without its mini draws none (dial.fitted); every other keeps its own.
+    kept = [i for i in dial.fitted(view["items"], G.SIZES["phone"]["figSizesChapter"]) if i.get("chart")]
+    assert 2 <= len(kept) <= 3
+    assert html.count('<g class="scope__mini chart chart--on-navy" transform="translate(') == len(kept)
     for item in view["items"]:
-        assert G.render_chart(item["mini"]) in html, item["chart"]
+        if any(k["name"] == item["name"] for k in kept):
+            assert G.render_chart(item["mini"]) in html, item["chart"]
 
 
 def test_a_slice_that_names_a_chart_must_give_it():

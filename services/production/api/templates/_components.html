@@ -49,7 +49,10 @@
     column; the wording is the Mirror's own (handoff section 7). -#}
 {#- [TICKET-812] The share, its base rate: never of the net result (definitions 1). -#}
 {% macro share_sentence(share) -%}
+{#- Every day he has: a share of all of them is true and says nothing (a short record). -#}
+{%- if share.worst_day_count < share.trading_day_count -%}
 {{ Figure(share.worst_day_count, "days") }} of your {{ Figure(share.trading_day_count, "days")|count }} trading days (about {{ Figure(share.days_percent, "percent") }}%) carried about <span class="num">{{ Figure(share.share_percent, "percent") }}</span>% of your losses.
+{%- endif -%}
 {%- endmacro %}
 
 {% macro gross_line() -%}
@@ -103,7 +106,7 @@
 {#- A chart from scope_geometry.CHARTS (each part a path, its role a .chart__ class).
     Its size is the chart's own: 350 x 96 on a fact page, 302 wide in a story card. -#}
 {% macro chart(c, cls="") -%}
-<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg>
+<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}{% for l in c.labels or [] %}<text class="chart__label" x="{{ l.x }}" y="{{ l.y }}" text-anchor="middle">{{ l.t }}</text>{% endfor %}</svg>
 {%- endmacro %}
 
 {#- A figure on a fact page: its number and caption, the chart, then - from a call

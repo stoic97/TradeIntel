@@ -41,7 +41,7 @@ def small_file() -> list[mx.Trip]:
 def slices(view: dict) -> dict[str, list[str]]:
     out = {}
     for block in re.findall(r'<a class="scope__slice.*?</a>', str(D.scope_dial(view)), flags=re.DOTALL):
-        name = unescape(re.search(r'aria-label="([^"]*?)\.?"', block).group(1))
+        name = unescape(re.search(r'aria-label="([^".]*)', block).group(1))  # then the mini's words
         texts = re.findall(r'<text class="scope__[a-z-]+[^"]*"[^>]*>(.*?)</text>', block, flags=re.DOTALL)
         out[name] = [unescape(re.sub(r"<[^>]+>", " ", t)).replace(chr(0xA0), " ").strip() for t in texts]
     return out

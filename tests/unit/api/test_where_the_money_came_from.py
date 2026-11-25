@@ -428,7 +428,8 @@ def next_chapter(page: str) -> str:
 def test_the_next_chapter_is_named_by_the_spine():
     """TICKET-903: the way into chapter 2 is the spine's Next, named from scope_map."""
     assert ">Chapter 2" not in next_chapter(fact_page("money", WHOLE))
-    assert S.next_step("money")["label"] == f"Next, chapter 2: {S.FACTS['math'].title}"
+    assert S.next_step("money")["label"] == f"Next: {S.FACTS['charges'].title}"  # 995 follows it
+    assert S.next_step("charges")["label"] == f"Next, chapter 2: {S.FACTS['math'].title}"
 
 
 def test_the_title_is_read_from_the_map(monkeypatch):
@@ -491,7 +492,7 @@ def test_the_page_through_the_app_has_its_lists_and_its_button(uploaded):
     page = uploaded.get("/mirror/fact/money").text
     assert len(lists(page)) == 2
     assert not re.search(r"Day \d", text(page))
-    assert "Next, chapter 2" in text(page)  # TICKET-903: the spine's Next
+    assert "Next &rsaquo; Where the money went" in text(page)  # TICKET-903: the spine's Next
 
 
 def test_no_trade_row_writes_its_hold_in_minutes_by_hand():

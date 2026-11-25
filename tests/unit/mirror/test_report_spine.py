@@ -262,7 +262,7 @@ def test_continue_moves_to_the_first_page_not_yet_read(client, engine):
 def test_a_view_kept_under_an_old_key_counts(client, engine):
     read(engine, "fx", "hidden", "worst-days", "best-worst-trades")  # the long page's key for money
     assert continues(client.get("/mirror").text) == [
-        ("/mirror/fact/math", f"Continue: {TITLE['math']}")]
+        ("/mirror/fact/charges", f"Continue: {TITLE['charges']}")]  # chapter 1's fourth page
 
 
 def test_with_every_page_read_continue_goes_away(client, engine):

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -22,7 +23,7 @@ from sqlalchemy import distinct, func, select
 from services.production.accounts import risk_budget as rb
 from services.production.api import after_clicked as AC
 from services.production.api import after_closed as ACL
-from services.production.api import day_chart, formatting
+from services.production.api import day_chart, fact_reads, formatting
 from services.production.api import market_chart as MC
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
@@ -31,6 +32,7 @@ from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent, trader_today
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.charges import record as charge_record
+from services.production.charges import waterfall
 from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
@@ -83,17 +85,19 @@ def load_record(request: Request):
                         reason=str(exc)), None
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
+        entries = waterfall.load(sess, trader, imp)  # each trade's charges, as stored (TICKET-995)
         if is_sample(request):
-            return None, (trips, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(trips))))
+            return None, (trips, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(trips, waterfall.build(entries, trips)))))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
+        request.state.report_chosen = chosen
         request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
-        return None, (shown, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(shown))))
+        return None, (shown, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(shown, waterfall.build(entries, shown)))))
 
 
 def _with_bars(sess, imp, context: dict) -> dict:
@@ -183,7 +187,8 @@ def scope_home(request: Request):
                 imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
                 charges=charges,
                 continue_step=SM.continue_step(_read_pages(request)),
-                **SF.home_context(context, imp, _opened_chapters(request), number=number))
+                **SF.home_context(context, imp, _opened_chapters(request), number=number,
+                                  read=_fact_reads(request, imp)))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -202,7 +207,7 @@ def scope_chapter(request: Request, n: int):
     figs = SF.facts(context, imp)
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
-                view=SF.chapter_view(n, figs), facts=figs, imp=imp,
+                view=SF.chapter_view(n, figs, read=_fact_reads(request, imp)), facts=figs, imp=imp,
                 next_step=SM.chapter_step(n),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
@@ -232,6 +237,24 @@ def _read_pages(request: Request) -> frozenset[str]:
         return frozenset()
     with make_session(request.app.state.engine) as sess:
         return read_pages(sess, current_trader(request, sess))
+
+
+def _fact_reads(request: Request, imp) -> frozenset[str]:
+    """The pages he has opened in this upload (fact_reads); the sample has read nothing."""
+    if is_sample(request):
+        return frozenset()
+    with make_session(request.app.state.engine) as sess:
+        return fact_reads.opened(sess, current_trader(request, sess), imp)
+
+
+def _note_fact_read(request: Request, imp, key: str) -> None:
+    """Noted when the page is served, so "opened" doesn't depend on a script running."""
+    if is_sample(request):
+        return
+    chosen = getattr(request.state, "report_chosen", None)
+    with make_session(request.app.state.engine) as sess:
+        fact_reads.record(sess, current_trader(request, sess), imp, key,
+                          chosen.period if chosen else RF.ALL, chosen.book if chosen else None)
 
 
 def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
@@ -317,6 +340,7 @@ def scope_fact(request: Request, key: str):
         return early
     _trips, imp, context = record
     chapter, index = SM.chapter_of(key)
+    _note_fact_read(request, imp, key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
     if key == "after" and request.query_params.get("u"):  # the chip he picked
@@ -497,6 +521,9 @@ def trading_day(request: Request, iso: str):
                 groups=SM.groups("busiest", context, only=that_day), chart=chart,
                 journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
                 path=day_chart.view(mx.day_path(that_day)),
+                # What Your numbers gives this day: its same-day trades.
+                same_day_net=sum((t.net for t in that_day if t.closed_same_day), Decimal(0))
+                if any(t.closed_same_day for t in that_day) else None,
                 before=(before, formatting.day(before)) if before else None,
                 after=(after, formatting.day(after)) if after else None)
 
