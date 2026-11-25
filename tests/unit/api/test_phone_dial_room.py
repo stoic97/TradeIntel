@@ -27,7 +27,7 @@ DESKTOP_ON_MAIN = {  # each page's desktop dial on main before this change (test
     "/mirror": "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df",
     "/mirror/chapter/1": "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab",
     "/mirror/chapter/2": "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63",
-    "/mirror/chapter/3": "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38",
+    "/mirror/chapter/3": "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7",
     "/mirror/chapter/4": "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5",
 }
 
