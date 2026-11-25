@@ -20,6 +20,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 SCANNED = ("services",)
 SKIP_PARTS = {"__pycache__", "fixtures", "prereg"}
 
@@ -104,3 +106,32 @@ def test_no_unexplained_large_number_is_in_the_code():
         + "\n".join(f"  {value}: {', '.join(where)}"
                     for value, where in sorted(found.items()))
     )
+
+
+def _scan_a_tree(tmp_path, monkeypatch, source: str) -> None:
+    """Run the guard on a one-file tree of its own, so no real file is touched."""
+    target = tmp_path / "services" / "sample.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(source, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    try:
+        test_no_unexplained_large_number_is_in_the_code()
+    finally:
+        target.unlink()
+
+
+def test_a_ticket_number_in_a_comment_is_not_a_figure(tmp_path, monkeypatch):
+    """TICKET-1094: a comment that names a ticket is not a trader's rupees."""
+    _scan_a_tree(tmp_path, monkeypatch, "x = 1  # see TICKET-1053\n# TICKET-1054 explains it\n")
+
+
+@pytest.mark.parametrize("source", [
+    "loss = 48213\n",
+    "loss = 48213  # see TICKET-1053\n",
+    "# TICKET-1053: the loss was 48,213 rupees\n",
+    "price = 1053  # not a ticket\n",
+])
+def test_a_trader_figure_still_fails_beside_a_ticket_number(tmp_path, monkeypatch, source):
+    """TICKET-1094: the exemption is the ticket number only, never a figure near it."""
+    with pytest.raises(AssertionError):
+        _scan_a_tree(tmp_path, monkeypatch, source)
