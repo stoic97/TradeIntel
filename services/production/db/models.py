@@ -607,6 +607,18 @@ class BarTradeFigure(Base):
     """The 30 minutes after the exit, as JSON, the exit's close as zero."""
 
 
+class BarDayRange(Base):
+    """How far the market moved on a day he traded, for the Market row: the session's highest high less
+    its lowest low, in points, as Decimal text, read from that one day file, with its sha256."""
+
+    __tablename__ = "bar_day_range"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    underlying: Mapped[str] = mapped_column(String(40))
+    day: Mapped[str] = mapped_column(String(10))
+    range_points: Mapped[str] = mapped_column(String(32))
+    sha256: Mapped[str] = mapped_column(String(64))
+
 class BarPathSummary(Base):
     """An import's after-you-clicked paths for one underlying, beside random moments (TICKET-999):
     medians, his middle half, the random middle 95%, and up to 200 of his paths, as JSON."""
