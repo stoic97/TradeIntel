@@ -353,8 +353,39 @@ and what the tag changes:
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
 the box by hand: the block stops, so find out who before going on. It also refuses a tag that
 is not on `origin/main`. `live:` is the previous tag (a
-sha only on the first train, or after a deploy that skipped the train). The last line
-before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
+sha only on the first train, or after a deploy that skipped the train).
+
+Before either path, check that no new migration sits behind the live tag's head. Like every
+block here it is one `( ... )` with its own `TAG`: set it to the same tag as the block above.
+It stops if `TAG` or `LIVE` comes out empty rather than checking nothing.
+
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      set -u
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      [ -n "$TAG" ] || { echo "STOP: TAG is not set (set it to the tag in the block above)"; exit 1; }
+      LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"
+      [ -n "$LIVE" ] || { echo "STOP: LIVE is not set (cannot tell what is live)"; exit 1; }
+      head=""
+      for f in $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -E '/[0-9]{4}_[^/]*\.py$'); do
+        rev=$(git show "$LIVE:$f" | grep -E "^revision = " | grep -oE "[0-9]{4}")
+        [ -z "$head" ] || [ "$rev" \> "$head" ] && head=$rev
+      done
+      [ -n "$head" ] || stop "no migration found at $LIVE"
+      echo "live head: $head"
+      git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions | while read -r f; do git show "$TAG:$f" | grep -E "^(revision|down_revision) =" | sed "s|^|$f: |"; done || stop "git diff failed; nothing was checked"
+      echo "DONE migration heads"
+    )
+
+Expected: the first new migration's `down_revision` is the live head, each later one's is the
+one before it, and no new `revision` is a number at or below the live head. Anything else:
+stop, and do not deploy the tag. Why: a migration whose revision id the live database already
+counts as applied is skipped with no error, so its table never exists and the page that reads
+it fails; a `down_revision` behind the live head leaves two heads, and the app refuses to start
+(`alembic upgrade head` needs one). Fix it on `main` with a new tag; never edit a migration a
+tag has shipped.
+
+The first block's last line before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
 person reads those migrations and rules, and **Path B** applies until they do;
 `CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
 migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a
