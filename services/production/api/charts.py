@@ -137,6 +137,28 @@ def rate_axis(lo, hi, tick, y: Callable[[object], float], *, left: float, right:
     return Markup("".join(out))
 
 
+def rate_axis_across(lo, hi, tick, x: Callable[[object], float], *, top: float, bottom: float,
+                     p: str = "ch") -> Markup:
+    """The axis along a bar of rates: a gridline at each tick from ``top`` to ``bottom``, and its
+    label under the bar as the whole number of 100 it is. The two edge labels hang inward, so
+    neither runs past the drawing."""
+    out = []
+    v = lo
+    while v <= hi:
+        anchor = ' text-anchor="start"' if v == lo else ' text-anchor="end"' if v == hi else ""
+        out.append(f'<line x1="{x(v):.1f}" x2="{x(v):.1f}" y1="{top}" y2="{bottom}" class="{p}-grid"/>'
+                   f'<text x="{x(v):.1f}" y="{bottom + 12}"{anchor} class="{p}-axis {p}-axis--x">{v}</text>')
+        v += tick
+    return Markup("".join(out))
+
+
+def rate_chart(cls: str, width: float, height: float, label: str, parts: Iterable) -> Markup:
+    """A chart of rates as one drawing: its class, its size, the name a screen reader reads, then
+    its parts in order. The drawing scales to its card, so a phone never scrolls it."""
+    return Markup(f'<svg class="{cls}" viewBox="0 0 {width} {height}" width="100%" role="img" '
+                  f'aria-label="{escape(label)}">' + "".join(str(part) for part in parts) + "</svg>")
+
+
 # ---------- time labels ----------
 
 @dataclass(frozen=True)

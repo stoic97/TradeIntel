@@ -20,6 +20,7 @@ from decimal import Decimal
 from markupsafe import Markup
 
 from services.production.api import after_clicked as AC
+from services.production.api import after_closed as ACL
 from services.production.api import charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
@@ -43,6 +44,7 @@ CARD_H = {
     "backin": 84,
     "sameway": 56,
     "nextday": 70,
+    "after-close": 84,
 }
 INDIA_OFFSET = timedelta(hours=5, minutes=30)
 NOT_TOLD = 4
@@ -92,6 +94,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "book_math": mx.math_by_book(same_day),
         "book_row_minimum": mx.BOOK_ROW_MINIMUM,
         "book_halves": mx.book_halves(trips),
+        "previous_result": mx.previous_result_figures(trips),
         "trips": trips,
         "after_strike": mx.strike_rate(after),
         "after_lots": mx.average_lots(after),
@@ -113,6 +116,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     trips = ctx["trips"]
     if kind == "after":  # stored figures only; not a kit chart, so not in G.CHARTS
         return AC.geometry(AC.view(ctx), w, h, mini=mini)
+    if kind == "after-close":  # stored figures only; not a kit chart, so not in G.CHARTS
+        return ACL.geometry(ACL.view(ctx), w, h, mini=mini)
     if kind == "worst":
         if mini:  # the dial's mini is the kit's chart, held to it byte for byte
             return G.chart_worst([_f(d.net) for d in mx.daily_series(trips)], w, h)
@@ -180,6 +185,8 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
 def _state(key: str, ctx: dict) -> str:
     if key == "after" and not AC.view(ctx)["enough"]:
         return "not-enough"  # under 30 measured trades in every underlying, or none measured yet
+    if key == "after-close" and not ACL.view(ctx)["enough"]:
+        return "not-enough"  # under 30 measured losing trades, or none worked out yet
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
     if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
@@ -352,6 +359,8 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
     if key == "after":
         return _after_figure(AC.view(ctx))
+    if key == "after-close":
+        return ACL.figure(ACL.view(ctx))
     if key == "hidden":
         return Figure(f"{formatting.count(_counted_days(ctx))} days", "days")
     if key == "worst-days":
@@ -483,6 +492,58 @@ def _hidden_cell(half, href: str, row: str):
     return _hidden_link(formatting.out_of_a_hundred(half.math.break_even_percent), "percent", href)
 
 
+def _trades_word(n: int) -> str:
+    return "trade" if n == 1 else "trades"
+
+
+def _count_link(n: int, href: str | None):
+    """A count of trades inside a sentence, as a figure, opening them when there are any."""
+    return formatting.opens(Figure(formatting.count(n), _trades_word(n), opens=href if n else None))
+
+
+def _previous_rows(ctx: dict) -> dict[str, list[dict]]:
+    """The hiding page's two figures for previous result (TICKET-919), per book, as written.
+
+    Every figure goes through Figure with its noun and opens its own trades; each carries its
+    band and its two labels. The page decides nothing: the chance line reads the band through
+    the |inside filter, and a figure inside its band is the result, never a blank."""
+    out: dict[str, list[dict]] = {}
+    for r in ctx.get("previous_result", ()):
+        after = f"a {r.state}"
+        record_href = S.see_all_href("hidden", book=r.book, after=r.state)
+        n = len(r.record_ids)
+        row = {
+            "state": r.state,
+            "record": _hidden_link(formatting.rupees(r.record_net), "rupees", record_href),
+            "record_words": Markup("net on {} {} opened right after {} that day").format(
+                _count_link(n, record_href), _trades_word(n), after),
+            "record_band": r.record_band,
+            "record_finding": findings.of_figure("hidden.record"),
+            "then": NOT_ENOUGH_YET,
+            "then_words": "",
+            "then_band": r.then_band,
+            "then_finding": findings.of_figure("hidden.then"),
+        }
+        if r.reached:
+            k = len(r.then_ids)
+            then_href = (S.see_all_href("hidden", book=r.book, after=r.state, then="yes")
+                         if k else None)
+            minimum = formatting.opens(Figure(formatting.count(r.minimum), "trades"))
+            if not k:  # nothing was picked: said plainly, with no figure and no verdict on it
+                row["then"] = Markup(
+                    "no trade after {} was opened while your earlier ones after {}, {} or more,"
+                    " were down overall").format(after, after, minimum)
+            else:
+                row["then"] = formatting.opens(
+                    Figure(formatting.rupees(r.then_net), "rupees", opens=then_href))
+                row["then_words"] = Markup(
+                    "net on {} {} opened right after {} that day while your earlier ones after {},"
+                    " {} or more, were down overall").format(
+                    _count_link(k, then_href), _trades_word(k), after, after, minimum)
+        out.setdefault(r.book, []).append(row)
+    return out
+
+
 def _hidden_view(ctx: dict) -> dict:
     """The plain-counts page (TICKET-910): each book's own halves, as its table writes them.
 
@@ -490,11 +551,13 @@ def _hidden_view(ctx: dict) -> dict:
     metrics.book_halves decided, never by a page. The p sits beside the change in net per trade
     it checks. Nothing here is called a finding, ranked or priced."""
     books = []
+    previous = _previous_rows(ctx)
     for r in ctx["book_halves"]:
         every = S.see_all_href("hidden", book=r.book)
         if r.state is not COUNTED:
             books.append({"book": r.book, "counted": False, "n": r.trades,
-                          "trades": _hidden_link(formatting.count(r.trades), "trades", every)})
+                          "trades": _hidden_link(formatting.count(r.trades), "trades", every),
+                          "previous": previous.get(r.book, [])})
             continue
         halves = (
             (r.first, S.see_all_href("hidden", book=r.book, half="first")),
@@ -514,7 +577,8 @@ def _hidden_view(ctx: dict) -> dict:
                              "cells": ["", "", change]})
                 rows.append({"label": "Whole days shuffled between the halves: p",
                              "control": "net-per-trade", "cells": ["", "", checked]})
-        books.append({"book": r.book, "counted": True, "n": r.trades, "columns": HIDDEN_COLUMNS, "rows": rows})
+        books.append({"book": r.book, "counted": True, "n": r.trades, "columns": HIDDEN_COLUMNS, "rows": rows,
+                      "previous": previous.get(r.book, [])})
     return {"books": books, "held": ctx["held_past_day"], "draws": mx.halves_shuffle.DRAWS}
 
 
@@ -1011,6 +1075,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(_clock_view(ctx))
     out["after"].update(after_page(ctx))
+    out["after-close"].update(after_close_page(ctx))
     return out
 
 
@@ -1027,6 +1092,13 @@ def after_page(ctx: dict, pick: str | None = None) -> dict:
     page's size, and its table. The route passes the chip the trader picked."""
     v = AC.view(ctx, pick)
     return {"view": v, "page_chart": AC.geometry(v), "table": AC.table(v) if v["enough"] else ""}
+
+
+def after_close_page(ctx: dict, pick: str | None = None) -> dict:
+    """The after-you-closed page for one underlying: its view and its chart at the page's size.
+    The route passes the chip the trader picked."""
+    v = ACL.view(ctx, pick)
+    return {"view": v, "page_chart": ACL.geometry(v)}
 
 
 def _zone_words(trip: mx.Trip) -> str:
@@ -1158,6 +1230,11 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         points = fig["figure"].removesuffix(" points")
         return _wedge(Figure(points, "points", of=f"{fig['lead_figure'].of}, 30 minutes after you clicked"),
                       phone="after\nyou clicked", shown=points)
+    if key == "after-close":
+        v = ACL.view(ctx)
+        return _wedge(Figure(formatting.count(v["came_back"]), "trades",
+                             of=f"of {formatting.count(v['losers'])} losing trades came back past your entry"),
+                      phone="came back\nafter you closed", shown=formatting.count(v["came_back"]))
     if key == "not-told":
         return _wedge(Figure(NOT_TOLD, "things", of="we have not told you"), phone="not told",
                       phone_shown=f"{NOT_TOLD} items")

@@ -44,9 +44,9 @@ def test_every_fact_counts_the_trades_behind_it(key):
 
 
 def test_on_the_fixture_every_fact_is_counted():
-    # After you clicked reads stored bar figures, which a fixture without market data has none of;
-    # same way again needs each trade's legs for its direction, which the fixture's trades carry none of.
-    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "after": "not-enough", "same-way": "not-enough"}
+    # After you clicked and After you closed need stored bar figures; same way again needs each
+    # trade's legs. The fixture has neither.
+    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "after": "not-enough", "same-way": "not-enough", "after-close": "not-enough"}
 
 
 # ---------- States: never hidden, never an all-clear ----------

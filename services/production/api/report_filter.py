@@ -100,9 +100,14 @@ def words(f: ReportFilter) -> str | None:
     return f"Showing {period}."
 
 
-def dropped(asked: ReportFilter, f: ReportFilter) -> str | None:
+def dropped(asked: ReportFilter, f: ReportFilter, earlier: bool = True) -> str | None:
     """What the page says when the filter it was given can't apply and fell back to All, so a
-    whole record is never read as the choice he made."""
+    whole record is never read as the choice he made. ``earlier``: an upload came before this
+    one; with none there is no "last upload" to have added nothing."""
+    if asked.period == SINCE and f.period != SINCE and not earlier:
+        if f.book:
+            return f"There is no upload before this one, so this shows every day in {f.book}."
+        return "There is no upload before this one, so this shows everything."
     if asked.period == SINCE and f.period != SINCE:
         if f.book:  # the book stays chosen, so the page is that book's every day, not everything
             return f"Your last upload added no new days, so this shows every day in {f.book}."
@@ -115,7 +120,7 @@ def dropped(asked: ReportFilter, f: ReportFilter) -> str | None:
 
 
 def bar(f: ReportFilter, trips: list[mx.Trip], new_days: set[str] | None, here: str,
-        asked: ReportFilter | None = None) -> dict:
+        asked: ReportFilter | None = None, earlier: bool = True) -> dict:
     """What the filter bar draws: each period and book with the address that chooses it."""
     def href(period: str, book: str | None) -> str:
         from urllib.parse import urlencode
@@ -131,7 +136,7 @@ def bar(f: ReportFilter, trips: list[mx.Trip], new_days: set[str] | None, here: 
                   *({"label": b, "href": href(f.period, b), "current": b == f.book}
                     for b in books(trips))],
         "words": words(f),
-        "dropped": dropped(asked, f) if asked is not None else None,
+        "dropped": dropped(asked, f, earlier) if asked is not None else None,
         "current": " · ".join(
             [next(label for p, label in periods if p == f.period), f.book or "All books"]),
         "clear": href(ALL, None) if f.active else None,
