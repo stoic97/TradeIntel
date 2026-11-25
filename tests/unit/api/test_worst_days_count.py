@@ -48,7 +48,7 @@ def flag_labels(trips):
 
 
 def row_labels(trips):
-    return [label for label in up._headline_figures(trips) if "worst" in label]
+    return [label for label, _ in up._headline_figures(trips).values() if "worst" in label]
 
 
 @pytest.mark.parametrize("trips,n", SHORT, ids=["one", "two", "four"])
