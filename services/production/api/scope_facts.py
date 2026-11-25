@@ -351,7 +351,7 @@ def _next_day_too_few(ctx: dict) -> Markup:
     """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
     have = len({t.exit_ts.date() for t in ctx["trips"]})
     least = mx.BIG_DAYS_AT_LEAST
-    return Markup("You traded on {} {}. This needs at least {}: "
+    return Markup("You closed trades on {} {}. This needs at least {}: "
                   "your {} best days and your {} worst.").format(
         _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
         _w(least, "days"), _w(least, "days"))
