@@ -3,4 +3,5 @@
 
 from __future__ import annotations
 
-KIT_SHA = "afb69ca1d998f06b1a49420343e60ae899b6aaf7886d4574f8fe594b975699c4"  # TICKET-1036: .chart__label
+# The dial classes, added once for the four dial tickets (kit update, ruled 24 Nov 2026).
+KIT_SHA = "b753634d8d8551016a36dd29a8be183ab07064da07a6caabb9dee9e49dab6646"

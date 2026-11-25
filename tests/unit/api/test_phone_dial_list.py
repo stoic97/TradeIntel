@@ -54,12 +54,13 @@ def dials(html: str) -> list[str]:
 ON_MAIN = {
     "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["c307b35c1e4040e3b5688c9bd2db8bf4e6e20b76dfd4b25babac5270475014ad",
+    # Dial minis (1036) on every wedge; chapter 3's desktop dial also carries main's After you closed.
+    "/mirror/chapter/1": ["dac37b9a4a2eb63750ccff6f9babccf495fd67a0299d9c352f82bcdb62d4528e",
                           "d765b662af7467f0834dc85cae0bc8b2921ed54712d9301e673cbd36c375201c"],
     "/mirror/chapter/2": ["0e9f0fe19966a88147f653511fc3dc4097125f01b9e713035631d99edbad8169",
                           "95c287111cf66a9ad80f493e1217838115c3695c14f5ffa7d2636b78c9856bac"],
     "/mirror/chapter/3": ["461efffc445d451f37c72f3b1d8101ac4b15205bbbcb279c07044d035972a13e",
-                          "b2819ea4a86b02ffee10dfc2c16858c7ee5c0d7fa645eb677f09de09e84df34d"],
+                          "6c2e142e84115a159c3c4404f5c4c8f5ce1296e4cf08e1de6bbb90017fda965f"],
     "/mirror/chapter/4": ["c1e506fcfa77485e7d82e87d3b63c461ba3db7e8339b3d1cf47143fc20e7a6d3",
                           "f27265173a763ba6714eaf862faaf4ec3788090d7645311a1b2556fa5b34ce7b"],
 }
@@ -69,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "931aa33f58d216b255557bb54a897b47f3d26c8a5ba69a2ba4e8e3ac587622ab",
     (2, "desktop"): "0c7ee0b8895cff7363196ac50e73f43624f2ad28797586055603096f22c45beb",
     (3, "phone"): "1a8dc2d67ff6e8570a6b50557c1ebb1de57e799742c5a6bc97f8699c6f04b63c",
-    (3, "desktop"): "241031176a19f6876f13ea80a29ad79513a330b39b8fb7e404d077e3bd6013a8",
+    (3, "desktop"): "1ec81fa1bdbbbb702f980315493e672351b814ba36b28f8fe9515e74e1d73c81",
     (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
     (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
@@ -78,6 +79,8 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
+OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
+                      "after-close"}  # After you closed: added after the phone dial was sized
 
 
 def sha(text) -> str:
@@ -104,7 +107,8 @@ def later(monkeypatch):
 
 def test_every_fact_says_whether_it_sits_on_the_phone_dial():
     assert {f.key for c in S.CHAPTERS for f in c.facts if f.on_phone_dial} == ON_THE_PHONE_DIAL
-    assert all(f.on_phone_dial for c in S.CHAPTERS for f in c.facts)  # every fact on main stays on it
+    # every fact on main stays on it; the facts added since sit in the list under the dial
+    assert {f.key for c in S.CHAPTERS for f in c.facts if not f.on_phone_dial} == OFF_THE_PHONE_DIAL
 
 
 # ---------- nothing else moves ----------
@@ -122,6 +126,8 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
+        if path == "/mirror/chapter/3":  # What you do next (1006) sits in chapter 3's list
+            continue
         assert "scope__list" not in html, path
 
 

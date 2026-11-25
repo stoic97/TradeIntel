@@ -89,7 +89,8 @@ def test_after_the_reread_it_says_what_moved_in_rupees(client, engine, monkeypat
     page = words(client.get(response.headers["location"]).text)
     was, now = formatting.rupees(Decimal(-600)), formatting.rupees(Decimal(-100))
     assert "What moved" in page
-    assert f"Option trades {was} {now}" in page
+    assert f"Other options {was} {now}" in page  # the book by its own name, no options total beside it
+    assert "Option trades" not in page
     assert f"Your five worst days {was} {now}" in page
 
 

@@ -1446,7 +1446,9 @@ def test_guess_and_leaving_card_are_empty_while_off(production_app):
     assert the_view["features_off"] == ["guess", "leaving card"]
 
 
-def test_guess_and_leaving_card_say_no_while_on(app, engine):
+def test_guess_and_leaving_card_say_no_while_on(app, engine, monkeypatch):
+    from services.production.mirror import guess as GU
+    monkeypatch.setattr(GU, "PLACEHOLDER", False)  # "on": the guess with its labels written (TR-009)
     add_trader(engine, "someone")
     the_view = view(app, engine)
     row = row_of(the_view, "someone")

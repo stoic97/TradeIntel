@@ -301,13 +301,14 @@ def test_the_fact_has_its_new_name(text):
 
 def test_a_book_row_shows_the_win_rate_and_both_ways_to_break_even(page):
     row = cells(row_of(page, "WIDGET options"))
-    for figure in ("60", "45%", "45.3%", "₹94", "+₹1"):
+    for figure in ("60", "45 of 100", "₹94", "+₹1"):  # 45% and 45.3%, as N of 100 (TICKET-1028)
         assert figure in row, row
+    assert row.count("45 of 100") == 2, row
 
 
 def test_both_ways_are_said_in_words(text):
-    assert "a win rate of 54.1%" not in text  # the year's figure is in the year's row, not here
-    assert "a win rate of 45.3%, about 1 more winner in 60." in text
+    assert "Break even at 54 of 100" not in text  # the year's figure is in the year's row, not here
+    assert "Break even at 45 of 100, about 1 more winner in 60." in text
     assert "an average winner of ₹94, +₹1 on your ₹93." in text
 
 
@@ -323,8 +324,8 @@ def test_averages_and_medians_sit_side_by_side_per_year(page):
 
 def test_the_year_table_gives_each_years_math(page):
     table = cells(re.search(r'data-table="years".*?</table>', page, re.DOTALL)[0])
-    assert "2025 30 40% 54.1% ₹150 +₹65" in table
-    assert "2026 30 50% 33.3% ₹50 −₹50" in table
+    assert "2025 30 40 of 100 54 of 100 ₹150 +₹65" in table
+    assert "2026 30 50 of 100 33 of 100 ₹50 −₹50" in table
 
 
 def test_each_median_is_stated_separately():
@@ -393,7 +394,7 @@ def test_a_book_at_exactly_30_shows_its_percentage():
     page = fact_page("math", make([100] * 12 + [-50] * 18))
     row = row_of(page, "WIDGET options")
     assert NOT_ENOUGH not in row
-    assert "40%" in row
+    assert "40 of 100" in row
     assert 'data-state="COUNTED_FACT"' in row
 
 

@@ -124,6 +124,9 @@ class Measured:
     took: Decimal | None = None
     path: tuple[Decimal, ...] = ()
     short: bool = False
+    after_exit: tuple[Decimal, ...] = ()
+    """The close at +1 ... +30 minutes after the exit minute, less the exit's close, in his
+    direction; index 0 is the exit itself. Cut at the session end, like ``path``."""
     waiting: tuple[date, ...] = ()
     days_read: tuple[tuple[str, str], ...] = ()
 
@@ -265,9 +268,12 @@ def measure(position: Position, prices: layer.Prices, *, closed: frozenset[date]
                 hi, lo, last = max(hi, bar.high), min(lo, bar.low), bar.close
     up, down = hi - ref, ref - lo
     way, against = (up, down) if sign > 0 else (down, up)
-    path, short = _path(series, entry, ref, sign, prices.session(underlying)[1])
+    ends_at = prices.session(underlying)[1]
+    path, short = _path(series, entry, ref, sign, ends_at)
+    after_exit, _cut = _path(series, exit_, last, sign, ends_at)
     return Measured(**base, way=max(way, Decimal(0)), against=max(against, Decimal(0)),
-                    took=(last - ref) * sign, path=path, short=short, days_read=tuple(read))
+                    took=(last - ref) * sign, path=path, short=short, after_exit=after_exit,
+                    days_read=tuple(read))
 
 
 # ---------- the comparison ----------
@@ -405,7 +411,8 @@ def work(sess: Session, job: m.BarFigureJob, prices: layer.Prices, *, now: datet
         sess.add(m.BarTradeFigure(
             import_id=imp.id, trip_id=x.trip_id, underlying=x.underlying, reason=x.reason,
             way=_text(x.way), against=_text(x.against), took=_text(x.took),
-            path=_series_json(x.path) if x.path else None, short=x.short))
+            path=_series_json(x.path) if x.path else None, short=x.short,
+            after_exit=_series_json(x.after_exit) if x.after_exit else None))
     for underlying in sorted({x.underlying for x in settled if x.reason is None}):
         s = summarise(underlying, settled, randoms)
         sess.add(m.BarPathSummary(
