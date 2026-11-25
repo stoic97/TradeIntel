@@ -452,8 +452,6 @@ FILTERS = (
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
     # Your process opens each figure's trades, whatever row drew it.
     Filter("line", "Your process", _line, only=frozenset({"risk"}), quiet=True),
-
-
     Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
     Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
