@@ -103,7 +103,7 @@ def test_the_bar_marks_both_rates_and_shades_the_gap():
 
 def test_a_book_at_break_even_says_so():
     at_par = wg().view(mx.math_by_book(trades("CRUDEOIL", 2024, 15, 100, 15, 100)))
-    assert plain(at_par["bars"][0]["line"]) == "50.0 of 100 · needs 50.0 of 100 · at break-even"
+    assert plain(at_par["bars"][0]["line"]) == "50 of 100 · needs 50 of 100 · at break-even"
 
 
 # ---------- 2. by year ----------

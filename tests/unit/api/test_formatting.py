@@ -207,6 +207,8 @@ def test_an_exact_figure_keeps_the_paise_metrics_decided(value, written):
         (Decimal("44.5"), Decimal("45.4"), "44.5 of 100", "45.4 of 100"),  # 44.5 prints 45, as 45.4 does
         (Decimal("45.4"), Decimal("44.5"), "45.4 of 100", "44.5 of 100"),
         (Decimal(45), Decimal("45.3"), "45.0 of 100", "45.3 of 100"),
+        (Decimal(50), Decimal(50), "50 of 100", "50 of 100"),  # an exact tie hides nothing: whole
+        (Decimal("45.0"), Decimal(45), "45 of 100", "45 of 100"),
         (Decimal("44.4"), Decimal("44.5"), "44 of 100", "45 of 100"),  # 44 and 45 print apart: whole
         (Decimal("43.6"), Decimal("44.5"), "44 of 100", "45 of 100"),
         (Decimal(40), None, "40 of 100", "40 of 100"),  # no break-even to read it against
