@@ -19,6 +19,7 @@ import re
 from html import unescape
 
 import pytest
+from fastapi.testclient import TestClient
 
 from services.production.api.app import create_app
 from tests.unit.api import figure_pages
@@ -32,7 +33,12 @@ RATE_PROSE = re.compile(r"(?:win rate of|break even at|made money)\s*\d[\d.]*\s?
 SHARES = ("of your losses", "of premium", "of losers closed within 5 minutes", "of what your winners made",
           "of it")
 """Shares a page may still write as a percent: each ends a "N% <share>" phrase."""
+ALLOWED: dict[str, str] = {}
+"""Percents a page may write that no share follows, each by name: what it is, and the words
+around it as a pattern ("N%" stands for the percent)."""
 PERCENT = re.compile(r"\d[\d.]*\s?%")
+INLINE = re.compile(r"</?(?:span|tspan|a|b|i|em|strong|small|abbr)\b[^>]*>")
+SAID_ALOUD = re.compile(r'\b(?:aria-label|alt|title)="([^"]*)"')
 
 
 def _text(fragment: str) -> str:
@@ -63,7 +69,38 @@ def rate_cells_as_percent(html: str) -> list[str]:
     return found
 
 
+def _said(html: str) -> str:
+    """What the whole page says, its labels included. Every block ends in " | ", so a percent is
+    never read together with the words of the next block."""
+    html = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.DOTALL)
+    labels = " | ".join(SAID_ALOUD.findall(html))
+    words = re.sub(r"<[^>]+>", " | ", INLINE.sub(" ", html))
+    return re.sub(r"\s+", " ", unescape(f"{words} | {labels}"))
+
+
+def unnamed_percents(html: str) -> list[str]:
+    """Every percent on the page that is neither beside a share in ``SHARES`` nor in ``ALLOWED``."""
+    said = _said(html)
+    spans = [m.span() for words in ALLOWED.values()
+             for m in re.finditer(words.replace("N%", PERCENT.pattern), said)]
+    beside = re.compile(r"\s*(?:" + "|".join(map(re.escape, SHARES)) + r")\b")
+    return [said[max(0, p.start() - 30):p.end() + 30] for p in PERCENT.finditer(said)
+            if not beside.match(said, p.end()) and not any(a <= p.start() and p.end() <= b for a, b in spans)]
+
+
 _RENDERED: dict[str, str] = {}
+
+
+def _budget_in_per_cent(app) -> str:
+    """The number page with capital and a number in per cent, which no scene sets: it prints
+    percents of its own. The demo's trader, as every scene is made up."""
+    client = TestClient(app)
+    figure_pages._sign_up(client, app.state.engine, "percenter")
+    figure_pages._consent(client)
+    client.post("/upload/demo", data={"csrf_token": figure_pages._token(client, "/upload")})
+    client.post("/budget", data={"csrf_token": figure_pages._token(client, "/budget"), "value": "2", "unit": "PCT",
+                                 "capital_amount": "100000", "effective_from": "2024-01-01"})
+    return client.get("/budget").text
 
 
 @pytest.fixture()
@@ -75,6 +112,7 @@ def pages() -> dict[str, str]:
         for scene, rendered in figure_pages.scenes(app, app.state.engine).items():
             for path, (_status, html) in rendered.items():
                 _RENDERED[f"{scene} {path}"] = html
+        _RENDERED["a number in per cent /budget"] = _budget_in_per_cent(app)
     return _RENDERED
 
 
@@ -95,12 +133,84 @@ def test_the_guard_catches_a_rate_and_leaves_a_share():
     assert rate_cells_as_percent(shares) == []
 
 
+def test_every_percent_is_a_named_share_or_allowed_by_name(pages):
+    offenders = {where: found for where, html in pages.items() if (found := unnamed_percents(html))}
+    assert offenders == {}, (len(offenders), list(offenders.items())[:5])
+
+
+def test_a_percent_nobody_named_is_found_on_a_page_of_every_scene(pages):
+    for where, html in _a_page_of_every_kind(pages):
+        assert any("61% of something new" in found
+                   for found in unnamed_percents(_with(html, "61% of something new"))), where
+
+
+SCENES = {"signed out", "signed up", "consented", "demo", "demo with a number", "small file"}
+
+
+def _a_page_of_every_kind(pages):
+    """Each page in every scene that says anything; every scene has one."""
+    spoken = [(where, html) for where, html in pages.items() if "</main>" in html]
+    assert {where.split(" /")[0] for where, _ in spoken} >= SCENES
+    return spoken
+
+
+def _with(html: str, sentence: str) -> str:
+    """The page with one more sentence at the end of what it says."""
+    return html.replace("</main>", f"<p>{sentence}</p></main>", 1)
+
+
+def _not_caught(pages, *sentences: str) -> list[str]:
+    """Pages the guard passes although a sentence that writes a rate as a percent is on them."""
+    return [where for where, html in _a_page_of_every_kind(pages) for sentence in sentences
+            if not rate_cells_as_percent(_with(html, sentence))]
+
+
+def test_the_guard_catches_won_n_percent(pages):
+    assert _not_caught(pages, "You won 45% in this book.", 'You won <span class="num">45</span>%.') == []
+
+
+def test_the_guard_catches_n_percent_of_trades_made_money(pages):
+    assert _not_caught(pages, "45% of trades made money.", '<span class="num">45</span>% of trades made money.') == []
+
+
+def test_the_guard_catches_a_win_rate_outside_a_table(pages):
+    assert _not_caught(pages, "Win rate 45%", 'Win rate <span class="num">45</span>%') == []
+
+
+def test_the_guard_catches_green_days_outside_a_table_row(pages):
+    assert _not_caught(pages, "Green days 15 (58%)",
+                       'Green days <span class="num">15</span> (<span class="num">58</span>%)') == []
+
+
+# ---------- the math page's two lines ----------
+
+def _math_pages(pages):
+    found = {where: _text(html) for where, html in pages.items()
+             if where.endswith("/fact/math") and "closed within 5 minutes" in html and "lost more than" in html}
+    assert found
+    return found.items()
+
+
+def test_quick_closes_read_n_of_100(pages):
+    for where, text in _math_pages(pages):
+        assert re.search(r"\d+ of 100 losers closed within 5 minutes, against \d+ of 100 winners\b", text), where
+        assert not re.search(r"%\s*of (?:losers|winners)\b", text), where
+
+
+def test_the_biggest_losers_out_of_the_trades_read_n_of_100_and_their_losses_stay_a_share(pages):
+    for where, text in _math_pages(pages):
+        assert re.search(r"\btrades? \(\s?\d+ of 100\s?\) lost more than", text), where
+        assert not re.search(r"\btrades? \(\s?\d+\s?%", text), where
+        assert re.search(r"\d+\s?% of this book's losses", text), where
+
+
 # ---------- shares stay shares ----------
 
-def test_shares_of_a_total_are_still_written_as_percents(pages):
-    text = " ".join(_text(h) for h in pages.values())
-    for share in ("of your losses", "of premium"):
-        assert re.search(r"\d[\d.]*\s?% " + re.escape(share), text), share
+def test_every_share_and_every_allowed_percent_is_still_on_a_page(pages):
+    said = [_said(h) for h in pages.values()]
+    for words in [rf"N%\s*{re.escape(share)}\b" for share in SHARES] + list(ALLOWED.values()):
+        shape = re.compile(words.replace("N%", PERCENT.pattern))
+        assert any(shape.search(text) for text in said), words
 
 
 # ---------- tables say what they are ----------
