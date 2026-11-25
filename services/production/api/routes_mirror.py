@@ -517,7 +517,8 @@ def scope_fact_trades(request: Request, key: str):
         expiries = loader.expiries_for(sess, imp)
         if key == "risk" and request.query_params.get("line"):
             from services.production.api import process_bars
-            context = {**context, "stored_bars": process_bars.stored(sess, imp.id)}
+            context = {**context, "stored_bars": process_bars.stored(sess, imp.id),
+                       "stored_ranges": process_bars.ranges(sess, imp.id)}
     chapter, index = SM.chapter_of(key)
     return page(request, "scope/trades.html", title=f"{SM.FACTS[key].title}: see all trades",
                 body_class="screen__body--fact", chapter=chapter, index=index,
