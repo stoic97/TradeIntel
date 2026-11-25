@@ -1338,8 +1338,8 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     if key == "worst-days":
         days, net = other_days(ctx)
         came = formatting.rupees(ctx["worst_days"].sum)
-        return _wedge(Figure(len(ctx["worst_days"].days), "days",
-                             of=f"came to {came}; the other {days} days {formatting.rupees(net)}"),
+        other = f"; the other {days} days {formatting.rupees(net)}" if days else ""  # none: nothing to set against
+        return _wedge(Figure(len(ctx["worst_days"].days), "days", of=f"came to {came}{other}"),
                       phone=f"came to {came}")  # a phone's wedge has room for two lines (fit test)
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).

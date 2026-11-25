@@ -82,9 +82,13 @@ def test_the_desktop_dial_is_marked_for_the_desktop_stage():
 def test_each_slice_draws_its_own_mini_chart():
     view = with_minis(raw(CASES["chapter_1_phone"]["view"]))
     html = page(view)
-    assert html.count('<g class="scope__mini chart chart--on-navy" transform="translate(') == 3
+    # A wedge that clears only without its mini draws none (dial.fitted); every other keeps its own.
+    kept = [i for i in dial.fitted(view["items"], G.SIZES["phone"]["figSizesChapter"]) if i.get("chart")]
+    assert 2 <= len(kept) <= 3
+    assert html.count('<g class="scope__mini chart chart--on-navy" transform="translate(') == len(kept)
     for item in view["items"]:
-        assert G.render_chart(item["mini"]) in html, item["chart"]
+        if any(k["name"] == item["name"] for k in kept):
+            assert G.render_chart(item["mini"]) in html, item["chart"]
 
 
 def test_a_slice_that_names_a_chart_must_give_it():
