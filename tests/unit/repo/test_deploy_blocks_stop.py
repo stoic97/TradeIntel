@@ -106,7 +106,8 @@ STUBS = {
     "uv": 'test ! -e "$BOX/uv-fails"\n',
     "systemctl": "true\n",
     "cmp": "exit 1\n",  # every file differs, so every install step runs
-    "cp": 'test ! -e "$BOX/cp-fails"\n',
+    # a copy that works leaves the file, so the chmod after it finds it
+    "cp": 'test ! -e "$BOX/cp-fails" || exit 1\nfor a; do :; done\ncase "$a" in */) ;; *) : > "$a";; esac\n',
     "chown": 'test ! -e "$BOX/chown-fails"\n',
     "python3": "true\n",
     "journalctl": "echo Application startup complete\n",
