@@ -159,7 +159,17 @@ SIZES = {
         "nameLine": 14,
         "edge": 187,
         "figSizesHome": [22, 18],
-        "figSizesChapter": [18, 15],
+        "figSizesChapter": [18, 15, 13],
+        # The phone dial makes room inside the same 260 px: a smaller centre where its words
+        # allow (a chapter's name wraps into 50 units; Home's "before charges" needs 56), the
+        # wedge band runs out to 147 where the bezel ticks were, a state's words take 56 px, and
+        # no empty serial row sits above a figure.
+        "room": {
+            "home": {"disc": 56, "ring": 56.5, "divStart": 62.5, "inner": 147, "divEnd": 142,
+                     "minorStart": None, "midStart": None, "majorStart": None, "stateW": 56, "serialRow": 0},
+            "chapter": {"disc": 50, "ring": 53, "divStart": 59, "inner": 147, "divEnd": 142,
+                        "minorStart": None, "midStart": None, "majorStart": None, "stateW": 56, "serialRow": 0},
+        },
     },
     "desktop": {
         "stageW": 640,
@@ -174,6 +184,9 @@ SIZES = {
 }
 
 # Names that may take three lines on the phone dial; every other name takes two at most.
+MINI = {"w": 72, "h": 20}
+"""A mini chart in a wedge: big enough that each mark reads on a phone."""
+
 THREE_LINE_NAMES = [
     "Where the money came from",
     "Where your results came from",
@@ -181,10 +194,11 @@ THREE_LINE_NAMES = [
 ]
 
 
-def radii(R: float) -> dict:
-    """Radii scaled from the kit's 300-unit master drawing (outer ring at 149.5)."""
+def radii(R: float, room: dict | None = None) -> dict:
+    """Radii scaled from the kit's 300-unit master drawing (outer ring at 149.5). `room`
+    overrides some of them, in the same units (None: that tick is not drawn)."""
     u = R / 150
-    return {
+    rr = {
         "u": u,
         "outer": 149.5 * u,  # outer hairline ring
         "tickEnd": 149 * u,  # all ticks end here
@@ -196,7 +210,18 @@ def radii(R: float) -> dict:
         "divEnd": 132 * u,  # ...and of the inner ring
         "ring": 64 * u,  # fine ring around the centre disc
         "disc": 60 * u,  # centre disc
+        "stateW": 66,  # px a state's words take in a slice
+        "serialRow": 17,  # px kept above an unlabelled figure, where the kit drew its serial
     }
+    for k, v in (room or {}).items():
+        rr[k] = v if k in ("stateW", "serialRow") or v is None else v * u
+    return rr
+
+
+def dial_radii(size_name: str, is_home: bool) -> dict:
+    """The radii a dial of this size and kind is drawn with."""
+    size = SIZES[size_name or "phone"]
+    return radii(size["R"], (size.get("room") or {}).get("home" if is_home else "chapter"))
 
 
 def sectors(n: int, is_home: bool) -> dict:
@@ -228,10 +253,11 @@ def ticks(cx: float, cy: float, rr: dict, dividers: list, rotation: float = 0) -
         if is_div(a):
             continue
         if math.fmod(a, 30) == 0:
-            mid += radial(cx, cy, a + rotation, rr["midStart"], rr["tickEnd"])
-        else:
+            if rr["midStart"] is not None:
+                mid += radial(cx, cy, a + rotation, rr["midStart"], rr["tickEnd"])
+        elif rr["minorStart"] is not None:
             minor += radial(cx, cy, a + rotation, rr["minorStart"], rr["tickEnd"])
-    for a in dividers:
+    for a in dividers if rr["majorStart"] is not None else ():
         major += radial(cx, cy, a + rotation, rr["majorStart"], rr["tickEnd"])
     return {"minor": minor, "mid": mid, "major": major}
 
@@ -305,7 +331,9 @@ def stacked_split(fig: str) -> list[str] | None:
     return [fig[:j], fig[j + 1 :]] if j > 0 else None
 
 
-def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
+def slice_block(
+    item: dict, fig_size: float, stacked: bool, state_w: float = 66, serial_row: float = 17
+) -> dict:
     """The box a slice's contents take: number, figure head, [tail], mini chart or state."""
     state = item.get("state") or ""
     label = "" if state else (item.get("label") or "")  # the line under a hub answer's figure
@@ -317,10 +345,10 @@ def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
     head_w = mono_width(head, fig_size) - (2 * 0.45 * fig_size if tight else 0)
     tail_w = max((mono_width(line, 11) for line in tail_lines), default=0)
     lh = js_round(fig_size * 1.15)
-    lead = 0 if label else 13 + 4  # the kit's serial row, which a labelled figure has no need of
+    lead = 0 if label else serial_row  # the kit's serial row, which a labelled figure has no need of
     row_a = lead + lh + 13 * len(tail_lines)
-    row_b = 28 if state else (14 if item.get("chart") else 0)
-    width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
+    row_b = 28 if state else ((item.get("miniH") or MINI["h"]) if item.get("chart") else 0)
+    width = max(head_w, tail_w, (state_w if state else (item.get("miniW") or MINI["w"])) if row_b else 0, 8)
     return {
         "head": head,
         "tail": tail,
@@ -386,7 +414,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
 
     for si, fs in enumerate(fig_sizes):
         forms = [False] * len(items)
-        blocks = [slice_block(it, fs, False) for it in items]
+        blocks = [slice_block(it, fs, False, rr["stateW"], rr["serialRow"]) for it in items]
         r = best(blocks)
         passes = 0
         while passes < 8 and r["score"] < 0:
@@ -399,7 +427,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
             if wi < 0:
                 break
             forms[wi] = True
-            blocks = [slice_block(it, fs, forms[i]) for i, it in enumerate(items)]
+            blocks = [slice_block(it, fs, forms[i], rr["stateW"], rr["serialRow"]) for i, it in enumerate(items)]
             r = best(blocks)
             passes += 1
         if r["score"] >= 0:
@@ -408,7 +436,7 @@ def layout_contents(items: list, sec: dict, rr: dict, fig_sizes: list) -> dict:
                     continue
                 f2 = list(forms)
                 f2[i] = False
-                b2 = [slice_block(x, fs, f2[j]) for j, x in enumerate(items)]
+                b2 = [slice_block(x, fs, f2[j], rr["stateW"], rr["serialRow"]) for j, x in enumerate(items)]
                 r2 = best(b2)
                 if r2["score"] >= 0:
                     forms[i], blocks, r = False, b2, r2
@@ -449,16 +477,21 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     """Every primitive of the dial.
 
     view = {"kind": "home" | "chapter",
-            "items": [{"name", "figure", "href", "chart"?, "state"?, "opened"?}, ...],
+            "items": [{"name", "figure", "href", "chart"?, "state"?, "opened"?, "marked"?}, ...],
             "centre": {"figure", "caption"} on home, {"name", "scopeHref"} in a chapter}
     """
     opts = opts or {}
     size_name = size_name or "phone"
     size = SIZES[size_name]
-    cx, cy, rr = size["stageW"] / 2, size["stageH"] / 2, radii(size["R"])
     is_home = view["kind"] == "home"
+    cx, cy, rr = size["stageW"] / 2, size["stageH"] / 2, dial_radii(size_name, is_home)
     sec = sectors(len(view["items"]), is_home)
     t = ticks(cx, cy, rr, sec["dividers"], 0)
+    # The reader's place: one state a wedge (unread | opened | current). Given, the ring
+    # replaces the ticks.
+    progress = view.get("progress")
+    reading = progress if isinstance(progress, list) and len(progress) == len(view["items"]) else None
+    ring_r = ((rr["inner"] if rr["majorStart"] is None else rr["majorStart"]) + rr["tickEnd"]) / 2
     lay = layout_contents(
         view["items"],
         sec,
@@ -477,6 +510,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                 "index": i,
                 "number": str(i + 1),
                 "name": it["name"],
+                "miniLabel": it.get("miniLabel") or "",
                 "href": it["href"],
                 "state": state,
                 "opened": bool(it.get("opened")),
@@ -512,8 +546,14 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     if state == "not-in-file"
                     else ""
                 ),
+                # Worse than its own reference: a quiet fill, under the ticks and words.
+                "marked": (
+                    wedge(cx, cy, sl["start"], sl["end"], rr["divStart"], rr["inner"])
+                    if it.get("marked")
+                    else ""
+                ),
                 "openedMark": polar(cx, cy, rr["inner"] - 3 * rr["u"], sl["mid"])
-                if it.get("opened")
+                if it.get("opened") and not reading
                 else None,
                 "contents": {
                     "x": q[0],
@@ -528,6 +568,8 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     "figSize": b["figSize"],
                     "lineHeight": b["lineHeight"],
                     "chart": "" if state else (it.get("chart") or ""),
+                    "miniW": it.get("miniW") or MINI["w"],  # a crowded wedge may draw its mini smaller
+                    "miniH": it.get("miniH") or MINI["h"],
                     "tone": "state"
                     if state
                     else ("rupee" if figure.startswith(("−₹", "-₹")) else "plain"),
@@ -548,8 +590,15 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
         "outerRing": circle(cx, cy, rr["outer"]),
         "innerRing": circle(cx, cy, rr["inner"]),
         "ticks": t,
+        "progress": [
+            {"state": reading[i], "d": arc(cx, cy, ring_r, sl["start"] + 2, sl["end"] - 2)}
+            for i, sl in enumerate(sec["slices"])
+        ]
+        if reading
+        else [],
+        "progressLabel": (view.get("progressLabel") or "") if reading else "",
         "dividers": [radial(cx, cy, a, rr["divStart"], rr["divEnd"]) for a in sec["dividers"]],
-        "arc": "" if is_home else arc(cx, cy, rr["inner"], -43, 43),
+        "arc": "" if is_home or reading else arc(cx, cy, rr["inner"], -43, 43),
         "disc": circle(cx, cy, rr["disc"]),
         "centreRing": circle(cx, cy, rr["ring"]),
         "slices": slices,
@@ -581,6 +630,19 @@ def _text_block(
     return f'<text class="{cls}" x="{fmt(x)}" y="{fmt(base)}" text-anchor="{anchor}">{spans}</text>'
 
 
+def _smaller(mini_w: float, mini_h: float) -> str:
+    """The scale on a mini drawn smaller than MINI, in a wedge with no room for it."""
+    if mini_w == MINI["w"] and mini_h == MINI["h"]:
+        return ""
+    return f" scale({fmt(mini_w / MINI['w'])} {fmt(mini_h / MINI['h'])})"
+
+
+def _spoken(s: dict) -> str:
+    """A slice read aloud: its name, then what its mini chart shows when it draws one."""
+    said = s.get("miniLabel") or ""
+    return s["name"] + "." + (" " + said if said and not s["state"] else "")
+
+
 def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
     """The dial as inline SVG; class names are components.css's (.scope__*).
 
@@ -595,6 +657,10 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if d["kind"] == "home"
         else "The Scope inside this chapter"
     )
+    if d["centre"].get("spoken"):  # a centre drawn short is read out in full
+        label += ". " + _esc(d["centre"]["spoken"])
+    if d["progressLabel"]:
+        label += f". {_esc(d['progressLabel'])}."
     o.append(
         f'<svg class="scope__svg" viewBox="{-pad} 0 {d["stageW"] + 2 * pad} {d["stageH"]}" '
         f'width="{d["stageW"] + 2 * pad}" height="{d["stageH"]}" role="img" aria-label="{label}">'
@@ -609,12 +675,21 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
             o.append(f'<path class="scope__state-hatch" d="{s["hatch"]}"/>')
         if s["dashed"]:
             o.append(f'<path class="scope__state-dashed" d="{s["dashed"]}"/>')
+        if s["marked"]:
+            o.append(f'<path class="scope__marked" d="{s["marked"]}"/>')
     tk = d["ticks"]
-    o.append(
-        f'<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="{tk["minor"]}"/>'
-        f'<path class="scope__tick scope__tick--mid" d="{tk["mid"]}"/>'
-        f'<path class="scope__tick scope__tick--major" d="{tk["major"]}"/></g>'
-    )
+    if d["progress"]:
+        segs = "".join(
+            f'<path class="scope__progress-seg scope__progress-seg--{p["state"]}" d="{p["d"]}"/>'
+            for p in d["progress"]
+        )
+        o.append(f'<g class="scope__progress">{segs}</g>')
+    else:
+        o.append(
+            f'<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="{tk["minor"]}"/>'
+            f'<path class="scope__tick scope__tick--mid" d="{tk["mid"]}"/>'
+            f'<path class="scope__tick scope__tick--major" d="{tk["major"]}"/></g>'
+        )
     o.append(f'<path class="scope__inner" d="{d["innerRing"]}"/>')
     if d["arc"]:
         o.append(f'<path class="scope__arc" d="{d["arc"]}"/>')
@@ -628,11 +703,11 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if s["href"]:
             o.append(
                 f'<a class="scope__slice{state_class}" href="{s["href"]}" '
-                f'aria-label="{_esc(s["name"] + ".")}">'
+                f'aria-label="{_esc(_spoken(s))}">'
             )
         else:
             o.append(f'<a class="scope__slice scope__slice--plain{state_class}" '
-                     f'aria-label="{_esc(s["name"] + ".")}">')
+                     f'aria-label="{_esc(_spoken(s))}">')
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
             f'<path class="scope__focus" d="{s["focusRing"]}"/>'
@@ -680,7 +755,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         elif c["chart"]:
             o.append(
                 f'<g class="scope__mini chart chart--on-navy" '
-                f'transform="translate({fmt(c["x"] - 18)} {fmt(c["chartY"])})">'
+                f'transform="translate({fmt(c["x"] - c["miniW"] / 2)} {fmt(c["chartY"])})'
+                f'{_smaller(c["miniW"], c["miniH"])}">'
                 f"{mini_charts.get(c['chart'], '')}</g>"
             )
         o.append("</a>")
@@ -733,11 +809,19 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
                 cur = t
         if cur:
             lines.append(cur)
+        read = d["centre"].get("readLine") or ""
         lh = js_round(fs * 1.25)
-        tot = len(lines) * lh + 4 + 13
+        tot = len(lines) * lh + 4 + 13 + (13 if read else 0)
         o.append(
             _text_block(lines, d["cx"], d["cy"] - tot / 2, lh, fs, "center", "scope__centre-name")
         )
+        if read:
+            o.append(
+                _text_block(
+                    [read], d["cx"], d["cy"] - tot / 2 + len(lines) * lh + 2, 13, 10, "center",
+                    "scope__centre-read",
+                )
+            )
         scope_href = d["centre"].get("scopeHref") or "/scope"
         o.append(
             f'<a class="scope__centre-link" href="{scope_href}" aria-label="Scope out to all four chapters">'
@@ -784,7 +868,9 @@ def build_lens(n_facts: int, fact_index: int) -> dict:
 # ---------- Charts ----------
 # Every chart returns {"w", "h", "parts"}, parts a list of {"role", "d"}; the role is a
 # CSS class suffix (.chart__<role>): ink, light, faint, red, green, hatch, axis, stroke,
-# dash. Mini charts (36 x 14) are the same functions at a small w and h.
+# dash. Mini charts (36 x 14) are the same functions at a small w and h. A dial's own minis
+# (MINI) are the straight forms after notold: meter, split, pair, steps, counts and
+# hours. A chart may carry labels, {"x", "y", "t"}, drawn as text.
 
 
 def _r2(x: float, y: float, w: float, h: float) -> str:
@@ -1063,6 +1149,79 @@ def chart_notold(w: float, h: float, mini: bool = False) -> dict:
     return _chart(w, h, {"light": light})
 
 
+def chart_meter(value: float, target: float | None, w: float, h: float) -> dict:
+    """A rate against the rate it needs, both 0 to 1: a track, a fill to the rate, a tick at
+    the target."""
+    bh, y0 = h * 0.4, h * 0.3
+    m = {"faint": _r2(0, y0, w, bh), "ink": _r2(0, y0, w * clamp01(value), bh), "stroke": ""}
+    if target is not None:
+        m["stroke"] = f"M{fmt(w * clamp01(target))} 0V{js_str(h)}"
+    return _chart(w, h, m)
+
+
+def chart_split(part: float, rest: float, w: float, h: float) -> dict:
+    """One part of a whole (ink) against the rest: green where the rest made money, light where
+    it did not."""
+    a = abs(part)
+    tot, bh, y0 = max(a + abs(rest), 1), h * 0.5, h * 0.25
+    pw = max(1, min(w - 3, w * a / tot))
+    m = {"ink": _r2(0, y0, pw, bh), "green": "", "light": ""}
+    m["green" if rest > 0 else "light"] = _r2(pw + 2, y0, w - pw - 2, bh)
+    return _chart(w, h, m)
+
+
+def chart_pair(a: float, b: float, w: float, h: float) -> dict:
+    """Two signed figures from one zero line, a on the left and b on the right: a gain up, a
+    loss down."""
+    mx, z, bw = max(abs(a), abs(b), 1), h / 2, w * 0.3
+    m = {"green": "", "red": "", "axis": f"M0 {fmt(z)}H{js_str(w)}"}
+    for i, v in enumerate((a, b)):
+        bh = max(1, abs(v) / mx * (z - 1))
+        r = _r2(w * (0.6 if i else 0.1), z - bh if v > 0 else z, bw, bh)
+        m["green" if v > 0 else "red"] += r
+    return _chart(w, h, m)
+
+
+def chart_steps(nets: list, w: float, h: float) -> dict:
+    """A losing run stepping down: one step per loss, each as deep as that loss."""
+    tot = 0
+    for v in nets:
+        tot = tot + abs(v)
+    tot, g = max(tot, 1), w / max(1, len(nets))
+    run, red = 0, ""
+    for i, v in enumerate(nets):
+        d = abs(v) / tot * (h - 1)
+        red += _r2(i * g + g * 0.1, run, g * 0.8, max(0.8, d))
+        run += d
+    return _chart(w, h, {"red": red, "axis": f"M0 0.5H{js_str(w)}"})
+
+
+def chart_counts(a: float, b: float, w: float, h: float, texts: list | None = None) -> dict:
+    """Two counts side by side, each with its number under it: a (ink) against b (faint)."""
+    texts = texts or [js_str(a), js_str(b)]
+    mx, top, bw = max(a, b, 1), h - 9, w * 0.18
+    m, labels = {"ink": "", "faint": ""}, []
+    for i, v in enumerate((a, b)):
+        bh = max(1, v / mx * (top - 1))
+        x = w * (0.55 if i else 0.12)
+        m["faint" if i else "ink"] = _r2(x, top - bh, bw, bh)
+        labels.append({"x": fmt(x + bw / 2), "y": fmt(h), "t": texts[i]})
+    return {**_chart(w, h, m), "labels": labels}
+
+
+def chart_hours(hour_net: list, mark: int, w: float, h: float) -> dict:
+    """Net (gross) by the hour a trade was opened: the marked hour in full, the rest faint; gains
+    up, losses down."""
+    n = max(1, len(hour_net))
+    bw, z, mx = w / n, h * 0.5, max([abs(v) for v in hour_net] + [1])
+    m = {"green": "", "red": "", "faint": "", "axis": f"M0 {fmt(z)}H{js_str(w)}"}
+    for i, v in enumerate(hour_net):
+        bh = max(0.6, abs(v) / mx * (z - 0.5))
+        r = _r2(i * bw + bw * 0.15, z - bh if v > 0 else z, bw * 0.7, bh)
+        m["faint" if i != mark else "green" if v > 0 else "red"] += r
+    return _chart(w, h, m)
+
+
 def chart_call_put(trades: list, w: float, h: float) -> dict:
     """The option trades of one day, in order: calls on the top row, puts on the bottom, a
     position of several legs on both. Bar height is the size of the result; a bar that made
@@ -1191,6 +1350,12 @@ CHARTS = {
     "risk": chart_risk,
     "notold": chart_notold,
     "waterfall": chart_waterfall,
+    "meter": chart_meter,
+    "split": chart_split,
+    "pair": chart_pair,
+    "steps": chart_steps,
+    "counts": chart_counts,
+    "hours": chart_hours,
     # Not the kit's: chapter 3's What you do next.
     "backin": chart_backin,
     "sameway": chart_sameway,
@@ -1201,6 +1366,10 @@ CHARTS = {
 def render_chart(c: dict, cls: str = "", wrap: bool = False) -> str:
     """A chart as SVG: its parts alone, or wrapped in an <svg> when wrap is true."""
     inner = "".join(f'<path class="chart__{p["role"]}" d="{p["d"]}"/>' for p in c["parts"])
+    inner += "".join(
+        f'<text class="chart__label" x="{lb["x"]}" y="{lb["y"]}" text-anchor="middle">{_esc(lb["t"])}</text>'
+        for lb in c.get("labels") or ()
+    )
     if not wrap:
         return inner
     return (

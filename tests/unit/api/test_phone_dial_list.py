@@ -29,7 +29,8 @@ from tests.helpers.scope_chapters import IMP
 from tests.unit.api import figure_pages as P
 
 PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
-FIT_ON_A_PHONE = -13  # the layout's own limit, as test_dial_states_facts holds every dial to it
+FIT_ON_A_PHONE = 0  # the layout's own limit, as test_dial_states_facts holds every dial to it
+FIT_ON_A_DESKTOP = -13  # the desktop dial as it was
 
 
 @pytest.fixture()
@@ -49,30 +50,32 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
+# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, then
+# re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
+# views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
-                "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["15c151598bedff98a253625918f1a078d3e3700de7108ffb1126f78176ef1882",  # phone: 1027 shortens a five-digit best trade
-                          "6eb51cfb9b374295da704757df16ca79fc8d2f876f481413df604b54d2935901"],  # desktop: 995 adds a wedge
-    "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          # Desktop: three more wedges since What you do next (1006), and a sixth for After
-                          # you closed; the phone dial is main's.
-                          "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7"],
-    "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
-                          "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
+    # Re-taken on the merge with main of 25 Nov: the reading ring (TICKET-1037) on main's dials,
+    # which since carry After you closed (1009) on the hub and chapter 3.
+    "/mirror": ["51ffae6f525acc246f544e7138e166132ebc5da2065dcf10e5f4b0830e056438",
+                "dc43965c99e54af2e71865fa7dec525fe65704149d05658b0936a2d17ddc4737"],
+    "/mirror/chapter/1": ["25228d3bc65b48e35618b2be5a3d39f4aaf19978abc096513223ad6b59e5ea4f",
+                          "e46f24ba3412133fc56f901c6bc7b0c91769f59e58b516ebc4c7d9dd2fa95408"],
+    "/mirror/chapter/2": ["972f76cd9e901140f239864048fc700763a4b99f12f0b370a3299d10862f8a44",
+                          "33301fff41ee1ea2529d14f40725b79554f8ba90de05584ac10fc8dff3bc2a9e"],
+    "/mirror/chapter/3": ["dd9a9d3a7d73c1abb04479e3695dd2c735fbc00d9a49370e20e9f8fc5e5cb518",
+                          "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf"],
+    "/mirror/chapter/4": ["159ca3ccb811dc84ab6e50a517d6ddc43277622f20d0ce5dca65e96e71fc65d9",
+                          "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
-    (1, "desktop"): "de82504974afc60ce463d7c6ae2776da1d5564171db868fa100d361a1d3fd1e8",  # 995's wedge
-    (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
-    (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "9704f56d35308a4edd16a6935792372428c21f4f0dc4d5c3afb853d6c6c44892",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
-    (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
-    (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
+    (1, "phone"): "6a3de0a598f2d9704254ac1496900547c2606c3f08cff24f7c77fb87681c401f",
+    (1, "desktop"): "8bc0e2a40901ff932580ae6f52cd294b004020d7b289bb34f368379b0d69f941",
+    (2, "phone"): "6907a01fd0d283f9381f7e8a9eeab1f9116e013651f2f46a083e771f89bbc948",
+    (2, "desktop"): "278466a1f4ee54fe75ad2c1e86a575efe86f19eb5ba5964eb85eb06af32e62ab",
+    (3, "phone"): "0b5658b2d2a33fdaad899ab0388ca458ea5efd4f712b840a15668d470df409f7",
+    (3, "desktop"): "685e67d71b832c20f00e18dab5d31179b9232c5a6f9388c29cfad9405e42c259",
+    (4, "phone"): "4b04bb18e7f1fa665e722a00f079c8dd4f5c1a0a83b40822b2b7cd622316fae3",
+    (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
@@ -136,28 +139,29 @@ def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
 def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
     phone, desk = str(D.scope_dial(later, "phone")), str(D.scope_dial(later, "desktop"))
     assert len(slices(phone)) == 3 and len(slices(desk)) == 4
-    assert 'aria-label="After two straight losses."' not in phone
-    assert 'aria-label="After two straight losses."' in desk
+    assert 'aria-label="After two straight losses.' not in phone
+    assert 'aria-label="After two straight losses.' in desk
     assert sha(phone) == CHAPTERS_ON_MAIN[(2, "phone")]  # the phone dial is today's, byte for byte
 
 
 def test_the_desktop_keeps_chapter_order_and_clears(later):
     assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
     z = G.SIZES["desktop"]
-    rr = G.radii(z["R"])
-    items = later["desktop_items"]
+    rr = G.dial_radii("desktop", False)
+    items = D.fitted(later["desktop_items"], z["figSizesChapter"], "desktop")  # as the dial draws it
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
-        assert G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], b, rr) >= FIT_ON_A_PHONE
+        assert G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], b, rr) >= FIT_ON_A_DESKTOP
 
 
 def test_the_phone_dial_still_clears(later):
     z = G.SIZES["phone"]
-    rr = G.radii(z["R"])
-    items = [{**i, "figure": i.get("phone_figure", i["figure"]),  # as the phone clearance test reads them
-              "label": i.get("phone_label", i.get("label", ""))} for i in later["items"]]
+    rr = G.dial_radii("phone", False)
+    items = [{**i, "figure": D.phone_rupees(i.get("phone_figure", i["figure"])),  # as the phone draws them
+              "label": D.phone_rupees(i.get("phone_label", i.get("label", "")))} for i in later["items"]]
     assert len(items) == 3
+    items = D.fitted(items, z["figSizesChapter"])  # each mini as wide as its wedge clears (TICKET-1036)
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):

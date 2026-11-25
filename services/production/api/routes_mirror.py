@@ -21,7 +21,7 @@ from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
 from services.production.api import after_closed as ACL
-from services.production.api import day_chart, formatting
+from services.production.api import day_chart, fact_reads, formatting
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -87,6 +87,7 @@ def load_record(request: Request):
             return None, (trips, imp, _with_close_bars(sess, imp, SF.record_context(trips, waterfall.build(entries, trips))))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
+        request.state.report_chosen = chosen
         request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
@@ -176,7 +177,8 @@ def scope_home(request: Request):
                 imp=imp, trade_count=len(trips), trading_day_count=context["file_trading_days"],
                 charges=charges,
                 continue_step=SM.continue_step(_read_pages(request)),
-                **SF.home_context(context, imp, _opened_chapters(request), number=number))
+                **SF.home_context(context, imp, _opened_chapters(request), number=number,
+                                  read=_fact_reads(request, imp)))
 
 
 @router.get("/mirror/chapter/{n}", response_class=HTMLResponse)
@@ -195,7 +197,7 @@ def scope_chapter(request: Request, n: int):
     figs = SF.facts(context, imp)
     return page(request, "scope/chapter.html", title=chapter.name,
                 enter_class=enter_class(request), chapter=chapter,
-                view=SF.chapter_view(n, figs), facts=figs, imp=imp,
+                view=SF.chapter_view(n, figs, read=_fact_reads(request, imp)), facts=figs, imp=imp,
                 next_step=SM.chapter_step(n),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
@@ -225,6 +227,24 @@ def _read_pages(request: Request) -> frozenset[str]:
         return frozenset()
     with make_session(request.app.state.engine) as sess:
         return read_pages(sess, current_trader(request, sess))
+
+
+def _fact_reads(request: Request, imp) -> frozenset[str]:
+    """The pages he has opened in this upload (fact_reads); the sample has read nothing."""
+    if is_sample(request):
+        return frozenset()
+    with make_session(request.app.state.engine) as sess:
+        return fact_reads.opened(sess, current_trader(request, sess), imp)
+
+
+def _note_fact_read(request: Request, imp, key: str) -> None:
+    """Noted when the page is served, so "opened" doesn't depend on a script running."""
+    if is_sample(request):
+        return
+    chosen = getattr(request.state, "report_chosen", None)
+    with make_session(request.app.state.engine) as sess:
+        fact_reads.record(sess, current_trader(request, sess), imp, key,
+                          chosen.period if chosen else RF.ALL, chosen.book if chosen else None)
 
 
 def _mark_opened(request: Request, chapter: SM.Chapter) -> None:
@@ -310,6 +330,7 @@ def scope_fact(request: Request, key: str):
         return early
     _trips, imp, context = record
     chapter, index = SM.chapter_of(key)
+    _note_fact_read(request, imp, key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
     if key == "after-close" and request.query_params.get("u"):  # the chip he picked

@@ -30,7 +30,7 @@
       {% endif %}
     </div>
     {% endif %}
-    {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ Figure(f.held.count, "positions") }} position{{ "" if f.held.count == 1 else "s" }}, net {{ Figure(f.held.net, "rupees")|rupees }}.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ Figure(f.found.top_holding.net, "rupees")|rupees }} of it, the longest held {{ Figure(f.found.top_holding.longest_seconds, "seconds")|hold }}.{% endif %}</p>{% endif %}
+    {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ Figure(f.held.count, "positions") }} position{{ "" if f.held.count == 1 else "s" }}, net <span class="nowrap">{{ Figure(f.held.net, "rupees")|rupees }}</span>.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ Figure(f.found.top_holding.net, "rupees")|rupees }} of it, the longest held {{ Figure(f.found.top_holding.longest_seconds, "seconds")|hold }}.{% endif %}</p>{% endif %}
     {% if f.see_all %}<p class="evidence__see-all">{{ button("See all trades", f.see_all, "secondary") }}</p>{% else %}{{ trades(f.held_groups) }}{% endif %}
   </section>
 {% endblock %}

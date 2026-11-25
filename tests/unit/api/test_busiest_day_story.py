@@ -446,7 +446,7 @@ def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
     figs = SF.facts(SF.record_context(DAY), IMP)
     item = SF.chapter_view(3, figs)["items"][1]
     assert (item["figure"], item["label"].replace("\xa0", " ")) == (
-        "6 trades", "on your\nbusiest day,\n02 Sep 2026")
+        "6 trades", "on your\nbusiest day,\n02 Sep 2026;\nusually 1")  # its usual day: TICKET-1035
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
@@ -471,7 +471,7 @@ def test_the_card_and_home_keep_their_own_figures():
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
     assert figs["down"]["figure"] == "2 trades"  # DOWN: 2 right after two losses in a row (1025)
-    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "on your\nbusiest day"
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["phone_label"] == "busiest day"
     assert ">4<" in chapter_page(3, DOWN)
 
 
