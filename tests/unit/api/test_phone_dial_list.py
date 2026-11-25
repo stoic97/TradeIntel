@@ -70,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "589504dfba30aeba12cc60d9c75be66013089389dc3c3dfadf22ae342d289996",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
+    (3, "desktop"): "8183a8dd4e7ae655be3301bd7fed01946b65674f14760a4e5dee072cfbdbc945",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
