@@ -117,9 +117,12 @@ def test_the_filter_bar_has_a_one_line_phone_form_and_keeps_its_links(client):
 # ---------- 4. the filter says when it can't apply ----------
 
 def test_since_your_last_upload_says_so_when_there_is_nothing_since(client):
+    # This reader has one upload: there is no last upload to have added nothing (TICKET-1051).
+    # The later-upload states are read in test_filter_states_and_folds.py.
     client.cookies.set(RF.COOKIE, f"{RF.SINCE}|")
     page = client.get("/mirror").text
-    assert "Your last upload added no new days, so this shows everything." in page
+    assert "There is no upload before this one, so this shows everything." in page
+    assert "Your last upload added no new days" not in page
 
 
 def test_a_book_the_file_does_not_hold_says_so(client):

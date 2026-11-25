@@ -53,14 +53,16 @@ def dials(html: str) -> list[str]:
 # re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
 # views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["5d48d407e0c2f56a1a01fcb520be818fd2a037cdde5f3d40a0bff4d08acdb160",
-                "0776faa6e2906da1fe4ddb0f48a9e72189a93db331233d81b9588c0baa9b7ddf"],
+    # Re-taken on the merge with main of 25 Nov: the reading ring (TICKET-1037) on main's dials,
+    # which since carry After you closed (1009) on the hub and chapter 3.
+    "/mirror": ["821a93ac5142c908da40d8acc26d21cd315b8b4b5db4478fd80289e63b63f996",
+                "ac6d0e1400d52f722af9883e47b40b493dd152773080904811d22af872063413"],
     "/mirror/chapter/1": ["dfbfc3322175cd50920dc7576da54b9c46e9ef836eb52df2fe45eac53bb4fc86",
                           "5289d114a13dce81088a2ea4952d6622ab5dfbb41b3653ce4b50081ad76a860b"],
     "/mirror/chapter/2": ["fc7f8bb02be93ddac8151d0c857e28212cac4d8fa4e1dea79bc4670041b05e0b",
                           "2fe1e8a6febd5659416c46cef21948d0d98c33b33451b90c2babb0289868fe91"],
-    "/mirror/chapter/3": ["91e5f1c28847aecf17b22d72d638ae6be696927eecd5a987d58bc8317288ff32",
-                          "34ef5a73843bc27acbc96e3169b122c03a0f343551497bd3e69d1b8ddaeb49b9"],
+    "/mirror/chapter/3": ["0023138c094ed21b9e6ca6acd0d8b6d65f92403c878e4d7a71d5c294133806ce",
+                          "412a8fd650fb5a3e29725f7fa40bdc899acac0cf210cca42cb3b7eec2ef52eb3"],
     "/mirror/chapter/4": ["7cd97ae999cd6a4ae3855a1e0c2b16bbbf9c1943ae2cbd462d6f90bb35fb8a4b",
                           "f3d930b722966a9ea5677198f62c4570de8baf32515efbb50dac0d6c7e63de96"],
 }
@@ -70,7 +72,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "c66c0416ae5dc9f3dddbc45228cb3e7e05e8261f9f88639503c0554d4d6b94f1",  # five wedges; back in under 30 a group reads its count and "too few" (24 Nov review)
+    (3, "desktop"): "9704f56d35308a4edd16a6935792372428c21f4f0dc4d5c3afb853d6c6c44892",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
@@ -79,7 +81,8 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
-OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day"}  # What you do next (1006)
+OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
+                      "after-close"}  # After you closed: added after the phone dial was sized
 
 
 def sha(text) -> str:
