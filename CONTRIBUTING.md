@@ -45,13 +45,28 @@ line stays under 72 characters; the body says *why*.
 `test(<area>): TICKET-NNN RED - <what it pins>`. The fix follows as its own commit, so a
 reviewer sees the test fail before it passes (SR-005). Both are kept.
 
+**RED is not rewritten** (merge practice v1.3). A later commit never changes an assertion the RED
+commit made. If the RED test was wrong, or a ruling changes the words it pins, a separate
+test-only commit says so and why; a test superseded by a ruling is skipped with its assertion
+unchanged and the skip reason naming the ruling.
+
 **No WIP commits on `main`.** A branch may hold work in progress; what merges is finished.
 "wip" in a subject line on `main` is a defect.
 
 ## Before review
 
-- Merge `main` into the branch and run `make test`. Paste its last line (`N passed …`) into
-  the PR description. Green on today's `main` is the bar, not green on your branch.
+- Merge `main` into the branch and run `make test`. Paste its last line (`N passed …`) and the
+  head sha it ran on into the PR. Green on today's `main` is the bar, not green on your branch;
+  a line for an older commit does not count. A wording-only commit may run the affected wording
+  tests instead and name the last full-suite sha.
+- A PR that adds a migration: its revision id is one no file on `main` uses, and its
+  `down_revision` is `main`'s head today. Check again after every merge of `main`; when
+  another migration lands first, re-point yours before review. Never renumber or edit a
+  migration already on `main`.
+- A gate line the diff does not meet as written is ruled in a comment on the Jira ticket, not
+  only in the PR body.
+- Two tickets that change the same file are stacked or sequenced, and the PR says which.
+  Stylesheet rules go next to their page's other rules, never appended at the end.
 - A change to a Mirror or Journal figure comes with a hand-calculated fixture or expected
   values, written from the spec, never from program output.
 - Screenshots go **in the PR**, dragged into its description. Never committed, never pushed to

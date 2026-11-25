@@ -206,14 +206,23 @@ misses. It reads the key from the environment:
 A second Scope on the same droplet, so a person can check a change before a trader
 sees it: `https://staging.scope.plusev.in`, behind a browser password (founder's
 password manager), on port 8001, in `/srv/scope-staging`, with its own database and
-session key. It runs `main`; production does not.
+session key. It runs `main`, or any commit `main` already holds; production runs only a
+tag.
 
 Refresh it by hand, as root, right before testing — never on a timer:
 
     /srv/scope-staging/deploy/refresh-staging.sh
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
 
-It restores the newest backup from `/var/backups/scope` into staging, checks out
-`origin/main`, starts `scope-staging`, and prints the version it runs. Migrations
+With no argument it takes `origin/main`. With one argument it takes that tag or sha
+instead, which is how a train whose tag sits behind `main` is checked (TICKET-1003). A
+ref that does not resolve, or that `origin/main` does not hold, is refused before the
+service stops, and staging keeps running what it was running. To judge a ref and change
+nothing, put `REFRESH_STAGING_CHECK_ONLY=1` before the command.
+
+It restores the newest backup from `/var/backups/scope` into staging, checks out the ref
+it was given, starts `scope-staging`, and prints the version it runs and whether that
+version was `main`. Migrations
 newer than production apply at startup, as they do in production. First install is
 the numbered block at the top of the script. Staging is never backed up; it is
 rebuilt from production's backups on every refresh. `deploy/scope-staging.service`
@@ -236,7 +245,7 @@ hour is reset: reconnect before pasting, or the block runs on your laptop.
 | f. Log it | same person | `docs/runbooks/deploys.md` |
 | g. Tell the traders | customer team | the loop tracker |
 
-### a. Refresh staging from `main`
+### a. Refresh staging at the sha the train will tag
 
     /srv/scope-staging/deploy/refresh-staging.sh
 
@@ -246,10 +255,33 @@ Expected, last lines:
     without the password: 401, as it must be
     from the app on :8001: {"status":"ok","code_version":"3f2a1bc"}
 
-    Staging is refreshed and running 3f2a1bc.
+    Staging is refreshed and running 3f2a1bc (origin/main).
 
 That sha is **what will be tagged**. Write it at the top of the train page. If the script
 stops, it names the step; fix that before anyone tests.
+
+A train split into two tags does not start at `main`. Give the script the first tag's
+sha, and staging runs that commit and nothing newer (TICKET-1003):
+
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
+
+The last line then reads `Staging is refreshed and running 09919b5 (ref 09919b5, not
+main)`, and that sha is what step c tags. The ref must be a commit `origin/main` already
+holds; anything else is refused before the service stops. The second tag gets its own
+refresh, at its own sha, once the first train is live.
+
+The ref is a tag or a sha (7 to 40 lower-case hex characters). `main`, `HEAD` and
+`origin/main~3` are refused before the service stops, because a branch name moves.
+
+A ref older than the script has no script in its tree, and step 4 rewrites the checkout
+the script lives in. So before the first such refresh, copy the script outside the
+checkout and run that copy, and run it again for the refresh back to `main`:
+
+    install -m 755 /srv/scope-staging/deploy/refresh-staging.sh /usr/local/sbin/refresh-staging
+    /usr/local/sbin/refresh-staging 09919b5
+
+After the train is tagged, `/usr/local/sbin/refresh-staging` with no argument takes
+`origin/main` again. Install the copy afresh whenever `deploy/refresh-staging.sh` changes.
 
 ### b. UAT on staging
 
@@ -290,22 +322,75 @@ pushed; a wrong tag is fixed by a new one.
 
 ### d. Deploy the tag
 
-Every block starts with `cd /srv/scope || exit 1`, so pasted in the wrong window it does
-nothing. First, where production is and what the tag changes:
+Every block is one `( ... )` that starts with `cd /srv/scope`, so pasted in the wrong window
+it prints `STOP: not on the server` and does nothing. After each step that matters there is a
+`STOP: <why>` line: the block ends there, your shell stays open, and a clean run ends in
+`DONE <name>`. Fix what the line says and paste the same block again; after `systemctl stop`
+(Path B and its rollback) the line also says the service is DOWN, and the block is not pasted
+again until you have decided between restarting it and rolling back. First, where production is
+and what the tag changes:
 
-    cd /srv/scope || exit 1
-    TAG=v2026.11.14
-    git status --short
-    git fetch --quiet --tags origin
-    LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD); echo "live: $LIVE"
-    git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/
-    git diff "$LIVE" "$TAG" -- migrations/versions | grep -nE "op\.(drop_|alter_column)" || echo "no destructive migration"
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      DIRTY=$(git status --short) || stop "git status failed"
+      test -z "$DIRTY" || { echo "$DIRTY"; stop "the box has changes made by hand; find out who before going on"; }
+      git fetch --quiet --tags origin || stop "git fetch failed; nothing was compared"
+      git merge-base --is-ancestor "$TAG^{commit}" origin/main || stop "$TAG is not on origin/main; do not deploy it"
+      LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"; echo "live: $LIVE"
+      git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/ || stop "git diff failed"
+      git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py || stop "CHECK DID NOT RUN - no classifier in $TAG; classify by hand, do not assume Path A"
+      python3 /tmp/classify_release.py "$LIVE" "$TAG"
+      case $? in
+        0) echo "PATH A - additive or no migration" ;;
+        1) echo "PATH B - destructive: stop the service BEFORE the snapshot, rollback is a DB restore" ;;
+        2) echo "READ BY HAND - Path B applies unless a person has read these migrations and says otherwise" ;;
+        *) stop "CHECK DID NOT RUN - classify by hand, do not assume Path A" ;;
+      esac
+      echo "DONE where"
+    )
 
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
-the box by hand: stop and find out who before going on. `live:` is the previous tag (a
-sha only on the first train, or after a deploy that skipped the train). The last line
-decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
-line → **Path B**.
+the box by hand: the block stops, so find out who before going on. It also refuses a tag that
+is not on `origin/main`. `live:` is the previous tag (a
+sha only on the first train, or after a deploy that skipped the train).
+
+Before either path, check that no new migration sits behind the live tag's head. Like every
+block here it is one `( ... )` with its own `TAG`: set it to the same tag as the block above.
+It stops if `TAG` or `LIVE` comes out empty rather than checking nothing.
+
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      set -u
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      [ -n "$TAG" ] || { echo "STOP: TAG is not set (set it to the tag in the block above)"; exit 1; }
+      LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"
+      [ -n "$LIVE" ] || { echo "STOP: LIVE is not set (cannot tell what is live)"; exit 1; }
+      head=""
+      for f in $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -E '/[0-9]{4}_[^/]*\.py$'); do
+        rev=$(git show "$LIVE:$f" | grep -E "^revision = " | grep -oE "[0-9]{4}")
+        [ -z "$head" ] || [ "$rev" \> "$head" ] && head=$rev
+      done
+      [ -n "$head" ] || stop "no migration found at $LIVE"
+      echo "live head: $head"
+      git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions | while read -r f; do git show "$TAG:$f" | grep -E "^(revision|down_revision) =" | sed "s|^|$f: |"; done || stop "git diff failed; nothing was checked"
+      echo "DONE migration heads"
+    )
+
+Expected: the first new migration's `down_revision` is the live head, each later one's is the
+one before it, and no new `revision` is a number at or below the live head. Anything else:
+stop, and do not deploy the tag. Why: a migration whose revision id the live database already
+counts as applied is skipped with no error, so its table never exists and the page that reads
+it fails; a `down_revision` behind the live head leaves two heads, and the app refuses to start
+(`alembic upgrade head` needs one). Fix it on `main` with a new tag; never edit a migration a
+tag has shipped.
+
+The first block's last line before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
+person reads those migrations and rules, and **Path B** applies until they do;
+`CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
+migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a
+rollback (in `downgrade()`) does not make a release destructive, and `batch.drop_column`
+counts the same as `op.drop_column`.
 
 Production then sits on a detached HEAD at the tag. That is correct, and `git status
 --short` still reports local changes, so the guard above still works. Do not "fix" it
@@ -313,38 +398,46 @@ with `git switch main`.
 
 **Path A** (no migration, or only additive ones). Back up the live database, then deploy:
 
-    cd /srv/scope || exit 1
-    TAG=v2026.11.14
-    RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
-    sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP"
-    git checkout --quiet "$TAG"
-    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
-    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
-    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
-    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
-    chown -R scope:scope /srv/scope
-    systemctl restart scope
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
+      sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP" || stop "the backup failed"
+      git checkout --quiet "$TAG" || stop "git checkout $TAG failed; the service was not restarted"
+      UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
+      cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
+      for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
+      cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
+      chown -R scope:scope /srv/scope || stop "chown failed"
+      systemctl restart scope || stop "systemctl restart scope failed"
+      echo "DONE path-a"
+    )
 
 **Path B** (a migration drops or alters something). Stop first, so the snapshot is an
 exact restore point; rollback for this release is that snapshot, not a checkout:
 
-    cd /srv/scope || exit 1
-    TAG=v2026.11.14
-    systemctl stop scope
-    sqlite3 /srv/scope/data/scope.db "PRAGMA wal_checkpoint(TRUNCATE);"
-    RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
-    sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP"
-    sqlite3 "$RP" "PRAGMA integrity_check;"
-    git checkout --quiet "$TAG"
-    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
-    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
-    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
-    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
-    chown -R scope:scope /srv/scope
-    systemctl start scope
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      systemctl stop scope || stop "systemctl stop scope failed; check systemctl status scope"
+      stop() { echo "STOP: $1; the service is DOWN, restart it or roll back"; exit 1; }
+      sqlite3 /srv/scope/data/scope.db "PRAGMA wal_checkpoint(TRUNCATE);" || stop "wal_checkpoint failed"
+      RP=/var/backups/scope/scope-$(date -u +%Y%m%dT%H%M%SZ).db
+      sqlite3 /srv/scope/data/scope.db ".backup '$RP'" && chmod 600 "$RP" && echo "restore point: $RP" || stop "the backup failed"
+      test "$(sqlite3 "$RP" "PRAGMA integrity_check;")" = ok || stop "integrity_check on $RP was not ok, never restore from it"; echo "integrity_check: ok"
+      git checkout --quiet "$TAG" || stop "git checkout $TAG failed"
+      UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
+      cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
+      for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
+      cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
+      chown -R scope:scope /srv/scope || stop "chown failed"
+      systemctl start scope || stop "systemctl start scope failed"
+      echo "DONE path-b"
+    )
 
-Expected (Path B): `integrity_check` prints `ok`. If it does not, `systemctl start scope`
-on the old code (`git checkout "$LIVE"` first if you already moved) and stop the train.
+Expected (Path B): `integrity_check: ok`. If the block stops there instead, `systemctl start scope`
+on the old code (`git checkout` the `live:` tag from the first block first if you already moved)
+and stop the train.
 
 Either path: a changed `scope.service`, market unit or `backup.sh` is not applied by checking
 out code (`cron.daily` runs its own copy). The `cmp` lines install each only when it differs,
@@ -356,12 +449,18 @@ The timer picks up a changed service on its next run; nothing needs restarting f
 Startup takes about five seconds; a `curl` straight after the restart can answer 502
 with nothing wrong.
 
-    cd /srv/scope || exit 1
-    journalctl -u scope --since "-3 min" --no-pager | grep -E "Application startup complete|Traceback"
-    sqlite3 /srv/scope/data/scope.db "select version_num from alembic_version;"
-    ls migrations/versions | sort | tail -1
-    curl -s https://scope.plusev.in/health; echo
-    curl -s -o /dev/null -w '%{http_code}\n' https://scope.plusev.in/login
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      stop() { echo "STOP: $1"; exit 1; }
+      LOG=$(journalctl -u scope --since "-3 min" --no-pager) || stop "journalctl failed"
+      echo "$LOG" | grep -E "Application startup complete|Traceback"
+      echo "$LOG" | grep -q "Application startup complete" || stop "no startup line yet; wait ten seconds and paste this block again"
+      echo "$LOG" | grep -q "Traceback" && stop "a Traceback in the log; read it before anything else"
+      sqlite3 /srv/scope/data/scope.db "select version_num from alembic_version;" || stop "cannot read the alembic revision"
+      ls migrations/versions | sort | tail -1
+      curl -s https://scope.plusev.in/health || stop "curl /health failed"; echo
+      curl -s -o /dev/null -w '%{http_code}\n' https://scope.plusev.in/login || stop "curl /login failed"
+      echo "DONE check"
+    )
 
 Expected: `Application startup complete` and no `Traceback`. The alembic revision matches
 the newest migration file (the startup log prints no alembic lines, and `alembic current`
@@ -384,19 +483,25 @@ Every ticket on the train that passed is now live. The tracker shows those rows 
 
 The previous tag is the second line of:
 
-    cd /srv/scope || exit 1
-    git tag --sort=-creatordate | head -2
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      stop() { echo "STOP: $1"; exit 1; }
+      git tag --sort=-creatordate | head -2; test "${PIPESTATUS[0]}" = 0 || stop "git tag failed"
+      echo "DONE tags"
+    )
 
 **After Path A** (code only):
 
-    cd /srv/scope || exit 1
-    PREV=v2026.11.07
-    git checkout --quiet "$PREV"
-    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
-    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
-    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
-    chown -R scope:scope /srv/scope
-    systemctl restart scope
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      PREV=v2026.11.07
+      stop() { echo "STOP: $1"; exit 1; }
+      git checkout --quiet "$PREV" || stop "git checkout $PREV failed; the service was not restarted"
+      UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
+      cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
+      cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
+      chown -R scope:scope /srv/scope || stop "chown failed"
+      systemctl restart scope || stop "systemctl restart scope failed"
+      echo "DONE rollback-a"
+    )
 
 An additive migration stays applied; older code ignores the new column or table.
 
@@ -404,16 +509,20 @@ An additive migration stays applied; older code ignores the new column or table.
 so the restore point goes back with it. Anything written after the snapshot (sign-ups,
 uploads) is lost; say so in the log.
 
-    cd /srv/scope || exit 1
-    PREV=v2026.11.07; RP=/var/backups/scope/scope-20261114T093000Z.db
-    systemctl stop scope
-    cp "$RP" /srv/scope/data/scope.db && rm -f /srv/scope/data/scope.db-wal /srv/scope/data/scope.db-shm
-    git checkout --quiet "$PREV"
-    UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
-    cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
-    cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
-    chown -R scope:scope /srv/scope
-    systemctl start scope
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      PREV=v2026.11.07; RP=/var/backups/scope/scope-20261114T093000Z.db
+      stop() { echo "STOP: $1"; exit 1; }
+      systemctl stop scope || stop "systemctl stop scope failed; check systemctl status scope"
+      stop() { echo "STOP: $1; the service is DOWN, restart it or roll back"; exit 1; }
+      cp "$RP" /srv/scope/data/scope.db && rm -f /srv/scope/data/scope.db-wal /srv/scope/data/scope.db-shm || stop "the restore point could not be copied back and the live database may be half written: copy $RP over it by hand first"
+      git checkout --quiet "$PREV" || stop "git checkout $PREV failed"
+      UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
+      cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
+      cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
+      chown -R scope:scope /srv/scope || stop "chown failed"
+      systemctl start scope || stop "systemctl start scope failed"
+      echo "DONE rollback-b"
+    )
 
 Then step e, and a log entry for the rollback.
 

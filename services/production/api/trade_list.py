@@ -180,13 +180,35 @@ def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     return None
 
 
+CHARGED_ON = "the charges each trade was charged"
+"""The lookup's key for each trade's charge steps (TICKET-995): trip id to the steps it was
+charged on, in waterfall order. A trade is charged on several, so this filter reads many."""
+
+
+def _charge(t: mx.Trip, lookup: dict) -> list[Choice]:
+    return [(place, key, name) for place, key, name in lookup.get(CHARGED_ON, {}).get(t.trip_id, ())]
+
+
+LINE_OF = "your process line"
+"""The lookup's key for the line chosen from Your process and the trades behind it: the page's
+row builders say which trades a figure counted (process.members), and this filter keeps those."""
+
+
+def _line(t: mx.Trip, lookup: dict) -> Choice | None:
+    from services.production.api import process
+    chosen = lookup.get(LINE_OF)
+    if chosen is None or t.trip_id not in chosen[1]:
+        return None
+    return 0, chosen[0], process.label(chosen[0])
+
+
 AFTER_OF = "the last trade's result before each trade"
 """The lookup's key for each trade's group: the result of the last trade that closed before it
 opened, the same day. One filter for every fact that groups trades this way (Your size after a
 loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
 AFTERS = (("loss", "After a loss"), ("win", "After a win"),
-          ("win-or-level", "After a win or a level trade"))
+          ("win-or-level", "After a win or a flat trade"))
 """How fast you went back in reads B1's two groups (the founder's ruling of 24 Nov 2026): after a
 loss, and after a win or a level trade. Size and Same way again read loss and win only."""
 
@@ -363,6 +385,15 @@ def opening(t: mx.Trip, _lookup: dict) -> Choice | None:
     return OPENINGS[0] if entry < cut else OPENINGS[1]
 
 
+SAME_DAYS = ((0, "yes", "Closed the day it opened"), (1, "no", "Held past its day"))
+
+
+def same_day(t: mx.Trip, _lookup: dict) -> Choice:
+    """Whether the trade closed on the day it opened: every trade, shares included. The Your
+    numbers day tiles count only these (the 23 Nov held ruling), so their links choose it."""
+    return SAME_DAYS[0] if t.closed_same_day else SAME_DAYS[1]
+
+
 OVERNIGHTS = ((0, "overnight", "Held overnight"), (1, "same-day", "Closed the same day"))
 
 
@@ -409,11 +440,18 @@ def _book_group(t: mx.Trip, lookup: dict) -> Choice | None:
 class Filter:
     name: str  # its name in the URL
     label: str
-    read: Callable[[mx.Trip, dict], Choice | None]
+    read: Callable[[mx.Trip, dict], Choice | None | list[Choice]]
     only: frozenset[str] | None = None  # the facts whose list offers it; None: every list
+    many: bool = False  # a trade can sit under several of its choices (a charge step)
     quiet: bool = False
     """Offered only when a link has already chosen it (TICKET-993's closed_day): a menu of every
     date he closed a trade on would bury the list, and a calendar cell is the way in."""
+
+    def choices(self, t: mx.Trip, lookup: dict) -> list[Choice]:
+        got = self.read(t, lookup)
+        if self.many:
+            return list(got or ())
+        return [] if got is None else [got]
 
 
 FILTERS = (
@@ -429,6 +467,7 @@ FILTERS = (
     Filter("days", "Expiry day or not", expiry_day_or_not, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
+    Filter("same_day", "Closed the day it opened", same_day, only=frozenset({"risk"}), quiet=True),
     # The shape of your days: his days by how many trades, his first 30 minutes, overnight.
     Filter("day_trades", "Trades that day", _day_third, only=frozenset({"risk"})),
     Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
@@ -437,10 +476,22 @@ FILTERS = (
     Filter("book_group", "Book", _book_group, only=frozenset({"risk"}), quiet=True),
     Filter("held_days", "Days held", held_days, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
+    Filter("charge", "Charge", _charge, only=frozenset({"charges"}), many=True),
+    # Your process opens each figure's trades, whatever row drew it.
+    Filter("line", "Your process", _line, only=frozenset({"risk"}), quiet=True),
     Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
     Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
 )
+
+
+def _charged_on(ctx: dict) -> dict[str, list[Choice]]:
+    wf = ctx.get("charges")
+    out: dict[str, list[Choice]] = {}
+    for place, step in enumerate(wf.steps if wf is not None else ()):
+        for trip_id in step.trip_ids:
+            out.setdefault(trip_id, []).append((place, step.key, step.name))
+    return out
 
 
 def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> dict:
@@ -453,17 +504,22 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
     lookup = {**expiries, HALF_OF: mx.half_of(behind), DAY_THIRD_OF: day_thirds(behind)[1],
+              CHARGED_ON: _charged_on(ctx),
               BOOK_GROUP_OF: {t.trip_id: name for name, ts in mx.book_groups(behind) for t in ts},
               AFTER_OF: after_groups(key, ctx),
               NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {},
               **_previous_lookup(ctx)}
+    if key == "risk" and query.get("line"):
+        from services.production.api import process
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"),
+                                                          ranges=ctx.get("stored_ranges")) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
         if f.quiet and not query.get(f.name):
             continue
-        read = [(t, f.read(t, lookup)) for t in behind]
-        offered = sorted({choice for _, choice in read if choice is not None}, key=lambda c: c[0])
+        read = [(t, f.choices(t, lookup)) for t in behind]
+        offered = sorted({c for _, chs in read for c in chs}, key=lambda c: c[0])
         if f.quiet:
             offered = [c for c in offered if c[1] == query.get(f.name)]
             if not offered:
@@ -482,7 +538,7 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
             ],
         })
         if wanted:
-            kept = {id(t) for t, choice in read if choice is not None and choice[1] == wanted}
+            kept = {id(t) for t, chs in read if any(c[1] == wanted for c in chs)}
             shown = [t for t in shown if id(t) in kept]
     chosen = {f["name"]: c for f in drawn for c in f["choices"] if c["selected"]}
     sort = query.get("sort", DEFAULT_SORT)

@@ -15,6 +15,7 @@
   {%- if journal_href %}
   <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
   {%- endif %}
+  {%- if chart %}{% include "scope/_market_chart.html" %}{% endif %}
   {%- if path %}
   <figure class="daychart-figure">
     {{ path.svg }}
@@ -23,7 +24,7 @@
     <p class="body-small">A ringed dot switched between a call and a put from the trade you opened before it.</p>
     {%- endif %}
     {%- if path.closed_later %}
-    <p class="body-small"><span class="num">{{ Figure(path.closed_later, "trades")|count }}</span> of them closed on a later day. Your numbers counts each trade on the day it closed.</p>
+    <p class="body-small"><span class="num">{{ Figure(path.closed_later, "trades")|count }}</span> of them closed on a later day and {{ "is" if path.closed_later == 1 else "are" }} held apart.{% if same_day_net is not none %} Your same-day trades this day came to <span class="num num--{{ same_day_net|tone }}">{{ Figure(same_day_net, "rupees")|rupees }}</span>, the figure Your numbers gives this day.{% else %} Your numbers counts none of this day's trades: each was held past the day.{% endif %}</p>
     {%- endif %}
     <details class="daychart-figure__table"><summary class="body-small">The day as numbers</summary>{{ path.table }}</details>
   </figure>

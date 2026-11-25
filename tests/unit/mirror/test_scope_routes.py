@@ -54,7 +54,7 @@ def test_the_page_is_told_how_it_was_entered(client, query, cls):
 
 def test_scope_home_is_at_the_mirrors_address(client):
     body = client.get("/mirror").text
-    assert 'aria-label="The Scope: four chapters of your story"' in body
+    assert 'aria-label="The Scope: four chapters of your story.' in body  # then his reading
     assert body.count('<a class="scope__slice') == 8, "four wedges, at both of the kit's sizes"
 
 

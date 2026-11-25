@@ -180,6 +180,10 @@ class ImportPlan:
     total shared across the day, ruled 14 Nov 2026 Q4), ``not_priced`` (the rate table
     doesn't reach it) or ``none``."""
     trips_not_priced: int = 0
+    trip_fees_components: tuple[tuple[tuple[str, Decimal], ...], ...] = ()
+    """Per trip, in ``trips`` order: what the charges were made of, by component, where they
+    were calculated (TICKET-995); empty for every other source. Not in the digest: it is the
+    total's breakdown, and the total already is."""
     charges_provenance: str | None = None
     """JSON: the rate table's as-of day, the broker's plan and the day it was read, his own
     brokerage figure if he set one, and how orders were counted."""
@@ -309,13 +313,16 @@ def _orders(trip: RoundTrip, fills_by_id: dict[str, Fill],
 def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
            fees_in_file: bool, given: ChargesInput | None,
            ) -> tuple[list[RoundTrip], tuple[str, ...], int, str | None,
-                      tuple[tuple[str, str | None, str], ...]]:
+                      tuple[tuple[str, str | None, str], ...],
+                      tuple[tuple[tuple[str, Decimal], ...], ...]]:
     """Each trip's charges (TICKET-912). Returns the trips, each one's source, how many the
-    rate table doesn't reach, the provenance and his day totals against ours."""
+    rate table doesn't reach, the provenance, his day totals against ours, and each trip's
+    components where they were calculated (TICKET-995)."""
+    none: tuple[tuple[str, Decimal], ...] = ()
     if fees_in_file:
-        return trips, ("tradebook",) * len(trips), 0, None, ()
+        return trips, ("tradebook",) * len(trips), 0, None, (), (none,) * len(trips)
     if given is None:
-        return trips, ("none",) * len(trips), 0, None, ()
+        return trips, ("none",) * len(trips), 0, None, (), (none,) * len(trips)
     fills_by_id = {f.fill_id: f for f in fills}
     trips_per_fill: dict[str, int] = {}
     for t in trips:
@@ -324,6 +331,7 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
     priced: list[RoundTrip] = []
     sources: list[str] = []
     ours: list[Decimal | None] = []
+    parts: list[tuple[tuple[str, Decimal], ...]] = []
     for t in trips:
         entry_orders, exit_orders = _orders(t, fills_by_id, trips_per_fill)
         got = charges.trip_charges(
@@ -336,10 +344,12 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
             priced.append(t.model_copy(update={"fees": got.total}))
             sources.append("calculated")
             ours.append(got.total)
+            parts.append(tuple(sorted(got.by_component.items())))
         else:
             priced.append(t)
             sources.append("not_priced")
             ours.append(None)
+            parts.append(none)
 
     scales: list[tuple[str, str | None, str]] = []
     for day in sorted(given.statement_days):
@@ -352,6 +362,7 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
         for i, share in zip(at, charges.share_day(his, [ours[i] for i in at]), strict=True):
             priced[i] = priced[i].model_copy(update={"fees": share})
             sources[i] = "statement"
+            parts[i] = none  # his total, shared: it has no breakdown
         scales.append((day, None if mine is None else str(mine), str(his)))
 
     start, table_rows, _raw = rates.load()
@@ -369,7 +380,8 @@ def _price(trips: list[RoundTrip], fills: list[Fill], days: list[str], *,
         "orders_counted": {b: ("order id" if b == "groww" else "one per entry and one per exit")
                            for b in brokers},
     }, sort_keys=True)
-    return (priced, tuple(sources), sources.count("not_priced"), provenance, tuple(scales))
+    return (priced, tuple(sources), sources.count("not_priced"), provenance, tuple(scales),
+            tuple(parts))
 
 
 def plan_import(
@@ -456,7 +468,7 @@ def plan_import(
         if profile is None
     )
     days = [_trading_day(t, profile_map) for t in result.round_trips]
-    trips, trip_sources, not_priced, provenance, day_scales = _price(
+    trips, trip_sources, not_priced, provenance, day_scales, trip_parts = _price(
         list(result.round_trips), fills, days,
         fees_in_file=parsed.fees_available, given=context.charges)
     fees_source = ("tradebook" if parsed.fees_available
@@ -512,6 +524,7 @@ def plan_import(
         fees_source=fees_source,
         trip_fees_source=trip_sources,
         trips_not_priced=not_priced,
+        trip_fees_components=trip_parts,
         charges_provenance=provenance,
         day_scales=day_scales,
     )

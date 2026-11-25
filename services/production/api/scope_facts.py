@@ -19,11 +19,13 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
+from services.production.api import after_clicked as AC
 from services.production.api import after_closed as ACL
-from services.production.api import charts, day_chart, dial, findings, formatting
+from services.production.api import charges_view, charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
 from services.production.api import scope_map as S
 from services.production.api.figures import Figure
+from services.production.charges import waterfall as W
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle, multiplicity
 from services.shared.schemas import scope_v1 as s
@@ -35,10 +37,12 @@ CARD_H = {
     "worst": 84,
     "share": 56,
     "money": 150,
+    "waterfall": 84,
     "strike": 40,
     "run": 40,
     "clock": 84,
     "busy": 84,
+    "after": 84,
     "backin": 84,
     "sameway": 56,
     "nextday": 70,
@@ -50,12 +54,14 @@ NOT_TOLD = 4
 score, a cost, a change. Counted from the sentence, which is the Mirror's own."""
 
 
-def record_context(trips: list[mx.Trip]) -> dict:
+def record_context(trips: list[mx.Trip], charges: W.Waterfall | None = None) -> dict:
     """Every Appendix A figure the Mirror and the Scope read, computed once.
 
     Moved here from routes_mirror so a page test reads the same figures the route
     does. The last five are PRD 6.3's comparison: trades after two straight losses
-    against the rest, on strike rate and average lots.
+    against the rest, on strike rate and average lots. ``charges`` is where the money went
+    (TICKET-995), read from the database by the route over the same trades; without it no
+    trade's charges are known.
     """
     same_day = mx.same_day_trips(trips)
     # Chapter 3 reads the same trades as Chapter 2 [TICKET-855]: a position held past the day
@@ -99,6 +105,7 @@ def record_context(trips: list[mx.Trip]) -> dict:
         "rest_strike": mx.strike_rate(rest),
         "rest_lots": mx.average_lots(rest),
         "days_with_the_condition": len({t.trading_day for t in after}),
+        "charges": charges if charges is not None else W.EMPTY,
         # The days it could happen on: days he closed a same-day trade, the trades chapter 3
         # reads (855), named as such wherever the count is said, the Journal's included.
         "same_day_days": len({t.trading_day for t in same_day}),
@@ -112,6 +119,8 @@ def _f(value) -> float:
 def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
+    if kind == "after":  # stored figures only; not a kit chart, so not in G.CHARTS
+        return AC.geometry(AC.view(ctx), w, h, mini=mini)
     if kind == "after-close":  # stored figures only; not a kit chart, so not in G.CHARTS
         return ACL.geometry(ACL.view(ctx), w, h, mini=mini)
     if kind == "worst":
@@ -160,6 +169,10 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
         return G.chart_busy(days.counts, _f(days.normal_day), w, h)
     if kind == "read":
         return G.chart_read(imp.rows_parsed, imp.rows_in, w, h, mini)
+    if kind == "waterfall":
+        wf = ctx["charges"]
+        return G.chart_waterfall(_f(wf.before), [_f(st.amount) for st in wf.steps], _f(wf.after),
+                                 w, h, mini)
     if kind == "risk":
         c = ctx["risk"].counts
         # The kit's chart has four bands. A spread's maximum loss is recorded and never
@@ -178,13 +191,99 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     return G.chart_notold(w, h, mini)
 
 
+def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
+    """A fact's chart on its dial wedge, and what it shows in words.
+
+    One of the kit's straight forms at the dial's MINI size, drawn from the figures the fact's own
+    page is built from. A fact that no form fits, or that has nothing to draw, has none.
+    """
+    w, h, rupees, count = dial.MINI_W, dial.MINI_H, formatting.rupees, formatting.count
+    if key == "hidden":
+        rows = [r for r in ctx["book_halves"] if r.state is COUNTED]
+        if not rows:
+            return None, ""
+        row = max(rows, key=lambda r: r.trades)
+        one, two = row.first.net_per_trade, row.second.net_per_trade
+        return G.chart_pair(_f(one), _f(two), w, h), (
+            f"{row.book}: {rupees(one)} a trade in the first half, {rupees(two)} in the second."
+        )
+    if key == "worst-days":
+        sh = ctx["share"]
+        n = len(ctx["worst_days"].days)
+        if n < 5:  # every day he has: no "five", and no other days to set against
+            words = "Your only trading day" if n == 1 else f"Your {count(n)} trading days"
+            return G.chart_split(_f(sh.five_day_sum), _f(sh.other_days_net), w, h), (
+                f"{words} {rupees(sh.five_day_sum)}."
+            )
+        other = (f"; {_other_days_words(sh.other_days_count)} {rupees(sh.other_days_net)}"
+                 if sh.other_days_count else "")
+        return G.chart_split(_f(sh.five_day_sum), _f(sh.other_days_net), w, h), (
+            f"Five worst days {rupees(sh.five_day_sum)}{other}."
+        )
+    if key == "share":
+        return _chart("share", ctx, imp, w, h, True), ""
+    if key == "money":
+        if not ctx["best"] or not ctx["worst"]:
+            return None, ""
+        best, worst = ctx["best"][0].net, ctx["worst"][0].net
+        return G.chart_pair(_f(best), _f(worst), w, h), (
+            f"Best trade {rupees(best)}; worst trade {rupees(worst)}."
+        )
+    if key == "math":
+        rate, even = ctx["strike"].rate_percent, ctx["break_even"].percent
+        if rate is None:
+            return None, ""
+        said = f"{formatting.out_of_a_hundred_beside(rate, even)} trades made money"
+        if even is not None:
+            said += f"; break-even at {formatting.out_of_a_hundred_beside(even, rate)}"
+        return G.chart_meter(_f(rate) / 100, None if even is None else _f(even) / 100, w, h), said + "."
+    if key == "run":
+        ids = set(ctx["run"].trip_ids)
+        nets = [t.net for t in ctx["trips"] if t.trip_id in ids]
+        return G.chart_steps([_f(v) for v in nets], w, h), (
+            f"{count(len(nets))} losses in a row, {rupees(sum(nets, Decimal(0)))} in all."
+        )
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        if lead is None:
+            return None, ""
+        mark = [hr.hour for hr in lead.hours].index(lead.largest.hour)
+        return G.chart_hours([_f(hr.net) for hr in lead.hours], mark, w, h), (
+            f"{_hour_words(lead.largest.hour)} hour {rupees(lead.largest.net)}; "
+            f"every hour {rupees(lead.net)}."
+        )
+    if key == "down":
+        tl = ctx["two_losses"]
+        if tl.condition_mean is None or tl.comparison_mean is None:
+            return None, ""
+        return G.chart_pair(_f(tl.condition_mean), _f(tl.comparison_mean), w, h), (
+            f"After two straight losses {rupees(tl.condition_mean)} a trade; "
+            f"other trades {rupees(tl.comparison_mean)}."
+        )
+    if key == "busiest":
+        days = ctx["days"]
+        texts = [count(days.busiest_trips), count(days.normal_day)]
+        return G.chart_counts(days.busiest_trips, _f(days.normal_day), w, h, texts), (
+            f"{texts[0]} trades on the busiest day; {texts[1]} on a normal day."
+        )
+    if key == "unread":
+        return _chart("read", ctx, imp, w, h, True), (
+            f"{count(imp.rows_parsed)} of {count(imp.rows_in)} rows read."
+        )
+    return None, ""  # the risk figure and what we have not told you: no form fits them
+
+
 def _state(key: str, ctx: dict) -> str:
+    if key == "after" and not AC.view(ctx)["enough"]:
+        return "not-enough"  # under 30 measured trades in every underlying, or none measured yet
     if key == "after-close" and not ACL.view(ctx)["enough"]:
         return "not-enough"  # under 30 measured losing trades, or none worked out yet
     if key == "clock" and not ctx["hours"]:
         return "not-enough"  # every trade was held past its day
     if key == "hidden" and not any(r.state is COUNTED for r in ctx["book_halves"]):
         return "not-enough"  # no book has the minimum of same-day trades
+    if key == "charges" and not ctx["charges"].included:
+        return "not-in-file"  # no trade here carries a charge: none in the file, none worked out
     if key == "risk" and ctx["risk"].showable == 0:
         return "not-in-file"  # no stop column and no budget: the kit's edge state e4
     metric = {
@@ -270,7 +369,7 @@ def _back_in_view(ctx: dict) -> dict:
     other_href = S.see_all_href("back-in", after="win-or-level")
     n_loss, n_other = len(nt.after_loss), len(nt.comparison)
     if not nt.back_in_enough:
-        line = Markup("{} {} came next after a loss and {} after a win or a level trade: too few "
+        line = Markup("{} {} came next after a loss and {} after a win or a flat trade: too few "
                       "to set side by side. Each needs {}.").format(
             _w(n_loss, "trades", opens=loss_href if n_loss else None),
             "trade" if n_loss == 1 else "trades",
@@ -280,14 +379,14 @@ def _back_in_view(ctx: dict) -> dict:
     else:
         m_loss, m_other = _minutes(nt.loss_median), _minutes(nt.comparison_median)
         line = Markup("After a loss your next trade came a median {} {} later; "
-                      "after a win or a level trade, {}.").format(
+                      "after a win or a flat trade, {}.").format(
             _w(m_loss, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes",
             _w(m_other, "minutes", opens=other_href))
     return {
         "line": line,
         "groups": [
             {"label": "After a loss", "trades": n_loss, "median": m_loss, "href": loss_href},
-            {"label": "After a win or a level trade", "trades": n_other, "median": m_other,
+            {"label": "After a win or a flat trade", "trades": n_other, "median": m_other,
              "href": other_href},
         ],
     }
@@ -351,7 +450,7 @@ def _next_day_too_few(ctx: dict) -> Markup:
     """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
     have = len({t.exit_ts.date() for t in ctx["trips"]})
     least = mx.BIG_DAYS_AT_LEAST
-    return Markup("You traded on {} {}. This needs at least {}: "
+    return Markup("You closed trades on {} {}. This needs at least {}: "
                   "your {} best days and your {} worst.").format(
         _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
         _w(least, "days"), _w(least, "days"))
@@ -363,6 +462,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "after":
+        return _after_figure(AC.view(ctx))
     if key == "after-close":
         return ACL.figure(ACL.view(ctx))
     if key == "hidden":
@@ -379,6 +480,9 @@ def _figure(key: str, ctx: dict, imp) -> Figure:
         return Figure(formatting.rupees(
             found.same_day_net if found.same_day_count else ctx["held_past_day"].net
         ), "rupees")
+    if key == "charges":
+        return Figure(formatting.rupees(ctx["charges"].charges, signed=False), "rupees",
+                      of="in charges")
     if key == "math":
         return Figure(f'{formatting.out_of_a_hundred(ctx["strike"].rate_percent)} trades', "trades")
     if key == "run":
@@ -490,10 +594,12 @@ def _hidden_cell(half, href: str, row: str):
     if half.math.win_percent is None:
         return NOT_ENOUGH_YET
     if row == "win":
-        return _hidden_link(formatting.out_of_a_hundred(half.math.win_percent), "percent", href)
+        return _hidden_link(formatting.out_of_a_hundred_beside(half.math.win_percent, half.math.break_even_percent),
+                            "percent", href)
     if half.math.break_even_percent is None:
         return "\u2014"
-    return _hidden_link(formatting.out_of_a_hundred(half.math.break_even_percent), "percent", href)
+    return _hidden_link(formatting.out_of_a_hundred_beside(half.math.break_even_percent, half.math.win_percent),
+                        "percent", href)
 
 
 def _trades_word(n: int) -> str:
@@ -967,6 +1073,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         behind = len(S.trades_behind(key, ctx))
         lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
         opens = None if state else _opens(key, ctx)
+        mini, mini_label = (None, "") if state else _mini(key, ctx, imp)
         out[key] = {
             "key": key,
             "finding": findings.of(key),  # both labels, or Unlabelled before any page
@@ -982,7 +1089,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
             "chart": None
             if state or kind not in CARD_H
             else _chart(kind, ctx, imp, CARD_W, CARD_H[kind], False),
-            "mini": None if state else _chart(kind, ctx, imp, dial.MINI_W, dial.MINI_H, True),
+            "mini": mini,
+            "mini_label": mini_label,
         }
     out["worst-days"].update(
         first_day=formatting.day(series[0].trading_day) if series else "",
@@ -1010,6 +1118,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         and two_losses.condition_mean is not None
         and two_losses.comparison_mean is not None
     )
+    out["charges"].update(charges_view.view(ctx["charges"], ctx))
     if not out["back-in"]["state"]:
         out["back-in"].update(_back_in_view(ctx))
     if not out["same-way"]["state"]:
@@ -1064,6 +1173,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
         fig["wedge"] = _no_answer(fig["state"]) if fig["state"] else _chapter_wedge(key, ctx, fig)
+        fig["wedge"]["worse"] = worse(key, ctx, fig)
     out["money"]["pairs"] = [
         {
             "best": b,
@@ -1092,8 +1202,24 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(_clock_view(ctx))
+    out["after"].update(after_page(ctx))
     out["after-close"].update(after_close_page(ctx))
     return out
+
+
+def _after_figure(v: dict) -> Figure:
+    """Where his median ends 30 minutes after the click, in whole points, and which way."""
+    n = v["his_end"]
+    if n is None:
+        return Figure("—", "points")
+    return Figure(f"{formatting.count(abs(n))} points", "points", of="your way" if n >= 0 else "against you")
+
+
+def after_page(ctx: dict, pick: str | None = None) -> dict:
+    """The after-you-clicked page for one underlying: its view, its chart at the
+    page's size, and its table. The route passes the chip the trader picked."""
+    v = AC.view(ctx, pick)
+    return {"view": v, "page_chart": AC.geometry(v), "table": AC.table(v) if v["enough"] else ""}
 
 
 def after_close_page(ctx: dict, pick: str | None = None) -> dict:
@@ -1175,42 +1301,141 @@ def _clock_view(ctx: dict) -> dict:
     }
 
 
+def wins_needed(ctx: dict) -> str | None:
+    """The win rate his own average winner and loser break even at, said as the strike rate is
+    ("needs 47"): only at BOOK_ROW_MINIMUM same-day trades or more."""
+    if ctx["break_even"].percent is None or len(mx.same_day_trips(ctx["trips"])) < mx.BOOK_ROW_MINIMUM:
+        return None
+    return formatting.out_of_a_hundred_beside(ctx["break_even"].percent,
+                                              ctx["strike"].rate_percent).removesuffix(" of 100")
+
+
+def _hundredths(rate) -> str:
+    """A rate as the count of a hundred a page says: 46.6 is "47"."""
+    return formatting.out_of_a_hundred(rate).removesuffix(" of 100")
+
+
+def _other_days_words(days: int) -> str:
+    """The days that are not the worst, as a sentence says them: "the other day", "the other 3 days"."""
+    return "the other day" if days == 1 else f"the other {formatting.count(days)} days"
+
+
+def other_days(ctx: dict) -> tuple[int, Decimal]:
+    """Every trading day but the five worst, and what they came to together."""
+    trips, worst = ctx["trips"], ctx["worst_days"]
+    days = len({t.trading_day for t in trips}) - len(worst.days)
+    return days, sum((t.net for t in trips), Decimal(0)) - worst.sum
+
+
+def run_lost(ctx: dict) -> Decimal:
+    """What the longest losing run's trades lost together."""
+    ids = set(ctx["run"].trip_ids)
+    return sum((t.net for t in ctx["trips"] if t.trip_id in ids), Decimal(0))
+
+
+def worse(key: str, ctx: dict, fig: dict) -> bool:
+    """Whether a fact's figure is worse than its own reference: the five worst days
+    came to less than every other day together; the strike rate is under what it needs; the
+    worst trade lost more than the best made; the clock's hour lost more than its whole book;
+    trades after two losses did worse than other times; the busiest day lost. Nothing else has
+    a reference to be worse than."""
+    if fig["state"]:
+        return False
+    if key == "worst-days":
+        return ctx["worst_days"].sum < other_days(ctx)[1]
+    if key == "math":
+        needs = wins_needed(ctx)  # the rates themselves, not their printed words: 40.0 is under 40.08
+        return needs is not None and Decimal(str(ctx["strike"].rate_percent)) < Decimal(str(ctx["break_even"].percent))
+    if key == "money":
+        return bool(ctx["best"]) and bool(ctx["worst"]) and -ctx["worst"][0].net > ctx["best"][0].net
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        return lead.largest.net < 0 and lead.largest.net < lead.net
+    if key == "down":
+        tl = ctx["two_losses"]
+        return bool(fig.get("post_loss_sentence")) and tl.condition_mean < tl.comparison_mean
+    if key == "busiest":
+        return bool(fig.get("story")) and fig["story"]["net"] < 0
+    return False
+
+
+def mark_first(items: list[dict]) -> list[dict]:
+    """The first wedge in reading order that is worse than its reference is marked; none other."""
+    out, done = [], False
+    for item in items:
+        mark = bool(item.get("worse")) and not done
+        done = done or mark
+        out.append({**item, "marked": mark})
+    return out
+
+
 def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     """Each fact's wedge on its chapter's dial (TICKET-880). Same figures its page shows."""
     if key == "hidden":
         n = formatting.count(_counted_days(ctx))
         return _wedge(Figure(n, "days", of="traded, in two halves"))
     if key == "worst-days":
-        return _wedge(Figure(len(ctx["worst_days"].days), "days",
-                             of=f"came to {formatting.rupees(ctx['worst_days'].sum)}"))
+        days, net = other_days(ctx)
+        came = formatting.rupees(ctx["worst_days"].sum)
+        n = len(ctx["worst_days"].days)
+        if n < 5:  # every day he has is a worst day: "5 days" or "1 days" would be untrue
+            words = "Your only trading day" if n == 1 else f"Your {formatting.count(n)} trading days"
+            return _wedge(Figure(came, "rupees", of=words), shown=came,
+                          phone=words.replace(" trading", "\ntrading", 1))
+        other = f"; {_other_days_words(days)} {formatting.rupees(net)}" if days else ""  # none: nothing to set against
+        return _wedge(Figure(n, "days", of=f"came to {came}{other}"),
+                      phone=f"came to {came}")  # a phone's wedge has room for two lines (fit test)
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
         net = ctx["best"][0].net
         best = formatting.rupees(net)
+        worst = formatting.rupees(ctx["worst"][0].net) if ctx["worst"] else None
         # Five digits and up run into a phone dial's centre ring: the toolkit's short form there
         # (₹11.5k). The desktop wedge and the page keep the whole figure.
         phone_best = charts.short(net) if abs(net) >= 10 * charts.THOUSAND else best.removeprefix("+")
-        return _wedge(Figure(best, "rupees", of="your best trade"), shown=best,
-                      phone="best\ntrade", phone_shown=phone_best)
+        return _wedge(Figure(best, "rupees", of=f"your best trade; worst {worst}" if worst else "your best trade"),
+                      shown=best, phone="best\ntrade", phone_shown=phone_best)
+    if key == "charges":
+        paid = formatting.rupees(ctx["charges"].charges, signed=False)
+        return _wedge(Figure(paid, "rupees", of="in charges"), shown=paid)
     if key == "math":
-        return _wedge(Figure(ctx["strike"].rate_percent, "trades", of="trades made money"),
-                      shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
+        needs = wins_needed(ctx)
+        return _wedge(Figure(ctx["strike"].rate_percent, "trades",
+                             of=f"made money; break-even {needs}" if needs else "trades made money"),
+                      phone=f"made money,\nbreak-even {needs}" if needs else None,
+                      shown=formatting.out_of_a_hundred_beside(
+                          ctx["strike"].rate_percent, ctx["break_even"].percent if needs else None))
     if key == "run":
         n = ctx["run"].length
-        return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of="in a row"),
-                      phone_shown=f"{formatting.count(n)} lost")
+        lost = formatting.rupees(run_lost(ctx))
+        return _wedge(Figure(formatting.count(n), "loss" if n == 1 else "losses", of=f"in a row, {lost} in all"),
+                      phone="in a row", phone_shown=f"{formatting.count(n)} lost")
     if key == "clock":
         hour = fig["figure"].removesuffix(" hour")
-        return _wedge(Figure(hour, "hour", of="the hour of your largest result"),
-                      phone="largest\nhour", shown=hour)
+        lead = mx.lead_clock(ctx["clocks"])
+        net = formatting.rupees(lead.largest.net)
+        if worse(key, ctx, fig):
+            of, phone = (f"your costliest hour, {net}: more than the whole book lost",
+                         f"hour,\n{net}")
+        else:
+            book = formatting.rupees(lead.net)
+            of, phone = (f"largest hour, {net}; the whole book {book}",
+                         f"hour,\n{net}")
+        return _wedge(Figure(hour, "hour", of=of), phone=phone, shown=hour)
     if key == "down":
-        return _wedge(_of(_trades(ctx["two_losses"].condition), "right after two losses"))
+        tl = ctx["two_losses"]
+        if not fig.get("post_loss_sentence"):  # the file's own test allows no direction
+            return _wedge(_of(_trades(tl.condition), "right after two losses"))
+        after, other = formatting.rupees(tl.condition_mean), formatting.rupees(tl.comparison_mean)
+        return _wedge(_of(_trades(tl.condition),
+                          f"right after two losses; {after} a trade, other times {other}"),
+                      phone="right after two losses")
     if key == "back-in":
         nt = ctx["next_trades"]
         if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
             n = len(nt.after_loss)
             return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
-                                 of="after a loss, too few"))
+                                 of=f"after a loss, too few (needs {mx.B1_MINIMUM})"))
         m = _minutes(nt.loss_median)
         return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
     if key == "same-way":
@@ -1219,8 +1444,9 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         return _wedge(Figure(fig["figure"], "trades", of="trades after your best days"), shown=fig["figure"])
     if key == "busiest":
         on_day = fig["busiest_date"].replace(" ", chr(0xA0))  # a date holds together
-        return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}"),
-                      phone=f"busiest day,\n{on_day}")
+        normal = ctx["days"].normal_day
+        return _wedge(_of(_trades(ctx["days"].busiest_trips), f"on your busiest day, {on_day}; usually {normal}"),
+                      phone=f"busiest day,\nusually {normal}")
     if key == "unread":
         read, _, whole = fig["figure"].removesuffix(" rows").partition(" of ")
         return _wedge(Figure(read, "rows", of=f"of {whole} rows read"), shown=read)
@@ -1228,6 +1454,10 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         measured, _, whole = fig["figure"].removesuffix(" trades").partition(" of ")
         return _wedge(Figure(measured, "trades", of=f"of {whole} trades have a risk figure"),
                       phone=f"of {whole}\ntrades", shown=measured)
+    if key == "after":
+        points = fig["figure"].removesuffix(" points")
+        return _wedge(Figure(points, "points", of=f"{fig['lead_figure'].of}, 30 minutes after you clicked"),
+                      phone="after\nyou clicked", shown=points)
     if key == "after-close":
         v = ACL.view(ctx)
         return _wedge(Figure(formatting.count(v["came_back"]), "trades",
@@ -1275,7 +1505,21 @@ def _list_row(f, fig: dict, item: dict) -> dict:
     }
 
 
-def chapter_view(n: int, figs: dict[str, dict]) -> dict:
+def reading_states(keys: list[str], read: frozenset[str]) -> list[str]:
+    """Each page's place in his reading: opened, the first not opened (current), or unread."""
+    states = ["opened" if k in read else "unread" for k in keys]
+    if "unread" in states:
+        states[states.index("unread")] = "current"
+    return states
+
+
+def read_line(done: int, total: int) -> str:
+    """"1 of 3 read": what the ring says, in words."""
+    fig = Figure(done, "read")
+    return f"{fig.value} of {total} {fig.noun}"
+
+
+def chapter_view(n: int, figs: dict[str, dict], read: frozenset[str] | None = None) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre.
 
     On a phone the dial keeps the wedges main had for it: a fact off it
@@ -1284,6 +1528,8 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     its dial has neither, and is drawn as it always was."""
     c = S.chapter(n)
     items, every, rows = [], [], []
+    states = reading_states([f.key for f in c.facts], read or frozenset())
+    on_phone: list[str] = []
     for f in c.facts:
         fig = figs[f.key]
         item = {
@@ -1298,11 +1544,15 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
                 item["chart"] = ""  # a share that is not a percentage draws no bar
             else:
                 item["mini"] = fig["mini"]
+                if fig["mini_label"]:
+                    item["miniLabel"] = fig["mini_label"]
         every.append(item)
         if f.on_phone_dial:
             items.append(item)
+            on_phone.append(states[len(every) - 1])
         else:
             rows.append(_list_row(f, fig, item))
+    items, every = mark_first(items), mark_first(every)
     view = {
         "kind": "chapter",
         "items": items,
@@ -1310,6 +1560,12 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     }
     if rows:
         view.update(desktop_items=every, phone_list=rows)
+    if read is not None:  # the page passes his reading; the ring replaces the ticks
+        words = read_line(states.count("opened"), len(states))
+        view["centre"]["readLine"] = words
+        view.update(progress=on_phone, progressLabel=words)
+        if rows:
+            view["desktop_progress"] = states
     return view
 
 
@@ -1380,6 +1636,7 @@ def _answer_one(ctx: dict) -> dict:
     else:
         wedge = _wedge(_of(days, f"came to {formatting.rupees(worst.sum)}"),
                        phone=formatting.rupees(worst.sum))
+    wedge["worse"] = worst.sum < other_days(ctx)[1]
     return {
         "state": "",
         "days_word": _number(len(worst.days)).capitalize(),
@@ -1398,9 +1655,13 @@ def _answer_two(ctx: dict, figs: dict[str, dict]) -> dict:
     if state:
         return {"state": state, "wedge": _no_answer(state)}
     strike, even = ctx["strike"], ctx["break_even"]
-    return {"state": "", "strike": strike, "even": even,
-            "wedge": _wedge(Figure(strike.rate_percent, "trades", of="trades made money"),
-                            phone="made money", shown=formatting.out_of_a_hundred(strike.rate_percent))}
+    needs = wins_needed(ctx)
+    wedge = _wedge(Figure(strike.rate_percent, "trades",
+                          of=f"made money; break-even {needs}" if needs else "trades made money"),
+                   phone="made money",  # the hub's phone wedge has one line of room (fit test)
+                   shown=formatting.out_of_a_hundred(strike.rate_percent))
+    wedge["worse"] = worse("math", ctx, figs["math"])
+    return {"state": "", "strike": strike, "even": even, "wedge": wedge}
 
 
 def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
@@ -1415,7 +1676,9 @@ def _answer_three(ctx: dict, figs: dict[str, dict]) -> dict:
         "story": story,
         "after_two": ctx["two_losses"].condition,
         "says_direction": bool(figs["down"].get("post_loss_sentence")),
-        "wedge": _trades_wedge(story["trades"], "on your busiest day", "busiest day"),
+        "wedge": {**_trades_wedge(story["trades"], f"on your busiest day; usually {ctx['days'].normal_day}",
+                                  "busiest day"),
+                  "worse": story["net"] < 0},
     }
 
 
@@ -1450,13 +1713,14 @@ def home_view(
     number: Decimal | None = None,
     answers: dict[int, dict] | None = None,
     figs: dict[str, dict] | None = None,
+    read: frozenset[str] | None = None,
 ) -> dict:
     """Home's dial: each chapter's answer in its wedge, the trader's result in the centre. Read
     is the dot on the rim, and no words in the wedge. Each wedge opens the trades behind its
     figure (TICKET-905); one whose figure has none behind it is drawn plain."""
     figs = figs or facts(ctx, imp)
     answers = answers or hub_answers(ctx, figs, number)
-    items = [
+    items = mark_first([
         {
             "name": c.name,
             **answers[c.number]["wedge"],
@@ -1464,10 +1728,19 @@ def home_view(
             "href": _hub_opens(c.number, answers[c.number], figs),
         }
         for c in S.CHAPTERS
-    ]
+    ])
     caption = ["your result,", "before charges"] if gross else ["your result for", "the whole period"]
     centre = {"figure": formatting.rupees(ctx["share"].total), "captionLines": caption}
-    return {"kind": "home", "items": items, "centre": centre}
+    view = {"kind": "home", "items": items, "centre": centre}
+    if read is not None:  # a chapter is opened once every one of its pages is
+        done = [all(f.key in read for f in c.facts) for c in S.CHAPTERS]
+        states = ["opened" if d else "unread" for d in done]
+        if "unread" in states:
+            states[states.index("unread")] = "current"
+        every = [f.key for c in S.CHAPTERS for f in c.facts]
+        view.update(progress=states,
+                    progressLabel=read_line(sum(k in read for k in every), len(every)))
+    return view
 
 
 def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
@@ -1484,14 +1757,15 @@ def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
 
 
 def home_context(
-    ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None
+    ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None,
+    read: frozenset[str] | None = None,
 ) -> dict:
     """What Scope home shows: the verdict, the books, each chapter's answer, a way in."""
     figs = facts(ctx, imp)
     answers = hub_answers(ctx, figs, number)
     return {
         "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers,
-                          figs=figs),
+                          figs=figs, read=read),
         "verdict": mx.verdict(ctx["trips"]),
         "chapters": [
             {
@@ -1533,7 +1807,7 @@ def reveal_days(ctx: dict) -> dict:
     if n >= 5:
         title = "Your five worst days"
     elif n == 1:
-        title = "Your one trading day"
+        title = "Your only trading day"
     else:
         title = f"Your {word} trading days"
     return {"count": n, "word": word, "all_of_them": n < 5, "title": title}

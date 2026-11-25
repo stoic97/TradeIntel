@@ -41,6 +41,16 @@ def test_home_does_not_say_it_is_in_development():
     ("−₹12,34,567", "scope__centre-figure scope__centre-figure--longest"),
 ])
 def test_a_longer_result_is_drawn_smaller_so_it_stays_in_the_centre(figure, expected):
+    # The desktop dial draws the whole figure; the phone's is short (below).
+    assert centre_class(figure, "desktop") == expected
+
+
+@pytest.mark.parametrize(("figure", "expected"), [
+    ("−₹1,420", "scope__centre-figure"),  # −₹1.4k
+    ("−₹58,522", "scope__centre-figure scope__centre-figure--long"),  # −₹58.5k
+    ("−₹12,34,567", "scope__centre-figure scope__centre-figure--long"),  # −₹12.3L
+])
+def test_the_phones_short_result_takes_the_size_of_its_short_form(figure, expected):
     assert centre_class(figure) == expected
 
 

@@ -1,0 +1,10 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{#- Where the money went (TICKET-995), on its chapter: what the charges came to, before charges
+    against after, and the waterfall as the card's chart. -#}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  <span class="mirror mirror--card">Before charges <span class="num">{{ Figure(f.before, "rupees")|rupees }}</span>. After charges <span class="num">{{ Figure(f.after, "rupees")|rupees }}</span>.</span>
+  {%- if f.left_out %}
+  <span class="body-small"><span class="num">{{ Figure(f.left_out, "trades")|count }}</span> {{ "trade is" if f.left_out == 1 else "trades are" }} not in this: {{ "its" if f.left_out == 1 else "their" }} result is before charges.</span>
+  {%- endif %}
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>Before charges</span><span>After charges</span></span></span>
+{% endcall %}

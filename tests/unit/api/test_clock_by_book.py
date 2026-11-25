@@ -283,9 +283,11 @@ def test_that_link_opens_the_trades_it_counts():
 
 
 def test_the_way_into_the_next_chapter_is_the_spines():
-    """TICKET-903: no button of its own; Next says it crosses into chapter 3."""
+    """TICKET-903: no button of its own; Next goes on through the spine. Since TICKET-1001 the
+    clock is followed by After you clicked, the chapter's last fact, which crosses into chapter 3."""
     assert "Chapter 3: " not in unescape(fact_page("clock", TRIPS))
-    assert S.next_step("clock")["label"] == f"Next, chapter 3: {S.FACTS['down'].title}"
+    assert S.next_step("clock")["label"] == "Next: After you clicked"
+    assert S.next_step("after")["label"] == f"Next, chapter 3: {S.FACTS['down'].title}"
 
 
 def test_the_button_is_there_with_nothing_to_show_too():
@@ -369,9 +371,10 @@ def test_the_card_names_each_clock_and_its_largest_hour():
 
 
 def test_the_dial_draws_the_book_its_figure_comes_from():
-    assert SF.facts(CTX, IMP)["clock"]["mini"] == G.chart_clock(
-        [float(h.net) for h in clock(OIL).hours],
-        [i for i, h in enumerate(clock(OIL).hours) if h.small_sample],
+    hours = clock(OIL).hours  # the dial marks the hour its figure names (TICKET-1036)
+    assert SF.facts(CTX, IMP)["clock"]["mini"] == G.chart_hours(
+        [float(h.net) for h in hours],
+        [h.hour for h in hours].index(clock(OIL).largest.hour),
         SF.dial.MINI_W,
         SF.dial.MINI_H,
     )

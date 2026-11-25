@@ -29,6 +29,7 @@ from services.production.ctr.profiles import registry as profiles
 from services.production.db.session import make_session
 from services.production.eligibility import assess as el
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 from services.shared.prereg import reader
 
 router = APIRouter()
@@ -60,10 +61,17 @@ def eligibility_page(request: Request):
             return RedirectResponse("/upload", status_code=303)
 
         result = el.assess(trips, framework)
+        # Ruling A, 24 Nov: this page counts every round trip and chapter 3 counts
+        # same-day trades, so B2's count can differ between them. Both are passed; the template
+        # draws its line only when they do.
+        b2 = next((v for v in result.verdicts if v.test.id == "B2"), None)
+        report_count = mx.two_straight_losses(mx.same_day_trips(trips)).condition
+        b2_differs = b2 is not None and b2.have is not None and b2.have != report_count
         return page(
             request, "eligibility.html", title="What we can check",
             result=result, trips=len(trips),
             days=len({t.trading_day for t in trips}),
-            framework=framework,
+            framework=framework, b2_differs=b2_differs,
+            b2_page_count=b2.have if b2 else None, b2_report_count=report_count,
             draft=framework.lock is not reader.LockState.LOCKED,
         )

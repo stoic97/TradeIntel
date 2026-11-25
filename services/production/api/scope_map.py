@@ -47,6 +47,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("hidden", "What your tradebook has been hiding", "notold"),
             Fact("worst-days", "Your worst trading days", "worst"),
             Fact("money", "Where the money came from", "money"),
+            Fact("charges", "Where the money went", "waterfall", on_phone_dial=False),
         ),
         feedback=True,
     ),
@@ -57,6 +58,7 @@ CHAPTERS: tuple[Chapter, ...] = (
             Fact("math", "Your wins and losses", "strike"),
             Fact("run", "Longest losing run", "run"),
             Fact("clock", "The clock", "clock"),
+            Fact("after", "After you clicked", "after", on_phone_dial=False),
         ),
         feedback=True,
     ),
@@ -87,6 +89,7 @@ CHAPTERS: tuple[Chapter, ...] = (
 )
 
 FACTS: dict[str, Fact] = {f.key: f for c in CHAPTERS for f in c.facts}
+
 
 FIGURES: dict[str, Fact] = {**FACTS, "share": Fact("share", "Share of your losses", "share")}
 """Everything with a figure. The share has no page of its own now: its one new row is a line on
@@ -271,6 +274,9 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
     if key == "money":
         ids = {t.trip_id for t in ctx["best"] + ctx["worst"] + ctx["held_past_day"].trips}
         return [t for t in trips if t.trip_id in ids]
+    if key == "charges":  # the trades the waterfall counts; the left-out ones are counted apart
+        ids = set(ctx["charges"].included)
+        return [t for t in trips if t.trip_id in ids]
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)
     if key == "back-in":
@@ -289,6 +295,10 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return list(trips)
     if key in ("unread", "not-told"):
         return []
+    if key == "after":  # the trades whose 30 minutes after the click were measured
+        stored = (ctx.get("bars") or {}).get("trades", {})
+        return [t for t in trips if (r := stored.get(t.trip_id)) is not None
+                and r["reason"] is None and r["path"]]
     if key == "after-close":  # the losing trades the market came back past the entry on
         from services.production.api import after_closed
 

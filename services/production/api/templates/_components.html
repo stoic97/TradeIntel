@@ -49,7 +49,10 @@
     column; the wording is the Mirror's own (handoff section 7). -#}
 {#- [TICKET-812] The share, its base rate: never of the net result (definitions 1). -#}
 {% macro share_sentence(share) -%}
+{#- Every day he has: a share of all of them is true and says nothing (a short record). -#}
+{%- if share.worst_day_count < share.trading_day_count -%}
 {{ Figure(share.worst_day_count, "days") }} of your {{ Figure(share.trading_day_count, "days")|count }} trading days (about {{ Figure(share.days_percent, "percent") }}%) carried about <span class="num">{{ Figure(share.share_percent, "percent") }}</span>% of your losses.
+{%- endif -%}
 {%- endmacro %}
 
 {% macro gross_line() -%}
@@ -103,7 +106,7 @@
 {#- A chart from scope_geometry.CHARTS (each part a path, its role a .chart__ class).
     Its size is the chart's own: 350 x 96 on a fact page, 302 wide in a story card. -#}
 {% macro chart(c, cls="") -%}
-<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}</svg>
+<svg class="chart{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 {{ c.w }} {{ c.h }}" width="{{ c.w }}" height="{{ c.h }}" aria-hidden="true">{% for part in c.parts %}<path class="chart__{{ part.role }}" d="{{ part.d }}"/>{% endfor %}{% for l in c.labels or [] %}<text class="chart__label" x="{{ l.x }}" y="{{ l.y }}" text-anchor="middle">{{ l.t }}</text>{% endfor %}</svg>
 {%- endmacro %}
 
 {#- A figure on a fact page: its number and caption, the chart, then - from a call
@@ -167,7 +170,7 @@
       <div class="trade__label">{% if rank %}<span class="trade__rank">{{ Figure(rank, "rank") }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ Figure(t.qty, "units")|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ Figure(t.held_seconds, "seconds")|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ Figure(t.net, "rupees")|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
-      {%- if dense %}<details class="trade__more"><summary>Prices</summary>{% endif %}
+      {%- if dense %}<details class="trade__more"><summary>Entry and exit prices</summary>{% endif %}
       <div class="trade__prices">{{ Figure(t.entry_price, "rupees")|price }} → {{ Figure(t.exit_price, "rupees")|price }}{% if t.get("paid") %} · Paid {{ Figure(t.paid, "rupees")|rupees(signed=false) }} · {{ Figure(t.result_percent, "percent")|signed_percent }} of premium{% endif %}</div>
       {%- if dense %}</details>{% endif %}
       {%- endif %}

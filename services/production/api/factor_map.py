@@ -111,7 +111,7 @@ FACTORS: tuple[Factor, ...] = (
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
     F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
-      filters=("overnight", "held_days")),
+      filters=("overnight", "held_days", "same_day")),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,
@@ -119,10 +119,14 @@ FACTORS: tuple[Factor, ...] = (
     # Results
     F("Results", "Worst days", K.ONLY_AFTER, S.WORKED_OUT, facts=("worst-days",)),
     F("Results", "Best and worst trades", K.ONLY_AFTER, S.WORKED_OUT, facts=("money",)),
+    F("Results", "What charges took, charge by charge", K.ONLY_AFTER, S.WORKED_OUT,
+      filters=("charge",), facts=("charges",)),
     F("Results", "Wins, losses and break-even", K.ONLY_AFTER, S.WORKED_OUT, filters=("result",),
       facts=("math",)),
     F("Results", "First half of a book's days against its second", K.ONLY_AFTER, S.WORKED_OUT,
       filters=("half",), facts=("hidden",)),
+    F("Results", "Your process: risk, sizing, under a drop, day control, consistency",
+      K.ONLY_AFTER, S.WORKED_OUT, filters=("line",)),
     F("Results", "Your result over time", K.ONLY_AFTER, S.IN_YOUR_FILE,
       checks=("S11", "S12")),
     F("Results", "Where your results come from, cell by cell", K.ONLY_AFTER,
@@ -133,6 +137,9 @@ FACTORS: tuple[Factor, ...] = (
     F("Market before entry", "The last 15 minutes", K.AT_CLICK, S.NEEDS_BARS),
     F("Market before entry", "The market's regime", K.AT_CLICK, S.NEEDS_BARS,
       checks=("S5",)),
+    # Market after entry
+    F("Market after entry", "The half hour after you clicked", K.ONLY_AFTER, S.NEEDS_BARS,
+      sources=("services.production.api.after_clicked",), facts=("after",)),
     # Market after exit
     F("Market after exit", "The half hour after you closed", K.ONLY_AFTER, S.NEEDS_BARS,
       sources=("services.production.api.after_closed",), facts=("after-close",)),
