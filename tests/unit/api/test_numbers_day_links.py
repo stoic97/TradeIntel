@@ -106,6 +106,7 @@ def test_the_list_a_day_tile_opens_is_the_trades_its_figure_counts(tiles, key, i
     assert sorted(t.trip_id for t in closed_on(iso)) == (["a", "b"] if iso == "2026-03-10" else ["c", "d"])
 
 
+@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py and test_calendar_same_day.py hold the new rule.')
 def test_every_traded_calendar_cell_opens_the_trades_closed_that_day():
     view = N.calendar(RECORD)
     traded = {c["iso"]: c for m in view["months"] for week in m["weeks"] for c in week

@@ -256,18 +256,19 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # names on the month view, the axis label under the last tag dropped, the count label ending
 # inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
 # Re-taken again for 1026 on main merged in: the card says "same-day trades" beside needed and
-# names the demo's one held position in its Result note.
+# names the demo's one held position in its Result note. Re-taken once more for the review of 24 Nov
+# 21:19: with a position held, the card's whole-record figure is labelled "Whole record", not "Result".
 BEFORE = {
-    "all/d": "0531fbcdaedd319385b306e84fb5131fb22bd392e8253b1ef4415bf9d81cc23d",
-    "all/w": "e7029e2e369d1728a3202d4729684e5b627ecc18587f57056a9dea73651092d4",
-    "all/m": "ad9164ada4a2ad506ddaa992f44afdb5e9271b829ac69ee44ecaf05818e861b8",
-    "crude-options/d": "dad1ce48807bba90d60a473e6400d9032a637ee19bed0045678da3072e6067a4",
-    "crude-options/w": "912cba45e6b3e5c8fe1efb4c1e393a26b2cbc9c85b6a2488501ca38251d4308f",
-    "crude-options/m": "4d698fcea99b62324ad52f84603a79e62c30a70fdb63da968bfc9fe5902358b9",
-    "nifty-options/d": "2deaa58feb9958fb686ba34d44410397c66297ee992972123849bccaa1f8bdd9",
-    "nifty-options/w": "c597625be1b2faa662164b62d1f4a5b8c5dccaed8f369d99c048698c9343866e",
-    "nifty-options/m": "741ba5d96ecf6c7eafa1ccdf5b8639eea41c0981325d7ac834b5f04ae4e3d141",
-    "default": "e7029e2e369d1728a3202d4729684e5b627ecc18587f57056a9dea73651092d4",
+    "all/d": "76d405ffa1d8f145f7dc134e4d3e28bc1377c409d2bd9831b67fa5ab25d0b0a5",
+    "all/w": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
+    "all/m": "9982a2d950d785f7cdfcaf5bfe072b53650f740033e86b97d3e9922dc0c78a17",
+    "crude-options/d": "ffcccf5e938afa315a531143b2f60a293066ac634e89eb97e8b9d5df617a1519",
+    "crude-options/w": "7b325967d95c45b4fd8a42256fc7ad1bb9db4d499e0e2864d33871366928794f",
+    "crude-options/m": "6232e4a39a3a9a08b3a0b6b8052a829d34caa9a7307e92691b159101ee9a9181",
+    "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
+    "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
+    "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
+    "default": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
 }
 
 

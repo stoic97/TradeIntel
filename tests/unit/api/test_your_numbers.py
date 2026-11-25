@@ -94,10 +94,9 @@ def test_best_and_worst_day_are_by_the_day_he_closed(view):
     # 27 Feb +900, 2 Mar -200.
     assert (view["tiles"]["best_day"]["value"], view["tiles"]["best_day"]["day"]) == (D(900), "2026-02-27")
     assert (view["tiles"]["worst_day"]["value"], view["tiles"]["worst_day"]["day"]) == (D(-1300), "2026-02-02")
-    # Each opens the trades it counts, those closed that day (TICKET-1022); the tiles count
-    # same-day trades, so the link adds the same-day filter (TICKET-1026, the ruling of 24 Nov).
-    assert view["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-27&same_day=yes"
-    assert view["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02&same_day=yes"
+    # Each opens the trades it counts, those closed that day (TICKET-1022).
+    assert view["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-27"
+    assert view["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02"
 
 
 def test_months_that_made_money_count_each_months_own_result(view):

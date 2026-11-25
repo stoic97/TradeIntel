@@ -8,6 +8,8 @@ Every trade here is made up, and the expected values are worked by hand in the c
 """
 from __future__ import annotations
 
+import pytest
+
 import re
 from datetime import datetime
 from decimal import Decimal
@@ -113,6 +115,7 @@ def test_home_result_says_what_is_held_in_it():
 
 # ---------- One normal day ----------
 
+@pytest.mark.skip(reason="superseded: the Journal's normal-day change was taken out of #208 (review of 24 Nov 21:19: no gate line needs it). Assertion kept as written.")
 def test_the_journals_normal_day_is_same_day_trades_as_chapter_three():
     facts = sections.history_facts(RECORD)
     same = mx.day_counts(mx.same_day_trips(RECORD)).normal_day
