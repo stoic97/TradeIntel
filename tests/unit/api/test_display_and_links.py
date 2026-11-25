@@ -285,7 +285,7 @@ def test_what_moved_labels_each_row_by_its_own_book_and_never_a_total_beside_it(
     rows = headline([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")])
     assert "Option trades" not in rows
     books = mx.verdict([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")]).books
-    assert [label for label in rows if label != "Your five worst days"] == [b.label for b in books]
+    assert [label for label in rows if label != "Your 2 worst days"] == [b.label for b in books]
 
 
 def test_a_stored_placeholder_guess_is_never_printed_on_the_reveal(app, demo):
