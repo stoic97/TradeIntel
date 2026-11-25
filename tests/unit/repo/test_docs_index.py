@@ -19,8 +19,11 @@ import functools
 import posixpath
 import re
 import subprocess
+import sys
 from fnmatch import fnmatchcase
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 INDEX = ROOT / "docs" / "README.md"
@@ -51,7 +54,11 @@ def read(path: str) -> str:
 
 
 def documents() -> list[str]:
-    return sorted(f for f in tracked()[0] if f.startswith("docs/") and f.endswith(".md"))
+    """The .md files git holds under docs/. An untracked one is not this branch's to index."""
+    out = subprocess.run(["git", "ls-files", "-z", "docs/"],
+                         cwd=ROOT, capture_output=True, check=True).stdout.decode("utf-8")
+    return sorted(f for f in out.split("\0")
+                  if f.endswith(".md") and (ROOT / f).is_file())
 
 
 def live_documents() -> list[str]:
@@ -126,6 +133,43 @@ def test_the_index_lists_every_document_under_docs_and_nothing_else():
     listed, there = set(index_rows()), set(documents()) - {"docs/README.md"}
     assert there <= listed, f"under docs/ but not in docs/README.md: {sorted(there - listed)}"
     assert listed <= there, f"in docs/README.md but not under docs/: {sorted(listed - there)}"
+
+
+def _repo_with_docs(tmp_path, monkeypatch, indexed, tracked_docs, untracked_docs=()):
+    """A throwaway git repo: docs/README.md indexes `indexed`; only `tracked_docs` are added to git."""
+    here = sys.modules[__name__]
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    rows = "".join(f"| [{d}]({d}) | what it is | live | owner | 2026-11-25 |\n" for d in indexed)
+    (docs / "README.md").write_text("# Index\n\n" + rows, encoding="utf-8")
+    for name in (*tracked_docs, *untracked_docs):
+        (docs / name).write_text(f"# {name}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "docs/README.md", *[f"docs/{d}" for d in tracked_docs]],
+                   cwd=tmp_path, check=True)
+    monkeypatch.setattr(here, "ROOT", tmp_path)
+    monkeypatch.setattr(here, "INDEX", docs / "README.md")
+    tracked.cache_clear()
+
+
+def test_an_untracked_document_under_docs_is_not_asked_for_in_the_index(tmp_path, monkeypatch):
+    """TICKET-1094: another branch's .md, not yet in git, is not this branch's fault."""
+    _repo_with_docs(tmp_path, monkeypatch, indexed=["a.md"], tracked_docs=["a.md"],
+                    untracked_docs=["not_yet_added.md"])
+    try:
+        test_the_index_lists_every_document_under_docs_and_nothing_else()
+    finally:
+        tracked.cache_clear()
+
+
+def test_a_tracked_document_missing_from_the_index_still_fails(tmp_path, monkeypatch):
+    """TICKET-1094: the guard still fires on a document git holds that the index leaves out."""
+    _repo_with_docs(tmp_path, monkeypatch, indexed=["a.md"], tracked_docs=["a.md", "b.md"])
+    try:
+        with pytest.raises(AssertionError, match="b.md"):
+            test_the_index_lists_every_document_under_docs_and_nothing_else()
+    finally:
+        tracked.cache_clear()
 
 
 def test_every_row_has_one_of_the_four_statuses_and_a_date():

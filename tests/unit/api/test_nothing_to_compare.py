@@ -30,8 +30,8 @@ ALL_CLEARS = ("nothing wrong", "all clear", "no problem", "no issue", "looks goo
 def test_a_comparison_of_two_zeros_is_not_drawn(trips):
     text = readable(fact_page("math", trips))
     assert LINE not in text
-    assert "0% of losers" not in text
-    assert "against 0%" not in text
+    assert "0 of 100 losers" not in text
+    assert "against 0 of 100" not in text
 
 
 def test_the_note_that_explained_the_line_goes_with_it():
@@ -39,9 +39,9 @@ def test_the_note_that_explained_the_line_goes_with_it():
 
 
 @pytest.mark.parametrize(("nets", "minutes", "said"), [
-    ([100] * 15 + [-50] * 15, [10] * 15 + [2] * 15, "100% of losers closed within 5 minutes, against 0% of winners."),
-    ([100] * 15 + [-50] * 15, [2] * 15 + [10] * 15, "0% of losers closed within 5 minutes, against 100% of winners."),
-    ([100] * 15 + [-50] * 15, [2] * 30, "100% of losers closed within 5 minutes, against 100% of winners."),
+    ([100] * 15 + [-50] * 15, [10] * 15 + [2] * 15, "100 of 100 losers closed within 5 minutes, against 0 of 100 winners."),
+    ([100] * 15 + [-50] * 15, [2] * 15 + [10] * 15, "0 of 100 losers closed within 5 minutes, against 100 of 100 winners."),
+    ([100] * 15 + [-50] * 15, [2] * 30, "100 of 100 losers closed within 5 minutes, against 100 of 100 winners."),
 ])
 def test_a_comparison_with_a_side_that_isnt_zero_still_is(nets, minutes, said):
     assert said in readable(fact_page("math", make(nets, minutes)))

@@ -190,7 +190,7 @@ def _line(t: mx.Trip, lookup: dict) -> Choice | None:
     chosen = lookup.get(LINE_OF)
     if chosen is None or t.trip_id not in chosen[1]:
         return None
-    return 0, chosen[0], process.LABELS.get(chosen[0], "From Your process")
+    return 0, chosen[0], process.label(chosen[0])
 
 
 AFTER_OF = "the last trade's result before each trade"
@@ -199,7 +199,7 @@ opened, the same day. One filter for every fact that groups trades this way (You
 loss, How fast you went back in, Same way again); a fact joins it by adding its key to ``only``."""
 
 AFTERS = (("loss", "After a loss"), ("win", "After a win"),
-          ("win-or-level", "After a win or a level trade"))
+          ("win-or-level", "After a win or a flat trade"))
 """How fast you went back in reads B1's two groups (the founder's ruling of 24 Nov 2026): after a
 loss, and after a win or a level trade. Size and Same way again read loss and win only."""
 
@@ -376,6 +376,15 @@ def opening(t: mx.Trip, _lookup: dict) -> Choice | None:
     return OPENINGS[0] if entry < cut else OPENINGS[1]
 
 
+SAME_DAYS = ((0, "yes", "Closed the day it opened"), (1, "no", "Held past its day"))
+
+
+def same_day(t: mx.Trip, _lookup: dict) -> Choice:
+    """Whether the trade closed on the day it opened: every trade, shares included. The Your
+    numbers day tiles count only these (the 23 Nov held ruling), so their links choose it."""
+    return SAME_DAYS[0] if t.closed_same_day else SAME_DAYS[1]
+
+
 OVERNIGHTS = ((0, "overnight", "Held overnight"), (1, "same-day", "Closed the same day"))
 
 
@@ -442,6 +451,7 @@ FILTERS = (
     Filter("days", "Expiry day or not", expiry_day_or_not, only=frozenset({"risk"})),
     Filter("left", "Days left when closed", left_bucket, only=frozenset({"risk"})),
     Filter("closed_day", "Date closed", closed_day, only=frozenset({"risk"}), quiet=True),
+    Filter("same_day", "Closed the day it opened", same_day, only=frozenset({"risk"}), quiet=True),
     # The shape of your days: his days by how many trades, his first 30 minutes, overnight.
     Filter("day_trades", "Trades that day", _day_third, only=frozenset({"risk"})),
     Filter("opening", "First 30 minutes", opening, only=frozenset({"risk"})),
@@ -474,7 +484,8 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
               **_previous_lookup(ctx)}
     if key == "risk" and query.get("line"):
         from services.production.api import process
-        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"]) or frozenset())
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"),
+                                                          ranges=ctx.get("stored_ranges")) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue

@@ -36,9 +36,9 @@ def _shown(rate) -> int:
     return int(Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
-def _rate(value) -> Markup:
+def _rate(value, beside) -> Markup:
     return Markup('<span class="num">{}</span>').format(
-        formatting._FIGURE_FILTERS["out_of_a_hundred"](Figure(value, "percent")))
+        formatting._FIGURE_FILTERS["out_of_a_hundred_beside"](Figure(value, "percent"), beside))
 
 
 def _count(value: int, noun: str) -> Markup:
@@ -116,7 +116,8 @@ def view(book_math: list) -> dict:
         if not _counted(w):
             continue
         win, need = _shown(w.win_percent), _shown(w.break_even_percent)
-        line = Markup(" · ").join((_rate(w.win_percent), Markup("needs ") + _rate(w.break_even_percent),
+        line = Markup(" · ").join((_rate(w.win_percent, w.break_even_percent),
+                                   Markup("needs ") + _rate(w.break_even_percent, w.win_percent),
                                    _gap_words(need - win)))
         bars.append({"book": w.label, "win": win, "need": need, "gap": need - win,
                      "line": line, "svg": _bar_svg(w.label, win, need),
@@ -132,7 +133,10 @@ def view(book_math: list) -> dict:
                 points.append(p)
                 values += [p["win"], p["need"]]
                 rows.append((w.label, yr.label, Figure(yr.trades, "trades"),
-                             Figure(yr.win_percent, "percent"), Figure(yr.break_even_percent, "percent")))
+                             formatting._FIGURE_FILTERS["out_of_a_hundred_beside"](
+                                 Figure(yr.win_percent, "percent"), yr.break_even_percent),
+                             formatting._FIGURE_FILTERS["out_of_a_hundred_beside"](
+                                 Figure(yr.break_even_percent, "percent"), yr.win_percent)))
             else:
                 gap = True
                 thin.append(Markup("{}: ").format(yr.label) + _count(yr.trades, "trades")

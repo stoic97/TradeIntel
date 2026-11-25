@@ -69,6 +69,6 @@ def test_the_fixture_counts_each_prior_once():
 def test_the_page_says_the_counts_of_one_per_prior():
     f = SF.facts(SF.record_context(PAIRS), IMP)["back-in"]
     assert _words(f["line"]) == (
-        "2 trades came next after a loss and 3 after a win or a level trade: too few to set "
+        "2 trades came next after a loss and 3 after a win or a flat trade: too few to set "
         "side by side. Each needs 30.")
     assert [g["trades"] for g in f["groups"]] == [2, 3]
