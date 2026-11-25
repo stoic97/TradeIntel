@@ -498,10 +498,12 @@ def _hidden_cell(half, href: str, row: str):
     if half.math.win_percent is None:
         return NOT_ENOUGH_YET
     if row == "win":
-        return _hidden_link(formatting.out_of_a_hundred(half.math.win_percent), "percent", href)
+        return _hidden_link(formatting.out_of_a_hundred_beside(half.math.win_percent, half.math.break_even_percent),
+                            "percent", href)
     if half.math.break_even_percent is None:
         return "\u2014"
-    return _hidden_link(formatting.out_of_a_hundred(half.math.break_even_percent), "percent", href)
+    return _hidden_link(formatting.out_of_a_hundred_beside(half.math.break_even_percent, half.math.win_percent),
+                        "percent", href)
 
 
 def _trades_word(n: int) -> str:
