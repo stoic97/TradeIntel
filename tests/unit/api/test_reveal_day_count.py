@@ -55,7 +55,7 @@ def test_the_title_comes_from_his_file():
 def test_one_day_says_that_day():
     text = page([t("2026-01-05", -600)])
     assert "five" not in text.lower()
-    assert "Your one trading day" in text
+    assert "Your only trading day" in text
     assert "That day came to" in text
 
 
