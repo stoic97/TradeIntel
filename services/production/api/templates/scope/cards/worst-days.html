@@ -1,6 +1,7 @@
-{% from "_components.html" import story_card, trades_behind, money, chart, share_sentence %}
+{% from "_components.html" import story_card, trades_behind, money, chart, share_sentence, worst_count %}
+{%- set n = worst_days.days|length %}{% set days_word = "day" if n == 1 else "days" %}
 {% call story_card(number, f.title, f.href, money(worst_days.sum), trades_behind(f.trade_count)) %}
-  <span class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}.
-    {% if share.shown_as_percentage %}{{ share_sentence(share) }} Your result for the whole period was {{ money(share.total) }}.{% else %}Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.{% endif %}</span>
-  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>worst day</span><span>your days added up, worst to best</span><span>best day</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>Five worst days</span><span><span class="legend__swatch legend__swatch--light"></span>Other days</span></span></span>
+  <span class="mirror mirror--card">Those {{ worst_count(n) }} {{ days_word }} came to {{ money(worst_days.sum) }}.
+    {% if share.shown_as_percentage %}{{ share_sentence(share) }} Your result for the whole period was {{ money(share.total) }}.{% else %}Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.{% endif %} A trade counts here on the day you opened it.</span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>worst day</span><span>your days added up, worst to best</span><span>best day</span></span><span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>{% if n == 5 %}Five worst days{% else %}Worst {{ days_word }}{% endif %}</span><span><span class="legend__swatch legend__swatch--light"></span>Other days</span></span></span>
 {% endcall %}

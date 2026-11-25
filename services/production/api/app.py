@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.production.api import (
+    chance,
     dial,
     door,
     findings,
@@ -56,6 +57,7 @@ formatting.register(TEMPLATES.env)  # rupees, tone, count, minutes: one place, e
 dial.register(TEMPLATES.env)  # scope_dial: the Scope dial, drawn on the server
 wins_gap.register(TEMPLATES.env)  # the math page's gap bar and years
 findings.register(TEMPLATES.env)  # a finding's two labels, read only from a Finding
+chance.register(TEMPLATES.env)  # the chance line, read only from its band (TICKET-919)
 door.register(TEMPLATES.env)  # the door's words, one place (TICKET-914)
 
 

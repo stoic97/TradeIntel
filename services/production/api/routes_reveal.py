@@ -106,10 +106,12 @@ def reveal(request: Request):
         # A guess stored while the labels were placeholders is never printed (until 973 lands).
         guessed_label = (GU.label_of(guessed.answer)
                          if guessed is not None and not GU.PLACEHOLDER else None)
+    days = SF.reveal_days(context)
     return page(
         request,
         "reveal.html",
-        title="Your five worst days",
+        title=days["title"],
+        reveal_days=days,
         imp=imp,
         screen_class="screen--navy on-navy",
         body_class="reveal",
