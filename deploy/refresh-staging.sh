@@ -77,6 +77,11 @@ fail() { echo "$1" >&2; false; }
 # number: this runs before 1/9, and a failure here is named by the ERR trap above.
 STEP="checking the ref"
 git -c safe.directory="$STAGING" -C "$STAGING" fetch --quiet --tags --prune origin
+# A branch name moves, so only a tag or a sha is taken as an argument (no argument means
+# origin/main, as ever). Judged here, after the tags are fetched and before anything stops.
+if [ -n "${1:-}" ] && ! git -c safe.directory="$STAGING" -C "$STAGING" show-ref --verify --quiet "refs/tags/$REF"         && ! [[ "$REF" =~ ^[0-9a-f]{7,40}$ ]]; then
+    fail "$REF is neither a tag nor a sha (7 to 40 lower-case hex characters); a branch name or HEAD would move. Nothing was stopped."
+fi
 REF_SHA="$(git -c safe.directory="$STAGING" -C "$STAGING" rev-parse --verify --quiet "$REF^{commit}" || true)"
 [ -n "$REF_SHA" ] || fail "$REF does not resolve to a commit in $STAGING. Nothing was stopped."
 git -c safe.directory="$STAGING" -C "$STAGING" merge-base --is-ancestor "$REF_SHA" origin/main \
