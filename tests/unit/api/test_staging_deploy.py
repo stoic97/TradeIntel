@@ -113,6 +113,45 @@ def test_the_ref_is_judged_before_anything_stops():
     assert body.index("merge-base --is-ancestor") < stop
 
 
+def _ref_rule(text):
+    """The sha pattern the script tests an argument against, as written in the script."""
+    m = re.search(r'\[\[ "\$REF" =~ (\S+) \]\]', text)
+    assert m, "the script does not test the ref against a sha pattern"
+    return re.compile(m.group(1))
+
+
+def test_only_a_tag_or_a_sha_is_accepted_as_the_ref():
+    """TICKET-1003 review: a branch name moves, so main, HEAD and origin/main~3 are refused."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert 'show-ref --verify --quiet "refs/tags/$REF"' in body
+    rule = _ref_rule(body)
+    for refused in ("main", "HEAD", "origin/main~3", "origin/main", "feat/x"):
+        assert not rule.match(refused), refused
+    for accepted in ("09919b5", "09919b5" + "a" * 33):
+        assert rule.match(accepted), accepted
+    assert not rule.match("09919b")  # six characters is not a sha
+    assert not rule.match("09919B5")  # git prints lower case
+
+
+def test_the_tag_or_sha_rule_runs_after_the_fetch_and_before_the_ancestor_test_and_the_stop():
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert 'show-ref --verify --quiet "refs/tags/$REF"' in body
+    rule = body.index('show-ref --verify --quiet "refs/tags/$REF"')
+    assert body.index("fetch --quiet --tags --prune origin") < rule
+    assert rule < body.index("merge-base --is-ancestor")
+    assert rule < body.index('systemctl stop "$SERVICE"')
+    assert "neither a tag nor a sha" in body
+    assert "Nothing was stopped." in body[body.index("neither a tag nor a sha"):][:300]
+
+
+def test_no_argument_still_means_origin_main():
+    """The default is not a sha or a tag, so the rule must only judge an argument."""
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert '"${1:-}"' in body
+
+
 def test_a_ref_that_does_not_resolve_is_refused():
     body = SCRIPT.read_text(encoding="utf-8")
     assert "does not resolve to a commit" in body
