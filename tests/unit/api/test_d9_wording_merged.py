@@ -62,7 +62,7 @@ def test_back_in_says_flat_not_level(demo, env):
 def test_under_thirty_the_wedge_says_what_is_too_few_and_what_it_needs():
     view = SF.chapter_view(3, facts_of(PAIRS))
     [wedge] = [i for i in view["desktop_items"] if i["name"] == BACK_IN]
-    assert wedge["label"].replace("\n", " ") == "after a loss: too few to compare (needs 30)"
+    assert wedge["label"].replace("\n", " ") == "after a loss, too few (needs 30)"
 
 
 def test_same_way_says_its_pairs_in_plain_sentences(demo):
