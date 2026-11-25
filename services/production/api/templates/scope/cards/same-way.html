@@ -1,0 +1,9 @@
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  {%- if not f.state %}
+  <span class="mirror mirror--card">{{ f.line }}</span>
+  {%- if f.chart %}
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>The same way</span><span><span class="legend__swatch legend__swatch--light"></span>The other way</span></span></span>
+  {%- endif %}
+  {%- endif %}
+{% endcall %}

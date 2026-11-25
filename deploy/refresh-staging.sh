@@ -32,14 +32,16 @@
 #       caddy hash-password            # prompts twice, prints the hash
 #       mkdir -p /etc/systemd/system/caddy.service.d
 #       install -m 600 -o root -g root /dev/null /etc/caddy/staging-auth.env
-#       # write two lines into it:  SCOPE_STAGING_USER=<user>   SCOPE_STAGING_HASH=<hash>
+#       # write two lines into it:  SCOPE_STAGING_USER=<user>   SCOPE_STAGING_HASH='<hash>'
+#       # (the hash in single quotes: bash's . would expand the $ in it; systemd strips the quotes)
 #       printf '[Service]\nEnvironmentFile=/etc/caddy/staging-auth.env\n' \
 #           > /etc/systemd/system/caddy.service.d/staging-auth.conf
 #       systemctl daemon-reload && systemctl restart caddy
 #  6. DNS: an A record staging.scope.plusev.in -> the droplet's address (founder, at the
 #     registrar). Wait until `dig +short staging.scope.plusev.in` answers it.
 #  7. cp /srv/scope-staging/deploy/Caddyfile /etc/caddy/Caddyfile
-#     caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile && systemctl reload caddy
+#     ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy
+#     (the staging block reads its user and hash from that file, as systemd hands them to Caddy)
 #     Let's Encrypt issues the certificate on this first reload.
 #  8. Run this script.
 set -Eeuo pipefail

@@ -16,12 +16,12 @@
 {#- A row per book, or per year of a book: the win rate and both ways to break even. -#}
 {%- macro math_table(rows, first, name="books", extra="") -%}
 <table class="table math__table{{ extra }}" data-table="{{ name }}">
-  <thead><tr><th>{{ first }}</th><th class="table__num">Trades</th><th class="table__num">You win</th><th class="table__num">Break even at</th><th class="table__num">Or per winner</th></tr></thead>
+  <thead><tr><th>{{ first }}</th><th class="table__num">Trades</th><th class="table__num">You win</th><th class="table__num">Break even at</th><th class="table__num">Or a bigger winner by</th></tr></thead>
   <tbody>
   {%- for row in rows %}
     <tr data-state="{{ row.state.name }}"><td class="table__text">{{ Figure(row.label, "year or book") }}</td><td class="table__num">{{ Figure(row.trades, "trades")|count }}</td>
     {%- if row.win_percent is none %}<td class="table__text" colspan="3">not enough trades to say</td>
-    {%- else %}<td class="table__num">{{ Figure(row.win_percent, "percent") }}%</td><td class="table__num">{% if row.break_even_percent is none %}—{% else %}{{ Figure(row.break_even_percent, "percent") }}%{% endif %}</td><td class="table__num">{{ needed_cell(row) }}</td>
+    {%- else %}<td class="table__num">{{ Figure(row.win_percent, "percent")|out_of_a_hundred }}</td><td class="table__num">{% if row.break_even_percent is none %}—{% else %}{{ Figure(row.break_even_percent, "percent")|out_of_a_hundred }}{% endif %}</td><td class="table__num">{{ needed_cell(row) }}</td>
     {%- endif %}</tr>
   {%- endfor %}
   </tbody>

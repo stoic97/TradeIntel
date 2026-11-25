@@ -1,0 +1,18 @@
+{% extends "scope/fact.html" %}
+{% from "_components.html" import figure %}
+{#- Same way again: after a loss and after a win, whether the next trade needed the underlying to
+    move the same way or the other way, by the shared direction rule. Counts, side by side. -#}
+{% block head %}
+    <p class="mirror">{{ f.line }}</p>
+    <p class="mirror">{{ f.rests_on }}</p>
+    <p class="mirror">Each trade and the last trade that closed before it, the same day, when that one lost or won; a pair after a level trade is left out. A bought call and a sold put need the underlying to rise; a bought put and a sold call need it to fall.
+    {%- if f.no_direction %} <span class="num">{{ Figure(f.no_direction, "trades")|count }}</span> {{ "pair had a trade" if f.no_direction == 1 else "pairs had a trade" }} with no single direction, such as a spread, and {{ "is" if f.no_direction == 1 else "are" }} left out.{% endif %}</p>
+{% endblock %}
+{% block body %}
+  {% if f.page_chart %}{% call figure(1, "Your next trade, the same way or the other way", f.page_chart) %}
+    <div class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>The same way</span><span><span class="legend__swatch legend__swatch--light"></span>The other way</span></div>
+  {% endcall %}{% endif %}
+  <table class="table"><thead><tr><th></th><th class="table__num">The same way</th><th class="table__num">The other way</th></tr></thead>
+  <tbody>{% for g in f.groups %}<tr><td class="table__text">{% if g.same + g.other %}<a class="link" href="{{ g.href }}">{{ g.label }}</a>{% else %}{{ g.label }}{% endif %}</td><td class="table__num">{{ Figure(g.same, "trades")|count }}</td><td class="table__num">{{ Figure(g.other, "trades")|count }}</td></tr>{% endfor %}</tbody></table>
+{% endblock %}
+{% block caption %}Every trade you opened right after a loss or a win, the same day, with a single direction.{% endblock %}

@@ -65,7 +65,12 @@ CHAPTERS: tuple[Chapter, ...] = (
         "Your behaviour",
         (
             Fact("down", "After two straight losses", "down"),
+            # What you do next: off the phone dial, so the phone keeps the wedges it had.
+            Fact("back-in", "How fast you went back in", "backin", on_phone_dial=False),
+            Fact("same-way", "Same way again", "sameway", on_phone_dial=False),
+            Fact("next-day", "The day after a big day", "nextday", on_phone_dial=False),
             Fact("busiest", "Your busiest day", "busy"),
+            Fact("after-close", "After you closed", "after-close", on_phone_dial=False),
         ),
         feedback=True,
     ),
@@ -160,7 +165,7 @@ def see_all_href(key: str, **filters) -> str:
 
 # ---------- The report's pages, in order (TICKET-903) ----------
 # One order, read from here and nowhere else: the rail, Previous and Next, All pages, Continue,
-# each chapter's way on, and the reveal's. Rikk's ruling of 13 Nov 2026 (round 2, section N):
+# each chapter's way on, and the reveal's. Ruled 13 Nov 2026 (round 2, section N):
 # the pages are the facts, chapter by chapter; Next says so when it crosses into a new chapter,
 # and the last page hands over to the Journal, not Home.
 
@@ -221,7 +226,7 @@ def continue_step(read: frozenset[str]) -> dict | None:
 
 def back_from(key: str | None) -> dict:
     """Where a Journal goes back to: the report page that opened it, or Home when that is not
-    one of the report's pages (Rikk, 13 Nov 2026)."""
+    one of the report's pages (TICKET-903, ruled 13 Nov 2026)."""
     if key in FACTS:
         return {"href": fact_href(key, lens=False), "title": FACTS[key].title}
     return {"href": "/", "title": "Home"}
@@ -268,6 +273,12 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return [t for t in trips if t.trip_id in ids]
     if key == "down":
         return mx.subset(trips, ctx["two_losses"].condition_trip_ids)
+    if key == "back-in":
+        return mx.subset(trips, list(ctx["next_trades"].back_in_group_of))
+    if key == "same-way":
+        return mx.subset(trips, list(ctx["next_trades"].way_ids))
+    if key == "next-day":
+        return mx.subset(trips, list(ctx["day_after"].group_of))
     if key == "run":
         return mx.subset(trips, ctx["run"].trip_ids)
     if key == "busiest":
@@ -278,6 +289,11 @@ def trades_behind(key: str, ctx: dict) -> list[mx.Trip]:
         return list(trips)
     if key in ("unread", "not-told"):
         return []
+    if key == "after-close":  # the losing trades the market came back past the entry on
+        from services.production.api import after_closed
+
+        back = set(after_closed.view(ctx)["came_back_ids"])
+        return [t for t in trips if t.trip_id in back]
     raise KeyError(key)
 
 
@@ -355,8 +371,10 @@ def groups(key: str, ctx: dict, only: list[mx.Trip] | None = None) -> list[dict]
         ]
     else:
         days = sorted({t.trading_day for t in shown})
+        # A list of one day names it by its date: "Day 1" says nothing on a page about that day.
         parts = [
-            (f"Day {i} · {formatting.day(d)}", [t for t in shown if t.trading_day == d])
+            (f"Day {i} · {formatting.day(d)}" if len(days) > 1 else formatting.day(d),
+             [t for t in shown if t.trading_day == d])
             for i, d in enumerate(days, start=1)
         ]
     gaps = mx.run_story(ctx["trips"], ctx["run"].trip_ids).gaps if key == "run" and shown else {}

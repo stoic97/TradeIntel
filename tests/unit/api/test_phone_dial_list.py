@@ -53,12 +53,14 @@ def dials(html: str) -> list[str]:
 ON_MAIN = {
     "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["e0a2d9a6f24f73d7f4ca77ab814768fd3f6527789a050983d40c2ff1dc9eaf49",
+    "/mirror/chapter/1": ["15c151598bedff98a253625918f1a078d3e3700de7108ffb1126f78176ef1882",  # phone: 1027 shortens a five-digit best trade
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
                           "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
     "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
-                          "446c19cca48cfcfdab535be73c537f4568f725e03171a3e5c29f7ad6135cad38"],
+                          # Desktop: three more wedges since What you do next (1006), and a sixth for After
+                          # you closed; the phone dial is main's.
+                          "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7"],
     "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
                           "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
 }
@@ -68,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "9224b880ab89b1d829e0a95a1a178dae6459d414512552236f544902dc58a24e",
+    (3, "desktop"): "55992140ed0097e928a7934b07b7d66b1690ecdb665e034e1c970da7c38b8fb1",  # six wedges (After you closed); back in counts one observation per prior (B1 parity)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
@@ -77,6 +79,8 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
+OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
+                      "after-close"}  # After you closed: added after the phone dial was sized
 
 
 def sha(text) -> str:
@@ -103,7 +107,8 @@ def later(monkeypatch):
 
 def test_every_fact_says_whether_it_sits_on_the_phone_dial():
     assert {f.key for c in S.CHAPTERS for f in c.facts if f.on_phone_dial} == ON_THE_PHONE_DIAL
-    assert all(f.on_phone_dial for c in S.CHAPTERS for f in c.facts)  # every fact on main stays on it
+    # every fact on main stays on it; the facts added since sit in the list under the dial
+    assert {f.key for c in S.CHAPTERS for f in c.facts if not f.on_phone_dial} == OFF_THE_PHONE_DIAL
 
 
 # ---------- nothing else moves ----------
@@ -121,6 +126,8 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
+        if path == "/mirror/chapter/3":  # What you do next (1006) sits in chapter 3's list
+            continue
         assert "scope__list" not in html, path
 
 
