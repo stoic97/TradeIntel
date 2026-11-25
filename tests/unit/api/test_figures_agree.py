@@ -66,7 +66,7 @@ def trip(tid, opened, closed, net, lots=1, book="NIFTY"):
 #   the biggest drop is 1,900, from 02 Mar to 02 Mar. Day by day it would be 500 (02 Mar's -500).
 # Trading days (any trade opened): 02, 03, 04, 06 Mar = 4; with a same-day trade: 02, 03, 06 = 3.
 # B2, same-day trades only (what the finding bar tests): a5 alone, on 1 day.
-#   On every trade it would be a4, a5 and d3, on 2 days: the off-by-one this ticket closes.
+#   On every trade it would be a4, a5 and d3, on 2 days: the two counts differ by a4 and d3, held overnight (ruling A, 24 Nov).
 # Options' lots: 1,1,2,3,1,1,1,1,1,1,1 = 14 over 11 trades = 1.27...; written "1.3".
 RECORD = [
     trip("a1", "2026-03-02T09:30", "2026-03-02T09:50", 1000),
@@ -265,5 +265,5 @@ def test_every_paired_figure_reads_one_function(seed):
     after = facts["after_two_straight_losses"]
     assert after["days_it_happened"] == ctx["days_with_the_condition"]
     assert after["your_trading_days"] == ctx["same_day_days"]
-    # Eligibility's B2 count is not paired here: its population waits on the research seat.
+    # Eligibility's B2 count is not paired here: it counts every round trip (ruling A, 24 Nov).
     assert D(facts["against_your_normal"]["lots_usually"]) == (mx.average_lots(record).mean or 0)
