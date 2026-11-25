@@ -25,7 +25,7 @@ from services.production.api import charts
 from services.production.api import scope_geometry as G
 
 MINI_W, MINI_H = G.MINI["w"], G.MINI["h"]  # the kit's: 72 x 20
-FIT_ON_A_PHONE = 0  # the phone dial keeps its spacing whole (TICKET-1039)
+FIT_ON_A_PHONE = 0  # the phone dial keeps its spacing whole, nothing touching the ring or a divider
 FIT_ON_A_DESKTOP = -13  # the desktop dial as it was
 SMALLER = ((64, 20), (56, 20), (48, 20), (48, 16))
 """Mini sizes a phone wedge steps down through when MINI_W x MINI_H will not clear it. A side wedge
