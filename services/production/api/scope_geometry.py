@@ -174,6 +174,9 @@ SIZES = {
 }
 
 # Names that may take three lines on the phone dial; every other name takes two at most.
+MINI = {"w": 72, "h": 20}
+"""A mini chart in a wedge: big enough that each mark reads on a phone."""
+
 THREE_LINE_NAMES = [
     "Where the money came from",
     "Where your results came from",
@@ -319,8 +322,8 @@ def slice_block(item: dict, fig_size: float, stacked: bool) -> dict:
     lh = js_round(fig_size * 1.15)
     lead = 0 if label else 13 + 4  # the kit's serial row, which a labelled figure has no need of
     row_a = lead + lh + 13 * len(tail_lines)
-    row_b = 28 if state else (14 if item.get("chart") else 0)
-    width = max(head_w, tail_w, (66 if state else 36) if row_b else 0, 8)
+    row_b = 28 if state else ((item.get("miniH") or MINI["h"]) if item.get("chart") else 0)
+    width = max(head_w, tail_w, (66 if state else (item.get("miniW") or MINI["w"])) if row_b else 0, 8)
     return {
         "head": head,
         "tail": tail,
@@ -477,6 +480,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                 "index": i,
                 "number": str(i + 1),
                 "name": it["name"],
+                "miniLabel": it.get("miniLabel") or "",
                 "href": it["href"],
                 "state": state,
                 "opened": bool(it.get("opened")),
@@ -528,6 +532,8 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                     "figSize": b["figSize"],
                     "lineHeight": b["lineHeight"],
                     "chart": "" if state else (it.get("chart") or ""),
+                    "miniW": it.get("miniW") or MINI["w"],  # a crowded wedge may draw its mini smaller
+                    "miniH": it.get("miniH") or MINI["h"],
                     "tone": "state"
                     if state
                     else ("rupee" if figure.startswith(("−₹", "-₹")) else "plain"),
@@ -581,6 +587,19 @@ def _text_block(
     return f'<text class="{cls}" x="{fmt(x)}" y="{fmt(base)}" text-anchor="{anchor}">{spans}</text>'
 
 
+def _smaller(mini_w: float, mini_h: float) -> str:
+    """The scale on a mini drawn smaller than MINI, in a wedge with no room for it."""
+    if mini_w == MINI["w"] and mini_h == MINI["h"]:
+        return ""
+    return f" scale({fmt(mini_w / MINI['w'])} {fmt(mini_h / MINI['h'])})"
+
+
+def _spoken(s: dict) -> str:
+    """A slice read aloud: its name, then what its mini chart shows when it draws one."""
+    said = s.get("miniLabel") or ""
+    return s["name"] + "." + (" " + said if said and not s["state"] else "")
+
+
 def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
     """The dial as inline SVG; class names are components.css's (.scope__*).
 
@@ -628,11 +647,11 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         if s["href"]:
             o.append(
                 f'<a class="scope__slice{state_class}" href="{s["href"]}" '
-                f'aria-label="{_esc(s["name"] + ".")}">'
+                f'aria-label="{_esc(_spoken(s))}">'
             )
         else:
             o.append(f'<a class="scope__slice scope__slice--plain{state_class}" '
-                     f'aria-label="{_esc(s["name"] + ".")}">')
+                     f'aria-label="{_esc(_spoken(s))}">')
         o.append(
             f'<path class="scope__hit" d="{s["hit"]}"/><path class="scope__lift" d="{s["lift"]}"/>'
             f'<path class="scope__focus" d="{s["focusRing"]}"/>'
@@ -680,7 +699,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
         elif c["chart"]:
             o.append(
                 f'<g class="scope__mini chart chart--on-navy" '
-                f'transform="translate({fmt(c["x"] - 18)} {fmt(c["chartY"])})">'
+                f'transform="translate({fmt(c["x"] - c["miniW"] / 2)} {fmt(c["chartY"])})'
+                f'{_smaller(c["miniW"], c["miniH"])}">'
                 f"{mini_charts.get(c['chart'], '')}</g>"
             )
         o.append("</a>")
@@ -784,7 +804,9 @@ def build_lens(n_facts: int, fact_index: int) -> dict:
 # ---------- Charts ----------
 # Every chart returns {"w", "h", "parts"}, parts a list of {"role", "d"}; the role is a
 # CSS class suffix (.chart__<role>): ink, light, faint, red, green, hatch, axis, stroke,
-# dash. Mini charts (36 x 14) are the same functions at a small w and h.
+# dash. Mini charts (36 x 14) are the same functions at a small w and h. A dial's own minis
+# (MINI) are the straight forms after notold: meter, split, pair, steps, counts and
+# hours. A chart may carry labels, {"x", "y", "t"}, drawn as text.
 
 
 def _r2(x: float, y: float, w: float, h: float) -> str:
@@ -1063,6 +1085,79 @@ def chart_notold(w: float, h: float, mini: bool = False) -> dict:
     return _chart(w, h, {"light": light})
 
 
+def chart_meter(value: float, target: float | None, w: float, h: float) -> dict:
+    """A rate against the rate it needs, both 0 to 1: a track, a fill to the rate, a tick at
+    the target."""
+    bh, y0 = h * 0.4, h * 0.3
+    m = {"faint": _r2(0, y0, w, bh), "ink": _r2(0, y0, w * clamp01(value), bh), "stroke": ""}
+    if target is not None:
+        m["stroke"] = f"M{fmt(w * clamp01(target))} 0V{js_str(h)}"
+    return _chart(w, h, m)
+
+
+def chart_split(part: float, rest: float, w: float, h: float) -> dict:
+    """One part of a whole (ink) against the rest: green where the rest made money, light where
+    it did not."""
+    a = abs(part)
+    tot, bh, y0 = max(a + abs(rest), 1), h * 0.5, h * 0.25
+    pw = max(1, min(w - 3, w * a / tot))
+    m = {"ink": _r2(0, y0, pw, bh), "green": "", "light": ""}
+    m["green" if rest > 0 else "light"] = _r2(pw + 2, y0, w - pw - 2, bh)
+    return _chart(w, h, m)
+
+
+def chart_pair(a: float, b: float, w: float, h: float) -> dict:
+    """Two signed figures from one zero line, a on the left and b on the right: a gain up, a
+    loss down."""
+    mx, z, bw = max(abs(a), abs(b), 1), h / 2, w * 0.3
+    m = {"green": "", "red": "", "axis": f"M0 {fmt(z)}H{js_str(w)}"}
+    for i, v in enumerate((a, b)):
+        bh = max(1, abs(v) / mx * (z - 1))
+        r = _r2(w * (0.6 if i else 0.1), z - bh if v > 0 else z, bw, bh)
+        m["green" if v > 0 else "red"] += r
+    return _chart(w, h, m)
+
+
+def chart_steps(nets: list, w: float, h: float) -> dict:
+    """A losing run stepping down: one step per loss, each as deep as that loss."""
+    tot = 0
+    for v in nets:
+        tot = tot + abs(v)
+    tot, g = max(tot, 1), w / max(1, len(nets))
+    run, red = 0, ""
+    for i, v in enumerate(nets):
+        d = abs(v) / tot * (h - 1)
+        red += _r2(i * g + g * 0.1, run, g * 0.8, max(0.8, d))
+        run += d
+    return _chart(w, h, {"red": red, "axis": f"M0 0.5H{js_str(w)}"})
+
+
+def chart_counts(a: float, b: float, w: float, h: float, texts: list | None = None) -> dict:
+    """Two counts side by side, each with its number under it: a (ink) against b (faint)."""
+    texts = texts or [js_str(a), js_str(b)]
+    mx, top, bw = max(a, b, 1), h - 9, w * 0.18
+    m, labels = {"ink": "", "faint": ""}, []
+    for i, v in enumerate((a, b)):
+        bh = max(1, v / mx * (top - 1))
+        x = w * (0.55 if i else 0.12)
+        m["faint" if i else "ink"] = _r2(x, top - bh, bw, bh)
+        labels.append({"x": fmt(x + bw / 2), "y": fmt(h), "t": texts[i]})
+    return {**_chart(w, h, m), "labels": labels}
+
+
+def chart_hours(hour_net: list, mark: int, w: float, h: float) -> dict:
+    """Net (gross) by the hour a trade was opened: the marked hour in full, the rest faint; gains
+    up, losses down."""
+    n = max(1, len(hour_net))
+    bw, z, mx = w / n, h * 0.5, max([abs(v) for v in hour_net] + [1])
+    m = {"green": "", "red": "", "faint": "", "axis": f"M0 {fmt(z)}H{js_str(w)}"}
+    for i, v in enumerate(hour_net):
+        bh = max(0.6, abs(v) / mx * (z - 0.5))
+        r = _r2(i * bw + bw * 0.15, z - bh if v > 0 else z, bw * 0.7, bh)
+        m["faint" if i != mark else "green" if v > 0 else "red"] += r
+    return _chart(w, h, m)
+
+
 def chart_call_put(trades: list, w: float, h: float) -> dict:
     """The option trades of one day, in order: calls on the top row, puts on the bottom, a
     position of several legs on both. Bar height is the size of the result; a bar that made
@@ -1157,6 +1252,12 @@ CHARTS = {
     "read": chart_read,
     "risk": chart_risk,
     "notold": chart_notold,
+    "meter": chart_meter,
+    "split": chart_split,
+    "pair": chart_pair,
+    "steps": chart_steps,
+    "counts": chart_counts,
+    "hours": chart_hours,
     # Not the kit's: chapter 3's What you do next.
     "backin": chart_backin,
     "sameway": chart_sameway,
@@ -1167,6 +1268,10 @@ CHARTS = {
 def render_chart(c: dict, cls: str = "", wrap: bool = False) -> str:
     """A chart as SVG: its parts alone, or wrapped in an <svg> when wrap is true."""
     inner = "".join(f'<path class="chart__{p["role"]}" d="{p["d"]}"/>' for p in c["parts"])
+    inner += "".join(
+        f'<text class="chart__label" x="{lb["x"]}" y="{lb["y"]}" text-anchor="middle">{_esc(lb["t"])}</text>'
+        for lb in c.get("labels") or ()
+    )
     if not wrap:
         return inner
     return (

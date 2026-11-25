@@ -49,30 +49,31 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
+# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, with
+# the minis TICKET-1036 redrew at 72 x 20.
 ON_MAIN = {
     "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
                 "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["15c151598bedff98a253625918f1a078d3e3700de7108ffb1126f78176ef1882",  # phone: 1027 shortens a five-digit best trade
-                          "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
-    "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "80e660cad35f1b6d1160fd02dd803a7cd5bb471f6ae44f41960d9a06a450a1dd"],  # desktop: 1001 adds a wedge
-    "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
+    "/mirror/chapter/1": ["dac37b9a4a2eb63750ccff6f9babccf495fd67a0299d9c352f82bcdb62d4528e",  # phone: 1027 shortens a five-digit best trade
+                          "d765b662af7467f0834dc85cae0bc8b2921ed54712d9301e673cbd36c375201c"],
+    "/mirror/chapter/2": ["0e9f0fe19966a88147f653511fc3dc4097125f01b9e713035631d99edbad8169",
+                          "3238e084386d276a375c6776a55065f15333d37d2952bd4974203855af69037c"],  # desktop: 1001 adds a wedge
+    "/mirror/chapter/3": ["461efffc445d451f37c72f3b1d8101ac4b15205bbbcb279c07044d035972a13e",
                           # Desktop: three more wedges since What you do next (1006), and a sixth for After
                           # you closed; the phone dial is main's.
-                          "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7"],
-    "/mirror/chapter/4": ["4cc3a7336541bf89b32172bbd9b87205e1508b37c64b33414da3d246c8fad4d5",
-                          "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
+                          "6c2e142e84115a159c3c4404f5c4c8f5ce1296e4cf08e1de6bbb90017fda965f"],
+    "/mirror/chapter/4": ["c1e506fcfa77485e7d82e87d3b63c461ba3db7e8339b3d1cf47143fc20e7a6d3",
+                          "f27265173a763ba6714eaf862faaf4ec3788090d7645311a1b2556fa5b34ce7b"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
-    (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
-    (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "4c1c58015e784dd70c3fac39624bdee568b0f198afa53ead22b20cc8e3c2a88c",  # 1001's wedge
-    (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "cf0105bbd97499ca6068301c947bbb0bb8794ca9d676d77be5fa6454c60da09e",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
-    (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
-    (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
+    (1, "phone"): "4b3c47e18100e8edf49dbf6e511b2d97e18b41a93fa592bd1bb0895ac980b20a",
+    (1, "desktop"): "6a629f9f0e3b69ec4e37da477b54e0cec0bf0d9874d43798cfed20d21e4704b9",
+    (2, "phone"): "931aa33f58d216b255557bb54a897b47f3d26c8a5ba69a2ba4e8e3ac587622ab",
+    (2, "desktop"): "8ac3520cb6ab598168e77a26ff538cc968a32c31feae694a3aa85343b542b391",  # 1001's wedge
+    (3, "phone"): "1a8dc2d67ff6e8570a6b50557c1ebb1de57e799742c5a6bc97f8699c6f04b63c",
+    (3, "desktop"): "8de756db0f95dcbb9ad58dd28b8cf87f86693d2b9f8c0e563633a978c295099d",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
+    (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
+    (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
@@ -138,8 +139,8 @@ def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
 def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
     phone, desk = str(D.scope_dial(later, "phone")), str(D.scope_dial(later, "desktop"))
     assert len(slices(phone)) == 3 and len(slices(desk)) == 4
-    assert 'aria-label="After two straight losses."' not in phone
-    assert 'aria-label="After two straight losses."' in desk
+    assert 'aria-label="After two straight losses.' not in phone
+    assert 'aria-label="After two straight losses.' in desk
     assert sha(phone) == CHAPTERS_ON_MAIN[(2, "phone")]  # the phone dial is today's, byte for byte
 
 
@@ -160,6 +161,7 @@ def test_the_phone_dial_still_clears(later):
     items = [{**i, "figure": i.get("phone_figure", i["figure"]),  # as the phone clearance test reads them
               "label": i.get("phone_label", i.get("label", ""))} for i in later["items"]]
     assert len(items) == 3
+    items = D.fitted(items, z["figSizesChapter"])  # each mini as wide as its wedge clears (TICKET-1036)
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
