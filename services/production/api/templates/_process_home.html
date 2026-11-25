@@ -1,0 +1,7 @@
+{#- Home's preview of Your process: three rows, each its first line, over the whole record. -#}
+<section class="card process-preview">
+  <h2 class="card-title"><a class="link" href="/process">Your process</a></h2>
+  {%- for row in process_preview %}
+  <p class="body"><span class="process-preview__name">{{ row.name }}</span> {% if row.empty %}{{ row.empty }}{% else %}{{ row.lines[0].text }}{% endif %}</p>
+  {%- endfor %}
+</section>

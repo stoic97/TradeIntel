@@ -1,0 +1,22 @@
+{#- Your process: counted rows, never a grade (process.ROWS). Every figure opens its trades. -#}
+{% extends "layout.html" %}
+{% set nav = "home" %}
+{% block content %}
+  <p class="body-small"><a class="link link--back" href="/">‹ Home</a></p>
+  <h1 class="title">Your process</h1>
+  <p class="body nb-top"><span class="num">{{ Figure(trades, "trades")|count }}</span> trades, counted row by row from your own file.{% if earlier %} Beside each line, the same figure from your last file.{% endif %}</p>
+  {%- for row in rows %}
+  <section class="process__row" id="{{ row.key }}">
+    <h2 class="card-title">{{ row.name }}</h2>
+    {%- if row.empty %}
+    <p class="body">{{ row.empty }}</p>
+    {%- endif %}
+    {%- for line in row.lines %}
+    <p class="body process__line">{{ line.text }}</p>
+    {%- endfor %}
+    {%- for note in row.notes %}
+    <p class="body-small process__note">{{ note }}</p>
+    {%- endfor %}
+  </section>
+  {%- endfor %}
+{% endblock %}

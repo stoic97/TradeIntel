@@ -30,6 +30,9 @@ jobs:
       UV_FROZEN: "1" # never re-lock in CI: install exactly what uv.lock says
     steps:
       - uses: actions/checkout@v4
+        with:
+          # TICKET-990: the release-path test pins shas in this repo's history
+          fetch-depth: 0
 
       # Methodology Rule 5: production (and shared) code must not import research.
       # TD-008's import-boundary job, unblocked now that more than one engineer merges.
@@ -78,6 +81,9 @@ jobs:
       UV_FROZEN: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # TICKET-990: the release-path test pins shas in this repo's history
+          fetch-depth: 0
 
       # The RCA could not prove what differed between runs and settled on the runner CPU
       # as most likely, unproven until the logs print it. This prints it.

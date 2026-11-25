@@ -6,6 +6,7 @@
     app's, and are left out. -#}
 {% extends "layout.html" %}
 {% macro checks(n) %}{{ Figure(n, "checks")|count }} check{{ "" if n == 1 else "s" }}{% endmacro %}
+{%- macro why_b2_differs(verdict) %}{% if b2_differs and verdict.test.id == "B2" %} <span class="body-small" data-b2-differs>This page counts every trade. Your report counts same-day trades, so the two can differ when a position was held past the day.</span>{% endif %}{% endmacro %}
 {% block content %}
   <p class="label label--plain">Eligibility</p>
   <h1 class="title">What we can check</h1>
@@ -52,7 +53,7 @@
       <table class="table"><thead><tr><th>Check</th><th>What it needs</th><th>What you have</th></tr></thead>
         <tbody>
         {%- for verdict in result.enough %}
-          <tr><td>{{ verdict.test.id }}</td><td>{{ Figure(verdict.need, verdict.unit.value) }} {{ verdict.unit.value.replace('_', ' ') }}</td><td class="table__text">{{ verdict.reason }}</td></tr>
+          <tr><td>{{ verdict.test.id }}</td><td>{{ Figure(verdict.need, verdict.unit.value) }} {{ verdict.unit.value.replace('_', ' ') }}</td><td class="table__text">{{ verdict.reason }}{{ why_b2_differs(verdict) }}</td></tr>
         {%- endfor %}
         </tbody></table>
       {%- else %}
@@ -65,7 +66,7 @@
       <table class="table"><thead><tr><th>Check</th><th>Why not</th></tr></thead>
         <tbody>
         {%- for verdict in result.blocked if verdict.state.value == 'insufficient_sample' %}
-          <tr><td>{{ verdict.test.id }}</td><td class="table__text">{{ verdict.reason }}</td></tr>
+          <tr><td>{{ verdict.test.id }}</td><td class="table__text">{{ verdict.reason }}{{ why_b2_differs(verdict) }}</td></tr>
         {%- endfor %}
         </tbody></table>
     </section>

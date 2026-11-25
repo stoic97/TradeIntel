@@ -299,13 +299,24 @@ nothing. First, where production is and what the tag changes:
     git fetch --quiet --tags origin
     LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD); echo "live: $LIVE"
     git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/
-    git diff "$LIVE" "$TAG" -- migrations/versions | grep -nE "op\.(drop_|alter_column)" || echo "no destructive migration"
+    git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py || { echo "CHECK DID NOT RUN - no classifier in $TAG; classify by hand, do not assume Path A"; exit 1; }
+    python3 /tmp/classify_release.py "$LIVE" "$TAG"
+    case $? in
+      0) echo "PATH A - additive or no migration" ;;
+      1) echo "PATH B - destructive: stop the service BEFORE the snapshot, rollback is a DB restore" ;;
+      2) echo "READ BY HAND - Path B applies unless a person has read these migrations and says otherwise" ;;
+      *) echo "CHECK DID NOT RUN - classify by hand, do not assume Path A"; exit 1 ;;
+    esac
 
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
 the box by hand: stop and find out who before going on. `live:` is the previous tag (a
 sha only on the first train, or after a deploy that skipped the train). The last line
-decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
-line → **Path B**.
+decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
+person reads those migrations and rules, and **Path B** applies until they do;
+`CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
+migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a
+rollback (in `downgrade()`) does not make a release destructive, and `batch.drop_column`
+counts the same as `op.drop_column`.
 
 Production then sits on a detached HEAD at the tag. That is correct, and `git status
 --short` still reports local changes, so the guard above still works. Do not "fix" it
