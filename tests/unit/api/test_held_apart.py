@@ -8,13 +8,13 @@ Every trade here is made up, and the expected values are worked by hand in the c
 """
 from __future__ import annotations
 
-import pytest
-
 import re
 from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
+
+import pytest
 
 from services.production.api import how_you_got_here as how
 from services.production.api import numbers as N
