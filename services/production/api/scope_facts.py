@@ -308,8 +308,7 @@ def _same_way_view(ctx: dict) -> dict:
     if loss_n >= least and win_n >= least:
         line = Markup("After a loss, your next trade went the same way {} times; after a win, {}.").format(
             _w(_rate(nt.same_after_loss, loss_n), "trades", "out_of_a_hundred", loss_href),
-            _w(int(_rate(nt.same_after_win, win_n).quantize(Decimal(1), rounding="ROUND_HALF_UP")),
-               "of 100", opens=win_href))
+            _w(_rate(nt.same_after_win, win_n), "trades", "out_of_a_hundred", win_href))
     else:
         line = Markup("After a loss, your next trade went the same way {} of {} times; ").format(
             _w(nt.same_after_loss, "trades", opens=loss_href if loss_n else None), _w(loss_n, "trades"))
@@ -325,6 +324,9 @@ def _same_way_view(ctx: dict) -> dict:
             {"label": "After a loss", "same": nt.same_after_loss, "other": nt.other_after_loss, "href": loss_href},
             {"label": "After a win", "same": nt.same_after_win, "other": nt.other_after_win, "href": win_href},
         ],
+        "rests_on": Markup("Counted over {} {}: {} after a loss, {} after a win.").format(
+            _w(loss_n + win_n, "pairs"), "pair" if loss_n + win_n == 1 else "pairs",
+            _w(loss_n, "pairs"), _w(win_n, "pairs")),
         "no_direction": nt.no_direction,
         "scratch": nt.scratch,
     }
@@ -349,6 +351,16 @@ def _next_day_view(ctx: dict) -> dict:
     return {"line": line, "rows": rows,
             "best_days": [formatting.day(d) for d in da.best],
             "worst_days": [formatting.day(d) for d in da.worst]}
+
+
+def _next_day_too_few(ctx: dict) -> Markup:
+    """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
+    have = len({t.exit_ts.date() for t in ctx["trips"]})
+    least = mx.BIG_DAYS_AT_LEAST
+    return Markup("You traded on {} {}. This needs at least {}: "
+                  "your {} best days and your {} worst.").format(
+        _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
+        _w(least, "days"), _w(least, "days"))
 
 
 def _trades_said(n: int) -> str:
@@ -676,6 +688,17 @@ def _story_words(story) -> dict:
             "back_in": story.back_in}
 
 
+COUNTED_ON_WORDS = {"opened": "A trade counts here on the day you opened it."}
+
+
+def _counted_on(state, trips: list) -> str | None:
+    """Which day a trade counts on, said only where his file makes it matter: a trade that closed
+    on a later day. Never in a state with too few days to count."""
+    if state or not mx.closes_on_a_later_day(trips):
+        return None
+    return COUNTED_ON_WORDS[mx.WORST_DAYS_COUNT_ON]
+
+
 def days_worst_to_best(trips: list) -> list[dict]:
     """Every trading day, worst to best (ties: earlier date first), with the running total
     of the days so far. The last total is the record's result: the shape is the share."""
@@ -1001,6 +1024,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         out["same-way"].update(_same_way_view(ctx))
     if not out["next-day"]["state"]:
         out["next-day"].update(_next_day_view(ctx))
+    else:
+        out["next-day"]["too_few"] = _next_day_too_few(ctx)
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     # The card names each group's days beside its words, in the bars' order (the kit's chart
     # itself is byte for byte, so the dates can't go inside it).
@@ -1042,6 +1067,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
             caption="Your days, worst to best"),
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
+        counted_on=_counted_on(out["worst-days"]["state"], trips),
         all_trades_href=S.see_all_href("worst-days"),
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label

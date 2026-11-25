@@ -123,6 +123,8 @@ FACTORS: tuple[Factor, ...] = (
       facts=("math",)),
     F("Results", "First half of a book's days against its second", K.ONLY_AFTER, S.WORKED_OUT,
       filters=("half",), facts=("hidden",)),
+    F("Results", "Your process: risk, sizing, under a drop, day control, consistency",
+      K.ONLY_AFTER, S.WORKED_OUT, filters=("line",)),
     F("Results", "Your result over time", K.ONLY_AFTER, S.IN_YOUR_FILE,
       checks=("S11", "S12")),
     F("Results", "Where your results come from, cell by cell", K.ONLY_AFTER,
