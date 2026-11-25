@@ -206,6 +206,9 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
     # trade, and the card says what of it was held past the day (the ruling of 23 Nov 2026).
     same = mx.same_day_trips(mine) or mine
     held = mx.held_past_day(mine)
+    # "same-day trades" is said only when it sets something apart: some trades were held and
+    # some closed the day they opened.
+    same_day_basis = bool(held.count) and same is not mine and len(same) < len(mine)
     every = run.candles[frame]
     shown_candles = every[-WINDOW:]
     opens = _day_of(mine, frame)
@@ -221,6 +224,7 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         "strike": mx.strike_rate(same).rate_percent,
         "even": mx.break_even(same).percent,
         "held": {"count": held.count, "net": held.net},
+        "same_day_basis": same_day_basis,
         "drop": run.drop.value,
         "high": run.high.value,
         "drop_day": _day_closed(mine, run.drop.to_day),
