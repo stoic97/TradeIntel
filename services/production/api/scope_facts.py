@@ -209,9 +209,16 @@ def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
         )
     if key == "worst-days":
         sh = ctx["share"]
+        n = len(ctx["worst_days"].days)
+        if n < 5:  # every day he has: no "five", and no other days to set against
+            words = "Your only trading day" if n == 1 else f"Your {count(n)} trading days"
+            return G.chart_split(_f(sh.five_day_sum), _f(sh.other_days_net), w, h), (
+                f"{words} {rupees(sh.five_day_sum)}."
+            )
+        other = (f"; {_other_days_words(sh.other_days_count)} {rupees(sh.other_days_net)}"
+                 if sh.other_days_count else "")
         return G.chart_split(_f(sh.five_day_sum), _f(sh.other_days_net), w, h), (
-            f"Five worst days {rupees(sh.five_day_sum)}; "
-            f"the other {count(sh.other_days_count)} days {rupees(sh.other_days_net)}."
+            f"Five worst days {rupees(sh.five_day_sum)}{other}."
         )
     if key == "share":
         return _chart("share", ctx, imp, w, h, True), ""
@@ -1299,12 +1306,18 @@ def wins_needed(ctx: dict) -> str | None:
     ("needs 47"): only at BOOK_ROW_MINIMUM same-day trades or more."""
     if ctx["break_even"].percent is None or len(mx.same_day_trips(ctx["trips"])) < mx.BOOK_ROW_MINIMUM:
         return None
-    return _hundredths(ctx["break_even"].percent)
+    return formatting.out_of_a_hundred_beside(ctx["break_even"].percent,
+                                              ctx["strike"].rate_percent).removesuffix(" of 100")
 
 
 def _hundredths(rate) -> str:
     """A rate as the count of a hundred a page says: 46.6 is "47"."""
     return formatting.out_of_a_hundred(rate).removesuffix(" of 100")
+
+
+def _other_days_words(days: int) -> str:
+    """The days that are not the worst, as a sentence says them: "the other day", "the other 3 days"."""
+    return "the other day" if days == 1 else f"the other {formatting.count(days)} days"
 
 
 def other_days(ctx: dict) -> tuple[int, Decimal]:
@@ -1331,8 +1344,8 @@ def worse(key: str, ctx: dict, fig: dict) -> bool:
     if key == "worst-days":
         return ctx["worst_days"].sum < other_days(ctx)[1]
     if key == "math":
-        needs = wins_needed(ctx)
-        return needs is not None and int(_hundredths(ctx["strike"].rate_percent)) < int(needs)
+        needs = wins_needed(ctx)  # the rates themselves, not their printed words: 40.0 is under 40.08
+        return needs is not None and Decimal(str(ctx["strike"].rate_percent)) < Decimal(str(ctx["break_even"].percent))
     if key == "money":
         return bool(ctx["best"]) and bool(ctx["worst"]) and -ctx["worst"][0].net > ctx["best"][0].net
     if key == "clock":
@@ -1364,8 +1377,13 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
     if key == "worst-days":
         days, net = other_days(ctx)
         came = formatting.rupees(ctx["worst_days"].sum)
-        other = f"; the other {days} days {formatting.rupees(net)}" if days else ""  # none: nothing to set against
-        return _wedge(Figure(len(ctx["worst_days"].days), "days", of=f"came to {came}{other}"),
+        n = len(ctx["worst_days"].days)
+        if n < 5:  # every day he has is a worst day: "5 days" or "1 days" would be untrue
+            words = "Your only trading day" if n == 1 else f"Your {formatting.count(n)} trading days"
+            return _wedge(Figure(came, "rupees", of=words), shown=came,
+                          phone=words.replace(" trading", "\ntrading", 1))
+        other = f"; {_other_days_words(days)} {formatting.rupees(net)}" if days else ""  # none: nothing to set against
+        return _wedge(Figure(n, "days", of=f"came to {came}{other}"),
                       phone=f"came to {came}")  # a phone's wedge has room for two lines (fit test)
     if key == "money" and ctx["best"]:
         # A phone's wedge: the same words on two lines; a plus may go, never a minus (ruled 14 Nov).
@@ -1385,7 +1403,8 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         return _wedge(Figure(ctx["strike"].rate_percent, "trades",
                              of=f"made money; break-even {needs}" if needs else "trades made money"),
                       phone=f"made money,\nbreak-even {needs}" if needs else None,
-                      shown=formatting.out_of_a_hundred(ctx["strike"].rate_percent))
+                      shown=formatting.out_of_a_hundred_beside(
+                          ctx["strike"].rate_percent, ctx["break_even"].percent if needs else None))
     if key == "run":
         n = ctx["run"].length
         lost = formatting.rupees(run_lost(ctx))
