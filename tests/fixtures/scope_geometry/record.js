@@ -30,7 +30,7 @@ function home(figures, states) {
 function chapter(name, facts) {
   return {
     kind: 'chapter',
-    items: facts.map((f, i) => Object.assign({ href: `/mirror/fact/${f.key}?enter=lens`, chart: f.chart || '', state: f.state || '', opened: !!f.opened }, { name: f.name, figure: f.figure })),
+    items: facts.map((f, i) => Object.assign({ href: `/mirror/fact/${f.key}?enter=lens`, chart: f.chart || '', state: f.state || '', opened: !!f.opened }, { name: f.name, figure: f.figure }, f.miniLabel ? { miniLabel: f.miniLabel } : {}, f.miniW ? { miniW: f.miniW, miniH: f.miniH || 20 } : {})),
     centre: { name, scopeHref: '/mirror?enter=out&amp;tap=1' },
   };
 }
@@ -67,6 +67,14 @@ const VIEWS = {
     { key: 'run', name: 'Longest losing run', figure: '10 trades', chart: 'run', opened: true },
     { key: 'clock', name: 'The clock', figure: '10:00', chart: 'clock' },
   ]), 'phone'],
+  chapter_2_reading_phone: [Object.assign(chapter('Your patterns', [
+    { key: 'hold', name: 'How long you hold', figure: '30 · 10 min', chart: 'hold', opened: true },
+    { key: 'strike', name: 'Strike rate', figure: '16%', chart: 'strike' },
+    { key: 'run', name: 'Longest losing run', figure: '10 trades', chart: 'run' },
+  ]), { progress: ['opened', 'current', 'unread'], progressLabel: '1 of 3 facts read',
+    centre: { name: 'Your patterns', scopeHref: '/mirror?enter=out&amp;tap=2', readLine: '1 of 3 facts read' } }), 'phone'],
+  home_phone_reading: [Object.assign(home(['96%', '30 · 10 min', '3', '38 of 40', '96%']),
+    { progress: ['opened', 'opened', 'current', 'unread'], progressLabel: '7 of 12 facts read' }), 'phone'],
   chapter_1_desktop: [chapter('Where your results came from', [
     { key: 'worst-days', name: 'Your worst trading days', figure: '−₹24,000', chart: 'worst' },
     { key: 'share', name: 'Share of your result', figure: '96%', chart: 'share' },
@@ -78,6 +86,15 @@ const VIEWS = {
     { key: 'c', name: 'Size after a loss', figure: '1.5 lots' },
     { key: 'd', name: 'Trading on while already down', figure: '7 of 12' },
     { key: 'e', name: 'The clock', figure: '10:00' },
+  ]), 'phone'],
+  chapter_1_narrow: [chapter('Where your results came from', [
+    { key: 'worst-days', name: 'Your worst trading days', figure: '−₹24,000', chart: 'worst' },
+    { key: 'share', name: 'Share of your result', figure: '96%', chart: 'share', miniW: 56 },
+    { key: 'money', name: 'Where the money came from', figure: '−₹9,000', chart: 'money', miniW: 48, miniH: 16 },
+  ]), 'phone'],
+  chapter_3_spoken: [chapter('Your behaviour', [
+    { key: 'down', name: 'After two straight losses', figure: '7 of 12', chart: 'down', miniLabel: 'After two straight losses −₹1,500 a trade; other trades −₹600.' },
+    { key: 'busiest', name: 'Your busiest day', figure: '—', state: 'not-enough', miniLabel: 'Not said while the slice has no figure.' },
   ]), 'phone'],
   chapter_one_fact: [chapter('A chapter of one', [
     { key: 'only', name: 'Your worst trading days', figure: '−₹24,000', chart: 'worst' },
@@ -124,7 +141,7 @@ for (const [key, [view, size]] of Object.entries(VIEWS)) {
     stacked: d.slices.map((s) => !!s.contents.tail),
     radii_contents: d.slices.map((s) => [G.fmt(s.contents.x), G.fmt(s.contents.numberY)]),
     svg: G.renderDialSVG(d),
-    svg_with_minis: key === 'chapter_1_phone' ? G.renderDialSVG(d, MINI) : null,  // one is enough to prove the slot
+    svg_with_minis: key === 'chapter_1_phone' || key === 'chapter_1_narrow' ? G.renderDialSVG(d, MINI) : null,  // one is enough to prove the slot
   };
 }
 
@@ -152,6 +169,24 @@ for (const [kind, inputs] of Object.entries(CHART_INPUTS)) {
       const call = WITH_MINI.has(kind) ? args.concat([w, h, mini]) : args.concat([w, h]);
       const c = G.charts[kind](...call);
       cases.charts.push({ kind, args, w, h, mini, out: c, svg: G.renderChart(c, 'chart--page', true), inner: G.renderChart(c) });
+    }
+  }
+}
+
+// A dial's own minis (TICKET-1036), at the phone's size and twice it. `tail` follows w and h.
+const DIAL_INPUTS = {
+  meter: [[[0.46, 0.51]], [[0.8, null]], [[1.2, -0.1]]],
+  split: [[[-48000, 3000]], [[-30000, -4000]], [[0, 0]]],
+  pair: [[[1500, -2000]], [[70, -419]], [[0, 0]]],
+  steps: [[[[-200, -300, -1500, -1900, -3200, -800]]], [[[]]], [[[-100]]]],
+  counts: [[[9, 4], [['9', '4']]], [[8, 4.5]], [[0, 0]]],
+  hours: [[[[13000, -50000, 1200, 1100, -4000], 1]], [[[100, -100], 0]], [[[], 0]]],
+};
+for (const [kind, inputs] of Object.entries(DIAL_INPUTS)) {
+  for (const [args, tail] of inputs) {
+    for (const [w, h] of [[72, 20], [144, 40]]) {
+      const c = G.charts[kind](...args.concat([w, h], tail || []));
+      cases.charts.push({ kind, args, w, h, mini: false, tail: tail || [], out: c, svg: G.renderChart(c, 'chart--page', true), inner: G.renderChart(c) });
     }
   }
 }

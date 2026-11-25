@@ -369,9 +369,10 @@ def test_the_card_names_each_clock_and_its_largest_hour():
 
 
 def test_the_dial_draws_the_book_its_figure_comes_from():
-    assert SF.facts(CTX, IMP)["clock"]["mini"] == G.chart_clock(
-        [float(h.net) for h in clock(OIL).hours],
-        [i for i, h in enumerate(clock(OIL).hours) if h.small_sample],
+    hours = clock(OIL).hours  # the dial marks the hour its figure names (TICKET-1036)
+    assert SF.facts(CTX, IMP)["clock"]["mini"] == G.chart_hours(
+        [float(h.net) for h in hours],
+        [h.hour for h in hours].index(clock(OIL).largest.hour),
         SF.dial.MINI_W,
         SF.dial.MINI_H,
     )

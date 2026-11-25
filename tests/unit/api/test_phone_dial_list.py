@@ -50,32 +50,32 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002.
-# The phone digests were re-taken when the phone dial made room inside itself (TICKET-1039);
-# every desktop digest is the one main had.
+# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, then
+# re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
+# views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["40fa64ef4773aade256a0c8e027c1dc74395d3903416a24eec121bcc621dc40a",
-                "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["28e028a865f1412785f8540e103330fdbf47df32c7a18a22c8447f9ac8f57e4c",  # phone: 1027 shortens a five-digit best trade
-                          "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
-    "/mirror/chapter/2": ["599d9d570fee5586121cd385f840308af28982c7a5b17cb5b5f57c104bf5909b",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
-    "/mirror/chapter/3": ["bf95a10de2409dbc6c3149e4098d5adf7019b23314baff62678869a6b2b703d6",
-                          # Desktop: three more wedges since What you do next (1006), and a sixth for After
-                          # you closed; the phone dial is main's.
-                          "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7"],
-    "/mirror/chapter/4": ["7f4cdb20eb508a9079cf93b012aea6086e2146cc5c7255b59180014a7907017a",
-                          "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5"],
+    # Re-taken on the merge with main of 25 Nov: the reading ring (TICKET-1037) on main's dials,
+    # which since carry After you closed (1009) on the hub and chapter 3.
+    "/mirror": ["5a4d2bcfa0af64e582a03cf5e5e9e1e5005a7a0472b70ca8827e3df7f85566ab",
+                "01ee5a065fa7002e39df7dae97e87f6de8b562f276abb8045fa5a66d6d4c1f27"],
+    "/mirror/chapter/1": ["cfd02b664bdbc277ad8cb7358c1438158ece81c3b75b58a5a1eceab9dc59f52b",
+                          "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc"],
+    "/mirror/chapter/2": ["972f76cd9e901140f239864048fc700763a4b99f12f0b370a3299d10862f8a44",
+                          "33301fff41ee1ea2529d14f40725b79554f8ba90de05584ac10fc8dff3bc2a9e"],
+    "/mirror/chapter/3": ["dd9a9d3a7d73c1abb04479e3695dd2c735fbc00d9a49370e20e9f8fc5e5cb518",
+                          "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf"],
+    "/mirror/chapter/4": ["159ca3ccb811dc84ab6e50a517d6ddc43277622f20d0ce5dca65e96e71fc65d9",
+                          "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "697494a6207985a97d3c2becf8cf093f19aab0ad09759185d8cc7436bd8e32fd",
-    (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
-    (2, "phone"): "d8fe6207341fb2e9cb79241c21353750f0c4eb67811078b45f1830ce1a929a5b",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
-    (3, "phone"): "ed540ed53f0e3104cb8a00905cbd01e2253e6a9f3c38addffb1e06eef6b7d4d4",
-    (3, "desktop"): "9704f56d35308a4edd16a6935792372428c21f4f0dc4d5c3afb853d6c6c44892",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
-    (4, "phone"): "6dacfeeef6fe9c6afc189612eeb8315072614b09c57c26d0c5651c7420512d4c",
-    (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
+    (1, "phone"): "6a3de0a598f2d9704254ac1496900547c2606c3f08cff24f7c77fb87681c401f",
+    (1, "desktop"): "3289d8dc852a321471ff35ea76ac36c9076fa72d60ccd31720002f8fde8b2d1b",
+    (2, "phone"): "6907a01fd0d283f9381f7e8a9eeab1f9116e013651f2f46a083e771f89bbc948",
+    (2, "desktop"): "278466a1f4ee54fe75ad2c1e86a575efe86f19eb5ba5964eb85eb06af32e62ab",
+    (3, "phone"): "0b5658b2d2a33fdaad899ab0388ca458ea5efd4f712b840a15668d470df409f7",
+    (3, "desktop"): "685e67d71b832c20f00e18dab5d31179b9232c5a6f9388c29cfad9405e42c259",
+    (4, "phone"): "4b04bb18e7f1fa665e722a00f079c8dd4f5c1a0a83b40822b2b7cd622316fae3",
+    (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
@@ -139,8 +139,8 @@ def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
 def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
     phone, desk = str(D.scope_dial(later, "phone")), str(D.scope_dial(later, "desktop"))
     assert len(slices(phone)) == 3 and len(slices(desk)) == 4
-    assert 'aria-label="After two straight losses."' not in phone
-    assert 'aria-label="After two straight losses."' in desk
+    assert 'aria-label="After two straight losses.' not in phone
+    assert 'aria-label="After two straight losses.' in desk
     assert sha(phone) == CHAPTERS_ON_MAIN[(2, "phone")]  # the phone dial is today's, byte for byte
 
 
@@ -148,7 +148,7 @@ def test_the_desktop_keeps_chapter_order_and_clears(later):
     assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
     z = G.SIZES["desktop"]
     rr = G.dial_radii("desktop", False)
-    items = later["desktop_items"]
+    items = D.fitted(later["desktop_items"], z["figSizesChapter"], "desktop")  # as the dial draws it
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
@@ -161,6 +161,7 @@ def test_the_phone_dial_still_clears(later):
     items = [{**i, "figure": D.phone_rupees(i.get("phone_figure", i["figure"])),  # as the phone draws them
               "label": D.phone_rupees(i.get("phone_label", i.get("label", "")))} for i in later["items"]]
     assert len(items) == 3
+    items = D.fitted(items, z["figSizesChapter"])  # each mini as wide as its wedge clears (TICKET-1036)
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):

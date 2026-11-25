@@ -104,8 +104,8 @@ def test_the_agreed_wording_on_the_desktop_dial():
 
     words = [f"{i['figure']} {i['label']}".replace("\n", " ") for i in hub_items(FORTY)[:3]]
     assert words[0] == f"5 days lost {CTX['share'].share_percent}% of all you lost"
-    assert words[1].endswith("of 100 trades made money")
-    assert words[2].endswith("trades on your busiest day")
+    assert words[1].endswith(f"of 100 made money; break-even {SF.wins_needed(CTX)}")  # TICKET-1035
+    assert words[2].endswith(f"trades on your busiest day; usually {CTX['days'].normal_day}")
 
 
 def test_a_uncapped_wedge_reads_as_agreed():
@@ -194,6 +194,8 @@ def test_every_chapter_dial_stays_clear_inside_its_wedge(pages, size):
         items = view["items"] if size == "desktop" else [
             {**i, "figure": D.phone_rupees(i.get("phone_figure", i["figure"])),
              "label": D.phone_rupees(i.get("phone_label", i.get("label", "")))} for i in view["items"]]
+        # a mini as wide as its wedge clears, on either size, as the dial draws it
+        items = D.fitted(items, z["figSizesChapter"], size)
         sec = G.sectors(len(items), False)
         lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
         for i, block in enumerate(lay["blocks"]):
