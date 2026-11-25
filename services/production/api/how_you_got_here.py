@@ -75,16 +75,15 @@ ALMOST_NOTHING = 4  # a period with under a quarter of his median period's trade
 
 
 def latest_usual(candles) -> tuple[mx.Candle, bool]:
-    """The candle the card describes: the latest one, unless it holds almost nothing (fewer
-    than a quarter of his own median candle's trades), when it is the latest that holds at
-    least his median. True when it is the latest. His median, not a count of ours: a month
-    with one trade at the end of a long record says nothing about how he trades, but a month
-    a little under his usual is still his latest month."""
+    """The candle the card describes: the latest one that is not itself almost nothing (fewer
+    than a quarter of his own median candle's trades). True when that is the latest. One
+    threshold, used both to pass a period over and to choose where to land: a month a little
+    under his usual is still described, and a month with one trade at the end of a long record
+    is named, not described. His median always qualifies, so a candle is always found."""
     trades = sorted(c.trades for c in candles)
     median = trades[(len(trades) - 1) // 2]  # the lower middle: a count some candle really holds
-    if candles[-1].trades * ALMOST_NOTHING >= median:
-        return candles[-1], True
-    return next(c for c in reversed(candles) if c.trades >= median), False
+    found = next(c for c in reversed(candles) if c.trades * ALMOST_NOTHING >= median)
+    return found, found is candles[-1]
 
 
 def period_end(period: str, frame: str) -> date:
@@ -230,8 +229,10 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         "drop_day": _day_closed(mine, run.drop.to_day),
         "last": last,
         "last_label": label(last.period, frame),
-        "last_words": (f"this {frame} so far" if so_far else f"the last {frame}") if usual
-        else f"the latest {frame} with your usual number of trades",
+        "last_words": (f"this {frame} so far" if so_far else f"the last {frame}") if usual else None,
+        # The newest period, named when the card passes it over as almost nothing.
+        "passed": None if usual else {"label": label(shown_candles[-1].period, frame),
+                                      "trades": shown_candles[-1].trades},
         "cut": (len(shown_candles), len(every)) if len(every) > WINDOW else None,
         "chart": chart(run, frame, opens),
         # Each row's figure is the difference of the closes as written, so the column adds up to

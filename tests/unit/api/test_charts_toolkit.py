@@ -258,9 +258,12 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # Re-taken again for 1026 on main merged in: the card says "same-day trades" beside needed and
 # names the demo's one held position in its Result note. Re-taken once more for the review of 24 Nov
 # 21:19: with a position held, the card's whole-record figure is labelled "Whole record", not "Result".
+# Moved again by 1080 (24 Nov 22:23 ruling): the card lands on the latest period that is not almost
+# nothing, and its readout names the thin period it passes instead of calling the one shown usual;
+# only all/w and the default view (the same card) moved.
 BEFORE = {
     "all/d": "76d405ffa1d8f145f7dc134e4d3e28bc1377c409d2bd9831b67fa5ab25d0b0a5",
-    "all/w": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
+    "all/w": "300ed7d2d18925969f824b6a4d02df9ad42b07c1ae74c568bf1ed5a70190684c",
     "all/m": "9982a2d950d785f7cdfcaf5bfe072b53650f740033e86b97d3e9922dc0c78a17",
     "crude-options/d": "ffcccf5e938afa315a531143b2f60a293066ac634e89eb97e8b9d5df617a1519",
     "crude-options/w": "7b325967d95c45b4fd8a42256fc7ad1bb9db4d499e0e2864d33871366928794f",
@@ -268,7 +271,7 @@ BEFORE = {
     "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
     "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
     "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
-    "default": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
+    "default": "300ed7d2d18925969f824b6a4d02df9ad42b07c1ae74c568bf1ed5a70190684c",
 }
 
 
