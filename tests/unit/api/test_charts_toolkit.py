@@ -254,10 +254,13 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # test_figures_agree); everything else on the card is still pinned byte for byte, and these
 # digests are main's own with the column left out. Moved once more, on purpose, by 1027 (month
 # names on the month view, the axis label under the last tag dropped, the count label ending
-# inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
+# inside the chart), re-taken on main merged with 1027. Moved again by 1080 (24 Nov 22:23 ruling):
+# the demo's week view lands on the same week, and its readout now names the thin week it passes
+# ("Week of 31 Aug 2026 had only 4 trades") instead of calling the one shown usual; only
+# all/w and the default view (the same card) moved. The demo file is synthetic.
 BEFORE = {
     "all/d": "e287da87940cff9d824ec32a386a0ccdec17f5f3b01d5cd09eee24caf6b38744",
-    "all/w": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
+    "all/w": "be84ad3308214cc24c169d760a17281549473572a4cedb2365054223e61a6cce",
     "all/m": "e66a7eb232301f16e1cb2dfdfc0162ba242badb516c58b862b741c60cc1f788c",
     "crude-options/d": "cfb163d1f14e4347d8575d56858343c28c967e8c34a82cfed606bd8d33eb023a",
     "crude-options/w": "86ea4597ce490b0ed2bda139fdd6d088f6e97b67a5e08a3deabb708220850caa",
@@ -265,7 +268,7 @@ BEFORE = {
     "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
     "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
     "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
-    "default": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
+    "default": "be84ad3308214cc24c169d760a17281549473572a4cedb2365054223e61a6cce",
 }
 
 
