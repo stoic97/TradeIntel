@@ -26,6 +26,12 @@ Decided here, and each threshold is his own:
   its count and "too few for a rate".
 * **What moved:** each line's figure beside the earlier reading's, only when both meet the line's
   minimum. No arrow, no colour, no "better" or "worse".
+
+**Execution** reads the bar figures stored off the web app (``bar_trade_figure``: how
+far each trade's underlying went his way while he held, and what he took, in points), never bars.
+Only holds of 45 minutes or more: on 1-minute bars the best price reached is biased for short
+holds (TD-004). Per underlying, because points never add across markets. Kept is Σ took ÷ Σ way
+over the trades the market moved his way, written as what happened, never as money left over.
 """
 from __future__ import annotations
 
@@ -45,6 +51,7 @@ from services.production.api.figures import Figure
 from services.production.mirror import metrics as mx
 
 RATE_AT = mx.CLOCK_MINIMUM_TRADES
+MEASURED_HOLD = 45 * 60  # seconds; shorter holds are too short to measure on minute bars (TD-004)
 WORST_AT_LEAST = 3
 BEST_DAYS = 3
 
@@ -67,9 +74,20 @@ LABELS: dict[str, str] = {
 
 
 @dataclass(frozen=True)
+class Bars:
+    """One trade's stored bar figures, in underlying points in its direction, or why it has none."""
+
+    underlying: str | None
+    way: Decimal | None
+    took: Decimal | None
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
 class Reading:
     trips: list
     capital: Decimal | None = None
+    figures: dict[str, Bars] | None = None  # by trip id; None when none are stored for this file
 
 
 @dataclass(frozen=True)
@@ -365,7 +383,72 @@ def consistency(reading: Reading) -> Row:
     return Row("consistency", "Consistency", tuple(lines))
 
 
-ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency]
+# ---------- Execution ----------
+
+def _median(values: list[Decimal]) -> Decimal:
+    return Decimal(str(statistics.median(values))) if values else Decimal(0)
+
+
+def _points(value: Decimal) -> Markup:
+    return _amount(value.normalize() if value == value.to_integral_value() else value.quantize(Decimal("0.1")),
+                   "points")
+
+
+UNDERLYING_POINTS = "in the underlying's points, not your option's price."
+
+
+def execution(reading: Reading) -> Row:
+    """Kept points and gave-back trades, per underlying, from the stored bar figures."""
+    figures = reading.figures
+    if figures is None:
+        return Row("execution", "Execution", (), empty="No market figures for this file yet.")
+    measured = [(t, figures[t.trip_id]) for t in reading.trips
+                if t.trip_id in figures and figures[t.trip_id].reason is None
+                and figures[t.trip_id].way is not None and figures[t.trip_id].took is not None]
+    short = [t for t, _b in measured if t.holding_seconds < MEASURED_HOLD]
+    held = [(t, b) for t, b in measured if t.holding_seconds >= MEASURED_HOLD]
+    by_underlying: dict[str, list] = defaultdict(list)
+    for t, b in held:
+        by_underlying[b.underlying or ""].append((t, b))
+    lines: list[Line] = []
+    for name in sorted(by_underlying, key=lambda u: (-len(by_underlying[u]), u)):
+        group = by_underlying[name]
+        moved = [(t, b) for t, b in group if b.way > 0]
+        kept_key, back_key = f"kept-{name}", f"gave-back-{name}"
+        ids = _ids(t for t, _b in moved)
+        trades = _s(len(moved), "trade", "trades")
+        if len(moved) < RATE_AT:
+            too_few = f" {trades} held 45 minutes or more that the market moved your way: too few for a rate."
+            lines.append(Line(kept_key, (f"In {name}: ", _count(len(moved), "trades", kept_key), too_few),
+                              {kept_key: ids}, meets=False))
+        else:
+            way = sum((b.way for _t, b in moved), Decimal(0))
+            took = sum((b.took for _t, b in moved), Decimal(0))
+            if took < 0:
+                gave = f"In {name} you gave back more than it moved your way while you held, over "
+                lines.append(Line(kept_key, (gave, _count(len(moved), "trades", kept_key),
+                                             f" {trades}, {UNDERLYING_POINTS}"), {kept_key: ids}, meets=False))
+            else:
+                rate = took * 100 / way
+                kept = f" points the market moved your way while you held, {UNDERLYING_POINTS}"
+                lines.append(Line(kept_key, (f"In {name} you kept ",
+                                             _write(rate, "percent", "out_of_a_hundred", kept_key), kept),
+                                  {kept_key: ids}, Measure(rate, "percent", "out_of_a_hundred")))
+        usual = _median([b.way for _t, b in group])
+        back = [t for t, b in group if b.way > usual and t.net < 0]
+        went = f" {_s(len(back), 'trade', 'trades')} went more than your usual "
+        lines.append(Line(back_key, (_count(len(back), "trades", back_key), went, _points(usual),
+                                     f" points your way and closed at a loss, in {name}."),
+                          {back_key: _ids(back)}, Measure(len(back), "trades", "count")))
+    too_short = f"{len(short)} {_s(len(short), 'trade', 'trades')} under 45 minutes are too short to measure"
+    notes = (f"{too_short} on minute bars.",) if short else ()
+    if not lines:
+        empty = "No trades held 45 minutes or more with market figures."
+        return Row("execution", "Execution", (), empty=empty, notes=notes)
+    return Row("execution", "Execution", tuple(lines), notes=notes)
+
+
+ROWS: list[Callable[[Reading], Row]] = [risk, sizing, under_drawdown, day_control, consistency, execution]
 """The page's rows, in order. A later row is one more builder here."""
 
 HOME_ROWS = ("risk", "sizing", "consistency")
@@ -380,6 +463,15 @@ def _was(today: Line, earlier: Line | None) -> Line:
     return dataclasses.replace(today, was=was)
 
 
+def label(key: str) -> str:
+    """What the trade list says a line's trades are."""
+    if key.startswith("kept-"):
+        return f"Moved your way, held 45 minutes or more, {key[5:]}"
+    if key.startswith("gave-back-"):
+        return f"Went more than your usual move your way and closed at a loss, {key[10:]}"
+    return LABELS.get(key, "From Your process")
+
+
 def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
     rows = [builder(reading) for builder in ROWS]
     if earlier is None or not earlier.trips:
@@ -389,9 +481,9 @@ def build(reading: Reading, earlier: Reading | None = None) -> list[Row]:
             for row in rows]
 
 
-def members(trips, key: str) -> frozenset[str] | None:
+def members(trips, key: str, figures: dict[str, Bars] | None = None) -> frozenset[str] | None:
     """The trades behind one figure, asked of the same builders the page drew it from."""
-    reading = Reading(list(trips))
+    reading = Reading(list(trips), figures=figures)
     for builder in ROWS:
         for ln in builder(reading).lines:
             if key in ln.sets:
