@@ -2392,6 +2392,9 @@ def previous_result_figures(trips: list[Trip], minimum: int = THEN_MINIMUM,
 # counted. How fast you went back in is the registered B1 row (post_loss_latency, the founder's
 # ruling of 24 Nov 2026): after a loss against after a win or a level trade, 30 in each group.
 
+# "Prior trip" is defined in docs/product/definitions_v1.md section 9: the latest trip that closed
+# strictly before this one opened, the same day. This 30 is tied to the framework's B1 n_min (30/30)
+# by tests/unit/mirror/test_b1_minimum_framework.py, not by any read of the research tree here.
 B1_MINIMUM = 30
 """Trades in each of B1's groups before the two are set side by side (B1's n_min, 30/30)."""
 
