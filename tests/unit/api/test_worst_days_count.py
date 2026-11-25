@@ -1,8 +1,8 @@
 """TICKET-1090: a short record is never told "five worst days"; every page counts them one way.
 
 The report's wording for the worst days counted is worst_count: "five" at five, the counted
-figure below five ("Your 2 worst days"). The Home and Journal flag, the upload re-read row and
-the reveal all say it. Records worked by hand, one trip a day, all losing:
+figure below five ("Your 2 worst days"). The Home and Journal flag and the upload re-read row
+say it. The reveal keeps the words D9 signed (TICKET-1081). Records worked by hand, one trip a day, all losing:
   ONE    1 day:  -600.
   TWO    2 days: -600, -200.
   FOUR   4 days: -400, -300, -200, -100.
@@ -84,15 +84,15 @@ def test_five_or_more_row_says_five(trips):
     assert row_labels(trips) == ["Your five worst days"]
 
 
-def test_the_reveal_says_it_the_way_the_report_does():
+def test_the_reveal_keeps_the_words_d9_signed_for_a_short_record():
+    """Signed in the D9 ruling (TICKET-1081): the reveal is not worded by worst_count."""
     two = readable(reveal(TWO))
     assert "five" not in two.lower()
-    assert "Your 2 worst days" in two
-    assert "Those 2 days came to" in two
-    assert "your two" not in two.lower()
+    assert "Your two trading days" in two
+    assert "Those two days came to" in two
     one = readable(reveal(ONE))
     assert "five" not in one.lower()
-    assert "Your 1 worst day" in one
+    assert "Your only trading day" in one
     assert "That day came to" in one
 
 
@@ -102,11 +102,9 @@ def test_the_reveal_at_five_or_more_reads_as_before(trips):
     assert "Your five worst days" in text
 
 
-def test_every_page_says_the_same_words_for_two_days():
-    reveal_text = readable(reveal(TWO))
+def test_the_flag_and_the_upload_row_say_the_same_words_for_two_days():
     (row,) = row_labels(TWO)
-    assert row in reveal_text, "the upload row and the reveal title are one wording"
-    assert all(row.lower() in label.lower() for label in flag_labels(TWO)), "and the flag too"
+    assert all(row.lower() in label.lower() for label in flag_labels(TWO))
 
 
 def test_no_counted_days_never_reaches_the_reveal(client, monkeypatch):
