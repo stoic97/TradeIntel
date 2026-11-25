@@ -4,7 +4,7 @@
 {%- if wb.shown %}
 <section class="shape" id="worst-books">
   <h2 class="card-title numbers__heading">Your books on your worst days</h2>
-  <p class="body">On your {{ Figure(wb.count, "worst days")|count }} worst days, every book you traded lost on {{ Figure(wb.all_lost, "days")|count }}.</p>
+  <p class="body">On your {{ Figure(wb.count, "worst days")|count }} {{ "worst day" if wb.count == 1 else "worst days" }}, every book you traded lost on {{ Figure(wb.all_lost, "days")|count }}.</p>
   <table class="table shape__grid">
     <thead><tr><th scope="col">Day</th>{% for b in wb.books %}<th scope="col" class="shape__book">{{ b }}</th>{% endfor %}</tr></thead>
     <tbody>

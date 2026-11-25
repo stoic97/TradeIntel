@@ -600,6 +600,20 @@ a.calendar__day { background: var(--color-surface); color: var(--color-ink); }
 .numbers__foot { margin-top: var(--space-6); }
 @media (min-width: 720px) { .numbers__grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* after you closed: the half hour after each exit, stored figures only */
+.after-close .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3); }
+.after-close .chip { text-decoration: none; }
+.after-close .chip--on { background: var(--color-ink); color: var(--color-page); }
+.acl-chart { width: 100%; height: auto; display: block; }
+.chart__acl-grid { fill: none; stroke: var(--color-hairline); stroke-width: .5; }
+.chart__acl-zero { fill: none; stroke: var(--color-muted); stroke-width: .75; }
+.chart__acl-winners { fill: none; stroke: var(--color-muted); stroke-width: 1.25; stroke-dasharray: 4 3; }
+.chart__acl-losers { fill: none; stroke: var(--color-action-blue); stroke-width: 2; }
+.acl-axis { font-family: var(--font-mono); font-size: 10px; fill: var(--color-muted); }
+.acl-swatch--losers { background: var(--color-action-blue); }
+.acl-swatch--winners { background: var(--color-muted); }
+.acl-table { margin-top: var(--space-3); }
+
 /* The shape of your days: the books grid fits a phone; book names wrap, cells 20 px and up. */
 .shape__grid { width: 100%; table-layout: fixed; }
 .shape__grid th, .shape__grid td { padding: var(--space-2) var(--space-1); vertical-align: top; font-size: 13px; }

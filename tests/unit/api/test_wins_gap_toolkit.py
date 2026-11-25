@@ -23,6 +23,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from services.production.api import charts
 from tests.helpers.upload import upload
 
@@ -154,6 +156,9 @@ def test_the_first_and_last_year_labels_hang_inside_the_drawing(client, engine):
 BEFORE = "07af43108373175f03dbb2a77b2f67f417e31c897ef34dad57711509a6714c4e"
 
 
+@pytest.mark.skip(reason="superseded by TICKET-1087: the gap bar now carries its own axis and the page says "
+                         "what the rate and the lines count, so the section is no longer drawn as on 037410b; "
+                         "it proved the move into the toolkit changed nothing, and that move is merged")
 def test_the_section_is_drawn_byte_for_byte_as_before(client, engine):
     assert hashlib.sha256(math_page(client).encode()).hexdigest() == BEFORE
 
