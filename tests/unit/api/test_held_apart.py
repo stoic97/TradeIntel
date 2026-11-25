@@ -14,11 +14,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from services.production.api import how_you_got_here as how
 from services.production.api import numbers as N
-from services.production.journal import sections
 from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s
 
@@ -111,15 +108,6 @@ def test_home_result_says_what_is_held_in_it():
     assert c["total"] == D(4850)
     assert "held" in c, "no held line on Home's card"
     assert (c["held"]["count"], c["held"]["net"]) == (2, D(4750))
-
-
-# ---------- One normal day ----------
-
-@pytest.mark.skip(reason="superseded: the Journal's normal-day change was taken out of #208 (review of 24 Nov 21:19: no gate line needs it). Assertion kept as written.")
-def test_the_journals_normal_day_is_same_day_trades_as_chapter_three():
-    facts = sections.history_facts(RECORD)
-    same = mx.day_counts(mx.same_day_trips(RECORD)).normal_day
-    assert D(facts["against_your_normal"]["your_normal_day"]) == same == D(2)
 
 
 # ---------- The wording names it ----------

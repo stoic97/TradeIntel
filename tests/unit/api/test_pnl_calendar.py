@@ -18,7 +18,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from services.production.api import numbers as N
-from services.production.api import scope_facts as SF
 from services.production.api import trade_list as TL
 from services.production.api.app import create_app
 from services.production.mirror import metrics as mx
@@ -99,43 +98,53 @@ def test_a_month_is_seven_columns_monday_first():
     assert sum(1 for week in feb["weeks"] for c in week if c) == 28  # every calendar day a cell
 
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
+# TICKET-1026's one-date rule: this record holds two positions past the day (t06 4->5 Feb, t09 26->27 Feb),
+# so the calendar reads same-day trades. Worked by hand without t06 and t09:
+#   30 Jan +600 (2) · 1 Feb +300 · 2 Feb -1500 · 3 Feb +700 · 9 Feb +200 (2) · 2 Mar -200 (2);
+#   5 Feb and 27 Feb are no traded cell. Months: Jan +600 (2); Feb 300-1500+700+200 = -300 (5); Mar -200 (2).
+#   |day results| sorted: 200 200 300 600 700 1500; 0.9 x 5 = 4.5, so 700 + 0.5 x (1500 - 700) = 1100.
+#   Tones against 1100: +600 -> 3, +300 -> 2, -1500 -> 4, +700 -> 3, +200 -> 1, -200 -> 1.
+SAME_DAY = "&same_day=yes"
+
 def test_month_totals_are_the_month_candles_own():
+    """Rewritten for TICKET-1026: the months read same-day trades, the same totals as the month
+    candles of his same-day trades."""
     view = record_view()
-    candles = {c.period: c for c in mx.running_result(RECORD).candles["month"]}
+    candles = {c.period: c for c in mx.running_result(mx.same_day_trips(RECORD)).candles["month"]}
     for m in view["months"]:
         assert m["net"] == candles[m["period"]].net and m["trades"] == candles[m["period"]].trades
-    assert [(m["net"], m["trades"]) for m in view["months"]] == [(D(-200), 2), (D(500), 7), (D(600), 2)]
+    assert [(m["net"], m["trades"]) for m in view["months"]] == [(D(-200), 2), (D(-300), 5), (D(600), 2)]
 
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_a_day_is_the_day_he_closed_and_a_sunday_is_its_own_cell():
+    """Rewritten for TICKET-1026: a Sunday is still its own cell; a day on which only a held
+    position closed (5 Feb) is no traded cell."""
     view = record_view()
     c = cells(view)
     assert c["2026-02-01"]["net"] == D(300)
-    assert c["2026-02-05"]["net"] == D(-100)  # opened on the 4th, closed on the 5th
+    assert c["2026-02-05"]["net"] is None and c["2026-02-05"]["trades"] == 0
     assert c["2026-02-04"]["net"] is None and c["2026-02-04"]["trades"] == 0
     assert c["2026-01-30"]["trades"] == 2
 
 
 # ---------- 4. colour ----------
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_the_scale_is_the_90th_percentile_of_the_days_in_view():
+    """Rewritten for TICKET-1026: the 90th percentile of the same-day days, 1100 by hand."""
     view = record_view()
-    assert view["scale"] == D(1080)
+    assert view["scale"] == D(1100)
 
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_each_cell_is_toned_by_its_result_against_the_scale():
+    """Rewritten for TICKET-1026: tones against the same-day scale of 1100; held-only days are surface."""
     view = record_view()
     c = cells(view)
     want = {"2026-01-30": "gain-3", "2026-02-01": "gain-2", "2026-02-02": "loss-4",
-            "2026-02-03": "gain-3", "2026-02-05": "loss-1", "2026-02-09": "gain-1",
-            "2026-02-27": "gain-4", "2026-03-02": "loss-1"}
+            "2026-02-03": "gain-3", "2026-02-09": "gain-1", "2026-03-02": "loss-1"}
     for iso, tone in want.items():
         assert c[iso]["tone"] == f"ch-cell ch-cell--{tone}", iso
-    assert c["2026-02-04"]["tone"] == "ch-cell ch-cell--surface"  # no trades: the surface
+    for iso in ("2026-02-04", "2026-02-05", "2026-02-27"):
+        assert c[iso]["tone"] == "ch-cell ch-cell--surface", iso
 
 
 def test_an_exchange_holiday_with_no_trades_is_greyed_and_nothing_moves():
@@ -178,20 +187,10 @@ def test_a_chosen_year_shows_that_years_months():
 
 # ---------- 6. every traded cell opens its trades ----------
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_a_day_with_a_trade_opened_still_opens_the_trades_closed_that_day():
-    # The cell counts the trades closed that day; the day page lists those opened (TICKET-1022).
+    """Rewritten for TICKET-1026: the cell opens the same-day trades closed that day, the ones it counts."""
     view = record_view()
-    assert cells(view)["2026-02-03"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03"
-
-
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
-def test_a_day_with_only_closings_opens_the_list_of_exactly_those_trades():
-    view = record_view()
-    href = cells(view)["2026-02-05"]["href"]
-    assert href == "/mirror/fact/risk/trades?closed_day=2026-02-05"
-    listed = TL.listing("risk", SF.record_context(RECORD), {"closed_day": "2026-02-05"}, {})
-    assert listed["shown"] == 1 and listed["total"] == len(RECORD)
+    assert cells(view)["2026-02-03"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03" + SAME_DAY
 
 
 def test_a_day_with_no_trades_opens_nothing():
@@ -199,12 +198,13 @@ def test_a_day_with_no_trades_opens_nothing():
     assert cells(view)["2026-02-04"]["href"] is None
 
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_the_best_and_worst_day_tiles_take_the_same_link():
+    """Rewritten for TICKET-1026: best day 3 Feb +700, worst 2 Feb -1500 among same-day days; each
+    tile takes its cell's link."""
     v = N.build(RECORD, {}, gross=True)
-    assert v["tiles"]["best_day"]["day"] == "2026-02-27"
-    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-27"
-    assert v["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02"
+    assert v["tiles"]["best_day"]["day"] == "2026-02-03"
+    assert v["tiles"]["best_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-03" + SAME_DAY
+    assert v["tiles"]["worst_day"]["href"] == "/mirror/fact/risk/trades?closed_day=2026-02-02" + SAME_DAY
 
 
 def test_closed_day_is_a_filter_on_the_map():
@@ -215,11 +215,11 @@ def test_closed_day_is_a_filter_on_the_map():
 
 # ---------- 9. the screen reader's table ----------
 
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar and the day tiles too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py, test_calendar_same_day.py and the same-day twin below hold the new rule.')
 def test_a_text_table_row_for_every_traded_day():
+    """Rewritten for TICKET-1026: the heading and the six same-day traded days."""
     view = record_view()
     table = str(view["table"])
-    assert table.count("<tr>") == 1 + 8  # the heading, and the eight traded days
+    assert table.count("<tr>") == 1 + 6
     assert "−₹1,500" in table
 
 
