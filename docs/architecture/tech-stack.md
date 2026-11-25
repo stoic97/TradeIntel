@@ -16,7 +16,7 @@ Validation    pydantic v2, strict=True, extra='forbid' on every schema in servic
 Tables        pandas + numpy; versions chosen for the product (JAX-compatible), not the fund   ADR 004
 Bayesian      PyMC + nutpie (NumPyro kept as the second backend)                              ADR 006
 Concurrency   ProcessPoolExecutor across tests · content-addressed cache                     ADR 005
-Testing       pytest · ruff · mypy on services/shared from day one · hypothesis on the
+Testing       pytest (xdist, -n auto by default; -n 0 for one core) · ruff · mypy on services/shared from day one · hypothesis on the
               load-bearing transformations                                                    Methodology §13
 Lineage       hashlib sha256; every evidence object carries the framework hash               ADR 003
 Market data   Fund → product as Parquet DATA, one-way, logged; folder now, bucket at stage 1  ADR 002, 005

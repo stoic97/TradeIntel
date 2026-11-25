@@ -720,6 +720,7 @@ help:
 dev: ## Start local development environment
 	docker compose up
 
+# Parallel by default: pyproject addopts has -n auto (TICKET-1057); add -n 0 for one core.
 test: test-unit test-integration test-repro ## Run fast tests
 
 test-unit: ## Run unit tests
