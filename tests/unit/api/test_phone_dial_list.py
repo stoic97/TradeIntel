@@ -54,12 +54,13 @@ def dials(html: str) -> list[str]:
 ON_MAIN = {
     "/mirror": ["4dc4d7bcd2a4994688fdcac075024102cd1bdd189bd9c25b89ff88c1533840e0",
                 "c4f3c085500933b994281bd76c1bc5ce99047e9c9911ba0ca2e2289a53b7ab20"],
-    # Dial minis (1036) and each wedge's reference line with the worst one marked (1035), on main's dials.
-    "/mirror/chapter/1": ["7cbaace90a5d06e70e6898060ba53430367d4752a0a9627df67f13a067003374",
+    "/mirror/chapter/1": ["7cbaace90a5d06e70e6898060ba53430367d4752a0a9627df67f13a067003374",  # phone: 1027 shortens a five-digit best trade
                           "649a0e5c1f1ac84420f26a8233c8d24e0bb8ef2d080030cc178dc15c8984e60a"],
     "/mirror/chapter/2": ["41452ba3d497737547f663b59b0584d631e1555baefb28c0fbb70781fb262920",
-                          "9e7ea17df669736ddc132b29076d09e54c0cee7ffcc6208283e47aaf0e7d2f3a"],
+                          "461200496621249aa300f6ec7c831dbec35ad456dbea8d580983d6f50c99175d"],  # desktop: 1001 adds a wedge
     "/mirror/chapter/3": ["ab076e1d93d341d0e16b00a26df8b69caec6e8ba7f72e096c706a882ba152c33",
+                          # Desktop: three more wedges since What you do next (1006), and a sixth for After
+                          # you closed; the phone dial is main's.
                           "50d72ea23497c77f04d6a5893d06373dc01a02c0e799617cf3e89eabb8cbe3ad"],
     "/mirror/chapter/4": ["c1e506fcfa77485e7d82e87d3b63c461ba3db7e8339b3d1cf47143fc20e7a6d3",
                           "f27265173a763ba6714eaf862faaf4ec3788090d7645311a1b2556fa5b34ce7b"],
@@ -68,9 +69,9 @@ CHAPTERS_ON_MAIN = {
     (1, "phone"): "6bd6d18fd0286f13bb41da988d151ed1e2605c7dfa9b16eba4045e841583bfb7",
     (1, "desktop"): "3289d8dc852a321471ff35ea76ac36c9076fa72d60ccd31720002f8fde8b2d1b",
     (2, "phone"): "805482e46f2ca8d8e7b0c7fe721c077322c094d3d2b3a9a99be9b007e4ced69d",
-    (2, "desktop"): "278466a1f4ee54fe75ad2c1e86a575efe86f19eb5ba5964eb85eb06af32e62ab",
+    (2, "desktop"): "d23dc8b3348d3a548a2b9da14ef17bf0c4115ca5f19e27140815f5f66f8498cb",  # 1001's wedge
     (3, "phone"): "89b3f6b0649fddad4a5256c83e822cc10f39387732a338d510a63e73f67efe1b",
-    (3, "desktop"): "685e67d71b832c20f00e18dab5d31179b9232c5a6f9388c29cfad9405e42c259",
+    (3, "desktop"): "ffd28d8a5a9972894a7bac99d3574f304a8fdc6cce2e2b05168a8652dc3773f8",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
     (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
     (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
@@ -80,7 +81,8 @@ CHAPTERS_ON_MAIN = {
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
-                      "after-close"}  # After you closed: added after the phone dial was sized
+                      "after-close",  # After you closed: added after the phone dial was sized
+                      "after"}  # After you clicked (1001), in chapter 2's list
 
 
 def sha(text) -> str:
@@ -98,7 +100,8 @@ LATER = S.Fact("down", "After two straight losses", "down", on_phone_dial=False)
 @pytest.fixture()
 def later(monkeypatch):
     two = S.CHAPTERS[1]
-    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*two.facts, LATER)), *S.CHAPTERS[2:])
+    on_dial = tuple(f for f in two.facts if f.on_phone_dial)  # main's chapter 2, then one later fact
+    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*on_dial, LATER)), *S.CHAPTERS[2:])
     monkeypatch.setattr(S, "CHAPTERS", chapters)
     return SF.chapter_view(2, SF.facts(CTX, IMP))
 
@@ -126,9 +129,9 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
-        if path == "/mirror/chapter/3":  # What you do next (1006) sits in chapter 3's list
-            continue
-        assert "scope__list" not in html, path
+        off = any(not f.on_phone_dial for c in S.CHAPTERS for f in c.facts
+                  if path in (f"/mirror/chapter/{c.number}",))
+        assert ("scope__list" in html) == off, path
 
 
 # ---------- a fact off the phone dial ----------
@@ -142,7 +145,7 @@ def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
 
 
 def test_the_desktop_keeps_chapter_order_and_clears(later):
-    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
+    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.chapter(2).facts]
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
     items = D.fitted(later["desktop_items"], z["figSizesChapter"], "desktop")  # as the dial draws it
