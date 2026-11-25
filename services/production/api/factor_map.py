@@ -111,7 +111,7 @@ FACTORS: tuple[Factor, ...] = (
     # Holding and exits
     F("Holding and exits", "How long you hold", K.ONLY_AFTER, S.WORKED_OUT, checks=("E5",)),
     F("Holding and exits", "Held past the day", K.AT_CLICK, S.WORKED_OUT, checks=("S6",),
-      filters=("overnight", "held_days")),
+      filters=("overnight", "held_days", "same_day")),
     F("Holding and exits", "How much of a move you kept", K.ONLY_AFTER, S.NEEDS_BARS,
       checks=("E2",)),
     F("Holding and exits", "Losses that grew late", K.ONLY_AFTER, S.NEEDS_BARS,

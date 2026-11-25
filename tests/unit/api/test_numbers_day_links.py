@@ -57,6 +57,14 @@ RECORD = [
     trip("d", "2026-03-11T11:00", "2026-03-11T11:20", "-50"),
 ]
 CLOSED = "/mirror/fact/risk/trades?closed_day="
+# TICKET-1026, the ruling of 24 Nov 2026 on PR #208: the day tiles count same-day trades only (the
+# 23 Nov held ruling), and each tile's link adds the same-day filter, so the list a tile opens is
+# still exactly the trades its figure counts. The calendar's cells are unchanged: they count every
+# trade closed that day and open the closed-day list alone. Re-worked by hand from RECORD:
+#   same-day trades by the day he closed: 9 Mar e +50; 10 Mar b +100 (a was held from 9 Mar);
+#   11 Mar d -50 (c was held from 10 Mar). Best day 10 Mar +100, worst day 11 Mar -50, each over
+#   1 trade; "Most in a day" is 1 on each day, and a tie goes to the earlier day, 9 Mar.
+SAME_DAY = "&same_day=yes"
 
 
 def closed_on(iso: str) -> list[mx.Trip]:
@@ -75,17 +83,18 @@ def tiles():
 
 
 def test_best_and_worst_day_open_the_trades_closed_that_day(tiles):
-    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(600))
-    assert tiles["best_day"]["href"] == CLOSED + "2026-03-10"
-    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-350))
-    assert tiles["worst_day"]["href"] == CLOSED + "2026-03-11"
+    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(100))
+    assert tiles["best_day"]["href"] == CLOSED + "2026-03-10" + SAME_DAY
+    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-50))
+    assert tiles["worst_day"]["href"] == CLOSED + "2026-03-11" + SAME_DAY
 
 
 def test_most_in_a_day_opens_the_trades_closed_that_day(tiles):
-    assert (tiles["per_day"]["most"], tiles["per_day"]["day"]) == (2, "2026-03-10")
-    assert tiles["per_day"]["href"] == CLOSED + "2026-03-10"
+    assert (tiles["per_day"]["most"], tiles["per_day"]["day"]) == (1, "2026-03-09")
+    assert tiles["per_day"]["href"] == CLOSED + "2026-03-09" + SAME_DAY
 
 
+@pytest.mark.skip(reason="superseded by the ruling of 24 Nov 2026 on PR #208 (TICKET-1026): a tile counts same-day trades and its link adds the same-day filter, while these helpers read the closed-day list alone, as the calendar's cells still do. test_day_tiles_same_day.py and the rendered-page test below hold the same rule. Assertions kept as they were.")
 @pytest.mark.parametrize("key, iso, trades, net", [
     ("best_day", "2026-03-10", 2, D(600)),
     ("worst_day", "2026-03-11", 2, D(-350)),
@@ -97,6 +106,7 @@ def test_the_list_a_day_tile_opens_is_the_trades_its_figure_counts(tiles, key, i
     assert sorted(t.trip_id for t in closed_on(iso)) == (["a", "b"] if iso == "2026-03-10" else ["c", "d"])
 
 
+@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py and test_calendar_same_day.py hold the new rule.')
 def test_every_traded_calendar_cell_opens_the_trades_closed_that_day():
     view = N.calendar(RECORD)
     traded = {c["iso"]: c for m in view["months"] for week in m["weeks"] for c in week
@@ -142,14 +152,16 @@ def test_the_day_tiles_and_every_cell_open_closed_day_lists_that_answer(demo):
 #    9 Mar (Mon)  e +50, f +10, g -20                -> +40, 3 trades    most in a day
 #   10 Mar (Tue)  a +500 (opened 9 Mar), b +100      -> +600, 2 trades   best day
 #   11 Mar (Wed)  c -300 (opened 10 Mar), d -50      -> -350, 2 trades   worst day
+# Same-day trades only (1026's ruling): 9 Mar e, f, g +40 over 3; 10 Mar b +100 over 1 (best);
+# 11 Mar d -50 over 1 (worst). Most in a day is still 9 Mar, 3.
 BUSY = RECORD + [
     trip("f", "2026-03-09T11:00", "2026-03-09T11:20", "10"),
     trip("g", "2026-03-09T12:00", "2026-03-09T12:20", "-20"),
 ]
 # The words on the tile -> (the tile's date, the trades its figure counts, their net).
 WANT = {
-    "Best day": ("2026-03-10", 2, 600),
-    "Worst day": ("2026-03-11", 2, -350),
+    "Best day": ("2026-03-10", 1, 100),
+    "Worst day": ("2026-03-11", 1, -50),
     "Most in a day": ("2026-03-09", 3, 40),
 }
 KEYS = {"Best day": "best_day", "Worst day": "worst_day", "Most in a day": "per_day"}
@@ -202,8 +214,8 @@ def made(demo, monkeypatch):
 
 def test_most_in_a_day_is_read_on_a_day_that_is_not_the_best_day():
     tiles = N.build(BUSY, {}, gross=True)["tiles"]
-    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(600))
-    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-350))
+    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(100))
+    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-50))
     assert (tiles["per_day"]["day"], tiles["per_day"]["most"]) == ("2026-03-09", 3)
     assert tiles["per_day"]["day"] != tiles["best_day"]["day"]
 
@@ -211,7 +223,7 @@ def test_most_in_a_day_is_read_on_a_day_that_is_not_the_best_day():
 @pytest.mark.parametrize("label", list(WANT))
 def test_each_day_tile_on_the_page_opens_its_own_days_closed_trades(made, label):
     html = made.get("/numbers").text
-    assert tile_link(html, label) == CLOSED + WANT[label][0]
+    assert tile_link(html, label) == CLOSED + WANT[label][0] + SAME_DAY
 
 
 @pytest.mark.parametrize("label", list(WANT))
@@ -243,7 +255,7 @@ def test_one_wrong_tile_link_is_caught_though_every_cell_is_right(made, monkeypa
     cells = CELLS.findall(cal.group(0))
     assert cells and all(c.startswith(CLOSED) for c in cells)
     with pytest.raises(AssertionError):
-        assert tile_link(html, label) == CLOSED + WANT[label][0]
+        assert tile_link(html, label) == CLOSED + WANT[label][0] + SAME_DAY
     for other in WANT:
         if other != label:
-            assert tile_link(html, other) == CLOSED + WANT[other][0]
+            assert tile_link(html, other) == CLOSED + WANT[other][0] + SAME_DAY

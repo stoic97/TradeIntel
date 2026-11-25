@@ -88,6 +88,7 @@ def main_of(html: str) -> str:
 
 # ---------- 2. the later-close sentence, on the rendered day page ----------
 
+@pytest.mark.skip(reason="superseded by TICKET-1026 (review of 24 Nov 21:19, point 1): Your numbers now counts same-day trades, so 'Your numbers counts each trade on the day it closed' would be false; the day page states its same-day figure instead (test_held_apart_one_date.py). Assertion kept as written.")
 def test_the_day_page_says_how_many_closed_on_a_later_day(page_of):
     text = plain(page_of(OVERNIGHT).get("/mirror/day/2026-03-02").text)
     assert "1 of them closed on a later day. Your numbers counts each trade on the day it closed." in text
