@@ -25,7 +25,8 @@ def section() -> str:
 
 def test_the_install_is_by_hand_and_before_the_deploy_window():
     s = section()
-    assert "never by `update.sh` or `refresh-staging.sh`" in s
+    assert "never by `refresh-staging.sh`" in s
+    assert "update.sh" not in s
     assert "before the deploy window" in s
 
 
