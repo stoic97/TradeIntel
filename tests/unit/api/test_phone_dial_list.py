@@ -52,26 +52,26 @@ def dials(html: str) -> list[str]:
 # Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, with
 # the minis TICKET-1036 redrew at 72 x 20.
 ON_MAIN = {
-    "/mirror": ["fa7d719b955808e3c9da6b533b6c403dde84210658e45f79efadc45c1622141b",
-                "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df"],
-    "/mirror/chapter/1": ["dac37b9a4a2eb63750ccff6f9babccf495fd67a0299d9c352f82bcdb62d4528e",  # phone: 1027 shortens a five-digit best trade
-                          "d765b662af7467f0834dc85cae0bc8b2921ed54712d9301e673cbd36c375201c"],
-    "/mirror/chapter/2": ["0e9f0fe19966a88147f653511fc3dc4097125f01b9e713035631d99edbad8169",
-                          "3238e084386d276a375c6776a55065f15333d37d2952bd4974203855af69037c"],  # desktop: 1001 adds a wedge
-    "/mirror/chapter/3": ["461efffc445d451f37c72f3b1d8101ac4b15205bbbcb279c07044d035972a13e",
+    "/mirror": ["4dc4d7bcd2a4994688fdcac075024102cd1bdd189bd9c25b89ff88c1533840e0",
+                "c4f3c085500933b994281bd76c1bc5ce99047e9c9911ba0ca2e2289a53b7ab20"],
+    "/mirror/chapter/1": ["7cbaace90a5d06e70e6898060ba53430367d4752a0a9627df67f13a067003374",  # phone: 1027 shortens a five-digit best trade
+                          "649a0e5c1f1ac84420f26a8233c8d24e0bb8ef2d080030cc178dc15c8984e60a"],
+    "/mirror/chapter/2": ["41452ba3d497737547f663b59b0584d631e1555baefb28c0fbb70781fb262920",
+                          "461200496621249aa300f6ec7c831dbec35ad456dbea8d580983d6f50c99175d"],  # desktop: 1001 adds a wedge
+    "/mirror/chapter/3": ["ab076e1d93d341d0e16b00a26df8b69caec6e8ba7f72e096c706a882ba152c33",
                           # Desktop: three more wedges since What you do next (1006), and a sixth for After
                           # you closed; the phone dial is main's.
-                          "6c2e142e84115a159c3c4404f5c4c8f5ce1296e4cf08e1de6bbb90017fda965f"],
+                          "50d72ea23497c77f04d6a5893d06373dc01a02c0e799617cf3e89eabb8cbe3ad"],
     "/mirror/chapter/4": ["c1e506fcfa77485e7d82e87d3b63c461ba3db7e8339b3d1cf47143fc20e7a6d3",
                           "f27265173a763ba6714eaf862faaf4ec3788090d7645311a1b2556fa5b34ce7b"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "4b3c47e18100e8edf49dbf6e511b2d97e18b41a93fa592bd1bb0895ac980b20a",
-    (1, "desktop"): "6a629f9f0e3b69ec4e37da477b54e0cec0bf0d9874d43798cfed20d21e4704b9",
-    (2, "phone"): "931aa33f58d216b255557bb54a897b47f3d26c8a5ba69a2ba4e8e3ac587622ab",
-    (2, "desktop"): "8ac3520cb6ab598168e77a26ff538cc968a32c31feae694a3aa85343b542b391",  # 1001's wedge
-    (3, "phone"): "1a8dc2d67ff6e8570a6b50557c1ebb1de57e799742c5a6bc97f8699c6f04b63c",
-    (3, "desktop"): "8de756db0f95dcbb9ad58dd28b8cf87f86693d2b9f8c0e563633a978c295099d",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
+    (1, "phone"): "6bd6d18fd0286f13bb41da988d151ed1e2605c7dfa9b16eba4045e841583bfb7",
+    (1, "desktop"): "3289d8dc852a321471ff35ea76ac36c9076fa72d60ccd31720002f8fde8b2d1b",
+    (2, "phone"): "805482e46f2ca8d8e7b0c7fe721c077322c094d3d2b3a9a99be9b007e4ced69d",
+    (2, "desktop"): "d23dc8b3348d3a548a2b9da14ef17bf0c4115ca5f19e27140815f5f66f8498cb",  # 1001's wedge
+    (3, "phone"): "89b3f6b0649fddad4a5256c83e822cc10f39387732a338d510a63e73f67efe1b",
+    (3, "desktop"): "ffd28d8a5a9972894a7bac99d3574f304a8fdc6cce2e2b05168a8652dc3773f8",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
     (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
     (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
@@ -148,7 +148,7 @@ def test_the_desktop_keeps_chapter_order_and_clears(later):
     assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.chapter(2).facts]
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
-    items = later["desktop_items"]
+    items = D.fitted(later["desktop_items"], z["figSizesChapter"], "desktop")  # as the dial draws it
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):

@@ -190,8 +190,11 @@ def test_the_wedges_carry_the_short_form_of_the_four_answers():
     share, strike = CTX["share"], CTX["strike"]
     words = [(i["figure"], i["label"].replace("\n", " ")) for i in items]
     assert words[0] == ("5 days", f"lost {share.share_percent}% of all you lost")
-    assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent), "trades made money")
-    assert words[2] == (f"{CTX['days'].busiest_trips} trades", "on your busiest day")
+    # TICKET-1035: each says what it is read against
+    assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent),
+                        f"made money; break-even {SF.wins_needed(CTX)}")
+    assert words[2] == (f"{CTX['days'].busiest_trips} trades",
+                        f"on your busiest day; usually {CTX['days'].normal_day}")
     assert words[3] == ("no number", "is set yet")
 
 

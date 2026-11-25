@@ -164,9 +164,8 @@ def test_every_chapter_dial_clears_on_the_demo_figures(app, demo, size):
         items = (view.get("desktop_items") or view["items"]) if size == "desktop" else [
             {**i, "figure": i.get("phone_figure", i["figure"]), "label": i.get("phone_label", i.get("label", ""))}
             for i in view["items"]]
-        if size == "phone":  # a mini as wide as its wedge clears, as the dial draws it (dial minis)
-            from services.production.api import dial as D
-            items = D.fitted(items, z["figSizesChapter"])
+        from services.production.api import dial as D  # a mini as wide as its wedge clears, either size
+        items = D.fitted(items, z["figSizesChapter"], size)
         sec = G.sectors(len(items), False)
         lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
         for i, block in enumerate(lay["blocks"]):

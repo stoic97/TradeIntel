@@ -315,6 +315,7 @@
         lift: wedge(cx, cy, sl.start, sl.end, rr.divStart - 6 * rr.u, rr.inner),  // pressed: white at 10 %
         hatch: it.state === 'not-enough' ? wedge(cx, cy, sl.start, sl.end, rr.divStart, rr.inner) : '',
         dashed: it.state === 'not-in-file' ? wedge(cx, cy, sl.start + 1.5, sl.end - 1.5, rr.divStart + 3, rr.inner - 3) : '',
+        marked: it.marked ? wedge(cx, cy, sl.start, sl.end, rr.divStart, rr.inner) : '',  // worse than its own reference: a quiet fill
         openedMark: it.opened ? polar(cx, cy, rr.inner - 3 * rr.u, sl.mid) : null,
         contents: {
           x: q[0],
@@ -367,7 +368,7 @@
     o.push(`<svg class="scope__svg" viewBox="${-pad} 0 ${d.stageW + 2 * pad} ${d.stageH}" width="${d.stageW + 2 * pad}" height="${d.stageH}" role="img" aria-label="${d.kind === 'home' ? 'The Scope: four chapters of your story' : 'The Scope inside this chapter'}">`);
     o.push('<defs><pattern id="scope-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/></pattern></defs>');
     o.push(`<path class="scope__outer" d="${d.outerRing}"/>`);
-    d.slices.forEach((s) => { if (s.hatch) o.push(`<path class="scope__state-hatch" d="${s.hatch}"/>`); if (s.dashed) o.push(`<path class="scope__state-dashed" d="${s.dashed}"/>`); });
+    d.slices.forEach((s) => { if (s.hatch) o.push(`<path class="scope__state-hatch" d="${s.hatch}"/>`); if (s.dashed) o.push(`<path class="scope__state-dashed" d="${s.dashed}"/>`); if (s.marked) o.push(`<path class="scope__marked" d="${s.marked}"/>`); });
     o.push(`<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="${d.ticks.minor}"/><path class="scope__tick scope__tick--mid" d="${d.ticks.mid}"/><path class="scope__tick scope__tick--major" d="${d.ticks.major}"/></g>`);
     o.push(`<path class="scope__inner" d="${d.innerRing}"/>`);
     if (d.arc) o.push(`<path class="scope__arc" d="${d.arc}"/>`);

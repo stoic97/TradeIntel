@@ -452,7 +452,7 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
     """Every primitive of the dial.
 
     view = {"kind": "home" | "chapter",
-            "items": [{"name", "figure", "href", "chart"?, "state"?, "opened"?}, ...],
+            "items": [{"name", "figure", "href", "chart"?, "state"?, "opened"?, "marked"?}, ...],
             "centre": {"figure", "caption"} on home, {"name", "scopeHref"} in a chapter}
     """
     opts = opts or {}
@@ -514,6 +514,12 @@ def build_dial(view: dict, size_name: str = "phone", opts: dict | None = None) -
                         rr["inner"] - 3,
                     )
                     if state == "not-in-file"
+                    else ""
+                ),
+                # Worse than its own reference: a quiet fill, under the ticks and words.
+                "marked": (
+                    wedge(cx, cy, sl["start"], sl["end"], rr["divStart"], rr["inner"])
+                    if it.get("marked")
                     else ""
                 ),
                 "openedMark": polar(cx, cy, rr["inner"] - 3 * rr["u"], sl["mid"])
@@ -628,6 +634,8 @@ def render_dial_svg(d: dict, mini_charts: dict | None = None) -> str:
             o.append(f'<path class="scope__state-hatch" d="{s["hatch"]}"/>')
         if s["dashed"]:
             o.append(f'<path class="scope__state-dashed" d="{s["dashed"]}"/>')
+        if s["marked"]:
+            o.append(f'<path class="scope__marked" d="{s["marked"]}"/>')
     tk = d["ticks"]
     o.append(
         f'<g class="scope__bezel"><path class="scope__tick scope__tick--minor" d="{tk["minor"]}"/>'
