@@ -31,7 +31,7 @@ def test_each_fact_leads_with_the_figure_metrics_decided():
     assert FIGS["math"]["figure"] == f'{formatting.out_of_a_hundred(CTX["strike"].rate_percent)} trades'
     assert FIGS["run"]["figure"] == f"{CTX['run'].length} trades"
     assert FIGS["clock"]["figure"] == "10:00 hour"
-    assert FIGS["down"]["figure"] == f"{CTX['two_losses'].population} trades"
+    assert FIGS["down"]["figure"] == f"{CTX['two_losses'].condition} trades"  # the fact's own group (1025)
     assert FIGS["busiest"]["figure"] == f"{CTX['days'].busiest_vs_normal}×"
     assert FIGS["unread"]["figure"] == "40 of 40 rows"
     assert FIGS["risk"]["figure"] == f"{CTX['risk'].showable} of 40 trades"
@@ -44,8 +44,9 @@ def test_every_fact_counts_the_trades_behind_it(key):
 
 
 def test_on_the_fixture_every_fact_is_counted():
-    # After you clicked reads stored bar figures, which a fixture without market data has none of.
-    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "after": "not-enough"}
+    # After you clicked reads stored bar figures, which a fixture without market data has none of;
+    # same way again needs each trade's legs for its direction, which the fixture's trades carry none of.
+    assert {k: f["state"] for k, f in FIGS.items()} == {**dict.fromkeys(S.FIGURES, ""), "after": "not-enough", "same-way": "not-enough"}
 
 
 # ---------- States: never hidden, never an all-clear ----------
@@ -89,7 +90,8 @@ def test_a_chapter_in_states_still_draws(n):
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_the_dial_has_a_slice_per_fact_in_slice_order(n):
     view = SF.chapter_view(n, FIGS)
-    # The phone dial has the facts on it (Fact.on_phone_dial); the desktop dial has every fact.
+    # On desktop every fact has its wedge; a fact off the phone dial (1006) is in its list there.
+    assert [i["name"] for i in view.get("desktop_items", view["items"])] == [f.title for f in S.chapter(n).facts]
     assert [i["name"] for i in view["items"]] == [f.title for f in S.chapter(n).facts if f.on_phone_dial]
     assert view["centre"] == {"name": S.chapter(n).name, "scopeHref": S.home_href(tap=n)}
     svg = str(dial.scope_dial(view, "desktop"))

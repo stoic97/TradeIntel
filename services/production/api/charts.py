@@ -12,6 +12,8 @@ Decided here:
   rupee, and the range widens to whole steps.
 * **Colour belongs to rupees alone.** A rupee value is green or red by its sign, in four steps
   by its size; a count or a rate is ink, whatever it is; a zero or an empty cell is the surface.
+* **A rate axis** (a win rate, "N of 100") is labelled by its whole number, with no rupee and no
+  percent sign; ``rate_scale`` places a rate, so a bar and a line chart of rates share one scale.
 * **Hatching** is the kit's own pattern (``chart__hatch``), the one the clock uses for an hour
   with too few trades.
 * **Every chart has its figures as text**, in a plain table, each through ``Figure``.
@@ -78,16 +80,22 @@ def ticks(lo: Decimal, hi: Decimal) -> tuple[Decimal, Decimal, Decimal]:
 
 def axis(lo: Decimal, hi: Decimal, tick: Decimal, y: Callable[[Decimal], float], *, left: float,
          right: float, width: float, ref: tuple[Decimal, str] | None = None,
-         last: Decimal | None = None, p: str = "ch", ref_cls: str | None = None) -> tuple[Markup, Markup]:
+         last: Decimal | None = None, p: str = "ch", ref_cls: str | None = None,
+         hide_under_last: bool = False) -> tuple[Markup, Markup]:
     """The right-hand price axis, as two layers: what sits behind the marks (gridlines with their
     labels, the ₹0 line when ₹0 is in range, a dashed reference line with its label) and what
-    sits in front (the last value's tag, coloured by its sign)."""
+    sits in front (the last value's tag, coloured by its sign).
+
+    ``hide_under_last`` drops a gridline's label that the last value's 16 px tag would sit on
+    (the gridline itself stays), so the two never print over each other."""
     x0, x1 = left, width - right
     back = []
     v = lo
+    under = y(last) if (hide_under_last and last is not None) else None
     while v <= hi:
-        back.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>'
-                    f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{short(v)}</text>')
+        label = (f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{short(v)}</text>'
+                 if under is None or abs(y(v) - under) >= 16 else "")
+        back.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>' + label)
         v += tick
     if lo <= 0 <= hi:
         zero = y(Decimal(0))
@@ -103,6 +111,30 @@ def axis(lo: Decimal, hi: Decimal, tick: Decimal, y: Callable[[Decimal], float],
                  f'class="{p}-last {p}-last--{formatting.tone(last)}"/>'
                  f'<text x="{x1 + 5}" y="{ly + 4:.1f}" class="{p}-last-text">{short(last)}</text>')
     return Markup("".join(back)), Markup(front)
+
+
+# ---------- the rate axis ----------
+
+def rate_scale(lo, hi, start: float, end: float) -> Callable[[object], float]:
+    """Where a rate ("N of 100") sits between two edges of a drawing: ``lo`` at ``start``, ``hi``
+    at ``end``. Across a bar the edges are 0 and its width; up a chart, the foot then the top.
+    A range of one value puts it at ``start``."""
+    span = (hi - lo) or 1
+    return lambda v: start + (v - lo) * (end - start) / span
+
+
+def rate_axis(lo, hi, tick, y: Callable[[object], float], *, left: float, right: float,
+              width: float, p: str = "ch") -> Markup:
+    """The right-hand axis of a chart of rates: a gridline at each tick with its label, written as
+    the whole number of 100 it is, with no rupee and no percent sign."""
+    x0, x1 = left, width - right
+    out = []
+    v = lo
+    while v <= hi:
+        out.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>'
+                   f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{v}</text>')
+        v += tick
+    return Markup("".join(out))
 
 
 # ---------- time labels ----------

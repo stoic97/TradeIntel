@@ -23,6 +23,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [adr/ADR-007-scope-v1-runtime.md](adr/ADR-007-scope-v1-runtime.md) | ADR 007: Scope v1 runtime - one process, server-rendered, SQLite, one droplet | frozen amended 2026-11-16 | founder, engineering | 2026-11-20 |
 | [adr/ADR-008-market-data-source.md](adr/ADR-008-market-data-source.md) | ADR 008: market data from the Fyers connection | frozen Accepted | founder | 2026-11-20 |
 | [architecture/tech-stack.md](architecture/tech-stack.md) | The stack the ADRs add up to, and what is deferred | live | engineering | 2026-11-20 |
+| [archive/scope_testing_register_v1.md](archive/scope_testing_register_v1.md) | The testing items, TR-001 to TR-014 and TR-D1 to TR-D7. Superseded by Jira (Plusev_Engineering): every open item is a ticket there (TICKET-934) | archived | founder | 2026-11-24 |
 | [archive/trade_dna_phase0_plan.md](archive/trade_dna_phase0_plan.md) | Phase 0's nine-week plan of 3 October. Superseded by Thesis v1.5, and for the schedule by TICKET-897's plan (Stages A to D). Its two seat rules moved to SR-014 in process_standing_rules.md. Its partner screen (at least 200 crude trades over at least 3 months) was a recruiting screen and is spent; it is not the research spec's adequacy bar (at least 100 trips, at least 3 months) | archived | founder | 2026-11-20 |
 | [archive/trade_dna_product_thesis_v1.4.md](archive/trade_dna_product_thesis_v1.4.md) | Product thesis v1.4. Superseded by Thesis v1.5 | archived | founder | 2026-11-20 |
 | [deferrals.md](deferrals.md) | Index of TD ids and their Jira tickets | live | founder | 2026-11-20 |
@@ -38,9 +39,9 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [phase0/recall-b2-prereg.md](phase0/recall-b2-prereg.md) | B2 recall: the predictions, written before the run | live | research seat | 2026-11-20 |
 | [process_standing_rules.md](process_standing_rules.md) | The standing rules, SR-001 onward | live | founder | 2026-11-20 |
 | [product/broker_connector_note_v1.md](product/broker_connector_note_v1.md) | The first read-only broker connector: what the APIs expose (TICKET-901, started) | live | founder | 2026-11-20 |
+| [product/consent_broker_pull_v1.md](product/consent_broker_pull_v1.md) | The consent for a standing, read-only broker pull: the wording, the ledger note, and what deletion removes (TICKET-896, wording pending D9) | live | founder, engineering | 2026-11-21 |
 | [product/definitions_v1.md](product/definitions_v1.md) | Definitions: trading day, the B2 rule, the Journal unit, the import states | live | founder | 2026-11-20 |
 | [product/reconciliation_v1.md](product/reconciliation_v1.md) | Why an outside FIFO count differs from Scope's (TICKET-788) | live | founder | 2026-11-20 |
-| [product/scope_testing_register_v1.md](product/scope_testing_register_v1.md) | The testing register, TR-001 to TR-014. Each open item is moving to a Jira ticket (TICKET-934) | live | founder | 2026-11-20 |
 | [product/scope_engineering_handoff_v1.md](product/scope_engineering_handoff_v1.md) | The engineering handoff: the build spec for the Scope UI; it wins where others disagree | live | founder | 2026-11-20 |
 | [references.md](references.md) | Where each document the repo cites lives, and who grants access | live | founder | 2026-11-20 |
 | [research/experiments/TICKET-834/_common.md](research/experiments/TICKET-834/_common.md) | TICKET-834: the rules every file in the folder shares | live | research seat | 2026-11-20 |
@@ -67,6 +68,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [trade_dna_brainstorm_workbook_v1.1_final.md](trade_dna_brainstorm_workbook_v1.1_final.md) | The brainstorm workbook, cited as B section | frozen v1.1.1 | founder | 2026-11-20 |
 | [trade_dna_product_thesis_v1.5.md](trade_dna_product_thesis_v1.5.md) | The product thesis, cited as T section | frozen v1.5 | founder | 2026-11-20 |
 | [trade_dna_research_spec_v1_0.md](trade_dna_research_spec_v1_0.md) | The research specification and its annexes | frozen v1.0.4 | founder, research | 2026-11-20 |
+| [where_things_live.md](where_things_live.md) | Where each kind of record lives: one home for each, and what may sit anywhere else (TICKET-953) | live | founder | 2026-11-24 |
 
 ## Phase 0 result files
 
