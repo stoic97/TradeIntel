@@ -65,11 +65,11 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | # | Chapter | Facts, in slice order | Fact key |
 |---|---|---|---|
 | 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Where the money came from · Where the money went | `hidden` · `worst-days` · `money` · `charges` |
-| 2 | Your patterns | Your wins and losses · Longest losing run · The clock | `math` · `run` · `clock` |
+| 2 | Your patterns | Your wins and losses · Longest losing run · The clock · After you clicked | `math` · `run` · `clock` · `after` |
 | 3 | Your behaviour | After two straight losses · How fast you went back in · Same way again · The day after a big day · Your busiest day · After you closed | `down` · `back-in` · `same-way` · `next-day` · `busiest` · `after-close` |
 | 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
 
-Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Five facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
+Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Six facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), After you clicked (TICKET-1001), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
 
 ### States and edge cases
 
@@ -110,7 +110,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 13 | One number | `/budget` | Restyle; moved | Now straight after the reveal (TR-008) |
 | 14 | Scope home | `/mirror` | New | Replaces the long Mirror page |
 | 15 | Chapter 1–4 | `/mirror/chapter/{n}` | New | |
-| 16 | Fact (16) | `/mirror/fact/{key}` | New | Keys in §4 |
+| 16 | Fact (17) | `/mirror/fact/{key}` | New | Keys in §4 |
 | 17 | Accurate / Not sure / Wrong | `POST /mirror/chapter/{n}/feedback` | New | B4 |
 | 18, 18b, 18c | Journals, one Journal, earlier Journals | `/journals`, `/journals/{id}`, `/journals/catch-up` | Restyle | WTP question stays inside the Journal |
 | 19 | Leaving card | top of `/journals`, once, after the first Journal | New | B7; D2 |

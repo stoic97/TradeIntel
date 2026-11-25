@@ -19,6 +19,7 @@ from decimal import Decimal
 
 from markupsafe import Markup
 
+from services.production.api import after_clicked as AC
 from services.production.api import after_closed as ACL
 from services.production.api import charges_view, charts, day_chart, dial, findings, formatting
 from services.production.api import scope_geometry as G
@@ -41,6 +42,7 @@ CARD_H = {
     "run": 40,
     "clock": 84,
     "busy": 84,
+    "after": 84,
     "backin": 84,
     "sameway": 56,
     "nextday": 70,
@@ -117,6 +119,8 @@ def _f(value) -> float:
 def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     """The chart a fact draws, at a size; None where the fact has nothing to draw."""
     trips = ctx["trips"]
+    if kind == "after":  # stored figures only; not a kit chart, so not in G.CHARTS
+        return AC.geometry(AC.view(ctx), w, h, mini=mini)
     if kind == "after-close":  # stored figures only; not a kit chart, so not in G.CHARTS
         return ACL.geometry(ACL.view(ctx), w, h, mini=mini)
     if kind == "worst":
@@ -222,9 +226,9 @@ def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
         rate, even = ctx["strike"].rate_percent, ctx["break_even"].percent
         if rate is None:
             return None, ""
-        said = f"{formatting.out_of_a_hundred(rate)} trades made money"
+        said = f"{formatting.out_of_a_hundred_beside(rate, even)} trades made money"
         if even is not None:
-            said += f"; break-even at {formatting.out_of_a_hundred(even)}"
+            said += f"; break-even at {formatting.out_of_a_hundred_beside(even, rate)}"
         return G.chart_meter(_f(rate) / 100, None if even is None else _f(even) / 100, w, h), said + "."
     if key == "run":
         ids = set(ctx["run"].trip_ids)
@@ -263,6 +267,8 @@ def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
 
 
 def _state(key: str, ctx: dict) -> str:
+    if key == "after" and not AC.view(ctx)["enough"]:
+        return "not-enough"  # under 30 measured trades in every underlying, or none measured yet
     if key == "after-close" and not ACL.view(ctx)["enough"]:
         return "not-enough"  # under 30 measured losing trades, or none worked out yet
     if key == "clock" and not ctx["hours"]:
@@ -356,7 +362,7 @@ def _back_in_view(ctx: dict) -> dict:
     other_href = S.see_all_href("back-in", after="win-or-level")
     n_loss, n_other = len(nt.after_loss), len(nt.comparison)
     if not nt.back_in_enough:
-        line = Markup("{} {} came next after a loss and {} after a win or a level trade: too few "
+        line = Markup("{} {} came next after a loss and {} after a win or a flat trade: too few "
                       "to set side by side. Each needs {}.").format(
             _w(n_loss, "trades", opens=loss_href if n_loss else None),
             "trade" if n_loss == 1 else "trades",
@@ -366,14 +372,14 @@ def _back_in_view(ctx: dict) -> dict:
     else:
         m_loss, m_other = _minutes(nt.loss_median), _minutes(nt.comparison_median)
         line = Markup("After a loss your next trade came a median {} {} later; "
-                      "after a win or a level trade, {}.").format(
+                      "after a win or a flat trade, {}.").format(
             _w(m_loss, "minutes", opens=loss_href), "minute" if m_loss == 1 else "minutes",
             _w(m_other, "minutes", opens=other_href))
     return {
         "line": line,
         "groups": [
             {"label": "After a loss", "trades": n_loss, "median": m_loss, "href": loss_href},
-            {"label": "After a win or a level trade", "trades": n_other, "median": m_other,
+            {"label": "After a win or a flat trade", "trades": n_other, "median": m_other,
              "href": other_href},
         ],
     }
@@ -437,7 +443,7 @@ def _next_day_too_few(ctx: dict) -> Markup:
     """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
     have = len({t.exit_ts.date() for t in ctx["trips"]})
     least = mx.BIG_DAYS_AT_LEAST
-    return Markup("You traded on {} {}. This needs at least {}: "
+    return Markup("You closed trades on {} {}. This needs at least {}: "
                   "your {} best days and your {} worst.").format(
         _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
         _w(least, "days"), _w(least, "days"))
@@ -449,6 +455,8 @@ def _trades_said(n: int) -> str:
 
 def _figure(key: str, ctx: dict, imp) -> Figure:
     """The figure a fact leads with, as its slice and its card show it, and what it counts."""
+    if key == "after":
+        return _after_figure(AC.view(ctx))
     if key == "after-close":
         return ACL.figure(ACL.view(ctx))
     if key == "hidden":
@@ -579,10 +587,12 @@ def _hidden_cell(half, href: str, row: str):
     if half.math.win_percent is None:
         return NOT_ENOUGH_YET
     if row == "win":
-        return _hidden_link(formatting.out_of_a_hundred(half.math.win_percent), "percent", href)
+        return _hidden_link(formatting.out_of_a_hundred_beside(half.math.win_percent, half.math.break_even_percent),
+                            "percent", href)
     if half.math.break_even_percent is None:
         return "\u2014"
-    return _hidden_link(formatting.out_of_a_hundred(half.math.break_even_percent), "percent", href)
+    return _hidden_link(formatting.out_of_a_hundred_beside(half.math.break_even_percent, half.math.win_percent),
+                        "percent", href)
 
 
 def _trades_word(n: int) -> str:
@@ -1185,8 +1195,24 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
     out["risk"]["uncapped_trades"] = sum(t.uncapped for t in trips)  # a budget does not cap it
     out["clock"]["held"] = ctx["held_past_day"]
     out["clock"].update(_clock_view(ctx))
+    out["after"].update(after_page(ctx))
     out["after-close"].update(after_close_page(ctx))
     return out
+
+
+def _after_figure(v: dict) -> Figure:
+    """Where his median ends 30 minutes after the click, in whole points, and which way."""
+    n = v["his_end"]
+    if n is None:
+        return Figure("—", "points")
+    return Figure(f"{formatting.count(abs(n))} points", "points", of="your way" if n >= 0 else "against you")
+
+
+def after_page(ctx: dict, pick: str | None = None) -> dict:
+    """The after-you-clicked page for one underlying: its view, its chart at the
+    page's size, and its table. The route passes the chip the trader picked."""
+    v = AC.view(ctx, pick)
+    return {"view": v, "page_chart": AC.geometry(v), "table": AC.table(v) if v["enough"] else ""}
 
 
 def after_close_page(ctx: dict, pick: str | None = None) -> dict:
@@ -1390,7 +1416,7 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
             n = len(nt.after_loss)
             return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
-                                 of="after a loss, too few"))
+                                 of=f"after a loss, too few (needs {mx.B1_MINIMUM})"))
         m = _minutes(nt.loss_median)
         return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
     if key == "same-way":
@@ -1409,6 +1435,10 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         measured, _, whole = fig["figure"].removesuffix(" trades").partition(" of ")
         return _wedge(Figure(measured, "trades", of=f"of {whole} trades have a risk figure"),
                       phone=f"of {whole}\ntrades", shown=measured)
+    if key == "after":
+        points = fig["figure"].removesuffix(" points")
+        return _wedge(Figure(points, "points", of=f"{fig['lead_figure'].of}, 30 minutes after you clicked"),
+                      phone="after\nyou clicked", shown=points)
     if key == "after-close":
         v = ACL.view(ctx)
         return _wedge(Figure(formatting.count(v["came_back"]), "trades",
@@ -1758,7 +1788,7 @@ def reveal_days(ctx: dict) -> dict:
     if n >= 5:
         title = "Your five worst days"
     elif n == 1:
-        title = "Your one trading day"
+        title = "Your only trading day"
     else:
         title = f"Your {word} trading days"
     return {"count": n, "word": word, "all_of_them": n < 5, "title": title}
