@@ -79,7 +79,17 @@
 
   /** Sizes. Phone: 260 px dial on a 358 px stage. Desktop: 440 px dial on a 640 × 560 stage. */
   const SIZES = {
-    phone: { stageW: 358, stageH: 358, R: 130, nameSize: 11, nameLine: 14, edge: 187, figSizesHome: [22, 18], figSizesChapter: [18, 15] },
+    phone: {
+      stageW: 358, stageH: 358, R: 130, nameSize: 11, nameLine: 14, edge: 187, figSizesHome: [22, 18], figSizesChapter: [18, 15, 13],
+      // The phone dial makes room inside the same 260 px: a smaller centre where its words allow
+      // (a chapter's name wraps into 50 units; Home's "before charges" needs 56), the wedge band
+      // runs out to 147 where the bezel ticks were, a state's words take 56 px, and no empty
+      // serial row sits above a figure.
+      room: {
+        home: { disc: 56, ring: 56.5, divStart: 62.5, inner: 147, divEnd: 142, minorStart: null, midStart: null, majorStart: null, stateW: 56, serialRow: 0 },
+        chapter: { disc: 50, ring: 53, divStart: 59, inner: 147, divEnd: 142, minorStart: null, midStart: null, majorStart: null, stateW: 56, serialRow: 0 }
+      }
+    },
     desktop: { stageW: 640, stageH: 560, R: 220, nameSize: 13, nameLine: 17, edge: 312, figSizesHome: [32, 22], figSizesChapter: [22, 18] }
   };
   /** A mini chart in a wedge: big enough that each mark reads on a phone (TICKET-1036). */
@@ -90,9 +100,9 @@
    * Radii, scaled from the 300-unit master drawing (outer ring at 149.5).
    * Returns px values for a dial of outer radius R.
    */
-  function radii(R) {
+  function radii(R, room) {
     const u = R / 150;
-    return {
+    const rr = {
       u,
       outer: 149.5 * u,        // outer hairline ring
       tickEnd: 149 * u,        // all ticks end here
@@ -103,8 +113,18 @@
       divStart: 70 * u,        // dividers stop short of the centre ring...
       divEnd: 132 * u,         // ...and of the inner ring
       ring: 64 * u,            // fine ring around the centre disc
-      disc: 60 * u             // centre disc
+      disc: 60 * u,            // centre disc
+      stateW: 66,              // px a state's words take in a slice
+      serialRow: 17            // px kept above a figure, where the serial was drawn
     };
+    Object.keys(room || {}).forEach((k) => { rr[k] = (k === 'stateW' || k === 'serialRow' || room[k] === null) ? room[k] : room[k] * u; });
+    return rr;
+  }
+
+  /** The radii a dial of this size and kind is drawn with. */
+  function dialRadii(sizeName, isHome) {
+    const size = SIZES[sizeName || 'phone'];
+    return radii(size.R, (size.room || {})[isHome ? 'home' : 'chapter']);
   }
 
   /**
@@ -138,10 +158,10 @@
     for (let j = 0; j < 144; j++) {
       const a = j * 2.5;
       if (isDiv(a)) continue;
-      if (a % 30 === 0) mid += radial(cx, cy, a + rotation, rr.midStart, rr.tickEnd);
-      else minor += radial(cx, cy, a + rotation, rr.minorStart, rr.tickEnd);
+      if (a % 30 === 0) { if (rr.midStart !== null) mid += radial(cx, cy, a + rotation, rr.midStart, rr.tickEnd); }
+      else if (rr.minorStart !== null) minor += radial(cx, cy, a + rotation, rr.minorStart, rr.tickEnd);
     }
-    dividers.forEach((a) => { major += radial(cx, cy, a + rotation, rr.majorStart, rr.tickEnd); });
+    if (rr.majorStart !== null) dividers.forEach((a) => { major += radial(cx, cy, a + rotation, rr.majorStart, rr.tickEnd); });
     return { minor, mid, major };
   }
 
@@ -213,7 +233,9 @@
    *   number (11 px mono, own line) · 4 px · figure head · [figure tail, 11 px] · 3 px · mini chart MINI.w×MINI.h (chapters)
    * A result state replaces the figure with "—" and a two-line state label.
    */
-  function sliceBlock(item, figSize, stacked) {
+  function sliceBlock(item, figSize, stacked, stateW, serialRow) {
+    if (stateW === undefined) stateW = 66;
+    if (serialRow === undefined) serialRow = 17;
     const state = item.state || '';
     const split = !state && stacked ? stackedSplit(item.figure) : null;
     const head = state ? '—' : (split ? split[0] : item.figure);
@@ -222,9 +244,9 @@
     const headW = monoWidth(head, figSize) - (tight ? 2 * 0.45 * figSize : 0);
     const tailW = monoWidth(tail, 11);
     const lh = Math.round(figSize * 1.15);
-    const rowA = 13 + 4 + lh + (tail ? 13 : 0);
+    const rowA = serialRow + lh + (tail ? 13 : 0);
     const rowB = state ? 28 : (item.chart ? (item.miniH || MINI.h) : 0);
-    const w = Math.max(headW, tailW, rowB ? (state ? 66 : (item.miniW || MINI.w)) : 0, 8);
+    const w = Math.max(headW, tailW, rowB ? (state ? stateW : (item.miniW || MINI.w)) : 0, 8);
     return { head, tail, tight, figSize, lineHeight: lh, rowA, rowB, w, h: rowA + (rowB ? 3 + rowB : 0) };
   }
 
@@ -263,18 +285,18 @@
     for (let si = 0; si < figSizes.length; si++) {
       const fs = figSizes[si];
       const forms = items.map(() => false);
-      let blocks = items.map((it) => sliceBlock(it, fs, false)), r = best(blocks);
+      let blocks = items.map((it) => sliceBlock(it, fs, false, rr.stateW, rr.serialRow)), r = best(blocks);
       for (let pass = 0; pass < 8 && r.score < 0; pass++) {
         let wi = -1, wv = Infinity;
         blocks.forEach((b, i) => { if (!forms[i] && canStack(items[i])) { const cl = blockClearance(sec.slices[i], sec.span, r.rc, b, rr); if (cl < wv) { wv = cl; wi = i; } } });
         if (wi < 0) break;
-        forms[wi] = true; blocks = items.map((it, i) => sliceBlock(it, fs, forms[i])); r = best(blocks);
+        forms[wi] = true; blocks = items.map((it, i) => sliceBlock(it, fs, forms[i], rr.stateW, rr.serialRow)); r = best(blocks);
       }
       if (r.score >= 0) {
         items.forEach((it, i) => {
           if (!forms[i]) return;
           const f2 = forms.slice(); f2[i] = false;
-          const b2 = items.map((x, j) => sliceBlock(x, fs, f2[j])), r2 = best(b2);
+          const b2 = items.map((x, j) => sliceBlock(x, fs, f2[j], rr.stateW, rr.serialRow)), r2 = best(b2);
           if (r2.score >= 0) { forms[i] = false; blocks = b2; r = r2; }
         });
         return { blocks, radius: blocks.map(() => r.rc), stacked: forms, figSize: fs };
@@ -299,13 +321,13 @@
   function buildDial(view, sizeName, opts) {
     opts = opts || {};
     const size = SIZES[sizeName || 'phone'];
-    const cx = size.stageW / 2, cy = size.stageH / 2, rr = radii(size.R);
     const isHome = view.kind === 'home';
+    const cx = size.stageW / 2, cy = size.stageH / 2, rr = dialRadii(sizeName, isHome);
     const sec = sectors(view.items.length, isHome);
     const t = ticks(cx, cy, rr, sec.dividers, 0);
     // The reader's place: one state a wedge (unread | opened | current). Given, the ring replaces the ticks.
     const reading = Array.isArray(view.progress) && view.progress.length === view.items.length ? view.progress : null;
-    const ringR = (rr.majorStart + rr.tickEnd) / 2;
+    const ringR = ((rr.majorStart == null ? rr.inner : rr.majorStart) + rr.tickEnd) / 2;  // the band the ticks held; where the phone has no ticks, between the inner ring and the tick end
     const lay = layoutContents(view.items, sec, rr, isHome ? size.figSizesHome : size.figSizesChapter);
     const slices = sec.slices.map((sl, i) => {
       const it = view.items[i], b = lay.blocks[i], q = polar(cx, cy, lay.radius[i], sl.mid);
@@ -323,8 +345,8 @@
         contents: {
           x: q[0],
           numberY: top,                                  // top of the 11 px number line
-          headY: top + 17,                               // top of the figure line
-          tailY: top + 17 + b.lineHeight,                // top of the 11 px tail line (stacked only)
+          headY: top + rr.serialRow,                     // top of the figure line
+          tailY: top + rr.serialRow + b.lineHeight,                // top of the 11 px tail line (stacked only)
           chartY: top + b.rowA + 3,                      // top of the mini chart / state label
           head: b.head, tail: b.tail, tight: b.tight, figSize: b.figSize, lineHeight: b.lineHeight,
           chart: it.state ? '' : (it.chart || ''),
@@ -370,7 +392,7 @@
     miniCharts = miniCharts || {};
     const o = [];
     const pad = 40; // room for names outside the stage box on phone
-    o.push(`<svg class="scope__svg" viewBox="${-pad} 0 ${d.stageW + 2 * pad} ${d.stageH}" width="${d.stageW + 2 * pad}" height="${d.stageH}" role="img" aria-label="${d.kind === 'home' ? 'The Scope: four chapters of your story' : 'The Scope inside this chapter'}${d.progressLabel ? '. ' + esc(d.progressLabel) + '.' : ''}">`);
+    o.push(`<svg class="scope__svg" viewBox="${-pad} 0 ${d.stageW + 2 * pad} ${d.stageH}" width="${d.stageW + 2 * pad}" height="${d.stageH}" role="img" aria-label="${d.kind === 'home' ? 'The Scope: four chapters of your story' : 'The Scope inside this chapter'}${d.centre.spoken ? '. ' + esc(d.centre.spoken) : ''}${d.progressLabel ? '. ' + esc(d.progressLabel) + '.' : ''}">`);
     o.push('<defs><pattern id="scope-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" class="scope__hatch-line"/></pattern></defs>');
     o.push(`<path class="scope__outer" d="${d.outerRing}"/>`);
     d.slices.forEach((s) => { if (s.hatch) o.push(`<path class="scope__state-hatch" d="${s.hatch}"/>`); if (s.dashed) o.push(`<path class="scope__state-dashed" d="${s.dashed}"/>`); if (s.marked) o.push(`<path class="scope__marked" d="${s.marked}"/>`); });
@@ -610,5 +632,5 @@
     };
   }
 
-  return { fmt, clamp01, easeInOut, polar, radial, arc, circle, wedge, sansWidth, monoWidth, CHAR_WIDTH, SIZES, MINI, radii, sectors, ticks, nameLabel, stackedSplit, sliceBlock, blockClearance, layoutContents, buildDial, renderDialSVG, buildLens, scopeInAt, charts, renderChart, tradeStrip };
+  return { fmt, clamp01, easeInOut, polar, radial, arc, circle, wedge, sansWidth, monoWidth, CHAR_WIDTH, SIZES, MINI, radii, dialRadii, sectors, ticks, nameLabel, stackedSplit, sliceBlock, blockClearance, layoutContents, buildDial, renderDialSVG, buildLens, scopeInAt, charts, renderChart, tradeStrip };
 }));

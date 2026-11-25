@@ -109,6 +109,7 @@ const cases = {
   sectors: [],
   ticks: [],
   name_labels: [],
+  dial_radii: [['phone', true], ['phone', false], ['desktop', true], ['desktop', false]].map(([size, isHome]) => [size, isHome, G.dialRadii(size, isHome)]),
   stacked_split: ['[N] of [N]', '10 trades', '[N] · [N] min', '96%', '—', '38 of 40'].map((f) => [f, G.stackedSplit(f)]),
   sans_width: ['Where your results came from', "What we couldn't read", 'mW Ii.,()', '₹12,34,567'].map((s) => [s, G.sansWidth(s, 11)]),
   dials: {},
@@ -120,7 +121,7 @@ const cases = {
 for (let n = 1; n <= 5; n++) for (const isHome of [true, false]) cases.sectors.push([n, isHome, G.sectors(n, isHome)]);
 
 for (const [sizeName, n, isHome, rotation] of [['phone', 4, true, 0], ['phone', 3, false, 0], ['desktop', 5, false, 0], ['phone', 4, false, -45]]) {
-  const size = G.SIZES[sizeName], rr = G.radii(size.R), sec = G.sectors(n, isHome);
+  const size = G.SIZES[sizeName], rr = G.dialRadii(sizeName, isHome), sec = G.sectors(n, isHome);
   cases.ticks.push([sizeName, n, isHome, rotation, G.ticks(size.stageW / 2, size.stageH / 2, rr, sec.dividers, rotation)]);
 }
 

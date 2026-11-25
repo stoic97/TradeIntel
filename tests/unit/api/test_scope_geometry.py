@@ -40,12 +40,17 @@ def test_sectors(n, is_home, want):
     assert G.sectors(n, is_home) == want
 
 
+@pytest.mark.parametrize(("size", "is_home", "want"), CASES["dial_radii"])
+def test_dial_radii(size, is_home, want):
+    assert G.dial_radii(size, is_home) == pytest.approx(want)
+
+
 @pytest.mark.parametrize(("size", "n", "is_home", "rotation", "want"), CASES["ticks"])
 def test_ticks(size, n, is_home, rotation, want):
     s = G.SIZES[size]
     sec = G.sectors(n, is_home)
     assert (
-        G.ticks(s["stageW"] / 2, s["stageH"] / 2, G.radii(s["R"]), sec["dividers"], rotation)
+        G.ticks(s["stageW"] / 2, s["stageH"] / 2, G.dial_radii(size, is_home), sec["dividers"], rotation)
         == want
     )
 
