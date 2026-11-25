@@ -37,18 +37,18 @@ def fitted(items: list, fig_sizes: list, size: str = "phone") -> list:
 
     The most crowded wedge steps down first, one width at a time, and the dial is laid out again
     after each step, since one wedge's block moves the shared radius for all of them. A wedge
-    that still does not clear at the smallest size draws no mini: its figure and reference line
-    say the fact, and the fact page carries the chart."""
-    z = G.SIZES[size]
+    that clears only without its mini draws none: its figure and reference line say the fact,
+    and the fact page carries the chart. One that overflows for other reasons keeps the smallest."""
     rr, sec = G.dial_radii(size, False), G.sectors(len(items), False)
     limit = FIT_ON_A_PHONE if size == "phone" else FIT_ON_A_DESKTOP
     items = list(items)
+    settled: set[int] = set()  # wedges whose overflow is not the mini's: they keep the smallest
     for _ in range(len(items) * (len(SMALLER) + 1)):
         lay = G.layout_contents(items, sec, rr, fig_sizes)
         worst = None
         for i, block in enumerate(lay["blocks"]):
             it = items[i]
-            if it.get("state") or not it.get("chart"):
+            if it.get("state") or not it.get("chart") or i in settled:
                 continue
             clear = G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], block, rr)
             if clear < limit and (worst is None or clear < worst[1]):
@@ -57,7 +57,12 @@ def fitted(items: list, fig_sizes: list, size: str = "phone") -> list:
             break
         i = worst[0]
         if _step(items[i]) == len(SMALLER):
-            items[i] = {**items[i], "chart": ""}  # no size clears: the wedge drops its mini
+            bare = items[:i] + [{**items[i], "chart": ""}] + items[i + 1:]
+            lay = G.layout_contents(bare, sec, rr, fig_sizes)
+            if G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], lay["blocks"][i], rr) >= limit:
+                items = bare  # only dropping the mini clears this wedge
+            else:
+                settled.add(i)
         else:
             w, h = SMALLER[_step(items[i])]
             items[i] = {**items[i], "miniW": w, "miniH": h}
