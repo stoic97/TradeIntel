@@ -70,7 +70,7 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
     (2, "desktop"): "4c1c58015e784dd70c3fac39624bdee568b0f198afa53ead22b20cc8e3c2a88c",  # 1001's wedge
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "55992140ed0097e928a7934b07b7d66b1690ecdb665e034e1c970da7c38b8fb1",  # six wedges (After you closed); back in counts one observation per prior (B1 parity)
+    (3, "desktop"): "cf0105bbd97499ca6068301c947bbb0bb8794ca9d676d77be5fa6454c60da09e",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }

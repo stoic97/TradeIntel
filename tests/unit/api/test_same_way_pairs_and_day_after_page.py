@@ -123,7 +123,7 @@ def test_with_too_few_days_the_page_says_how_many_and_how_many_it_needs():
     five = [t for t in _six_days() if t.trading_day != "2026-03-09"]
     said = text(fact_page("next-day", trips=five))
     assert "Not enough trades yet" in said
-    assert ("You traded on 5 days. This needs at least 6: "
+    assert ("You closed trades on 5 days. This needs at least 6: "
             "your 3 best days and your 3 worst.") in said, said
     assert "On the days after your best days" not in said
 
