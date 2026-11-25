@@ -303,15 +303,24 @@ nothing. First, where production is and what the tag changes:
 
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
 the box by hand: stop and find out who before going on. `live:` is the previous tag (a
-sha only on the first train, or after a deploy that skipped the train). The last line
-decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
-line → **Path B**.
+sha only on the first train, or after a deploy that skipped the train).
 
-Before either path, check that no new migration sits behind the live tag's head:
+Before either path, check that no new migration sits behind the live tag's head. Paste this in
+the same window as the block above: it uses that block's `TAG` and `LIVE`, and stops if either
+is missing rather than checking nothing.
 
     cd /srv/scope || exit 1
-    echo "live head: $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -oE '/[0-9]{4}_' | tr -d '/_' | sort | tail -1)"
-    git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions | while read -r f; do git show "$TAG:$f" | grep -E "^(revision|down_revision) =" | sed "s|^|$f: |"; done
+    ( set -u
+      [ -n "${TAG:-}" ] || { echo "STOP: TAG is not set (paste the first block of step d first)"; exit 1; }
+      [ -n "${LIVE:-}" ] || { echo "STOP: LIVE is not set (paste the first block of step d first)"; exit 1; }
+      head=""
+      for f in $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -E '/[0-9]{4}_[^/]*\.py$'); do
+        rev=$(git show "$LIVE:$f" | grep -E "^revision = " | grep -oE "[0-9]{4}")
+        [ -z "$head" ] || [ "$rev" \> "$head" ] && head=$rev
+      done
+      [ -n "$head" ] || { echo "STOP: no migration found at $LIVE"; exit 1; }
+      echo "live head: $head"
+      git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions | while read -r f; do git show "$TAG:$f" | grep -E "^(revision|down_revision) =" | sed "s|^|$f: |"; done )
 
 Expected: the first new migration's `down_revision` is the live head, each later one's is the
 one before it, and no new `revision` is a number at or below the live head. Anything else:
@@ -320,6 +329,9 @@ counts as applied is skipped with no error, so its table never exists and the pa
 it fails; a `down_revision` behind the live head leaves two heads, and the app refuses to start
 (`alembic upgrade head` needs one). Fix it on `main` with a new tag; never edit a migration a
 tag has shipped.
+
+Then the first block's last line decides the path: `no destructive migration` → **Path A**;
+any `drop_`/`alter_column` line → **Path B**.
 
 Production then sits on a detached HEAD at the tag. That is correct, and `git status
 --short` still reports local changes, so the guard above still works. Do not "fix" it
