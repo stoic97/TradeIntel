@@ -337,14 +337,14 @@ def test_each_median_is_stated_separately():
 
 def test_the_exit_line_says_nothing_about_entries():
     text = readable(fact_page("math", YEAR_ONE))
-    assert "50% of losers closed within 5 minutes, against 25% of winners." in text
+    assert "50 of 100 losers closed within 5 minutes, against 25 of 100 winners." in text
     assert "It says nothing about the entries." in text
 
 
 def test_the_biggest_losers_are_a_secondary_line_that_explains_nothing():
     page = fact_page("math", YEAR_ONE)
     text = readable(page)
-    assert "1 trade (3%) lost more than ₹1,000, 63% of this book's losses." in text
+    assert "1 trade (3 of 100) lost more than ₹1,000, 63% of this book's losses." in text
     assert "It was 2 lots, the other losers a median 2 lots." in text
     assert "It was open 30 min, the other losers a median 5 min." in text
     assert "Part of this is arithmetic" not in text
@@ -356,7 +356,7 @@ def test_more_than_one_big_loser_reads_in_the_plural_and_one_lot_in_the_singular
     """Winners 100 x 20. Losers 50 x 8 at 2 min, and 2,000 x 2 at 40 and 60 min: median 50."""
     nets = [100] * 20 + [-50] * 8 + [-2000] * 2
     text = readable(fact_page("math", make(nets, [10] * 20 + [2] * 8 + [40, 60], lots=1)))
-    assert "2 trades (7%) lost more than ₹1,000 each, 91% of this book's losses." in text
+    assert "2 trades (7 of 100) lost more than ₹1,000 each, 91% of this book's losses." in text
     assert "They were a median 1 lot, the other losers a median 1 lot." in text
     assert "They were open a median 50 min, the other losers a median 2 min." in text
 

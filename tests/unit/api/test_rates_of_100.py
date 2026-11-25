@@ -1,15 +1,16 @@
 """TICKET-1028: a rate reads "N of 100" on every page; a share of a total may stay a percent.
 
 A **rate** is a count out of a count of the same thing: trades that made money out of trades
-(the win rate, "you win", "made money"), the win rate break-even needs ("break even at"), and
-green days out of days traded. The product's rule is that a rate is written "N of 100"
+(the win rate, "you win", "made money"), the win rate break-even needs ("break even at"),
+green days out of days traded, and a group of trades counted out of its own kind ("16 of 100
+losers closed within 5 minutes", "18 trades (12 of 100) lost more than"). The product's rule is that a rate is written "N of 100"
 (``formatting.out_of_a_hundred``), and the report's prose already does; its tables wrote "45%".
 
 A **share** is a part of a whole that is not a count of the same kind, and it may stay a
 percent: days as a share of the record ("about 8%"), money as a share of money ("40% of your
 losses", "34% of what your winners made"), a trade's result against its premium ("% of
-premium"), a loss against capital, and a part of a group of trades described by how it closed
-("16% of losers closed within 5 minutes"). Both kinds are listed by name below.
+premium"), and a loss against capital. Both kinds are listed by name below, and a percent that
+is on neither list fails.
 
 Tables also say what they are in words: no "Table 1", no "Figure 1 ·", no "Or per winner".
 """
@@ -28,12 +29,21 @@ RATE_HEADERS = ("You win", "Break even at", "Win rate", "Made money")
 """Table columns whose cells are rates."""
 RATE_ROWS = ("You win", "Break even at", "Green days")
 """Table rows (first cell) whose cells are rates: the hidden page's halves."""
-RATE_PROSE = re.compile(r"(?:win rate of|break even at|made money)\s*\d[\d.]*\s?%", re.IGNORECASE)
+RATE_PROSE = re.compile(
+    r"(?:\bwin rate of|\bbreak even at|\bmade money|\bwon)\s*\d[\d.]*\s?%"
+    r"|\d[\d.]*\s?%\s*of trades made money", re.IGNORECASE)
+RATE_PROSE_OUTSIDE_TABLES = re.compile(
+    r"\bwin rate\s*\d[\d.]*\s?%|\bgreen days\s*[\d,]+\s*\(\s*\d[\d.]*\s?%", re.IGNORECASE)
 """A rate in a sentence, written as a percent."""
-SHARES = ("of your losses", "of premium", "of losers closed within 5 minutes", "of what your winners made",
-          "of it")
+SHARES = ("of your losses", "of all you lost", "of this book's losses", "of what your winners made",
+          "of premium", "of it", "of your capital")
 """Shares a page may still write as a percent: each ends a "N% <share>" phrase."""
-ALLOWED: dict[str, str] = {}
+ALLOWED = {
+    "the five days as a share of the days traded": r"trading days \(about N%\)",
+    "the dial's five days, as a share of what he lost": r"days[\s|]+lost N%",
+    "the reveal's centre figure, said in full under it": r"worst days[\s|]+N%",
+    "a number he set in per cent of his capital": r"N% of ₹\d",
+}
 """Percents a page may write that no share follows, each by name: what it is, and the words
 around it as a pattern ("N%" stands for the percent)."""
 PERCENT = re.compile(r"\d[\d.]*\s?%")
@@ -65,7 +75,9 @@ def rate_cells_as_percent(html: str) -> list[str]:
                 cells = row[1:]
             found += [f"{row[0]}: {c}" for c in cells if PERCENT.search(c)]
     main = re.search(r"<main.*?</main>", html, re.DOTALL)
-    found += RATE_PROSE.findall(_text(main.group(0) if main else html))
+    page = main.group(0) if main else html
+    found += RATE_PROSE.findall(_text(page))
+    found += RATE_PROSE_OUTSIDE_TABLES.findall(_text(re.sub(r"<table\b.*?</table>", " ", page, flags=re.DOTALL)))
     return found
 
 
@@ -128,9 +140,12 @@ def test_the_guard_catches_a_rate_and_leaves_a_share():
              "<table><tr><th></th><th>First half</th></tr><tr><td>Green days</td><td>15 (58 %)</td></tr></table>")
     assert len(rate_cells_as_percent(table)) == 2
     assert rate_cells_as_percent("<main><p>Break even at a win rate of 53.4%, about 13 more.</p></main>")
-    shares = ("<main><p>5 of your days (about 8%) carried about 40% of your losses. Paid ₹900 · +23.3% of "
-              "premium. 16% of losers closed within 5 minutes.</p></main>")
+    shares = ("<main><p>5 of your 62 trading days (about 8%) carried about 40% of your losses. "
+              "Paid ₹900 · +23.3% of premium.</p></main>")
     assert rate_cells_as_percent(shares) == []
+    assert unnamed_percents(shares) == []
+    assert len(unnamed_percents("<main><p>16% of losers closed within 5 minutes, against 2% of winners.</p>"
+                                "<p>18 trades (12%) lost more than ₹1,000 each.</p></main>")) == 3
 
 
 def test_every_percent_is_a_named_share_or_allowed_by_name(pages):
