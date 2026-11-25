@@ -83,21 +83,18 @@ def _query(href: str) -> dict:
 
 
 # ---------- 2. your books on your worst days ----------
-# Six traded days: the worst tenth, at least 5, is 5 days, worst first:
-#   3 Feb -300, 2 Feb -120, 5 Feb -40, 6 Feb +10, 9 Feb +50.
+# Six traded days: the worst tenth, at least 5, from the days that lost (TICKET-1050: a day he
+# made money is never called worst), worst first: 3 Feb -300, 2 Feb -120, 5 Feb -40.
 # Books, the verdict's split: Other options, Futures, Stocks and ETFs.
 #   3 Feb: options -200 lost, futures -100 lost, shares none     -> every book traded lost
 #   2 Feb: options -100 lost, futures -50 lost, shares +30 made  -> not (3 books, 2 lost)
 #   5 Feb: options -40 lost, nothing else                         -> every book traded lost
-#   6 Feb: shares +10 made                                        -> not
-#   9 Feb: options +50 made                                       -> not
-# "On your 5 worst days, every book you traded lost on 2."
+# "On your 3 worst days, every book you traded lost on 2."
 
 def test_the_worst_tenth_of_days_at_least_five_worst_first():
     view = fn("worst_books")(RECORD)
     assert view["shown"] is True
-    assert [d["day"] for d in view["days"]] == [
-        "2026-02-03", "2026-02-02", "2026-02-05", "2026-02-06", "2026-02-09"]
+    assert [d["day"] for d in view["days"]] == ["2026-02-03", "2026-02-02", "2026-02-05"]
     assert view["books"] == ["Other options", "Futures", "Stocks and ETFs"]
 
 
@@ -106,13 +103,12 @@ def test_each_book_on_a_worst_day_lost_made_money_or_didnt_trade():
     states = {d["day"]: [c["state"] for c in d["cells"]] for d in view["days"]}
     assert states["2026-02-03"] == ["lost", "lost", "none"]
     assert states["2026-02-02"] == ["lost", "lost", "made"]
-    assert states["2026-02-09"] == ["made", "none", "none"]
+    assert states["2026-02-05"] == ["lost", "none", "none"]
 
 
 def test_the_line_counts_days_every_book_he_traded_lost():
     view = fn("worst_books")(RECORD)
-    assert (view["count"], view["all_lost"]) == (5, 2)
-    assert view["line"] == "On your 5 worst days, every book you traded lost on 2."
+    assert (view["count"], view["all_lost"]) == (3, 2)  # the sentence is the template's (TICKET-1050)
 
 
 def test_cells_are_toned_by_sign():
@@ -134,7 +130,7 @@ def test_a_worst_day_and_its_book_cells_open_exactly_their_trades():
     assert _query(day["href"]) == {"closed_day": "2026-02-03"}
     assert _listed(day["href"]) == 2
     futures = day["cells"][1]
-    assert _query(futures["href"]) == {"closed_day": "2026-02-03", "book": "Futures"}
+    assert _query(futures["href"]) == {"closed_day": "2026-02-03", "book_group": "Futures"}
     assert _listed(futures["href"]) == 1
     assert day["cells"][2]["href"] is None  # no trades: nothing to open
 
@@ -218,13 +214,13 @@ def test_the_longest_hold_is_named_in_days_across_a_weekend():
     assert view["longest"] == 3
 
 
-def test_the_longest_hold_opens_the_trades_closed_the_day_it_ended_not_a_day_page():
-    """Review, 24 Nov: on Your numbers a day opens the trades closed that day, never the day page
-    (the day page lists the trades opened that day). e1 ended Mon 9 Feb, with f1 f2 f3: 4 trades."""
+def test_the_longest_hold_opens_the_trades_held_that_long_not_a_day_page():
+    """The longest hold is a figure about one trade: it opens the trades held that many days
+    (TICKET-1050), not the day page and not every trade closed the day it ended. e1, 3 days."""
     href = fn("overnight")(RECORD)["longest_href"]
     assert "/mirror/day/" not in href
-    assert _query(href) == {"closed_day": "2026-02-09"}
-    assert _listed(href) == 4
+    assert _query(href) == {"held_days": "3"}
+    assert _listed(href) == 1
 
 
 def test_the_overnight_rows_open_exactly_their_trades():
