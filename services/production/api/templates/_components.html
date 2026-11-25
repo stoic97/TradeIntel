@@ -128,9 +128,11 @@
 </a>
 {%- endmacro %}
 
-{#- The worst days counted: "five", or how many there are when his record has fewer days. -#}
+{#- The worst days counted: "five", or how many there are when his record has fewer days. The
+    words come from formatting.worst_count; a counted figure is written through Figure. -#}
 {% macro worst_count(n) -%}
-{%- if n == 5 %}five{% else %}<span class="num">{{ Figure(n, "days")|count }}</span>{% endif -%}
+{%- set word = worst_count_text(n) -%}
+{%- if word[0].isdigit() %}<span class="num">{{ Figure(n, "days")|count }}</span>{% else %}{{ word }}{% endif -%}
 {%- endmacro %}
 
 {% macro trades_behind(n) -%}

@@ -248,3 +248,4 @@ def register(env) -> None:
     env.filters.update(tone=tone, day=day, local_day=local_day, book_in_a_sentence=book_in_a_sentence,
                        day_link=day_link, opens=opens, identifier=identifier, **_FIGURE_FILTERS)
     env.globals["Figure"] = Figure
+    env.globals["worst_count_text"] = worst_count
