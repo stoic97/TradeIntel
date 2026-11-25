@@ -23,6 +23,7 @@
   {%- endif %}
   {{ uncounted_line(imp.trips_refused) }}
   {% include "_how_you_got_here.html" %}
+  {%- if process_preview %}{% include "_process_home.html" %}{% endif %}
   {%- if challenge %}{% include "_challenge_home.html" %}{% endif %}
   {%- if latest %}
   <section class="latest">

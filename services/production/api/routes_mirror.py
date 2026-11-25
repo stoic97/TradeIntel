@@ -13,7 +13,7 @@ argument is that he should not have to.
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -22,6 +22,7 @@ from sqlalchemy import distinct, func, select
 from services.production.accounts import risk_budget as rb
 from services.production.api import after_closed as ACL
 from services.production.api import day_chart, fact_reads, formatting
+from services.production.api import market_chart as MC
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -123,7 +124,7 @@ def _new_days(sess, imp) -> set[str] | None:
 def choose_filter(request: Request, period: str = RF.ALL, book: str = "", next: str = "/mirror"):
     """Remember the chosen period and book, then go back to the page it was chosen on. Only a
     report address is gone back to; anything else goes to the report's home."""
-    back = next if next.startswith(("/mirror", "/numbers")) and "//" not in next else "/mirror"
+    back = next if next.startswith(("/mirror", "/numbers", "/process")) and "//" not in next else "/mirror"
     response = RedirectResponse(back, status_code=303)
     chosen = RF.ReportFilter(period or RF.ALL, book or None)
     if chosen.active:
@@ -489,10 +490,22 @@ def trading_day(request: Request, iso: str):
     with make_session(request.app.state.engine) as sess:
         # The sample's Journals are no visitor's to open, so its day page has no link to one.
         opens = {} if is_sample(request) else _journal_ids(sess, reader(request, sess), {iso})
+        legs: dict[str, tuple[str, str]] = {}
+        figures: dict = {}
+        if imp is not None:
+            # Which instrument each trade was, and the bar figures stored for it.
+            for trip_id, position_id, exchange, symbol in sess.execute(
+                    select(m.Trip.trip_id, m.Trip.position_id, m.Trip.exchange, m.Trip.symbol)
+                    .where(m.Trip.import_id == imp.id)):
+                legs.setdefault(position_id or trip_id, (exchange, symbol))
+            figures = {f.trip_id: f for f in sess.scalars(
+                select(m.BarTradeFigure).where(m.BarTradeFigure.import_id == imp.id))}
+    chart = MC.build(MC.prices(), date.fromisoformat(iso), trips, legs, figures,
+                     request.query_params.get("u"))
     before, after = mx.day_neighbours(trips, iso)
     return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
                 when=formatting.day(iso), count=len(that_day),
-                groups=SM.groups("busiest", context, only=that_day),
+                groups=SM.groups("busiest", context, only=that_day), chart=chart,
                 journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
                 path=day_chart.view(mx.day_path(that_day)),
                 before=(before, formatting.day(before)) if before else None,
