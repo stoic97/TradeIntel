@@ -56,9 +56,10 @@ def test_the_edge_pages_are_on_the_kits_layout(name):
 
 def test_a_fact_with_not_enough_trades_keeps_its_card_with_its_state():
     page = chapter_page(2, trips_from([100, 200, 300, 50]))  # no losers: the math and the run
-    assert page.count('<a class="story-card story-card--state"') == 2
-    assert page.count("Not enough trades yet") == 2
-    assert page.count('story-card__figure story-card__figure--state">—</span>') == 2
+    # and after you clicked, which has no stored bar figures on a fixture
+    assert page.count('<a class="story-card story-card--state"') == 3
+    assert page.count("Not enough trades yet") == 4  # three cards, and after you clicked's row under the phone dial
+    assert page.count('story-card__figure story-card__figure--state">—</span>') == 3
     assert '<span class="num">4</span> trades so far' in page
     assert 'href="/mirror/fact/math?enter=lens"' in page  # still opens
 

@@ -56,7 +56,7 @@ ON_MAIN = {
     "/mirror/chapter/1": ["15c151598bedff98a253625918f1a078d3e3700de7108ffb1126f78176ef1882",  # phone: 1027 shortens a five-digit best trade
                           "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab"],
     "/mirror/chapter/2": ["3f6297e8c48876c366497aac6e324945409a3e59409963c475c56fa6812d2e44",
-                          "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63"],
+                          "80e660cad35f1b6d1160fd02dd803a7cd5bb471f6ae44f41960d9a06a450a1dd"],  # desktop: 1001 adds a wedge
     "/mirror/chapter/3": ["b15b4a3f96b17c2f30405ab1e9e8a811cb4ef7d13c79666abf4e9f6df0542e1e",
                           # Desktop: three more wedges since What you do next (1006), and a sixth for After
                           # you closed; the phone dial is main's.
@@ -68,9 +68,9 @@ CHAPTERS_ON_MAIN = {
     (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
     (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
     (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
+    (2, "desktop"): "4c1c58015e784dd70c3fac39624bdee568b0f198afa53ead22b20cc8e3c2a88c",  # 1001's wedge
     (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "55992140ed0097e928a7934b07b7d66b1690ecdb665e034e1c970da7c38b8fb1",  # six wedges (After you closed); back in counts one observation per prior (B1 parity)
+    (3, "desktop"): "cf0105bbd97499ca6068301c947bbb0bb8794ca9d676d77be5fa6454c60da09e",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
     (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
     (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
 }
@@ -80,7 +80,8 @@ CHAPTERS_ON_MAIN = {
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
-                      "after-close"}  # After you closed: added after the phone dial was sized
+                      "after-close",  # After you closed: added after the phone dial was sized
+                      "after"}  # After you clicked (1001), in chapter 2's list
 
 
 def sha(text) -> str:
@@ -98,7 +99,8 @@ LATER = S.Fact("down", "After two straight losses", "down", on_phone_dial=False)
 @pytest.fixture()
 def later(monkeypatch):
     two = S.CHAPTERS[1]
-    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*two.facts, LATER)), *S.CHAPTERS[2:])
+    on_dial = tuple(f for f in two.facts if f.on_phone_dial)  # main's chapter 2, then one later fact
+    chapters = (S.CHAPTERS[0], dataclasses.replace(two, facts=(*on_dial, LATER)), *S.CHAPTERS[2:])
     monkeypatch.setattr(S, "CHAPTERS", chapters)
     return SF.chapter_view(2, SF.facts(CTX, IMP))
 
@@ -126,9 +128,9 @@ def test_every_chapter_dial_is_drawn_as_on_main():
 
 def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
     for path, html in pages.items():
-        if path == "/mirror/chapter/3":  # What you do next (1006) sits in chapter 3's list
-            continue
-        assert "scope__list" not in html, path
+        off = any(not f.on_phone_dial for c in S.CHAPTERS for f in c.facts
+                  if path in (f"/mirror/chapter/{c.number}",))
+        assert ("scope__list" in html) == off, path
 
 
 # ---------- a fact off the phone dial ----------
@@ -142,7 +144,7 @@ def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
 
 
 def test_the_desktop_keeps_chapter_order_and_clears(later):
-    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
+    assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.chapter(2).facts]
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
     items = later["desktop_items"]
