@@ -469,18 +469,15 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
     """
     behind = S.trades_behind(key, ctx)
     drawn, shown = [], list(behind)
-    lookup = {**expiries, HALF_OF: mx.half_of(behind)}
-    if key == "risk" and query.get("line"):
-        from services.production.api import process
-        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"),
-                                                          ranges=ctx.get("stored_ranges")) or frozenset())
-
-
     lookup = {**expiries, HALF_OF: mx.half_of(behind), DAY_THIRD_OF: day_thirds(behind)[1],
               BOOK_GROUP_OF: {t.trip_id: name for name, ts in mx.book_groups(behind) for t in ts},
               AFTER_OF: after_groups(key, ctx),
               NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {},
               **_previous_lookup(ctx)}
+    if key == "risk" and query.get("line"):
+        from services.production.api import process
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"], figures=ctx.get("stored_bars"),
+                                                          ranges=ctx.get("stored_ranges")) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
