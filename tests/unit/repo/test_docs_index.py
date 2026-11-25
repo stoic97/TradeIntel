@@ -54,7 +54,11 @@ def read(path: str) -> str:
 
 
 def documents() -> list[str]:
-    return sorted(f for f in tracked()[0] if f.startswith("docs/") and f.endswith(".md"))
+    """The .md files git holds under docs/. An untracked one is not this branch's to index."""
+    out = subprocess.run(["git", "ls-files", "-z", "docs/"],
+                         cwd=ROOT, capture_output=True, check=True).stdout.decode("utf-8")
+    return sorted(f for f in out.split("\0")
+                  if f.endswith(".md") and (ROOT / f).is_file())
 
 
 def live_documents() -> list[str]:
