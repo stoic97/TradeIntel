@@ -97,10 +97,26 @@ def test_the_fact_read_table_is_migrated():
     cols = {c["name"] for c in inspect(engine).get_columns("fact_read")}
     assert {"trader_id", "import_id", "fact_key", "period", "book", "opened_at"} <= cols
     migration = ROOT / "migrations/versions/0020_fact_reads.py"
-    # It chains on the migration before it, main's head when it merges (the one-head rule);
-    # the number moves with main, so the test reads it instead of pinning it.
-    before = sorted(p.name[:4] for p in migration.parent.glob("[0-9]*.py") if p.name[:4] < "0020")[-1]
-    assert f"down_revision = '{before}'" in migration.read_text(encoding="utf-8")
+    # It chains on main's head when it merges (the one-head rule). Main's head is not always the
+    # number just below 0020 (main's 0022 revises 0019), so the test reads the chain: set 0020 and
+    # anything stacked on it aside, and the one head left is the revision 0020 must revise.
+    import re
+    revs = {}
+    for f in migration.parent.glob("[0-9]*.py"):
+        t = f.read_text(encoding="utf-8")
+        rev = re.search(r"^revision = '([^']+)'", t, re.M).group(1)
+        down = re.search(r"^down_revision = '([^']+)'", t, re.M)
+        revs[rev] = down.group(1) if down else None
+    above = {"0020"}
+    while True:
+        more = {r for r, d in revs.items() if d in above} - above
+        if not more:
+            break
+        above |= more
+    rest = {r: d for r, d in revs.items() if r not in above}
+    heads = set(rest) - {d for d in rest.values() if d}
+    assert len(heads) == 1, heads
+    assert f"down_revision = '{heads.pop()}'" in migration.read_text(encoding="utf-8")
 
 
 @pytest.fixture()
