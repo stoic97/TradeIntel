@@ -255,17 +255,20 @@ def test_every_class_the_toolkit_draws_is_styled_in_one_app_css_block():
 # digests are main's own with the column left out. Moved once more, on purpose, by 1027 (month
 # names on the month view, the axis label under the last tag dropped, the count label ending
 # inside the chart), re-taken on main merged with 1027. The demo file is synthetic.
+# Re-taken again for 1026 on main merged in: the card says "same-day trades" beside needed and
+# names the demo's one held position in its Result note. Re-taken once more for the review of 24 Nov
+# 21:19: with a position held, the card's whole-record figure is labelled "Whole record", not "Result".
 BEFORE = {
-    "all/d": "e287da87940cff9d824ec32a386a0ccdec17f5f3b01d5cd09eee24caf6b38744",
-    "all/w": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
-    "all/m": "e66a7eb232301f16e1cb2dfdfc0162ba242badb516c58b862b741c60cc1f788c",
-    "crude-options/d": "cfb163d1f14e4347d8575d56858343c28c967e8c34a82cfed606bd8d33eb023a",
-    "crude-options/w": "86ea4597ce490b0ed2bda139fdd6d088f6e97b67a5e08a3deabb708220850caa",
-    "crude-options/m": "7c01166d3e486a5b3b43d7e97a827c103950ee94abf5a5ca65597c1c29fb303a",
+    "all/d": "76d405ffa1d8f145f7dc134e4d3e28bc1377c409d2bd9831b67fa5ab25d0b0a5",
+    "all/w": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
+    "all/m": "9982a2d950d785f7cdfcaf5bfe072b53650f740033e86b97d3e9922dc0c78a17",
+    "crude-options/d": "ffcccf5e938afa315a531143b2f60a293066ac634e89eb97e8b9d5df617a1519",
+    "crude-options/w": "7b325967d95c45b4fd8a42256fc7ad1bb9db4d499e0e2864d33871366928794f",
+    "crude-options/m": "6232e4a39a3a9a08b3a0b6b8052a829d34caa9a7307e92691b159101ee9a9181",
     "nifty-options/d": "080a6c0c1e61305b0f24ebf9700d0da97482598a3178ca54eaa256e525a86656",
     "nifty-options/w": "3a3132070b7c9c681d8fda460125d7fc9a1907909edba1c80fe898aa44de6d94",
     "nifty-options/m": "ca14fa4c39f764b6920e7349b43713a46a15446ea998f0f3cd720165de167f8c",
-    "default": "e98621edb990d5d59e6a38f17d0072fa2c87406e8f49c5ea0afaee4fdc8a1ac6",
+    "default": "5f7ae658d51cd48ab185962671116c0ff56cc19721d193f4d4984b1860902394",
 }
 
 

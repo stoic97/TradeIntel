@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -520,6 +521,9 @@ def trading_day(request: Request, iso: str):
                 groups=SM.groups("busiest", context, only=that_day), chart=chart,
                 journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
                 path=day_chart.view(mx.day_path(that_day)),
+                # What Your numbers gives this day: its same-day trades.
+                same_day_net=sum((t.net for t in that_day if t.closed_same_day), Decimal(0))
+                if any(t.closed_same_day for t in that_day) else None,
                 before=(before, formatting.day(before)) if before else None,
                 after=(after, formatting.day(after)) if after else None)
 

@@ -202,6 +202,13 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         return view
 
     mine = by_name[run.book]
+    # Made money and needed are trading figures: same-day trades only. The result is every closed
+    # trade, and the card says what of it was held past the day (the ruling of 23 Nov 2026).
+    same = mx.same_day_trips(mine) or mine
+    held = mx.held_past_day(mine)
+    # "same-day trades" is said only when it sets something apart: some trades were held and
+    # some closed the day they opened.
+    same_day_basis = bool(held.count) and same is not mine and len(same) < len(mine)
     every = run.candles[frame]
     shown_candles = every[-WINDOW:]
     opens = _day_of(mine, frame)
@@ -214,8 +221,10 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         "last_day": max(t.exit_ts.date() for t in mine).isoformat(),
         "trades": run.trades,
         "total": run.total,
-        "strike": run.strike.rate_percent,
-        "even": run.even.percent,
+        "strike": mx.strike_rate(same).rate_percent,
+        "even": mx.break_even(same).percent,
+        "held": {"count": held.count, "net": held.net},
+        "same_day_basis": same_day_basis,
         "drop": run.drop.value,
         "high": run.high.value,
         "drop_day": _day_closed(mine, run.drop.to_day),
