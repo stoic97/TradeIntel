@@ -6,6 +6,7 @@
   {%- for b in wg.bars %}
   <div class="wg-book">
     <p class="body"><span class="wg-book__name">{{ b.book }}</span> {{ b.line }}</p>
+    <p class="body-small wg-count">{{ b.counts }}</p>
     {{ b.svg }}
   </div>
   {%- endfor %}
@@ -15,6 +16,7 @@
   {%- for y in wg.years %}
   <div class="wg-book">
     <p class="body wg-book__name">{{ y.book }}</p>
+    <p class="body-small wg-count">{{ y.counts }}</p>
     {{ y.svg }}
     {%- if y.thin %}<p class="body-small">{{ y.thin }}</p>{% endif %}
   </div>

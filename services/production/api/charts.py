@@ -12,6 +12,8 @@ Decided here:
   rupee, and the range widens to whole steps.
 * **Colour belongs to rupees alone.** A rupee value is green or red by its sign, in four steps
   by its size; a count or a rate is ink, whatever it is; a zero or an empty cell is the surface.
+* **A rate axis** (a win rate, "N of 100") is labelled by its whole number, with no rupee and no
+  percent sign; ``rate_scale`` places a rate, so a bar and a line chart of rates share one scale.
 * **Hatching** is the kit's own pattern (``chart__hatch``), the one the clock uses for an hour
   with too few trades.
 * **Every chart has its figures as text**, in a plain table, each through ``Figure``.
@@ -109,6 +111,52 @@ def axis(lo: Decimal, hi: Decimal, tick: Decimal, y: Callable[[Decimal], float],
                  f'class="{p}-last {p}-last--{formatting.tone(last)}"/>'
                  f'<text x="{x1 + 5}" y="{ly + 4:.1f}" class="{p}-last-text">{short(last)}</text>')
     return Markup("".join(back)), Markup(front)
+
+
+# ---------- the rate axis ----------
+
+def rate_scale(lo, hi, start: float, end: float) -> Callable[[object], float]:
+    """Where a rate ("N of 100") sits between two edges of a drawing: ``lo`` at ``start``, ``hi``
+    at ``end``. Across a bar the edges are 0 and its width; up a chart, the foot then the top.
+    A range of one value puts it at ``start``."""
+    span = (hi - lo) or 1
+    return lambda v: start + (v - lo) * (end - start) / span
+
+
+def rate_axis(lo, hi, tick, y: Callable[[object], float], *, left: float, right: float,
+              width: float, p: str = "ch") -> Markup:
+    """The right-hand axis of a chart of rates: a gridline at each tick with its label, written as
+    the whole number of 100 it is, with no rupee and no percent sign."""
+    x0, x1 = left, width - right
+    out = []
+    v = lo
+    while v <= hi:
+        out.append(f'<line x1="{x0}" x2="{x1}" y1="{y(v):.1f}" y2="{y(v):.1f}" class="{p}-grid"/>'
+                   f'<text x="{x1 + 6}" y="{y(v) + 4:.1f}" class="{p}-axis">{v}</text>')
+        v += tick
+    return Markup("".join(out))
+
+
+def rate_axis_across(lo, hi, tick, x: Callable[[object], float], *, top: float, bottom: float,
+                     p: str = "ch") -> Markup:
+    """The axis along a bar of rates: a gridline at each tick from ``top`` to ``bottom``, and its
+    label under the bar as the whole number of 100 it is. The two edge labels hang inward, so
+    neither runs past the drawing."""
+    out = []
+    v = lo
+    while v <= hi:
+        anchor = ' text-anchor="start"' if v == lo else ' text-anchor="end"' if v == hi else ""
+        out.append(f'<line x1="{x(v):.1f}" x2="{x(v):.1f}" y1="{top}" y2="{bottom}" class="{p}-grid"/>'
+                   f'<text x="{x(v):.1f}" y="{bottom + 12}"{anchor} class="{p}-axis {p}-axis--x">{v}</text>')
+        v += tick
+    return Markup("".join(out))
+
+
+def rate_chart(cls: str, width: float, height: float, label: str, parts: Iterable) -> Markup:
+    """A chart of rates as one drawing: its class, its size, the name a screen reader reads, then
+    its parts in order. The drawing scales to its card, so a phone never scrolls it."""
+    return Markup(f'<svg class="{cls}" viewBox="0 0 {width} {height}" width="100%" role="img" '
+                  f'aria-label="{escape(label)}">' + "".join(str(part) for part in parts) + "</svg>")
 
 
 # ---------- time labels ----------

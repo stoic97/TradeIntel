@@ -489,7 +489,9 @@ def buttons(html: str) -> list[tuple[str, str]]:
 def test_the_way_into_chapter_four_uses_its_real_title():
     """TICKET-903: the spine's Next names the chapter it crosses into, from scope_map."""
     assert S.chapter(4).name == "What we read"
-    assert S.next_step("busiest")["label"] == f"Next, chapter 4: {S.FACTS['unread'].title}"
+    # Chapter 3 now ends on After you closed, so that page crosses into chapter 4.
+    assert S.next_step("busiest")["label"] == "Next: After you closed"
+    assert S.next_step("after-close")["label"] == f"Next, chapter 4: {S.FACTS['unread'].title}"
     assert "Chapter 4: What we read" not in readable(fact_page("busiest", DAY))
 
 
@@ -530,7 +532,8 @@ def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):
 
 def test_a_fact_in_a_state_still_goes_on():
     """TICKET-903: the way on is scope_map's, so a page in a state has it as surely as any."""
-    assert S.next_step("busiest")["href"] == S.fact_href("unread")
+    assert S.next_step("busiest")["href"] == S.fact_href("after-close")
+    assert S.next_step("after-close")["href"] == S.fact_href("unread")
     assert S.next_step("down")["href"] == S.fact_href("back-in")
     assert S.next_step("next-day")["href"] == S.fact_href("busiest")
 

@@ -5,7 +5,7 @@ what it computed: the source per trip, and one row per component with its amount
 as text like trip.fees. Insert-only.
 
 Revision ID: 0021
-Revises: 0018
+Revises: 0019
 """
 import sqlalchemy as sa
 from alembic import op
@@ -13,7 +13,7 @@ from alembic import op
 import services.production.db.types as dbtypes
 
 revision = '0021'
-down_revision = '0018'
+down_revision = '0019'
 branch_labels = None
 depends_on = None
 

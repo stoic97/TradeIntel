@@ -2,7 +2,8 @@
     founder's ruling (scope_facts.worst_days_in_common); when nothing is shared the page says so
     and leads with the rupees. Every trade stays one tap away, and on its own list. -#}
 {% extends "scope/fact.html" %}
-{% from "_components.html" import money, trades, button, chart %}
+{% from "_components.html" import money, trades, button, chart, worst_count %}
+{%- set n = worst_days.days|length %}{% set days_word = "day" if n == 1 else "days" %}
 {% from "scope/_story_lines.html" import story_lines %}
 {% block head %}
     {%- if f.in_common %}
@@ -14,17 +15,18 @@
     <p class="mirror">They don't share a book, an hour or a size.</p>
     {%- endif %}
     {%- if share.shown_as_percentage %}
-    <p class="mirror">Your five worst days: {{ money(worst_days.sum) }}. Your other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days: {{ money(share.other_days_net) }}.</p>
+    <p class="mirror">Your {{ worst_count(n) }} worst {{ days_word }}: {{ money(worst_days.sum) }}. Your other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days: {{ money(share.other_days_net) }}.</p>
     {%- else %}
-    <p class="mirror">Those five days came to {{ money(worst_days.sum) }}.</p>
+    <p class="mirror">Those {{ worst_count(n) }} {{ days_word }} came to {{ money(worst_days.sum) }}.</p>
     <p class="mirror">Your result for the whole period was {{ money(share.total) }}. The other <span class="num">{{ Figure(share.other_days_count, "days")|count }}</span> days were net {{ money(share.other_days_net) }}.</p>
     {%- endif %}
+    <p class="body-small">A trade counts here on the day you opened it.</p>
 {% endblock %}
 {% block body %}{% endblock %}
 {% block evidence %}
   {%- if not f.state %}
   <section class="day-blocks" aria-labelledby="days-title">
-    <h2 class="heading" id="days-title">The five days</h2>
+    <h2 class="heading" id="days-title">The {{ worst_count(n) }} {{ days_word }}</h2>
     <p class="body-small">Each line is your running result through the day, first trade to last. Tap a day to see its trades.</p>
     {%- for b in f.blocks %}
     <details class="day-block" id="day-{{ b.iso }}">
@@ -57,19 +59,19 @@
   </section>
   <section class="worst-sorted" aria-labelledby="sorted-title">
     <h2 class="heading" id="sorted-title">Your days, worst to best</h2>
-    <p class="body-small">Your days added up from worst to best. The dark stretch is your five worst days; where the line ends is your whole result.</p>
+    <p class="body-small">Your days added up from worst to best. The dark stretch is your {{ worst_count(n) }} worst {{ days_word }}; where the line ends is your whole result.</p>
     {{ chart(f.page_chart) }}
     <details class="worst-sorted__table"><summary class="body-small">Every day as numbers</summary>{{ f.sorted_days_table }}</details>
   </section>
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">The {{ worst_count(n) }} {{ days_word }}, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     <p class="evidence__see-all">{{ button("See all trades", f.all_trades_href, "secondary") }}</p>
   </section>
   {%- else %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">The five days, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">The {{ worst_count(n) }} {{ days_word }}, and every trade on them. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
     {{ trades(groups) }}
   </section>
   {%- endif %}

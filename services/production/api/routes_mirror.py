@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
+from services.production.api import after_closed as ACL
 from services.production.api import day_chart, formatting
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
@@ -73,6 +74,7 @@ def load_record(request: Request):
         try:
             trips, imp = loader.load_for(sess, trader)
             new_days = None if is_sample(request) or imp is None else _new_days(sess, imp)
+            earlier = not (is_sample(request) or imp is None) and _earlier_upload(sess, imp)
         except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
@@ -82,16 +84,29 @@ def load_record(request: Request):
             return page(request, "mirror_empty.html", title="Your record"), None
         entries = waterfall.load(sess, trader, imp)  # each trade's charges, as stored (TICKET-995)
         if is_sample(request):
-            return None, (trips, imp, SF.record_context(trips, waterfall.build(entries, trips)))
+            return None, (trips, imp, _with_close_bars(sess, imp, SF.record_context(trips, waterfall.build(entries, trips))))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
-        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked)
+        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
-        return None, (shown, imp, SF.record_context(shown, waterfall.build(entries, shown)))
+        return None, (shown, imp, _with_close_bars(sess, imp, SF.record_context(shown, waterfall.build(entries, shown))))
+
+
+def _with_close_bars(sess, imp, context: dict) -> dict:
+    """The import's stored after-exit paths beside the record: read, never worked
+    out here, and never a bar."""
+    context["bars_after_close"] = ACL.load(sess, imp)
+    return context
+
+
+def _earlier_upload(sess, imp) -> bool:
+    """Whether an upload came before this one. With none, "since your last upload" has nothing to
+    be since, and the page must not say his last upload added no new days."""
+    return persist.earlier_reading(sess, imp) is not None
 
 
 def _new_days(sess, imp) -> set[str] | None:
@@ -297,6 +312,8 @@ def scope_fact(request: Request, key: str):
     chapter, index = SM.chapter_of(key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
+    if key == "after-close" and request.query_params.get("u"):  # the chip he picked
+        figs["after-close"].update(SF.after_close_page(context, request.query_params["u"]))
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
     journals = _journal_links(request, key, figs[key], context)
