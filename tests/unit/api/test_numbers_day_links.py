@@ -94,32 +94,6 @@ def test_most_in_a_day_opens_the_trades_closed_that_day(tiles):
     assert tiles["per_day"]["href"] == CLOSED + "2026-03-09" + SAME_DAY
 
 
-@pytest.mark.skip(reason="superseded by the ruling of 24 Nov 2026 on PR #208 (TICKET-1026): a tile counts same-day trades and its link adds the same-day filter, while these helpers read the closed-day list alone, as the calendar's cells still do. test_day_tiles_same_day.py and the rendered-page test below hold the same rule. Assertions kept as they were.")
-@pytest.mark.parametrize("key, iso, trades, net", [
-    ("best_day", "2026-03-10", 2, D(600)),
-    ("worst_day", "2026-03-11", 2, D(-350)),
-])
-def test_the_list_a_day_tile_opens_is_the_trades_its_figure_counts(tiles, key, iso, trades, net):
-    assert tiles[key]["value"] == net
-    assert listed(iso) == trades
-    assert sum(t.net for t in closed_on(iso)) == net
-    assert sorted(t.trip_id for t in closed_on(iso)) == (["a", "b"] if iso == "2026-03-10" else ["c", "d"])
-
-
-@pytest.mark.skip(reason='superseded by TICKET-1026 (proposal on the ticket, review of 24 Nov 21:19, point 1): every figure on Your numbers, the calendar too, reads same-day trades when some trades were held past the day, so one date is one figure on the tile, the cell and the day page. This record holds positions held past the day. Assertion kept as written; test_held_apart_one_date.py and test_calendar_same_day.py hold the new rule.')
-def test_every_traded_calendar_cell_opens_the_trades_closed_that_day():
-    view = N.calendar(RECORD)
-    traded = {c["iso"]: c for m in view["months"] for week in m["weeks"] for c in week
-              if c and c["trades"]}
-    # 9 Mar +50 over 1; 10 Mar +600 over 2, though b and c opened then; 11 Mar -350 over 2.
-    assert {iso: (c["trades"], c["net"]) for iso, c in traded.items()} == {
-        "2026-03-09": (1, D(50)), "2026-03-10": (2, D(600)), "2026-03-11": (2, D(-350))}
-    for iso, c in traded.items():
-        assert c["href"] == CLOSED + iso
-        assert listed(iso) == c["trades"]
-        assert sum(t.net for t in closed_on(iso)) == c["net"]
-
-
 # ---------- on the rendered page ----------
 
 @pytest.fixture()
