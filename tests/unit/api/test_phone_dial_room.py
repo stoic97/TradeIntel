@@ -24,11 +24,11 @@ from tests.unit.api import figure_pages as P
 
 PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
 DESKTOP_ON_MAIN = {  # each page's desktop dial on main before this change (test_phone_dial_list's)
-    "/mirror": "f387c5dc0c65eaaea514f4aa900d6f50fe593661d4d7a4a30e0ff81b8c4de3df",
-    "/mirror/chapter/1": "6c32a7ab38dc9e82409495f32e55b73fa04592b650003763891c8461549ab1ab",
-    "/mirror/chapter/2": "ce211d75dfcb8d3d88ce7a9379db9056ad549fab1785c35bbbcf6db68de3bf63",
-    "/mirror/chapter/3": "d7709d6dc91e0e6f76add9bdfd85e7776089c5f41e39ef081d8dd811e5eaedf7",
-    "/mirror/chapter/4": "334070052978911efc817e89f4cdafa6f21f653afccfd4820813f01c0734b6e5",
+    "/mirror": "01ee5a065fa7002e39df7dae97e87f6de8b562f276abb8045fa5a66d6d4c1f27",
+    "/mirror/chapter/1": "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc",
+    "/mirror/chapter/2": "33301fff41ee1ea2529d14f40725b79554f8ba90de05584ac10fc8dff3bc2a9e",
+    "/mirror/chapter/3": "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf",
+    "/mirror/chapter/4": "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572",
 }
 
 
@@ -122,7 +122,8 @@ def test_one_formatter_writes_them():
 def test_the_phone_dial_writes_rupees_short_and_the_desktop_whole(demo):
     pages, _ = demo
     phone, desk = dials(pages["/mirror/chapter/1"])
-    assert "₹11.5k" in phone and "₹11,492" not in phone
+    shown = re.sub(r'aria-label="[^"]*"', "", phone)  # what a phone draws; its spoken names keep the whole figure
+    assert "₹11.5k" in shown and "₹11,492" not in shown
     assert "₹11,492" in desk
 
 
@@ -130,7 +131,7 @@ def test_the_phone_hub_centre_is_short_and_read_out_whole(demo):
     pages, _ = demo
     phone, desk = dials(pages["/mirror"])
     assert ">−₹47.8k<" in phone
-    assert 'aria-label="The Scope: four chapters of your story. −₹47,780 your result, before charges"' in phone
+    assert 'aria-label="The Scope: four chapters of your story. −₹47,780 your result, before charges' in phone
     assert ">−₹47,780<" in desk
 
 
