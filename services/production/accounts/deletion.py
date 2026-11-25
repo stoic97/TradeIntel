@@ -133,7 +133,7 @@ def delete_trader(
     # His bar figures (TICKET-999). The market files hold no trader data and stay.
     _delete_where(sess, m.BarFigureJob, m.BarFigureJob.trader_id == trader_id, removed)
     if import_ids:
-        for model in (m.BarTradeFigure, m.BarPathSummary, m.Trip, m.OpenPosition, m.SkippedTrip,
+        for model in (m.BarTradeFigure, m.BarPathSummary, m.BarDayRange, m.Trip, m.OpenPosition, m.SkippedTrip,
                       m.ImportRow):
             _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.Import, m.Import.trader_id == trader_id, removed)
@@ -202,7 +202,7 @@ def remove_demo(sess: Session, store: FileStore, *, trader: m.Trader) -> Removed
         _delete_where(sess, m.ChapterFeedbackReason,
                       m.ChapterFeedbackReason.feedback_id.in_(feedback_ids), removed)
     for model in (m.ChapterFeedback, m.ReportFeedback, m.GuessAnswer, m.BarFigureJob,
-                  m.BarTradeFigure, m.BarPathSummary, m.Trip, m.OpenPosition, m.SkippedTrip,
+                  m.BarTradeFigure, m.BarPathSummary, m.BarDayRange, m.Trip, m.OpenPosition, m.SkippedTrip,
                   m.ImportRow):
         _delete_where(sess, model, model.import_id.in_(import_ids), removed)
     _delete_where(sess, m.TradingDayVersion,

@@ -12,7 +12,7 @@ Index of TD ids and their Jira tickets. No new rows: a new deferral is a Jira ti
 | TD-006 | tests/e2e | Engineering | TICKET-968 |
 | TD-007 | DOF ledger, append-only | Engineering | TICKET-962 |
 | TD-008 | .importlinter and the import-boundary job | Engineering | TICKET-937 |
-| TD-009 | Faithfulness suite | Engineering | Closed 17 Nov: dropped by the founder. |
+| TD-009 | Faithfulness suite | Engineering | Closed 17 Nov: dropped by the founder; confirmed on TICKET-1079, 25 Nov 2026. |
 | TD-010 | WALL.md signature | Engineering | TICKET-937 |
 | TD-011 | S5 and R8 run on stand-in labels | Research | TICKET-960 |
 | TD-012 | Class B gate reading rules | Research | TICKET-955 |
@@ -25,7 +25,7 @@ Index of TD ids and their Jira tickets. No new rows: a new deferral is a Jira ti
 | TD-019 | A condition almost determined by the day defeats M1 | Research | TICKET-897 |
 | TD-020 | M1's alpha and tau_day fail diagnostics in two regimes | Research | TICKET-897 |
 | TD-021 | Floor nu at 2 on correctness grounds | Research | TICKET-897 |
-| TD-022 | Per-day hybrid parameterisation for M1 | Research | Closed 17 Nov: dropped by the founder. |
+| TD-022 | Per-day hybrid parameterisation for M1 | Research | Closed 17 Nov: dropped by the founder; confirmed on TICKET-1079, 25 Nov 2026. |
 | TD-023 | B2 end-to-end test is red under the repository's own lock | Research | TICKET-975 |
 | TD-024 | The Dhan file map is a draft, not verified against Dhan's interface | Research | Closed 21 Oct: the file map was checked against Dhan and set to verified. |
 | TD-025 | The Dhan adapter maps every commodity row to an option, so an MCX future cannot be represented | Research | TICKET-964 |

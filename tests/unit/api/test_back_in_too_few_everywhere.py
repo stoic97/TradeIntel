@@ -64,7 +64,7 @@ def test_at_thirty_each_the_wedge_still_gives_the_median():
 def test_the_cards_legend_names_the_comparison_group_as_ruled(env):
     f = facts_of(paired(30, 20, 10))["back-in"]
     said = text(env.get_template("scope/cards/back-in.html").render(number=1, f=f))
-    assert "After a win or a level trade" in said, said
+    assert "After a win or a flat trade" in said, said
 
 
 @pytest.fixture()
@@ -83,4 +83,4 @@ def demo():
 def test_same_way_says_its_own_pairs_not_back_ins(demo):
     said = text(demo.get(S.fact_href("same-way")).text)
     assert "The same pairs as How fast you went back in" not in said
-    assert "after a level trade is left out" in said, said
+    assert "after a flat trade are left out" in said, said

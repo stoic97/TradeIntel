@@ -135,6 +135,9 @@ FACTORS: tuple[Factor, ...] = (
     F("Market before entry", "The last 15 minutes", K.AT_CLICK, S.NEEDS_BARS),
     F("Market before entry", "The market's regime", K.AT_CLICK, S.NEEDS_BARS,
       checks=("S5",)),
+    # Market after entry
+    F("Market after entry", "The half hour after you clicked", K.ONLY_AFTER, S.NEEDS_BARS,
+      sources=("services.production.api.after_clicked",), facts=("after",)),
     # Market after exit
     F("Market after exit", "The half hour after you closed", K.ONLY_AFTER, S.NEEDS_BARS,
       sources=("services.production.api.after_closed",), facts=("after-close",)),

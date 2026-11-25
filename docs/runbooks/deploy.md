@@ -206,14 +206,23 @@ misses. It reads the key from the environment:
 A second Scope on the same droplet, so a person can check a change before a trader
 sees it: `https://staging.scope.plusev.in`, behind a browser password (founder's
 password manager), on port 8001, in `/srv/scope-staging`, with its own database and
-session key. It runs `main`; production does not.
+session key. It runs `main`, or any commit `main` already holds; production runs only a
+tag.
 
 Refresh it by hand, as root, right before testing — never on a timer:
 
     /srv/scope-staging/deploy/refresh-staging.sh
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
 
-It restores the newest backup from `/var/backups/scope` into staging, checks out
-`origin/main`, starts `scope-staging`, and prints the version it runs. Migrations
+With no argument it takes `origin/main`. With one argument it takes that tag or sha
+instead, which is how a train whose tag sits behind `main` is checked (TICKET-1003). A
+ref that does not resolve, or that `origin/main` does not hold, is refused before the
+service stops, and staging keeps running what it was running. To judge a ref and change
+nothing, put `REFRESH_STAGING_CHECK_ONLY=1` before the command.
+
+It restores the newest backup from `/var/backups/scope` into staging, checks out the ref
+it was given, starts `scope-staging`, and prints the version it runs and whether that
+version was `main`. Migrations
 newer than production apply at startup, as they do in production. First install is
 the numbered block at the top of the script. Staging is never backed up; it is
 rebuilt from production's backups on every refresh. `deploy/scope-staging.service`
@@ -236,7 +245,7 @@ hour is reset: reconnect before pasting, or the block runs on your laptop.
 | f. Log it | same person | `docs/runbooks/deploys.md` |
 | g. Tell the traders | customer team | the loop tracker |
 
-### a. Refresh staging from `main`
+### a. Refresh staging at the sha the train will tag
 
     /srv/scope-staging/deploy/refresh-staging.sh
 
@@ -246,10 +255,33 @@ Expected, last lines:
     without the password: 401, as it must be
     from the app on :8001: {"status":"ok","code_version":"3f2a1bc"}
 
-    Staging is refreshed and running 3f2a1bc.
+    Staging is refreshed and running 3f2a1bc (origin/main).
 
 That sha is **what will be tagged**. Write it at the top of the train page. If the script
 stops, it names the step; fix that before anyone tests.
+
+A train split into two tags does not start at `main`. Give the script the first tag's
+sha, and staging runs that commit and nothing newer (TICKET-1003):
+
+    /srv/scope-staging/deploy/refresh-staging.sh 09919b5
+
+The last line then reads `Staging is refreshed and running 09919b5 (ref 09919b5, not
+main)`, and that sha is what step c tags. The ref must be a commit `origin/main` already
+holds; anything else is refused before the service stops. The second tag gets its own
+refresh, at its own sha, once the first train is live.
+
+The ref is a tag or a sha (7 to 40 lower-case hex characters). `main`, `HEAD` and
+`origin/main~3` are refused before the service stops, because a branch name moves.
+
+A ref older than the script has no script in its tree, and step 4 rewrites the checkout
+the script lives in. So before the first such refresh, copy the script outside the
+checkout and run that copy, and run it again for the refresh back to `main`:
+
+    install -m 755 /srv/scope-staging/deploy/refresh-staging.sh /usr/local/sbin/refresh-staging
+    /usr/local/sbin/refresh-staging 09919b5
+
+After the train is tagged, `/usr/local/sbin/refresh-staging` with no argument takes
+`origin/main` again. Install the copy afresh whenever `deploy/refresh-staging.sh` changes.
 
 ### b. UAT on staging
 
@@ -299,13 +331,24 @@ nothing. First, where production is and what the tag changes:
     git fetch --quiet --tags origin
     LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD); echo "live: $LIVE"
     git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/
-    git diff "$LIVE" "$TAG" -- migrations/versions | grep -nE "op\.(drop_|alter_column)" || echo "no destructive migration"
+    git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py || { echo "CHECK DID NOT RUN - no classifier in $TAG; classify by hand, do not assume Path A"; exit 1; }
+    python3 /tmp/classify_release.py "$LIVE" "$TAG"
+    case $? in
+      0) echo "PATH A - additive or no migration" ;;
+      1) echo "PATH B - destructive: stop the service BEFORE the snapshot, rollback is a DB restore" ;;
+      2) echo "READ BY HAND - Path B applies unless a person has read these migrations and says otherwise" ;;
+      *) echo "CHECK DID NOT RUN - classify by hand, do not assume Path A"; exit 1 ;;
+    esac
 
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
 the box by hand: stop and find out who before going on. `live:` is the previous tag (a
 sha only on the first train, or after a deploy that skipped the train). The last line
-decides the path: `no destructive migration` → **Path A**; any `drop_`/`alter_column`
-line → **Path B**.
+decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
+person reads those migrations and rules, and **Path B** applies until they do;
+`CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
+migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a
+rollback (in `downgrade()`) does not make a release destructive, and `batch.drop_column`
+counts the same as `op.drop_column`.
 
 Production then sits on a detached HEAD at the tag. That is correct, and `git status
 --short` still reports local changes, so the guard above still works. Do not "fix" it
