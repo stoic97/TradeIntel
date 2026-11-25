@@ -1,0 +1,22 @@
+{#- The shape of your days: his books on his worst days. Each cell says whether that book lost,
+    made money or didn't trade that day; no day or book is called anything. -#}
+{%- set wb = worst_books %}
+{%- if wb.shown %}
+<section class="shape" id="worst-books">
+  <h2 class="card-title numbers__heading">Your books on your worst days</h2>
+  <p class="body">On your {{ Figure(wb.count, "worst days")|count }} {{ "worst day" if wb.count == 1 else "worst days" }}, every book you traded lost on {{ Figure(wb.all_lost, "days")|count }}.</p>
+  <table class="table shape__grid">
+    <thead><tr><th scope="col">Day</th>{% for b in wb.books %}<th scope="col" class="shape__book">{{ b }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {%- for d in wb.days %}
+      <tr>
+        <th scope="row"><a class="link" href="{{ d.href }}">{{ d.day|day }}</a><span class="body-small num shape__net num--{{ 'gain' if d.net > 0 else 'loss' if d.net < 0 else 'zero' }}">{{ Figure(d.net, "rupees")|rupees }}</span></th>
+        {%- for c in d.cells %}
+        <td class="shape__cell">{% if c.href %}<a class="shape__tap" href="{{ c.href }}">{% endif %}<svg class="shape__swatch" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><rect x="0" y="0" width="20" height="20" rx="3" class="{{ c.tone }}"/></svg><span class="body-small shape__state">{{ {"lost": "lost", "made": "made money", "level": "level", "none": "no trades"}[c.state] }}</span>{% if c.href %}</a>{% endif %}</td>
+        {%- endfor %}
+      </tr>
+      {%- endfor %}
+    </tbody>
+  </table>
+</section>
+{%- endif %}

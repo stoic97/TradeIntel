@@ -81,6 +81,24 @@ class ConsentEvent(Base, _InsertOnly):
     wording_shown: Mapped[str] = mapped_column(Text)
 
 
+class BrokerConnection(Base):
+    """TICKET-896: the stored key behind a read-only broker pull. One row per trader per broker.
+
+    Not insert-only: disconnecting deletes the row, and so does /delete. The key is held
+    encrypted (the same Fernet key as uploaded files) and never logged. The consent for it
+    is a ``broker_pull`` row in the ledger, kept apart from the diagnosis consent.
+    """
+
+    __tablename__ = "broker_connection"
+    __table_args__ = (UniqueConstraint("trader_id", "broker",
+                                       name="uq_broker_connection_trader_broker"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    broker: Mapped[str] = mapped_column(String(32))
+    token_ciphertext: Mapped[str] = mapped_column(Text)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RiskBudgetDeclaration(Base, _InsertOnly):
     """PRD 5.5. A percentage requires the capital, or no trip has a denominator."""
 
@@ -447,6 +465,26 @@ class RuleDeclaration(Base, _InsertOnly):
     screen: Mapped[str | None] = mapped_column(String(32))
 
 
+class Challenge(Base):
+    """A challenge he set himself: 10 or 20 exchange trading days and one to three
+    of the rules he set. Written once when he starts it; only how it ended (with its card) and his
+    share link change after that, so it is not insert-only. ``rule_ids`` is a JSON list of
+    ``rule_declaration`` ids; ``start_day`` an India date."""
+
+    __tablename__ = "challenge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    rule_ids: Mapped[str] = mapped_column(Text)
+    length: Mapped[int] = mapped_column(Integer)
+    start_day: Mapped[str] = mapped_column(String(10))
+    started_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
+    ended_how: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    share_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    card_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """The card as it read when it ended; a later upload never recounts it."""
+
+
 class PreTradeNote(Base, _InsertOnly):
     """Two taps before a click: the book and the reason, matched to a fill on upload."""
 
@@ -565,6 +603,8 @@ class BarTradeFigure(Base):
     took: Mapped[str | None] = mapped_column(String(32))
     path: Mapped[str | None] = mapped_column(Text)
     short: Mapped[bool] = mapped_column(Boolean, default=False)
+    after_exit: Mapped[str | None] = mapped_column(Text)
+    """The 30 minutes after the exit, as JSON, the exit's close as zero."""
 
 
 class BarPathSummary(Base):

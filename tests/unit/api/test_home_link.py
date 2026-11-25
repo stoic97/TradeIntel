@@ -77,6 +77,7 @@ def params(engine) -> dict[str, list[str]]:
         "n": [str(c.number) for c in S.CHAPTERS],
         "key": list(S.FACTS),
         "iso": [str(day)],
+        "token": ["no-such-link"],  # the challenge card's share link: none made, so it 404s
     }
 
 
