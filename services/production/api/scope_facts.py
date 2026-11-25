@@ -178,6 +178,81 @@ def _chart(kind: str, ctx: dict, imp, w: float, h: float, mini: bool):
     return G.chart_notold(w, h, mini)
 
 
+def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
+    """A fact's chart on its dial wedge, and what it shows in words.
+
+    One of the kit's straight forms at the dial's MINI size, drawn from the figures the fact's own
+    page is built from. A fact that no form fits, or that has nothing to draw, has none.
+    """
+    w, h, rupees, count = dial.MINI_W, dial.MINI_H, formatting.rupees, formatting.count
+    if key == "hidden":
+        rows = [r for r in ctx["book_halves"] if r.state is COUNTED]
+        if not rows:
+            return None, ""
+        row = max(rows, key=lambda r: r.trades)
+        one, two = row.first.net_per_trade, row.second.net_per_trade
+        return G.chart_pair(_f(one), _f(two), w, h), (
+            f"{row.book}: {rupees(one)} a trade in the first half, {rupees(two)} in the second."
+        )
+    if key == "worst-days":
+        sh = ctx["share"]
+        return G.chart_split(_f(sh.five_day_sum), _f(sh.other_days_net), w, h), (
+            f"Five worst days {rupees(sh.five_day_sum)}; "
+            f"the other {count(sh.other_days_count)} days {rupees(sh.other_days_net)}."
+        )
+    if key == "share":
+        return _chart("share", ctx, imp, w, h, True), ""
+    if key == "money":
+        if not ctx["best"] or not ctx["worst"]:
+            return None, ""
+        best, worst = ctx["best"][0].net, ctx["worst"][0].net
+        return G.chart_pair(_f(best), _f(worst), w, h), (
+            f"Best trade {rupees(best)}; worst trade {rupees(worst)}."
+        )
+    if key == "math":
+        rate, even = ctx["strike"].rate_percent, ctx["break_even"].percent
+        if rate is None:
+            return None, ""
+        said = f"{formatting.out_of_a_hundred(rate)} trades made money"
+        if even is not None:
+            said += f"; break-even at {formatting.out_of_a_hundred(even)}"
+        return G.chart_meter(_f(rate) / 100, None if even is None else _f(even) / 100, w, h), said + "."
+    if key == "run":
+        ids = set(ctx["run"].trip_ids)
+        nets = [t.net for t in ctx["trips"] if t.trip_id in ids]
+        return G.chart_steps([_f(v) for v in nets], w, h), (
+            f"{count(len(nets))} losses in a row, {rupees(sum(nets, Decimal(0)))} in all."
+        )
+    if key == "clock":
+        lead = mx.lead_clock(ctx["clocks"])
+        if lead is None:
+            return None, ""
+        mark = [hr.hour for hr in lead.hours].index(lead.largest.hour)
+        return G.chart_hours([_f(hr.net) for hr in lead.hours], mark, w, h), (
+            f"{_hour_words(lead.largest.hour)} hour {rupees(lead.largest.net)}; "
+            f"every hour {rupees(lead.net)}."
+        )
+    if key == "down":
+        tl = ctx["two_losses"]
+        if tl.condition_mean is None or tl.comparison_mean is None:
+            return None, ""
+        return G.chart_pair(_f(tl.condition_mean), _f(tl.comparison_mean), w, h), (
+            f"After two straight losses {rupees(tl.condition_mean)} a trade; "
+            f"other trades {rupees(tl.comparison_mean)}."
+        )
+    if key == "busiest":
+        days = ctx["days"]
+        texts = [count(days.busiest_trips), count(days.normal_day)]
+        return G.chart_counts(days.busiest_trips, _f(days.normal_day), w, h, texts), (
+            f"{texts[0]} trades on the busiest day; {texts[1]} on a normal day."
+        )
+    if key == "unread":
+        return _chart("read", ctx, imp, w, h, True), (
+            f"{count(imp.rows_parsed)} of {count(imp.rows_in)} rows read."
+        )
+    return None, ""  # the risk figure and what we have not told you: no form fits them
+
+
 def _state(key: str, ctx: dict) -> str:
     if key == "after-close" and not ACL.view(ctx)["enough"]:
         return "not-enough"  # under 30 measured losing trades, or none worked out yet
@@ -302,8 +377,7 @@ def _same_way_view(ctx: dict) -> dict:
     if loss_n >= least and win_n >= least:
         line = Markup("After a loss, your next trade went the same way {} times; after a win, {}.").format(
             _w(_rate(nt.same_after_loss, loss_n), "trades", "out_of_a_hundred", loss_href),
-            _w(int(_rate(nt.same_after_win, win_n).quantize(Decimal(1), rounding="ROUND_HALF_UP")),
-               "of 100", opens=win_href))
+            _w(_rate(nt.same_after_win, win_n), "trades", "out_of_a_hundred", win_href))
     else:
         line = Markup("After a loss, your next trade went the same way {} of {} times; ").format(
             _w(nt.same_after_loss, "trades", opens=loss_href if loss_n else None), _w(loss_n, "trades"))
@@ -319,6 +393,9 @@ def _same_way_view(ctx: dict) -> dict:
             {"label": "After a loss", "same": nt.same_after_loss, "other": nt.other_after_loss, "href": loss_href},
             {"label": "After a win", "same": nt.same_after_win, "other": nt.other_after_win, "href": win_href},
         ],
+        "rests_on": Markup("Counted over {} {}: {} after a loss, {} after a win.").format(
+            _w(loss_n + win_n, "pairs"), "pair" if loss_n + win_n == 1 else "pairs",
+            _w(loss_n, "pairs"), _w(win_n, "pairs")),
         "no_direction": nt.no_direction,
         "scratch": nt.scratch,
     }
@@ -343,6 +420,16 @@ def _next_day_view(ctx: dict) -> dict:
     return {"line": line, "rows": rows,
             "best_days": [formatting.day(d) for d in da.best],
             "worst_days": [formatting.day(d) for d in da.worst]}
+
+
+def _next_day_too_few(ctx: dict) -> Markup:
+    """With too few traded days for a best and a worst tenth apart: how many, and how many it needs."""
+    have = len({t.exit_ts.date() for t in ctx["trips"]})
+    least = mx.BIG_DAYS_AT_LEAST
+    return Markup("You traded on {} {}. This needs at least {}: "
+                  "your {} best days and your {} worst.").format(
+        _w(have, "days"), "day" if have == 1 else "days", _w(2 * least, "days"),
+        _w(least, "days"), _w(least, "days"))
 
 
 def _trades_said(n: int) -> str:
@@ -668,6 +755,17 @@ def _story_words(story) -> dict:
             "back_in": story.back_in}
 
 
+COUNTED_ON_WORDS = {"opened": "A trade counts here on the day you opened it."}
+
+
+def _counted_on(state, trips: list) -> str | None:
+    """Which day a trade counts on, said only where his file makes it matter: a trade that closed
+    on a later day. Never in a state with too few days to count."""
+    if state or not mx.closes_on_a_later_day(trips):
+        return None
+    return COUNTED_ON_WORDS[mx.WORST_DAYS_COUNT_ON]
+
+
 def days_worst_to_best(trips: list) -> list[dict]:
     """Every trading day, worst to best (ties: earlier date first), with the running total
     of the days so far. The last total is the record's result: the shape is the share."""
@@ -944,6 +1042,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         behind = len(S.trades_behind(key, ctx))
         lead = Figure("—", "no figure yet") if state else _figure(key, ctx, imp)
         opens = None if state else _opens(key, ctx)
+        mini, mini_label = (None, "") if state else _mini(key, ctx, imp)
         out[key] = {
             "key": key,
             "finding": findings.of(key),  # both labels, or Unlabelled before any page
@@ -959,7 +1058,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
             "chart": None
             if state or kind not in CARD_H
             else _chart(kind, ctx, imp, CARD_W, CARD_H[kind], False),
-            "mini": None if state else _chart(kind, ctx, imp, dial.MINI_W, dial.MINI_H, True),
+            "mini": mini,
+            "mini_label": mini_label,
         }
     out["worst-days"].update(
         first_day=formatting.day(series[0].trading_day) if series else "",
@@ -993,6 +1093,8 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
         out["same-way"].update(_same_way_view(ctx))
     if not out["next-day"]["state"]:
         out["next-day"].update(_next_day_view(ctx))
+    else:
+        out["next-day"]["too_few"] = _next_day_too_few(ctx)
     out["money"]["days"] = [formatting.day(t.trading_day) for t in ctx["best"] + ctx["worst"]]
     # The card names each group's days beside its words, in the bars' order (the kit's chart
     # itself is byte for byte, so the dates can't go inside it).
@@ -1034,6 +1136,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
             caption="Your days, worst to best"),
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
+        counted_on=_counted_on(out["worst-days"]["state"], trips),
         all_trades_href=S.see_all_href("worst-days"),
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
@@ -1358,6 +1461,8 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
                 item["chart"] = ""  # a share that is not a percentage draws no bar
             else:
                 item["mini"] = fig["mini"]
+                if fig["mini_label"]:
+                    item["miniLabel"] = fig["mini_label"]
         every.append(item)
         if f.on_phone_dial:
             items.append(item)

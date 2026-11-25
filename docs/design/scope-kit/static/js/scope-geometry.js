@@ -82,6 +82,8 @@
     phone: { stageW: 358, stageH: 358, R: 130, nameSize: 11, nameLine: 14, edge: 187, figSizesHome: [22, 18], figSizesChapter: [18, 15] },
     desktop: { stageW: 640, stageH: 560, R: 220, nameSize: 13, nameLine: 17, edge: 312, figSizesHome: [32, 22], figSizesChapter: [22, 18] }
   };
+  /** A mini chart in a wedge: big enough that each mark reads on a phone (TICKET-1036). */
+  const MINI = { w: 72, h: 20 };
   // `edge`: how far a name may run from the stage centre (phone: to 8 px from a 390 px screen edge).
 
   /**
@@ -208,7 +210,7 @@
 
   /**
    * The block a slice's contents occupy. Rows, top to bottom:
-   *   number (11 px mono, own line) · 4 px · figure head · [figure tail, 11 px] · 3 px · mini chart 36×14 (chapters)
+   *   number (11 px mono, own line) · 4 px · figure head · [figure tail, 11 px] · 3 px · mini chart MINI.w×MINI.h (chapters)
    * A result state replaces the figure with "—" and a two-line state label.
    */
   function sliceBlock(item, figSize, stacked) {
@@ -221,8 +223,8 @@
     const tailW = monoWidth(tail, 11);
     const lh = Math.round(figSize * 1.15);
     const rowA = 13 + 4 + lh + (tail ? 13 : 0);
-    const rowB = state ? 28 : (item.chart ? 14 : 0);
-    const w = Math.max(headW, tailW, rowB ? (state ? 66 : 36) : 0, 8);
+    const rowB = state ? 28 : (item.chart ? (item.miniH || MINI.h) : 0);
+    const w = Math.max(headW, tailW, rowB ? (state ? 66 : (item.miniW || MINI.w)) : 0, 8);
     return { head, tail, tight, figSize, lineHeight: lh, rowA, rowB, w, h: rowA + (rowB ? 3 + rowB : 0) };
   }
 
@@ -306,7 +308,7 @@
       const it = view.items[i], b = lay.blocks[i], q = polar(cx, cy, lay.radius[i], sl.mid);
       const top = q[1] - b.h / 2;
       return {
-        index: i, number: String(i + 1), name: it.name, href: it.href, state: it.state || '', opened: !!it.opened,
+        index: i, number: String(i + 1), name: it.name, miniLabel: it.miniLabel || '', href: it.href, state: it.state || '', opened: !!it.opened,
         start: sl.start, end: sl.end, mid: sl.mid,
         hit: wedge(cx, cy, sl.start, sl.end, rr.ring, rr.outer),            // the whole slice is the tap target
         focusRing: wedge(cx, cy, sl.start + 1.5, sl.end - 1.5, rr.divStart - 4 * rr.u, rr.inner - 2),
@@ -323,6 +325,7 @@
           chartY: top + b.rowA + 3,                      // top of the mini chart / state label
           head: b.head, tail: b.tail, tight: b.tight, figSize: b.figSize, lineHeight: b.lineHeight,
           chart: it.state ? '' : (it.chart || ''),
+          miniW: it.miniW || MINI.w, miniH: it.miniH || MINI.h,  // a crowded wedge may draw its mini smaller
           tone: it.state ? 'state' : (/^−₹|^-₹/.test(it.figure) ? 'rupee' : 'plain')
         },
         label: nameLabel(it.name, sl.mid, cx, cy, rr, size, opts)
@@ -353,7 +356,8 @@
 
   /**
    * Render the dial as inline SVG. Class names match components.css (.scope__*).
-   * miniCharts: optional map kind → inner SVG markup for a 36 × 14 chart.
+   * miniCharts: optional map kind → inner SVG markup for a MINI.w × MINI.h chart. A slice's
+   * miniLabel, when given, is read after its name: what its mini chart shows, in words.
    * Values in item.figure / centre are written as given — pass Jinja placeholders
    * (e.g. "{{ ch1_figure }}") to get a template.
    */
@@ -371,14 +375,14 @@
     o.push(`<g class="scope__dividers">${d.dividers.map((p) => `<path class="scope__divider" d="${p}"/>`).join('')}</g>`);
     d.slices.forEach((s) => {
       const c = s.contents;
-      o.push(`<a class="scope__slice${s.state ? ' scope__slice--' + s.state : ''}" href="${s.href}" aria-label="${esc(s.name + '.')}">`);
+      o.push(`<a class="scope__slice${s.state ? ' scope__slice--' + s.state : ''}" href="${s.href}" aria-label="${esc(s.name + '.' + (s.miniLabel && !s.state ? ' ' + s.miniLabel : ''))}">`);
       o.push(`<path class="scope__hit" d="${s.hit}"/><path class="scope__lift" d="${s.lift}"/><path class="scope__focus" d="${s.focusRing}"/>`);
       if (s.openedMark) o.push(`<circle class="scope__opened" cx="${fmt(s.openedMark[0])}" cy="${fmt(s.openedMark[1])}" r="${d.size === 'phone' ? 2 : 2.5}"/>`);
       // No serial beside the figure (TICKET-843): order is the slice's position and its name.
       if (c.head) o.push(textBlock([c.head], c.x, c.headY, c.lineHeight, c.figSize, 'center', `scope__figure scope__figure--s${c.figSize} scope__figure--${c.tone}${c.tight ? ' scope__figure--tight' : ''}`));
       if (c.tail) o.push(textBlock([c.tail], c.x, c.tailY, 13, 11, 'center', `scope__figure-tail scope__figure--${c.tone}`));
       if (s.state) o.push(textBlock(s.state === 'not-enough' ? ['not enough', 'trades yet'] : ['not in', 'your file'], c.x, c.chartY, 14, 11, 'center', 'scope__state'));
-      else if (c.chart) o.push(`<g class="scope__mini chart chart--on-navy" transform="translate(${fmt(c.x - 18)} ${fmt(c.chartY)})">${miniCharts[c.chart] || ''}</g>`);
+      else if (c.chart) o.push(`<g class="scope__mini chart chart--on-navy" transform="translate(${fmt(c.x - c.miniW / 2)} ${fmt(c.chartY)})${c.miniW !== MINI.w || c.miniH !== MINI.h ? ` scale(${fmt(c.miniW / MINI.w)} ${fmt(c.miniH / MINI.h)})` : ''}">${miniCharts[c.chart] || ''}</g>`);
       o.push('</a>');
       o.push(`<path class="scope__leader" d="${s.label.leader}"/>`);
       o.push(textBlock(s.label.lines, s.label.x, s.label.top, s.label.lineHeight, 11, s.label.align, 'scope__name'));
@@ -446,6 +450,8 @@
    *   ink (emphasis), light (context), faint (secondary), red / green (signed rupees),
    *   hatch (not enough / not in file), axis, stroke (brackets, medians), dash (reference line).
    * Data are plain numbers. `mini` charts (36 × 14) use the same functions with small w/h.
+   * A dial's own minis (MINI.w × MINI.h, TICKET-1036) are the straight forms after notold:
+   * meter, split, pair, steps, counts, hours. A chart may carry labels, { x, y, t }, drawn as text.
    */
   const R2 = (x, y, w, h) => `M${fmt(x)} ${fmt(y)}h${fmt(w)}v${fmt(h)}h${fmt(-w)}Z`;
   const DOT = (x, y, r) => circle(x, y, r);
@@ -525,12 +531,52 @@
     notold(w, h, mini) {
       let light = ''; [1, 0.86, 0.94, 0.6].forEach((v, i) => { light += R2(0, (i + 0.5) * h / 4 - (mini ? 0.75 : 2), v * w, mini ? 1.5 : 4); });
       return { w, h, parts: partsOf({ light }) };
+    },
+    /** A rate against the rate it needs, both 0–1: a track, a fill to the rate, a tick at the target. */
+    meter(value, target, w, h) {
+      const bh = h * 0.4, y0 = h * 0.3, m = { faint: R2(0, y0, w, bh), ink: R2(0, y0, w * clamp01(value), bh), stroke: '' };
+      if (target !== null && target !== undefined) m.stroke = `M${fmt(w * clamp01(target))} 0V${h}`;
+      return { w, h, parts: partsOf(m) };
+    },
+    /** One part of a whole (ink) against the rest: green where the rest made money, light where it did not. */
+    split(part, rest, w, h) {
+      const a = Math.abs(part), tot = Math.max(a + Math.abs(rest), 1), bh = h * 0.5, y0 = h * 0.25;
+      const pw = Math.max(1, Math.min(w - 3, w * a / tot)), m = { ink: R2(0, y0, pw, bh), green: '', light: '' };
+      m[rest > 0 ? 'green' : 'light'] = R2(pw + 2, y0, w - pw - 2, bh);
+      return { w, h, parts: partsOf(m) };
+    },
+    /** Two signed figures from one zero line, a on the left and b on the right: a gain up, a loss down. */
+    pair(a, b, w, h) {
+      const max = Math.max(Math.abs(a), Math.abs(b), 1), z = h / 2, bw = w * 0.3, m = { green: '', red: '', axis: `M0 ${fmt(z)}H${w}` };
+      [a, b].forEach((v, i) => { const bh = Math.max(1, Math.abs(v) / max * (z - 1)); const r = R2(w * (i ? 0.6 : 0.1), v > 0 ? z - bh : z, bw, bh); if (v > 0) m.green += r; else m.red += r; });
+      return { w, h, parts: partsOf(m) };
+    },
+    /** A losing run stepping down: one step per loss, each as deep as that loss. */
+    steps(nets, w, h) {
+      const tot = Math.max(nets.reduce((s, v) => s + Math.abs(v), 0), 1), g = w / Math.max(1, nets.length);
+      let run = 0, red = '';
+      nets.forEach((v, i) => { const d = Math.abs(v) / tot * (h - 1); red += R2(i * g + g * 0.1, run, g * 0.8, Math.max(0.8, d)); run += d; });
+      return { w, h, parts: partsOf({ red, axis: `M0 0.5H${w}` }) };
+    },
+    /** Two counts side by side, each with its number under it: a (ink) against b (faint). */
+    counts(a, b, w, h, texts) {
+      texts = texts || [String(a), String(b)];
+      const max = Math.max(a, b, 1), top = h - 9, bw = w * 0.18, m = { ink: '', faint: '' }, labels = [];
+      [a, b].forEach((v, i) => { const bh = Math.max(1, v / max * (top - 1)); const x = w * (i ? 0.55 : 0.12); m[i ? 'faint' : 'ink'] = R2(x, top - bh, bw, bh); labels.push({ x: fmt(x + bw / 2), y: fmt(h), t: texts[i] }); });
+      return { w, h, parts: partsOf(m), labels };
+    },
+    /** Net (gross) by the hour a trade was opened: the marked hour in full, the rest faint; gains up, losses down. */
+    hours(hourNet, mark, w, h) {
+      const n = Math.max(1, hourNet.length), bw = w / n, z = h * 0.5, max = Math.max(...hourNet.map(Math.abs), 1), m = { green: '', red: '', faint: '', axis: `M0 ${fmt(z)}H${w}` };
+      hourNet.forEach((v, i) => { const bh = Math.max(0.6, Math.abs(v) / max * (z - 0.5)); const r = R2(i * bw + bw * 0.15, v > 0 ? z - bh : z, bw * 0.7, bh); if (i !== mark) m.faint += r; else if (v > 0) m.green += r; else m.red += r; });
+      return { w, h, parts: partsOf(m) };
     }
   };
 
   /** Chart → SVG markup (inner parts only, or wrapped when `wrap` is true). */
   function renderChart(c, cls, wrap) {
-    const inner = c.parts.map((p) => `<path class="chart__${p.role}" d="${p.d}"/>`).join('');
+    const inner = c.parts.map((p) => `<path class="chart__${p.role}" d="${p.d}"/>`).join('')
+      + (c.labels || []).map((l) => `<text class="chart__label" x="${l.x}" y="${l.y}" text-anchor="middle">${esc(l.t)}</text>`).join('');
     return wrap ? `<svg class="chart ${cls || ''}" viewBox="0 0 ${c.w} ${c.h}" width="${c.w}" height="${c.h}" aria-hidden="true">${inner}</svg>` : inner;
   }
 
@@ -556,5 +602,5 @@
     };
   }
 
-  return { fmt, clamp01, easeInOut, polar, radial, arc, circle, wedge, sansWidth, monoWidth, CHAR_WIDTH, SIZES, radii, sectors, ticks, nameLabel, stackedSplit, sliceBlock, blockClearance, layoutContents, buildDial, renderDialSVG, buildLens, scopeInAt, charts, renderChart, tradeStrip };
+  return { fmt, clamp01, easeInOut, polar, radial, arc, circle, wedge, sansWidth, monoWidth, CHAR_WIDTH, SIZES, MINI, radii, sectors, ticks, nameLabel, stackedSplit, sliceBlock, blockClearance, layoutContents, buildDial, renderDialSVG, buildLens, scopeInAt, charts, renderChart, tradeStrip };
 }));

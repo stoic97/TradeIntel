@@ -20,7 +20,48 @@ from markupsafe import Markup, escape
 
 from services.production.api import scope_geometry as G
 
-MINI_W, MINI_H = 36, 14
+MINI_W, MINI_H = G.MINI["w"], G.MINI["h"]  # the kit's: 72 x 20
+FIT_ON_A_PHONE = -13  # the layout's own limit, as test_dial_states_facts holds every dial to it
+SMALLER = ((64, 20), (56, 20), (48, 20), (48, 16))
+"""Mini sizes a phone wedge steps down through when MINI_W x MINI_H will not clear it. A side wedge
+of a three-wedge phone dial cannot hold 72 px at any figure size the kit has."""
+
+
+def fitted(items: list, fig_sizes: list, size: str = "phone") -> list:
+    """A chapter's wedges with each mini as wide as its wedge clears, MINI_W where it can.
+
+    The most crowded wedge steps down first, one width at a time, and the dial is laid out again
+    after each step, since one wedge's block moves the shared radius for all of them. A wedge
+    that still does not clear at the smallest size draws no mini: its figure and reference line
+    say the fact, and the fact page carries the chart."""
+    z = G.SIZES[size]
+    rr, sec = G.radii(z["R"]), G.sectors(len(items), False)
+    items = list(items)
+    for _ in range(len(items) * (len(SMALLER) + 1)):
+        lay = G.layout_contents(items, sec, rr, fig_sizes)
+        worst = None
+        for i, block in enumerate(lay["blocks"]):
+            it = items[i]
+            if it.get("state") or not it.get("chart"):
+                continue
+            clear = G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], block, rr)
+            if clear < FIT_ON_A_PHONE and (worst is None or clear < worst[1]):
+                worst = (i, clear)
+        if worst is None:
+            break
+        i = worst[0]
+        if _step(items[i]) == len(SMALLER):
+            items[i] = {**items[i], "chart": ""}  # no size clears: the wedge drops its mini
+        else:
+            w, h = SMALLER[_step(items[i])]
+            items[i] = {**items[i], "miniW": w, "miniH": h}
+    return items
+
+
+def _step(item: dict) -> int:
+    """How many sizes down from MINI a wedge's mini already is."""
+    now = (item.get("miniW") or MINI_W, item.get("miniH") or MINI_H)
+    return SMALLER.index(now) + 1 if now in SMALLER else 0
 OPTS = {"threeLineNames": G.THREE_LINE_NAMES}
 CRUMB_LIMIT = 44  # characters in "Scope › chapter › fact" on the phone (the kit's path note)
 STRIP_W = 350  # a trade strip's drawing width; the SVG stretches it to the column
@@ -58,6 +99,7 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
         _text(item["name"], "name")
         _text(item["figure"], "figure")
         _text(item.get("label") or "", "label")
+        _text(item.get("miniLabel") or "", "mini label")
         kind = item.get("chart") or ""
         if kind and not item.get("state"):
             if "mini" not in item:
@@ -66,6 +108,8 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
         href = item.get("href")
         items.append({**item, "href": str(escape(href)) if href else ""})
 
+    if view["kind"] == "chapter":
+        items = fitted(items, view.get("figSizes") or G.SIZES[size]["figSizesChapter"], size)
     built = G.build_dial({**view, "items": items, "centre": centre}, size, OPTS)
     return Markup(G.render_dial_svg(built, minis))
 

@@ -145,6 +145,7 @@ def many_pairs():
     return out
 
 
+@pytest.mark.skip(reason="superseded: every rate reads N of 100 in every sentence (the rates-of-100 rule on main); the after-a-win half now reads \"50 of 100\", pinned in test_same_way_pairs_and_day_after_page. Assertion left as written.")
 def test_the_same_way_rates_from_thirty():
     figs = facts_of(many_pairs())
     assert words(figs["same-way"]["line"]) == (
