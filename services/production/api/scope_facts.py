@@ -217,9 +217,9 @@ def _mini(key: str, ctx: dict, imp) -> tuple[dict | None, str]:
         rate, even = ctx["strike"].rate_percent, ctx["break_even"].percent
         if rate is None:
             return None, ""
-        said = f"{formatting.out_of_a_hundred(rate)} trades made money"
+        said = f"{formatting.out_of_a_hundred_beside(rate, even)} trades made money"
         if even is not None:
-            said += f"; break-even at {formatting.out_of_a_hundred(even)}"
+            said += f"; break-even at {formatting.out_of_a_hundred_beside(even, rate)}"
         return G.chart_meter(_f(rate) / 100, None if even is None else _f(even) / 100, w, h), said + "."
     if key == "run":
         ids = set(ctx["run"].trip_ids)
