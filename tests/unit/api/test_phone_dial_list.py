@@ -49,21 +49,22 @@ def pages():
 def dials(html: str) -> list[str]:
     return re.findall(r'<div class="scope[^"]*">.*?</svg>', html, flags=re.DOTALL)
 
-# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, with
-# the minis TICKET-1036 redrew at 72 x 20.
+# Every dial on the demo pages, phone then desktop, as main drew them before TICKET-1002, then
+# re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
+# views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["4dc4d7bcd2a4994688fdcac075024102cd1bdd189bd9c25b89ff88c1533840e0",
-                "c4f3c085500933b994281bd76c1bc5ce99047e9c9911ba0ca2e2289a53b7ab20"],
-    "/mirror/chapter/1": ["7cbaace90a5d06e70e6898060ba53430367d4752a0a9627df67f13a067003374",  # phone: 1027 shortens a five-digit best trade
-                          "649a0e5c1f1ac84420f26a8233c8d24e0bb8ef2d080030cc178dc15c8984e60a"],
-    "/mirror/chapter/2": ["41452ba3d497737547f663b59b0584d631e1555baefb28c0fbb70781fb262920",
-                          "461200496621249aa300f6ec7c831dbec35ad456dbea8d580983d6f50c99175d"],  # desktop: 1001 adds a wedge
-    "/mirror/chapter/3": ["ab076e1d93d341d0e16b00a26df8b69caec6e8ba7f72e096c706a882ba152c33",
+    "/mirror": ["983a730f1a147362f65a3259dd0140628eb3fb76e36abb624a240740d6193bac",
+                "dc43965c99e54af2e71865fa7dec525fe65704149d05658b0936a2d17ddc4737"],
+    "/mirror/chapter/1": ["43435fe12960253b9d9bbd502a41633fa586ab113e4cae6212a86b7f12db3355",  # phone: 1027 shortens a five-digit best trade
+                          "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc"],
+    "/mirror/chapter/2": ["b5abedfd416bc7f8b79ea1e1f847b786236e4ae978ffbeae52a4f06b3a992e8e",
+                          "9e13b9bcc5ea14c455b9699f5b7d94769cba58ba60fd97c2120e1ddf1b52fc49"],  # desktop: 1001 adds a wedge
+    "/mirror/chapter/3": ["96dd8e59f664620302a9d8025e82164d62dc1d7d3afdb3a044f32591e7b9b31d",
                           # Desktop: three more wedges since What you do next (1006), and a sixth for After
                           # you closed; the phone dial is main's.
-                          "50d72ea23497c77f04d6a5893d06373dc01a02c0e799617cf3e89eabb8cbe3ad"],
-    "/mirror/chapter/4": ["c1e506fcfa77485e7d82e87d3b63c461ba3db7e8339b3d1cf47143fc20e7a6d3",
-                          "f27265173a763ba6714eaf862faaf4ec3788090d7645311a1b2556fa5b34ce7b"],
+                          "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf"],
+    "/mirror/chapter/4": ["41c0f9a155759c6061ff061590074f9078525daaee05f89741d84436070e41f1",
+                          "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572"],
 }
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "6bd6d18fd0286f13bb41da988d151ed1e2605c7dfa9b16eba4045e841583bfb7",

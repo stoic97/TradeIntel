@@ -91,11 +91,17 @@ def scope_dial(view: dict, size: str = "phone") -> Markup:
             _text(centre[key], f"centre {key}")
     for line in centre.get("captionLines") or ():
         _text(line, "centre caption")
+    if centre.get("readLine"):
+        _text(centre["readLine"], "centre reading")
+    if view.get("progressLabel"):
+        _text(view["progressLabel"], "reading")
     if centre.get("scopeHref"):
         centre["scopeHref"] = str(escape(centre["scopeHref"]))
 
     if size == "desktop" and view.get("desktop_items"):  # every fact keeps its wedge (Fact.on_phone_dial)
         view = {**view, "items": view["desktop_items"]}
+        if view.get("desktop_progress"):
+            view["progress"] = view["desktop_progress"]
     items, minis = [], {}
     if view["kind"] == "home" and size == "phone" and any("phone_label" in i for i in view["items"]):
         view = {**view, "figSizes": HUB_FIG_SIZES_PHONE}  # all of them the kit's own classes

@@ -115,5 +115,5 @@ def test_trade_strip(times, width, height, want):
 
 def test_every_recorded_dial_view_is_checked():
     # A view added to record.js without a test above would pass silently; this one would not.
-    assert len(CASES["dials"]) == 15
+    assert len(CASES["dials"]) == 17  # stacked: the reading cases (1037) and the reference cases (1035) on 13
     assert len(CASES["charts"]) == 52 + 36  # TICKET-1036: six dial forms, three inputs, two sizes

@@ -67,6 +67,14 @@ const VIEWS = {
     { key: 'run', name: 'Longest losing run', figure: '10 trades', chart: 'run', opened: true },
     { key: 'clock', name: 'The clock', figure: '10:00', chart: 'clock' },
   ]), 'phone'],
+  chapter_2_reading_phone: [Object.assign(chapter('Your patterns', [
+    { key: 'hold', name: 'How long you hold', figure: '30 · 10 min', chart: 'hold', opened: true },
+    { key: 'strike', name: 'Strike rate', figure: '16%', chart: 'strike' },
+    { key: 'run', name: 'Longest losing run', figure: '10 trades', chart: 'run' },
+  ]), { progress: ['opened', 'current', 'unread'], progressLabel: '1 of 3 facts read',
+    centre: { name: 'Your patterns', scopeHref: '/mirror?enter=out&amp;tap=2', readLine: '1 of 3 facts read' } }), 'phone'],
+  home_phone_reading: [Object.assign(home(['96%', '30 · 10 min', '3', '38 of 40', '96%']),
+    { progress: ['opened', 'opened', 'current', 'unread'], progressLabel: '7 of 12 facts read' }), 'phone'],
   chapter_1_desktop: [chapter('Where your results came from', [
     { key: 'worst-days', name: 'Your worst trading days', figure: '−₹24,000', chart: 'worst' },
     { key: 'share', name: 'Share of your result', figure: '96%', chart: 'share' },

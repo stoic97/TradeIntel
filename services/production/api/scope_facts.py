@@ -1468,7 +1468,21 @@ def _list_row(f, fig: dict, item: dict) -> dict:
     }
 
 
-def chapter_view(n: int, figs: dict[str, dict]) -> dict:
+def reading_states(keys: list[str], read: frozenset[str]) -> list[str]:
+    """Each page's place in his reading: opened, the first not opened (current), or unread."""
+    states = ["opened" if k in read else "unread" for k in keys]
+    if "unread" in states:
+        states[states.index("unread")] = "current"
+    return states
+
+
+def read_line(done: int, total: int) -> str:
+    """"1 of 3 read": what the ring says, in words."""
+    fig = Figure(done, "read")
+    return f"{fig.value} of {total} {fig.noun}"
+
+
+def chapter_view(n: int, figs: dict[str, dict], read: frozenset[str] | None = None) -> dict:
     """The chapter's dial, for the dial macro: its facts as slices, its name in the centre.
 
     On a phone the dial keeps the wedges main had for it: a fact off it
@@ -1477,6 +1491,8 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     its dial has neither, and is drawn as it always was."""
     c = S.chapter(n)
     items, every, rows = [], [], []
+    states = reading_states([f.key for f in c.facts], read or frozenset())
+    on_phone: list[str] = []
     for f in c.facts:
         fig = figs[f.key]
         item = {
@@ -1496,6 +1512,7 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
         every.append(item)
         if f.on_phone_dial:
             items.append(item)
+            on_phone.append(states[len(every) - 1])
         else:
             rows.append(_list_row(f, fig, item))
     items, every = mark_first(items), mark_first(every)
@@ -1506,6 +1523,12 @@ def chapter_view(n: int, figs: dict[str, dict]) -> dict:
     }
     if rows:
         view.update(desktop_items=every, phone_list=rows)
+    if read is not None:  # the page passes his reading; the ring replaces the ticks
+        words = read_line(states.count("opened"), len(states))
+        view["centre"]["readLine"] = words
+        view.update(progress=on_phone, progressLabel=words)
+        if rows:
+            view["desktop_progress"] = states
     return view
 
 
@@ -1653,6 +1676,7 @@ def home_view(
     number: Decimal | None = None,
     answers: dict[int, dict] | None = None,
     figs: dict[str, dict] | None = None,
+    read: frozenset[str] | None = None,
 ) -> dict:
     """Home's dial: each chapter's answer in its wedge, the trader's result in the centre. Read
     is the dot on the rim, and no words in the wedge. Each wedge opens the trades behind its
@@ -1670,7 +1694,16 @@ def home_view(
     ])
     caption = ["your result,", "before charges"] if gross else ["your result for", "the whole period"]
     centre = {"figure": formatting.rupees(ctx["share"].total), "captionLines": caption}
-    return {"kind": "home", "items": items, "centre": centre}
+    view = {"kind": "home", "items": items, "centre": centre}
+    if read is not None:  # a chapter is opened once every one of its pages is
+        done = [all(f.key in read for f in c.facts) for c in S.CHAPTERS]
+        states = ["opened" if d else "unread" for d in done]
+        if "unread" in states:
+            states[states.index("unread")] = "current"
+        every = [f.key for c in S.CHAPTERS for f in c.facts]
+        view.update(progress=states,
+                    progressLabel=read_line(sum(k in read for k in every), len(every)))
+    return view
 
 
 def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
@@ -1687,14 +1720,15 @@ def _hub_opens(n: int, answer: dict, figs: dict[str, dict]) -> str | None:
 
 
 def home_context(
-    ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None
+    ctx: dict, imp, opened: frozenset[int] = frozenset(), number: Decimal | None = None,
+    read: frozenset[str] | None = None,
 ) -> dict:
     """What Scope home shows: the verdict, the books, each chapter's answer, a way in."""
     figs = facts(ctx, imp)
     answers = hub_answers(ctx, figs, number)
     return {
         "view": home_view(ctx, imp, gross=not imp.fees_available, opened=opened, answers=answers,
-                          figs=figs),
+                          figs=figs, read=read),
         "verdict": mx.verdict(ctx["trips"]),
         "chapters": [
             {

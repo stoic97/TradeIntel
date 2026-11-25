@@ -32,7 +32,10 @@ def test_opening_a_chapter_marks_it_read(client):
     body = client.get("/mirror").text
     assert ">Continue: What your tradebook has been hiding<" in body  # TICKET-903: opening a chapter reads no page
     assert body.count("home__chapter--read") == 1
-    assert 'class="scope__opened"' in body
+    # The rim dot gave way to the reading ring: a chapter's segment is opened once every one of
+    # its pages is, so opening the chapter alone leaves it the one to read next.
+    assert 'class="scope__opened"' not in body
+    assert "scope__progress-seg--current" in body
 
 
 def test_a_chapter_that_does_not_exist_marks_nothing(client, engine):
