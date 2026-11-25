@@ -199,3 +199,20 @@ def test_an_exact_figure_keeps_the_paise_metrics_decided(value, written):
     """The long page printed an average as metrics returned it; cutting it to whole
     rupees would change the figure, not only how it is written."""
     assert rupees(value, exact=True) == written
+
+
+@pytest.mark.parametrize(
+    ("rate", "other", "said", "said_other"),
+    [
+        (Decimal("44.5"), Decimal("45.4"), "44.5 of 100", "45.4 of 100"),  # 44.5 prints 45, as 45.4 does
+        (Decimal("45.4"), Decimal("44.5"), "45.4 of 100", "44.5 of 100"),
+        (Decimal(45), Decimal("45.3"), "45.0 of 100", "45.3 of 100"),
+        (Decimal("44.4"), Decimal("44.5"), "44 of 100", "45 of 100"),  # 44 and 45 print apart: whole
+        (Decimal("43.6"), Decimal("44.5"), "44 of 100", "45 of 100"),
+        (Decimal(40), None, "40 of 100", "40 of 100"),  # no break-even to read it against
+    ],
+)
+def test_two_rates_that_print_the_same_whole_number_show_one_decimal_on_both(rate, other, said, said_other):
+    """The tie is decided by what is printed, not by rounding the value a second way."""
+    assert formatting.out_of_a_hundred_beside(rate, other) == said
+    assert formatting.out_of_a_hundred_beside(other, rate) == said_other if other is not None else True

@@ -4,12 +4,12 @@
 {% from "scope/_math.html" import math_table, sizes_table %}
 {% block head %}
     <div class="fact__figure"><span class="num num--hero">{{ f.lead_figure|opens }}</span></div>
-    <p class="mirror"><span class="num">{{ Figure(strike.rate_percent, "percent")|out_of_a_hundred }}</span> trades made money: <span class="num">{{ Figure(strike.wins, "trades")|count }}</span> winners against <span class="num">{{ Figure(strike.losses, "trades")|count }}</span> losers.</p>
+    <p class="mirror"><span class="num">{{ Figure(strike.rate_percent, "percent")|out_of_a_hundred_beside(break_even.percent) }}</span> trades made money: <span class="num">{{ Figure(strike.wins, "trades")|count }}</span> winners against <span class="num">{{ Figure(strike.losses, "trades")|count }}</span> losers.</p>
     {%- if strike.scratches %}
     <p class="mirror"><span class="num">{{ Figure(strike.scratches, "trades")|count }}</span> trades finished level and are in neither count.</p>
     {%- endif %}
     {%- if break_even.percent is not none %}
-    <p class="mirror">Your average winner was {{ Figure(break_even.average_winner, "rupees")|rupees(signed=false) }} and your average loser {{ Figure(break_even.average_loser, "rupees")|rupees(signed=false) }}. At those sizes, you break even at <span class="num">{{ Figure(break_even.percent, "percent")|out_of_a_hundred }}</span>.</p>
+    <p class="mirror">Your average winner was {{ Figure(break_even.average_winner, "rupees")|rupees(signed=false) }} and your average loser {{ Figure(break_even.average_loser, "rupees")|rupees(signed=false) }}. At those sizes, you break even at <span class="num">{{ Figure(break_even.percent, "percent")|out_of_a_hundred_beside(strike.rate_percent) }}</span>.</p>
     {%- endif %}
     <p class="mirror">Your winners were open a median of <span class="num">{{ Figure(holding.winners_median_seconds, "seconds")|minutes }}</span> minutes, your losers <span class="num">{{ Figure(holding.losers_median_seconds, "seconds")|minutes }}</span> minutes.</p>
     {%- if f.held.count %}
@@ -35,7 +35,7 @@
   {% set w = book.whole %}
   <h2 class="heading math__book">{{ w.label }}</h2>
   {% if w.break_even_percent is not none %}
-  <p class="body">Break even at <span class="num">{{ Figure(w.break_even_percent, "percent")|out_of_a_hundred }}</span>{% if w.more_winners is not none %}, about <span class="num">{{ Figure(w.more_winners, "winners")|count }}</span> more {{ "winner" if w.more_winners == 1 else "winners" }} in <span class="num">{{ Figure(w.decided, "trades")|count }}</span>{% endif %}. Or at an average winner of {{ Figure(w.winner_needed, "rupees")|rupees(signed=false) }}, {{ Figure(w.winner_gap, "rupees")|rupees }} on your {{ Figure(w.average_winner, "rupees")|rupees(signed=false) }}.</p>
+  <p class="body">Break even at <span class="num">{{ Figure(w.break_even_percent, "percent")|out_of_a_hundred_beside(w.win_percent) }}</span>{% if w.more_winners is not none %}, about <span class="num">{{ Figure(w.more_winners, "winners")|count }}</span> more {{ "winner" if w.more_winners == 1 else "winners" }} in <span class="num">{{ Figure(w.decided, "trades")|count }}</span>{% endif %}. Or at an average winner of {{ Figure(w.winner_needed, "rupees")|rupees(signed=false) }}, {{ Figure(w.winner_gap, "rupees")|rupees }} on your {{ Figure(w.average_winner, "rupees")|rupees(signed=false) }}.</p>
   {% endif %}
   {% if w.losers_median_seconds is not none %}<p class="body">Losers were open a median <span class="num">{{ Figure(w.losers_median_seconds, "seconds")|minutes }}</span> min and lost a median {{ Figure(w.median_loser, "rupees")|rupees(signed=false) }}.</p>{% endif %}
   {% if w.winners_median_seconds is not none %}<p class="body">Winners were open a median <span class="num">{{ Figure(w.winners_median_seconds, "seconds")|minutes }}</span> min and made a median {{ Figure(w.median_winner, "rupees")|rupees(signed=false) }}.</p>{% endif %}
