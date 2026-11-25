@@ -104,8 +104,8 @@ def test_the_fact_read_table_is_migrated():
     revs = {}
     for f in migration.parent.glob("[0-9]*.py"):
         t = f.read_text(encoding="utf-8")
-        rev = re.search(r"^revision = '([^']+)'", t, re.M).group(1)
-        down = re.search(r"^down_revision = '([^']+)'", t, re.M)
+        rev = re.search(r"^revision = '([^']+)'", t, re.MULTILINE).group(1)
+        down = re.search(r"^down_revision = '([^']+)'", t, re.MULTILINE)
         revs[rev] = down.group(1) if down else None
     above = {"0020"}
     while True:
