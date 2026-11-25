@@ -1184,7 +1184,7 @@ def _chapter_wedge(key: str, ctx: dict, fig: dict) -> dict:
         if not nt.back_in_enough:  # under B1's 30 a group, the count and "too few", never a median
             n = len(nt.after_loss)
             return _wedge(Figure(formatting.count(n), "trade" if n == 1 else "trades",
-                                 of=f"after a loss: too few to compare (needs {mx.B1_MINIMUM})"))
+                                 of=f"after a loss, too few (needs {mx.B1_MINIMUM})"))
         m = _minutes(nt.loss_median)
         return _wedge(Figure(m, "minutes", of="median wait after a loss"), shown=f"{formatting.count(m)} min")
     if key == "same-way":
