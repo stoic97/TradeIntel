@@ -33,7 +33,7 @@ def eligibility_page_engine():
     return e
 
 
-def eligibility_page_client(engine):
+def eligibility_page_client(engine, rows=None):
     from services.production.accounts import auth
     with make_session(engine) as sess:
         trader = m.Trader(display_name="F", login_id="fx",
@@ -54,7 +54,8 @@ def eligibility_page_client(engine):
                        density_default_unit="day", created_at=datetime.now(UTC))
         sess.add(imp)
         sess.flush()
-        rows = json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text())
+        if rows is None:
+            rows = json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text())
         for row in rows:
             sess.add(m.Trip(
                 import_id=imp.id, trip_id=row["trip_id"],

@@ -328,6 +328,11 @@ class JournalUnitDefault:
     state: s.ResultState
 
 
+WORST_DAYS_COUNT_ON = "opened"
+"""The day a trade counts on in the worst days and the sorted days: ``_by_day`` groups by
+``trading_day``, the day the trade was opened. The pages say so from this, not from a template."""
+
+
 def _by_day(trips: list[Trip]) -> dict[str, list[Trip]]:
     days: dict[str, list[Trip]] = {}
     for trip in trips:
@@ -345,6 +350,12 @@ def daily_series(trips: list[Trip]) -> list[DayNet]:
         DayNet(day, sum((t.net for t in day_trips), Decimal(0)), len(day_trips))
         for day, day_trips in _by_day(trips).items()
     ]
+
+
+def closes_on_a_later_day(trips: list[Trip]) -> bool:
+    """Whether any trade closed on a later day than the one it counts on. When none did, the
+    day it was opened and the day it closed are one day, and saying which is counted says nothing."""
+    return any(t.exit_ts.date().isoformat() != t.trading_day for t in trips)
 
 
 def five_worst_days(trips: list[Trip]) -> FiveWorstDays:
@@ -1044,14 +1055,18 @@ def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
 
 @dataclass(frozen=True)
 class DayPoint:
-    """One trade on a day's path: where the running result stood once it closed."""
+    """One trade on a day's path: where the running result stood once it closed.
+
+    The points run in the order the trades closed. ``switched`` is counted in the
+    order they were opened, as the "You switched ..." sentence counts it, so a ringed point can
+    sit between two points on the same side; the day page says which order its rings mark."""
 
     trip: Trip
     exit_ts: datetime  # when it closed, in the trade's own zone (the loader's)
     running: Decimal
     lots: int
     side: str | None  # "CE", "PE" or None
-    switched: bool  # an option on the other side from the option before it, in one book
+    switched: bool  # on the other side from the option opened before it, in one book
 
 
 @dataclass(frozen=True)
@@ -2435,7 +2450,7 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     for t in same_day:
         by_day.setdefault(t.trading_day, []).append(t)
     loss, win, level, minutes, group, back_in = [], [], [], {}, {}, {}
-    no_dir = 0
+    no_dir = scratch = 0
     way = {("loss", True): 0, ("loss", False): 0, ("win", True): 0, ("win", False): 0}
     way_ids = set()
     for members in by_day.values():
@@ -2445,12 +2460,18 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
                 continue
             prev = max(closed, key=lambda p: (p.exit_ts, p.trip_id))
             minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
-            back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
-            if prev.is_scratch:
-                level.append(t)
+            # B1 is the time to the next entry: one observation per previous trade. A trade opened
+            # after an earlier one that already followed the same previous trade is not its next entry.
+            first = not any(o is not t and prev.exit_ts < o.entry_ts
+                            and (o.entry_ts, o.trip_id) < (t.entry_ts, t.trip_id) for o in members)
+            if first:
+                back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
+            g = "level" if prev.is_scratch else "loss" if prev.is_loss else "win"
+            if first:
+                {"loss": loss, "win": win, "level": level}[g].append(t)
+            if g == "level":
+                scratch += 1
                 continue
-            g = "loss" if prev.is_loss else "win"
-            (loss if g == "loss" else win).append(t)
             group[t.trip_id] = g
             a, b = _direction(prev), _direction(t)
             if a is None or b is None:
@@ -2462,7 +2483,7 @@ def next_trades(same_day: list[Trip]) -> NextTrades:
     def mid(group_trips):
         return median([minutes[t.trip_id] for t in group_trips]) if group_trips else None
 
-    return NextTrades(tuple(loss), tuple(win), len(level), minutes, group, mid(loss), mid(win),
+    return NextTrades(tuple(loss), tuple(win), scratch, minutes, group, mid(loss), mid(win),
                       way[("loss", True)], way[("loss", False)], way[("win", True)], way[("win", False)],
                       no_dir, frozenset(way_ids), tuple(level), back_in)
 
