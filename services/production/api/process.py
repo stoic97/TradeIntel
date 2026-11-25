@@ -441,7 +441,8 @@ def execution(reading: Reading) -> Row:
         lines.append(Line(back_key, (_count(len(back), "trades", back_key), went, _points(usual),
                                      f" points your way and closed at a loss, in {name}."),
                           {back_key: _ids(back)}, Measure(len(back), "trades", "count")))
-    too_short = f"{len(short)} {_s(len(short), 'trade', 'trades')} under 45 minutes are too short to measure"
+    are = "is" if len(short) == 1 else "are"
+    too_short = f"{len(short)} {_s(len(short), 'trade', 'trades')} under 45 minutes {are} too short to measure"
     notes = (f"{too_short} on minute bars.",) if short else ()
     if not lines:
         empty = "No trades held 45 minutes or more with market figures."
