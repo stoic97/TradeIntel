@@ -85,3 +85,15 @@ Strike rate and hold time as one fact, per book, on same-day trades only (sectio
 - **Medians** of rupees and of minutes are each worked out on their own. They describe no single trade.
 - **Minimum:** a book row, or a year of one, with fewer than 30 same-day trades is `INSUFFICIENT_SAMPLE`, "not enough trades to say", and carries no figure but its count. 30 is the framework's standard n_min.
 - **Biggest losers:** losses past ₹1,000, not at it, against the book's other losers. **Closed quickly:** within five minutes, five included. **Top winners:** the biggest tenth, rounded up.
+
+## 9. Previous result, and the random sets it is set against (TICKET-919)
+
+Two figures for each book on the hiding page, on same-day trades only (section 1): after a win, and after a loss. A book is `metrics.trade_book`.
+
+- **Previous result:** of the same-day trades closed before this one was opened that day, the one closed last. Closed before means its exit is strictly earlier than this entry, so a trade still open never counts, however it ends, and nothing carries across the day boundary. It is read across all books (founder, 24 Nov 2026, TICKET-918). A trade with none is in neither figure, and in no random set.
+- **Win / loss / level:** the previous trade's result **before charges** is above, below or equal to zero (founder, 24 Nov 2026, TICKET-918). A trade after a level result is in neither figure. Only the label reads the result before charges: the figures themselves, and every sum below, are **after charges** (net, section 2).
+- **On the record:** the net of every trade in the book after a win, and of every trade after a loss. A book with no trade in a state has no row for it.
+- **Only what was known then:** a trade in a state counts when the earlier trades in that state in the book, exited before its entry, number `THEN_MINIMUM` = 30 or more and are down overall, below zero after charges. The earlier trades are from any day, not that day alone. The 30 is the framework's `minimums.condition` (`framework_v1.yaml`, marked arbitrary there), reused; its use as this warm-up is new, and arbitrary (founder, 16 Nov 2026). While no trade has that many earlier ones there is no second figure, and nothing to set it against.
+- **The null:** random sets of the same size as the figure's, drawn without replacement from the book's trades that have a previous result, level ones included. `DRAWS` = 10,000 sets and `SEED` = 20260302, both `b2_shuffle`'s own. The band is the middle 95% of the sets' net sums (`BAND` = 2.5 and 97.5, percentiles). A figure on the band's end is inside it.
+- **The chance line**, "Can't be told apart from chance.", is written only from that comparison, when the figure is inside its band. It is never written for a set of none or for the whole pool (review, 24 Nov 2026), where one set alone has that size, or when the band is one value, its two ends exactly equal (founder, 24 Nov 2026): nothing was compared. It counts random sets. It is not a finding, and promotes nothing.
+- **(closed here)** Pending the research seat's sign-off (TICKET-919).

@@ -233,7 +233,7 @@ def test_the_filters_and_facts_are_on_the_factor_map():
 
 def test_three_facts_in_chapter_three_after_down():
     three = S.chapter(3)
-    assert [f.key for f in three.facts] == ["down", *NEW, "busiest"]
+    assert [f.key for f in three.facts] == ["down", *NEW, "busiest", "after-close"]  # After you closed ends the chapter
     assert all(not S.FACTS[k].on_phone_dial for k in NEW)
     assert all(k in findings.LABELS for k in NEW)
     assert all(S.FACTS[k].chart in G.CHARTS for k in NEW)
@@ -273,11 +273,11 @@ def test_on_a_phone_they_sit_in_the_list_and_on_desktop_each_has_its_wedge(demo)
     html = demo.get("/mirror/chapter/3").text
     phone, desktop = html.split('<div class="scope scope--desktop">', 1)
     rows = re.findall(r'<li class="scope__list-row".*?</li>', phone, flags=re.DOTALL)
-    assert len(rows) == 3
+    assert len(rows) == 4  # the three facts above and After you closed
     for row in rows:
         said = " ".join(re.sub(r"<[^>]+>", " ", row).split()).lower()
         assert set(re.findall(r"[a-z]+", said)) & GL.nouns(), said
-    assert len(re.findall(r'<a class="scope__slice', desktop.split("</svg>")[0])) == 5
+    assert len(re.findall(r'<a class="scope__slice', desktop.split("</svg>")[0])) == 6
 
 
 def test_the_desktop_dial_clears_with_five_wedges():
@@ -287,14 +287,14 @@ def test_the_desktop_dial_clears_with_five_wedges():
     view = SF.chapter_view(3, SF.facts(CTX, IMP))
     assert "desktop_items" in view, "chapter 3 has no fact off the phone dial"
     items = view["desktop_items"]
-    assert len(items) == 5
+    assert len(items) == 6  # After you closed is the sixth wedge
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
         assert G.block_clearance(sec["slices"][i], sec["span"], lay["radius"][i], b, rr) >= FIT, items[i]["name"]
-    assert len(Dl.scope_dial(view, "desktop").split('class="scope__slice')) - 1 == 5
+    assert len(Dl.scope_dial(view, "desktop").split('class="scope__slice')) - 1 == 6
 
 
 # ---------- helpers ----------

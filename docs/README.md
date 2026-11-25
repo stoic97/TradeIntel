@@ -64,6 +64,7 @@ deploy runbook and log) are listed in `docs/references.md` with where each lives
 | [runbooks/deploy.md](runbooks/deploy.md) | Putting Scope on a server, and every deploy after | live | engineering | 2026-11-20 |
 | [runbooks/deploys.md](runbooks/deploys.md) | Production deploys to scope.plusev.in | live | engineering | 2026-11-20 |
 | [runbooks/price-series.md](runbooks/price-series.md) | The price series in production | live | engineering | 2026-11-20 |
+| [runbooks/skills-workflow.md](runbooks/skills-workflow.md) | The skills workflow in order: who does each step, the skill and the prompt; steps only a person does are marked (TICKET-1038) | live | engineering | 2026-11-24 |
 | [runbooks/uat-smoke.md](runbooks/uat-smoke.md) | The fixed UAT pass every release train gets | live | engineering | 2026-11-20 |
 | [trade_dna_brainstorm_workbook_v1.1_final.md](trade_dna_brainstorm_workbook_v1.1_final.md) | The brainstorm workbook, cited as B section | frozen v1.1.1 | founder | 2026-11-20 |
 | [trade_dna_product_thesis_v1.5.md](trade_dna_product_thesis_v1.5.md) | The product thesis, cited as T section | frozen v1.5 | founder | 2026-11-20 |
