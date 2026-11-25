@@ -192,6 +192,8 @@ def test_every_chapter_dial_stays_clear_inside_its_wedge(pages, size):
         items = view["items"] if size == "desktop" else [
             {**i, "figure": i.get("phone_figure", i["figure"]),
              "label": i.get("phone_label", i.get("label", ""))} for i in view["items"]]
+        # a mini as wide as its wedge clears, on either size, as the dial draws it
+        items = D.fitted(items, z["figSizesChapter"], size)
         sec = G.sectors(len(items), False)
         lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
         for i, block in enumerate(lay["blocks"]):
