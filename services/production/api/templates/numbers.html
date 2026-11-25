@@ -26,7 +26,7 @@
   <h1 class="title">Your numbers</h1>
   <p class="body nb-top numbers__top"><span class="num">{{ Figure(trades, "trades")|count }}</span> trades, {{ first|day }} to {{ last|day }}.{% if gross %} Result before charges.{% endif %}</p>
   {%- if same_day_basis %}
-  <p class="body-small numbers__basis">Every figure below, the calendar too, reads your same-day trades. Held past the day: <span class="num">{{ Figure(held.count, "positions")|count }}</span> {{ "position" if held.count == 1 else "positions" }}, <span class="num num--{{ held.net|tone }}">{{ Figure(held.net, "rupees")|rupees }}</span>, not in them.</p>
+  <p class="body-small numbers__basis">These figures and the calendar read your same-day trades. Held past the day: <span class="num">{{ Figure(held.count, "positions")|count }}</span> {{ "position" if held.count == 1 else "positions" }}, <span class="num num--{{ held.net|tone }}">{{ Figure(held.net, "rupees")|rupees }}</span>, not in them.</p>
   {%- endif %}
 
   <div class="numbers__grid">
