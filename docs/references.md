@@ -21,7 +21,7 @@ this repository.
 | **build plan**, `scope_v1_build_plan_v1.md` | Scope v1's build plan (cited by ADR-007) | *Project* `scope_v1_build_plan_v1.md` | v1, 16 Oct 2026 |
 | `scope_v1_build_completion_v1.md` | What the v1 build completed | *Project* `scope_v1_build_completion_v1.md` | v1, 21 Oct 2026 |
 | `scope_thin_slice_plan_v1.md` | The thin-slice plan before the v1 build | *Project* `scope_thin_slice_plan_v1.md` | v1, 12 Oct 2026 |
-| **testing register** | Scope's testing register | *repo* `docs/product/scope_testing_register_v1.md`; a copy is in the *Project* | v1 |
+| **testing register** | Scope's testing register, archived 17 Nov 2026; open work is in Jira | *repo* `docs/archive/scope_testing_register_v1.md` | v1, archived |
 | **definitions** | Trading day, the B2 rule, the Journal unit and the import states | *repo* `docs/product/definitions_v1.md` | v1 |
 | **Annex H** (multi-leg; spreads) | The multi-leg convention: how legs become one position | *Project* `claude/scope_annex_h_multileg_convention_v2.md` | v2, 4 Nov 2026 |
 | **Scope_Feedback**, "Scope_Feedback section x", RN-0001 | T-001's round-1 page-by-page review | Kept by the founder, outside the repo and the Project index, because it is a trader's own words. The loop that acts on it: *Project* `claude/scope_feedback_loop_v1.md`, `claude/scope_feedback_loop_rn0001_status_v1.md`, `claude/scope_rn0002_round2_register_12nov.md` | round 1, 3 Nov 2026; round 2, 12 Nov 2026 |

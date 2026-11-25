@@ -12,8 +12,8 @@
     <span class="scope-card__verdict">{{ verdict_sentence(verdict) }}</span>
     {%- if verdict.options_trades and verdict.others_trades %}
     <span class="scope-card__split">
-      <span class="body-small">Option trades {{ money(verdict.options_net) }} · <span class="num">{{ Figure(verdict.options_trades, "trades")|count }}</span> trades</span>
-      <span class="body-small">Stocks, ETFs and futures {{ money(verdict.others_net) }} · <span class="num">{{ Figure(verdict.others_trades, "trades")|count }}</span> trades</span>
+      <span class="body-small">Option trades {{ money(verdict.options_net) }} · <span class="num">{{ Figure(verdict.options_trades, "trades")|count }}</span> {{ "trade" if verdict.options_trades == 1 else "trades" }}</span>
+      <span class="body-small">Stocks, ETFs and futures {{ money(verdict.others_net) }} · <span class="num">{{ Figure(verdict.others_trades, "trades")|count }}</span> {{ "trade" if verdict.others_trades == 1 else "trades" }}</span>
     </span>
     {%- endif %}
     <span class="scope-card__foot"><span>Open your report</span><span aria-hidden="true">›</span></span>
@@ -24,6 +24,7 @@
   {{ uncounted_line(imp.trips_refused) }}
   {% include "_how_you_got_here.html" %}
   {%- if process_preview %}{% include "_process_home.html" %}{% endif %}
+  {%- if challenge %}{% include "_challenge_home.html" %}{% endif %}
   {%- if latest %}
   <section class="latest">
     <div class="latest__head"><h2 class="card-title">{{ days_heading }}</h2><a class="link link--back" href="/journals">All days</a></div>
