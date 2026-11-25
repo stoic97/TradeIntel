@@ -78,10 +78,26 @@ def plain(html: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
+@pytest.mark.skip(reason="superseded by option (a) (TICKET-1025): after two straight losses counts every round trip, not same-day trips; the same guard over every round trip is the test below")
 @pytest.mark.parametrize("seed", SEEDS)
 def test_after_two_straight_losses_is_one_count_on_every_page(reader, seed):
     trips = record(seed)
     want = mx.two_straight_losses(mx.same_day_trips(trips)).condition
+    client = reader(trips)
+    hub = plain(client.get("/mirror").text)
+    said = re.findall(r"After two straight losses you opened ([\d,]+) trades?", hub)
+    card = client.get("/mirror/chapter/3").text
+    row = re.search(r'<td class="table__text">After two straight losses</td><td class="table__num">(.*?)</td>', card)
+    printed = {int(n.replace(",", "")) for n in said} | ({int(plain(row.group(1)).replace(",", ""))} if row else set())
+    assert printed, "no page printed the count"
+    assert printed == {want}, (seed, printed, want)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_after_two_straight_losses_every_round_trip_is_one_count_on_every_page(reader, seed):
+    """The guard above, under option (a): the count is over every round trip, as definitions_v1 section 2 says."""
+    trips = record(seed)
+    want = mx.two_straight_losses(trips).condition
     client = reader(trips)
     hub = plain(client.get("/mirror").text)
     said = re.findall(r"After two straight losses you opened ([\d,]+) trades?", hub)
