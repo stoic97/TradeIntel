@@ -45,7 +45,7 @@ this repository.
 | **methodology** | What is binding today, by stage; governs where it and the Manual differ on scope or timing | *repo* `docs/methodology.md` | as committed |
 | **tester page**, `onboarding/tester.md` | The tester page in the feedback-loop repository: where a UAT device result is recorded | *feedback-loop repo* `onboarding/tester.md`; not in this repository | as committed there |
 | **deletion log**, the old `docs/runbooks/deletion-log.md` | The append-only log of data deletions | On the server only, `/srv/scope/data/deletion-log.md`; never in git | moved out of git, TICKET-930 |
-| **merge practice** | How a PR gets merged, in full | *Project* `claude/scope_pr_merge_practice_v1.md`; short form in [CONTRIBUTING.md](../CONTRIBUTING.md) | v1.1, 4 Nov 2026 |
+| **merge practice** | How a PR gets merged, in full | *Project* `claude/scope_pr_merge_practice_v1.md`; short form in [CONTRIBUTING.md](../CONTRIBUTING.md) | v1.3, 25 Nov 2026 |
 | **SR-nnn** | The standing rules | *repo* `docs/process_standing_rules.md` | as committed |
 | **TD-nnn** | Deferrals | *repo* `docs/deferrals.md` | as committed |
 | **deploy runbook**, **deploy log** | How the live app is updated, and the record of each deploy | *Project* `claude/scope_deploy_update_runbook_v1.md` and `claude/scope_deploy_log.md` | runbook v1.4, 5 Nov 2026 |
