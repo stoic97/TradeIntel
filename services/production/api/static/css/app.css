@@ -301,6 +301,15 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .day-block__run { stroke: currentColor; stroke-width: 1.5; }
 .day-block__flag { margin: var(--space-3) 0; }
 .day-blocks__next, .chapter__next { margin-top: var(--space-6); }
+/* Your process: rows stack; a figure's link keeps a 44 px tap target without moving the text. */
+.process__row { margin: var(--space-6) 0; padding-top: var(--space-4); border-top: 1px solid var(--color-hairline); }
+.process__line, .process-preview p { line-height: 1.7; overflow-wrap: anywhere; }
+.process__line a, .process-preview a { display: inline-block; padding: 10px 0; margin: -10px 0; }
+.process__note { color: var(--color-muted); }
+.process-preview { margin: var(--space-4) 0; }
+.process-preview__name { font-weight: 600; margin-right: var(--space-1); }
+.home__process { margin: var(--space-2) 0 var(--space-4); }
+
 /* Days you can replay: a day's running result, the shared component (day_chart). */
 .day-nav { display: flex; gap: var(--space-2); margin: 0 0 var(--space-2); }
 .daychart-figure { margin: var(--space-4) 0; }
@@ -312,6 +321,30 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .daychart__dot--switched { stroke: var(--color-ink); stroke-width: 1.5; }
 .daychart__later path { fill: none; stroke: var(--color-ink); stroke-width: 1.5; }
 .daychart-figure__table .table, .worst-sorted__table .table { display: block; overflow-x: auto; max-width: 100%; }
+
+/* Your day on the market chart . The chart is drawn to the kit's 358 px and scales to
+   the width, so a phone never scrolls sideways; a crude day's candles run under 2 px. */
+.dc { margin: var(--space-4) 0; }
+.dc .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.dc-frame { width: 100%; max-width: 100%; overflow: hidden; }
+.dc-chart { display: block; width: 100%; height: auto; }
+.dc-wick { stroke-width: 1; }
+.dc-wick--up, .dc-body--up { stroke: var(--color-gain); fill: var(--color-gain); }
+.dc-wick--down, .dc-body--down { stroke: var(--color-loss); fill: var(--color-loss); }
+.dc-line { stroke-width: 1.5; stroke-dasharray: 3 2; fill: none; }
+.dc-line--gain { stroke: var(--color-gain); }
+.dc-line--loss { stroke: var(--color-loss); }
+.dc-line--plain { stroke: var(--color-muted); }
+.dc-tap { fill: transparent; }
+.dc-mark { stroke: var(--color-page); stroke-width: 1.5; fill: var(--color-navy); }
+.dc-mark--out { fill: var(--color-page); stroke: var(--color-navy); }
+.dc-number { font-size: 9px; fill: var(--color-ink); }
+.dc-rows { list-style: none; padding: 0; margin: var(--space-3) 0; }
+.dc-row { display: grid; grid-template-columns: 2em 1fr; gap: 0 var(--space-2); padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-hairline); }
+.dc-row__figures { grid-column: 2; color: var(--color-muted); }
+.dc-text summary { cursor: pointer; color: var(--color-action-blue); }
+.dc-text .table { display: block; overflow-x: auto; max-width: 100%; }
 .worst-sorted { margin: var(--space-4) 0; }
 .worst-sorted svg { display: block; width: 100%; height: auto; }
 .day-block__story { margin: var(--space-2) 0; }
