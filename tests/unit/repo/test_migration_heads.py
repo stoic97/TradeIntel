@@ -46,7 +46,7 @@ def test_the_merge_practice_says_down_revision_is_mains_head_today():
 
 # --- review of 24 Nov 22:20: the guard must see heads, and the deploy block must not pass on nothing ---
 
-from tests.helpers.migration_chain import chain_problems  # noqa: E402
+from tests.helpers.migration_chain import chain_problems
 
 
 def _scratch(tmp_path: Path, files: dict[str, tuple[str, str | None]]) -> Path:
