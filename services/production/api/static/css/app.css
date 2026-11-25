@@ -301,6 +301,15 @@ button.guess__option { width: 100%; padding: 0; background: none; border: 0; bor
 .day-block__run { stroke: currentColor; stroke-width: 1.5; }
 .day-block__flag { margin: var(--space-3) 0; }
 .day-blocks__next, .chapter__next { margin-top: var(--space-6); }
+/* Your process: rows stack; a figure's link keeps a 44 px tap target without moving the text. */
+.process__row { margin: var(--space-6) 0; padding-top: var(--space-4); border-top: 1px solid var(--color-hairline); }
+.process__line, .process-preview p { line-height: 1.7; overflow-wrap: anywhere; }
+.process__line a, .process-preview a { display: inline-block; padding: 10px 0; margin: -10px 0; }
+.process__note { color: var(--color-muted); }
+.process-preview { margin: var(--space-4) 0; }
+.process-preview__name { font-weight: 600; margin-right: var(--space-1); }
+.home__process { margin: var(--space-2) 0 var(--space-4); }
+
 /* Days you can replay: a day's running result, the shared component (day_chart). */
 .day-nav { display: flex; gap: var(--space-2); margin: 0 0 var(--space-2); }
 .daychart-figure { margin: var(--space-4) 0; }
