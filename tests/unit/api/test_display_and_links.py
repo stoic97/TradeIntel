@@ -118,6 +118,7 @@ def trip(tid: str, day: str, net: str = "100") -> mx.Trip:
                    lines=(mx.TradeLine("NIFTY", "OPT", "Buy", 1, None, None, Decimal(net)),))
 
 
+@pytest.mark.skip(reason="Superseded by the 24 Nov 22:23 ruling on TICKET-1080: the card names the period it passes over and no longer calls the one it describes his usual; test_landing_period.py holds the rule")
 def test_the_card_describes_the_latest_period_with_his_usual_trading():
     """Months with 10, 10 and 1 trades: his median month is 10, so the latest month with at least
     10 trades (February) is the one the card describes, and it says so."""
