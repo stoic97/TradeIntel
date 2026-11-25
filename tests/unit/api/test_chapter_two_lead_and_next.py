@@ -138,7 +138,7 @@ def pages(tmp_path_factory):
         assert upload(client, path=DEMO).status_code == 303
         got = {path: client.get(path).text for path in (
             "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4",
-            S.fact_href("math"), S.fact_href("run"), S.fact_href("clock"))}
+            S.fact_href("math"), S.fact_href("run"), S.fact_href("clock"), S.fact_href("after"))}
         engine.dispose()
     finally:
         patch.undo()
@@ -187,9 +187,11 @@ def test_the_run_page_goes_to_the_next_fact(pages):
 
 
 def test_the_last_fact_goes_on_into_chapter_three(pages):
-    """TICKET-903: Next says so when it crosses into a new chapter."""
+    """TICKET-903: Next says so when it crosses into a new chapter. Since TICKET-1001 the
+    chapter's last fact is After you clicked, so the clock goes on to it first."""
+    assert f'href="{S.fact_href("after")}" aria-label="Next: After you clicked"' in pages[S.fact_href("clock")]
     label = f"Next, chapter 3: {S.FACTS['down'].title}"
-    assert f'href="{S.fact_href("down")}" aria-label="{label}"' in pages[S.fact_href("clock")]
+    assert f'href="{S.fact_href("down")}" aria-label="{label}"' in pages[S.fact_href("after")]
 
 
 def test_a_run_with_no_story_still_has_a_way_on():
