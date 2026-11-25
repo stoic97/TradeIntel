@@ -680,6 +680,17 @@ def _story_words(story) -> dict:
             "back_in": story.back_in}
 
 
+COUNTED_ON_WORDS = {"opened": "A trade counts here on the day you opened it."}
+
+
+def _counted_on(state, trips: list) -> str | None:
+    """Which day a trade counts on, said only where his file makes it matter: a trade that closed
+    on a later day. Never in a state with too few days to count."""
+    if state or not mx.closes_on_a_later_day(trips):
+        return None
+    return COUNTED_ON_WORDS[mx.WORST_DAYS_COUNT_ON]
+
+
 def days_worst_to_best(trips: list) -> list[dict]:
     """Every trading day, worst to best (ties: earlier date first), with the running total
     of the days so far. The last total is the record's result: the shape is the share."""
@@ -1048,6 +1059,7 @@ def facts(ctx: dict, imp) -> dict[str, dict]:
             caption="Your days, worst to best"),
         in_common=worst_days_in_common(ctx),
         blocks=[_day_block(b, ctx) for b in ctx["day_blocks"]],
+        counted_on=_counted_on(out["worst-days"]["state"], trips),
         all_trades_href=S.see_all_href("worst-days"),
     )
     for key, fig in out.items():  # the chapter's dial: a wedge says what it says with no label
