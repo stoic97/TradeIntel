@@ -21,6 +21,7 @@
   <p class="label">Counted from your file</p>
   <h1 class="title fact__title">{{ verdict_sentence(verdict) }}</h1>
   {% if not imp.fees_available %}{{ gross_line() }}{% endif %}
+  <p class="body-small home__process"><a class="link" href="/process">Your process: risk, sizing, under a drop, day control, consistency ›</a></p>
   <p class="label label--plain home__heading">Your books</p>
   {%- set filter_books = filter_books if filter_books is defined else {} %}
   {%- set by_year = by_year if by_year is defined else {} %}

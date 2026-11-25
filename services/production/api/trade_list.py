@@ -189,6 +189,19 @@ def _charge(t: mx.Trip, lookup: dict) -> list[Choice]:
     return [(place, key, name) for place, key, name in lookup.get(CHARGED_ON, {}).get(t.trip_id, ())]
 
 
+LINE_OF = "your process line"
+"""The lookup's key for the line chosen from Your process and the trades behind it: the page's
+row builders say which trades a figure counted (process.members), and this filter keeps those."""
+
+
+def _line(t: mx.Trip, lookup: dict) -> Choice | None:
+    from services.production.api import process
+    chosen = lookup.get(LINE_OF)
+    if chosen is None or t.trip_id not in chosen[1]:
+        return None
+    return 0, chosen[0], process.LABELS.get(chosen[0], "From Your process")
+
+
 AFTER_OF = "the last trade's result before each trade"
 """The lookup's key for each trade's group: the result of the last trade that closed before it
 opened, the same day. One filter for every fact that groups trades this way (Your size after a
@@ -454,6 +467,8 @@ FILTERS = (
     Filter("held_days", "Days held", held_days, only=frozenset({"risk"}), quiet=True),
     Filter("half", "Half of the book's days", _half, only=frozenset({"hidden"})),
     Filter("charge", "Charge", _charge, only=frozenset({"charges"}), many=True),
+    # Your process opens each figure's trades, whatever row drew it.
+    Filter("line", "Your process", _line, only=frozenset({"risk"}), quiet=True),
     Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
     Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
@@ -484,6 +499,9 @@ def listing(key: str, ctx: dict, query: Mapping[str, str], expiries: dict) -> di
               AFTER_OF: after_groups(key, ctx),
               NEXT_DAY_OF: ctx["day_after"].group_of if "day_after" in ctx else {},
               **_previous_lookup(ctx)}
+    if key == "risk" and query.get("line"):
+        from services.production.api import process
+        lookup[LINE_OF] = (query["line"], process.members(behind, query["line"]) or frozenset())
     for f in FILTERS:
         if f.only is not None and key not in f.only:
             continue
