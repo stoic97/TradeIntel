@@ -55,26 +55,26 @@ def dials(html: str) -> list[str]:
 ON_MAIN = {
     # Re-taken on the merge with main of 25 Nov: the reading ring (TICKET-1037) on main's dials,
     # which since carry After you closed (1009) on the hub and chapter 3.
-    "/mirror": ["821a93ac5142c908da40d8acc26d21cd315b8b4b5db4478fd80289e63b63f996",
-                "ac6d0e1400d52f722af9883e47b40b493dd152773080904811d22af872063413"],
-    "/mirror/chapter/1": ["dfbfc3322175cd50920dc7576da54b9c46e9ef836eb52df2fe45eac53bb4fc86",
-                          "5289d114a13dce81088a2ea4952d6622ab5dfbb41b3653ce4b50081ad76a860b"],
-    "/mirror/chapter/2": ["fc7f8bb02be93ddac8151d0c857e28212cac4d8fa4e1dea79bc4670041b05e0b",
-                          "2fe1e8a6febd5659416c46cef21948d0d98c33b33451b90c2babb0289868fe91"],
-    "/mirror/chapter/3": ["0023138c094ed21b9e6ca6acd0d8b6d65f92403c878e4d7a71d5c294133806ce",
-                          "412a8fd650fb5a3e29725f7fa40bdc899acac0cf210cca42cb3b7eec2ef52eb3"],
-    "/mirror/chapter/4": ["7cd97ae999cd6a4ae3855a1e0c2b16bbbf9c1943ae2cbd462d6f90bb35fb8a4b",
-                          "f3d930b722966a9ea5677198f62c4570de8baf32515efbb50dac0d6c7e63de96"],
+    "/mirror": ["256db06b221aa64da5e46403b21d617cd232a2a6c7bb8b8038022af90a26236e",
+                "01ee5a065fa7002e39df7dae97e87f6de8b562f276abb8045fa5a66d6d4c1f27"],
+    "/mirror/chapter/1": ["43435fe12960253b9d9bbd502a41633fa586ab113e4cae6212a86b7f12db3355",
+                          "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc"],
+    "/mirror/chapter/2": ["46dfcb9f5505275fc7fbac9327f7b779b5bf37a5024667c7086ee1436153bb4d",
+                          "33301fff41ee1ea2529d14f40725b79554f8ba90de05584ac10fc8dff3bc2a9e"],
+    "/mirror/chapter/3": ["96dd8e59f664620302a9d8025e82164d62dc1d7d3afdb3a044f32591e7b9b31d",
+                          "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf"],
+    "/mirror/chapter/4": ["41c0f9a155759c6061ff061590074f9078525daaee05f89741d84436070e41f1",
+                          "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572"],
 }
 CHAPTERS_ON_MAIN = {
-    (1, "phone"): "39f363b279e35b075a55490d595f43ca05bfebd615ead84edacabccae763a0f2",
-    (1, "desktop"): "b01363ef21b8d32746e9b315a4c2eb3771967f2c16642dcdec9508ed241beaaf",
-    (2, "phone"): "71525747aed2642faf23daf121f3605e685940e1378dddeb1c173089aa255c44",
-    (2, "desktop"): "0aec1678372b4371a50afd20f4642aa9ba4fe5e5eacc8e3f5d7727b7ed223a94",
-    (3, "phone"): "2050d5f721282152057d6d81d1f4b6ff453595c8afbe6fcef49afd45a3cd0753",
-    (3, "desktop"): "9704f56d35308a4edd16a6935792372428c21f4f0dc4d5c3afb853d6c6c44892",  # six wedges: After you closed is the sixth; back in under 30 a group reads its count and "too few" (24 Nov review)
-    (4, "phone"): "d3260585c29a8b98e718318c1ba2003c94eccb5a5d1b314fef81856eb632a644",
-    (4, "desktop"): "8682906281d97b977530eff602d927d842ad6c20ffac161654109cafaef25790",
+    (1, "phone"): "6bd6d18fd0286f13bb41da988d151ed1e2605c7dfa9b16eba4045e841583bfb7",
+    (1, "desktop"): "3289d8dc852a321471ff35ea76ac36c9076fa72d60ccd31720002f8fde8b2d1b",
+    (2, "phone"): "805482e46f2ca8d8e7b0c7fe721c077322c094d3d2b3a9a99be9b007e4ced69d",
+    (2, "desktop"): "278466a1f4ee54fe75ad2c1e86a575efe86f19eb5ba5964eb85eb06af32e62ab",
+    (3, "phone"): "89b3f6b0649fddad4a5256c83e822cc10f39387732a338d510a63e73f67efe1b",
+    (3, "desktop"): "685e67d71b832c20f00e18dab5d31179b9232c5a6f9388c29cfad9405e42c259",
+    (4, "phone"): "1dec31d1bc2c5b813c04b4be1ab50920e7c56c53aae7e35c2a4b9c40f4dd6340",
+    (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
@@ -138,8 +138,8 @@ def test_a_chapter_with_every_fact_on_its_dial_has_no_list(pages):
 def test_the_phone_dial_leaves_it_out_and_the_desktop_dial_keeps_it(later):
     phone, desk = str(D.scope_dial(later, "phone")), str(D.scope_dial(later, "desktop"))
     assert len(slices(phone)) == 3 and len(slices(desk)) == 4
-    assert 'aria-label="After two straight losses."' not in phone
-    assert 'aria-label="After two straight losses."' in desk
+    assert 'aria-label="After two straight losses.' not in phone
+    assert 'aria-label="After two straight losses.' in desk
     assert sha(phone) == CHAPTERS_ON_MAIN[(2, "phone")]  # the phone dial is today's, byte for byte
 
 
@@ -147,7 +147,7 @@ def test_the_desktop_keeps_chapter_order_and_clears(later):
     assert [i["name"] for i in later["desktop_items"]] == [f.title for f in S.CHAPTERS[1].facts]
     z = G.SIZES["desktop"]
     rr = G.radii(z["R"])
-    items = later["desktop_items"]
+    items = D.fitted(later["desktop_items"], z["figSizesChapter"], "desktop")  # as the dial draws it
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):
@@ -160,6 +160,7 @@ def test_the_phone_dial_still_clears(later):
     items = [{**i, "figure": i.get("phone_figure", i["figure"]),  # as the phone clearance test reads them
               "label": i.get("phone_label", i.get("label", ""))} for i in later["items"]]
     assert len(items) == 3
+    items = D.fitted(items, z["figSizesChapter"])  # each mini as wide as its wedge clears (TICKET-1036)
     sec = G.sectors(len(items), False)
     lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
     for i, b in enumerate(lay["blocks"]):

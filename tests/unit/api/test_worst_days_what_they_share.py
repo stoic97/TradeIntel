@@ -297,7 +297,8 @@ def test_the_dial_says_findings_not_counts():
     items = [i for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
              if i["name"] != S.FACTS["hidden"].title]  # TICKET-910: its wedge is a plain count
     assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
-        ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
+        ("5 days", "came to −₹2,064; the other 8 days +₹80"),  # TICKET-1035: its reference
+        ("+₹20", "your best trade; worst −₹300")]
 
 
 def _imp():
