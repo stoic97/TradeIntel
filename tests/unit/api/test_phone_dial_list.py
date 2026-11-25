@@ -77,12 +77,11 @@ CHAPTERS_ON_MAIN = {
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
-OFF_THE_PHONE_DIAL = {"after"}
-"""Facts added after the dial, each in the list under its chapter's phone dial (1001's after)."""
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
-                      "after-close"}  # After you closed: added after the phone dial was sized
+                      "after-close",  # After you closed: added after the phone dial was sized
+                      "after"}  # After you clicked (1001), in chapter 2's list
 
 
 def sha(text) -> str:
