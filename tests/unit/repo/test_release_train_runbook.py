@@ -38,8 +38,13 @@ def test_every_block_that_touches_production_starts_with_the_guard():
     touching = [b for b in _blocks(TRAIN)
                 if any(w in " ".join(b) for w in ("systemctl", "git checkout", "/srv/scope/data"))]
     assert len(touching) >= 5
+    # or the same guard as the first line of one ( ... ) block, so its stop ends only the
+    # block, in a nested shell too (TICKET-1048)
+    subshell = '( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }'
     for block in touching:
-        assert block[0] == "cd /srv/scope || exit 1", block[0]
+        assert block[0] in ("cd /srv/scope || exit 1", subshell), block[0]
+        if block[0] == subshell:
+            assert block[-1] == ")", block[-1]
 
 
 def test_the_runbook_keeps_what_the_first_deploys_taught():

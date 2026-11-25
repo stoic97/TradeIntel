@@ -428,7 +428,7 @@ deploys `main` directly.
 ### When `deploy/Caddyfile` changes
 
 Caddy serves production as well as staging, so its config is installed by a person, on its
-own, never by `update.sh` or `refresh-staging.sh`. Do it before the deploy window of the
+own, never by `refresh-staging.sh`. Do it before the deploy window of the
 train that carries the change, while production still runs the previous train: a bad file is
 then found with nothing else moving. Before a train is tagged, check whether it touches the
 file (`git log --oneline <last tag>..$SHA -- deploy/Caddyfile`); if it does, this comes first.
@@ -438,43 +438,66 @@ systemd hands Caddy through `caddy.service.d/staging-auth.conf`. A plain `caddy 
 a root shell has neither, so it checks a different config from the one the reload loads. Load
 the file first, as below. bash's `.` expands `$` and a bcrypt hash is full of them
 (`$2a$14$…`), so the hash must sit in single quotes in that file (`SCOPE_STAGING_HASH='…'`);
-systemd strips the quotes and reads the same value, and the block refuses an unquoted one. If
+systemd strips the quotes and reads the same value, and the block refuses anything but one
+line for it, quoted and with the closing quote. If
 the file or the drop-in is missing, do staging's first install (the header of
 `deploy/refresh-staging.sh`) before this.
 
-Fill `SHA=` in every block. Each block stops at once if it is empty, if git cannot show the
-file at that sha, or if what it wrote is empty.
+Fill `SHA=` in every block. Each block is one `( ... )`: when it stops, it prints one `STOP:`
+line saying why and the rest of that block does not run, in a login shell or a shell inside one,
+and your shell stays open. Fix what the line says and paste the same block again.
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
-    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || exit 1
-    test -s /tmp/Caddyfile.next || exit 1
-    cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA"
-    test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf && echo "staging auth: present"
-    grep -q "^SCOPE_STAGING_HASH='" /etc/caddy/staging-auth.env || exit 1
-    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) && echo "VALID"
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
+      git fetch --quiet origin || stop "git fetch failed"
+      git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || stop "git show failed: no deploy/Caddyfile at $SHA"
+      test -s /tmp/Caddyfile.next || stop "the file fetched at $SHA is empty"
+      cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA" || stop "the live file could not be saved"
+      test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf || stop "staging auth is missing; do staging's first install"
+      echo "staging auth: present"
+      test "$(grep -c SCOPE_STAGING_HASH /etc/caddy/staging-auth.env)" = 1 || stop "staging-auth.env must hold SCOPE_STAGING_HASH on exactly one line"
+      grep -qx "SCOPE_STAGING_HASH='[^'][^']*'" /etc/caddy/staging-auth.env || stop "the SCOPE_STAGING_HASH line must be single-quoted, closing quote included"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) || stop "caddy refused /tmp/Caddyfile.next; nothing was installed"
+      echo "VALID"
+    )
 
-Go on only after `staging auth: present` and `VALID`:
+Go on only after `staging auth: present` and `VALID`. The next block validates the same file
+again right before it replaces the live one. A stop before the install leaves the live file as
+it was; after it, the block puts the saved copy back, and its line says whether that worked:
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile
-    diff <(git show "$SHA:deploy/Caddyfile") /etc/caddy/Caddyfile && echo "matches $SHA"
-    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy && sleep 2
-    curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
-    curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      undo() { cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && stop "$1; the saved copy is back"; stop "$1, and the saved copy could NOT be put back: copy it by hand"; }
+      test -s /tmp/Caddyfile.next || stop "/tmp/Caddyfile.next is empty or missing; nothing was installed, run the first block again"
+      git show "$SHA:deploy/Caddyfile" | diff - /tmp/Caddyfile.next > /dev/null || stop "/tmp/Caddyfile.next is not the file at $SHA; nothing was installed"
+      test -s "/etc/caddy/Caddyfile.before-$SHA" || stop "no saved copy for $SHA; nothing was installed, run the first block again"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) || stop "caddy refused /tmp/Caddyfile.next; nothing was installed"
+      install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile || undo "the install failed"
+      diff /tmp/Caddyfile.next /etc/caddy/Caddyfile > /dev/null || undo "the live file is not the file at $SHA"
+      echo "matches $SHA"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy || undo "caddy refused the installed file or its reload"
+      sleep 2
+      curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
+      curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+    )
 
 Expected: `matches <sha>`, `production after:` the same as `production before:` (200), and
 staging without the password `401`, so the staging block and its `basic_auth` survived. If
 production answers anything else, put the old file back at once:
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && systemctl reload caddy
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      test -s "/etc/caddy/Caddyfile.before-$SHA" || stop "no saved copy for $SHA"
+      cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile || stop "the saved copy could not be put back"
+      systemctl reload caddy || stop "the saved copy is back but caddy did not reload"
+    )
 
 Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the
 before and after codes.

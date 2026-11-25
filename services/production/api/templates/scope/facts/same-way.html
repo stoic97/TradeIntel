@@ -4,6 +4,7 @@
     move the same way or the other way, by the shared direction rule. Counts, side by side. -#}
 {% block head %}
     <p class="mirror">{{ f.line }}</p>
+    <p class="mirror">{{ f.rests_on }}</p>
     <p class="mirror">Each trade is paired with the last trade that closed before it on the same day. Pairs after a flat trade are left out. A bought call and a sold put gain when the underlying rises; a bought put and a sold call gain when it falls.
     {%- if f.no_direction %} <span class="num">{{ Figure(f.no_direction, "trades")|count }}</span> {{ "pair had a trade" if f.no_direction == 1 else "pairs had a trade" }} with no single direction, such as a spread, and {{ "is" if f.no_direction == 1 else "are" }} left out.{% endif %}</p>
 {% endblock %}
