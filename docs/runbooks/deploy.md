@@ -177,7 +177,7 @@ private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
     s3cmd --configure -c /etc/scope/s3cfg
     chmod 600 /etc/scope/s3cfg
     printf 'SCOPE_SPACES=s3://%s/scope\n' "$BUCKET" > /etc/scope/spaces.env && chmod 600 /etc/scope/spaces.env
-    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30
+    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30 --expiry-prefix=scope/
     s3cmd -c /etc/scope/s3cfg getlifecycle "s3://$BUCKET"
     cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup
     /etc/cron.daily/scope-backup
@@ -185,7 +185,8 @@ private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
 
 `s3cmd --configure` asks for the access key and secret; give `blr1.digitaloceanspaces.com`
 as the endpoint and `%(bucket)s.blr1.digitaloceanspaces.com` as the bucket template, no
-encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Days>30</Days>`; the
+encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Prefix>scope/</Prefix>` and `<Days>30</Days>` (the rule covers the
+trader copies only; the market bars under `market/` are kept); the
 backup prints "backed up to" and then "copied off the droplet"; `ls` lists
 `scope-<stamp>.db.enc` and `files-<stamp>.tar.gz`. `cron.daily` runs the installed copy,
 not the checkout, so every deploy re-installs a changed `backup.sh` (the release train,
@@ -441,7 +442,7 @@ deploys `main` directly.
 ### When `deploy/Caddyfile` changes
 
 Caddy serves production as well as staging, so its config is installed by a person, on its
-own, never by `update.sh` or `refresh-staging.sh`. Do it before the deploy window of the
+own, never by `refresh-staging.sh`. Do it before the deploy window of the
 train that carries the change, while production still runs the previous train: a bad file is
 then found with nothing else moving. Before a train is tagged, check whether it touches the
 file (`git log --oneline <last tag>..$SHA -- deploy/Caddyfile`); if it does, this comes first.
@@ -451,43 +452,66 @@ systemd hands Caddy through `caddy.service.d/staging-auth.conf`. A plain `caddy 
 a root shell has neither, so it checks a different config from the one the reload loads. Load
 the file first, as below. bash's `.` expands `$` and a bcrypt hash is full of them
 (`$2a$14$…`), so the hash must sit in single quotes in that file (`SCOPE_STAGING_HASH='…'`);
-systemd strips the quotes and reads the same value, and the block refuses an unquoted one. If
+systemd strips the quotes and reads the same value, and the block refuses anything but one
+line for it, quoted and with the closing quote. If
 the file or the drop-in is missing, do staging's first install (the header of
 `deploy/refresh-staging.sh`) before this.
 
-Fill `SHA=` in every block. Each block stops at once if it is empty, if git cannot show the
-file at that sha, or if what it wrote is empty.
+Fill `SHA=` in every block. Each block is one `( ... )`: when it stops, it prints one `STOP:`
+line saying why and the rest of that block does not run, in a login shell or a shell inside one,
+and your shell stays open. Fix what the line says and paste the same block again.
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
-    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || exit 1
-    test -s /tmp/Caddyfile.next || exit 1
-    cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA"
-    test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf && echo "staging auth: present"
-    grep -q "^SCOPE_STAGING_HASH='" /etc/caddy/staging-auth.env || exit 1
-    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) && echo "VALID"
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
+      git fetch --quiet origin || stop "git fetch failed"
+      git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || stop "git show failed: no deploy/Caddyfile at $SHA"
+      test -s /tmp/Caddyfile.next || stop "the file fetched at $SHA is empty"
+      cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA" || stop "the live file could not be saved"
+      test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf || stop "staging auth is missing; do staging's first install"
+      echo "staging auth: present"
+      test "$(grep -c SCOPE_STAGING_HASH /etc/caddy/staging-auth.env)" = 1 || stop "staging-auth.env must hold SCOPE_STAGING_HASH on exactly one line"
+      grep -qx "SCOPE_STAGING_HASH='[^'][^']*'" /etc/caddy/staging-auth.env || stop "the SCOPE_STAGING_HASH line must be single-quoted, closing quote included"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) || stop "caddy refused /tmp/Caddyfile.next; nothing was installed"
+      echo "VALID"
+    )
 
-Go on only after `staging auth: present` and `VALID`:
+Go on only after `staging auth: present` and `VALID`. The next block validates the same file
+again right before it replaces the live one. A stop before the install leaves the live file as
+it was; after it, the block puts the saved copy back, and its line says whether that worked:
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile
-    diff <(git show "$SHA:deploy/Caddyfile") /etc/caddy/Caddyfile && echo "matches $SHA"
-    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy && sleep 2
-    curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
-    curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      undo() { cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && stop "$1; the saved copy is back"; stop "$1, and the saved copy could NOT be put back: copy it by hand"; }
+      test -s /tmp/Caddyfile.next || stop "/tmp/Caddyfile.next is empty or missing; nothing was installed, run the first block again"
+      git show "$SHA:deploy/Caddyfile" | diff - /tmp/Caddyfile.next > /dev/null || stop "/tmp/Caddyfile.next is not the file at $SHA; nothing was installed"
+      test -s "/etc/caddy/Caddyfile.before-$SHA" || stop "no saved copy for $SHA; nothing was installed, run the first block again"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) || stop "caddy refused /tmp/Caddyfile.next; nothing was installed"
+      install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile || undo "the install failed"
+      diff /tmp/Caddyfile.next /etc/caddy/Caddyfile > /dev/null || undo "the live file is not the file at $SHA"
+      echo "matches $SHA"
+      ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy || undo "caddy refused the installed file or its reload"
+      sleep 2
+      curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
+      curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+    )
 
 Expected: `matches <sha>`, `production after:` the same as `production before:` (200), and
 staging without the password `401`, so the staging block and its `basic_auth` survived. If
 production answers anything else, put the old file back at once:
 
-    cd /srv/scope || exit 1
-    SHA=
-    test -n "$SHA" || exit 1
-    cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && systemctl reload caddy
+    ( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }
+      SHA=
+      stop() { echo "STOP: $1"; exit 1; }
+      test -n "$SHA" || stop "SHA= is empty; fill it in"
+      test -s "/etc/caddy/Caddyfile.before-$SHA" || stop "no saved copy for $SHA"
+      cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile || stop "the saved copy could not be put back"
+      systemctl reload caddy || stop "the saved copy is back but caddy did not reload"
+    )
 
 Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the
 before and after codes.
@@ -521,6 +545,109 @@ the last day held per series, days behind, the last run, the stock days waiting,
 **Staging** gets no Fyers keys: its card says "not set up on this server", it never syncs, and it
 reads production's folder read only (`SCOPE_MARKET_DIR` in `deploy/staging.env.example`). Don't
 install the market units for staging.
+
+### Train 3, once: market data before the restart
+
+Train 3 is the first deploy that needs more than a checkout and a restart. Paste these blocks
+as root, one at a time and in this order, after step c has a tag and before step d's Path A or
+Path B restarts production. Each block runs in a subshell that stops at the first failing line
+and prints `STOPPED`; when it does, fix that and paste the same block again before going on.
+No block holds a key's value, and none reads an env file with `.` or `source`: a `$` inside a
+value would be expanded (the lesson of the caddy install).
+
+**1. Staging first.** Staging holds no Fyers keys and reads production's market folder read
+only. Check that before production changes:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      grep -qx 'SCOPE_MARKET_DIR=/srv/scope/data/market' /etc/scope/staging.env || { echo "STOP: staging.env has no SCOPE_MARKET_DIR (deploy/staging.env.example)"; exit 1; }
+      if grep -qE '^FYERS_' /etc/scope/staging.env; then echo "STOP: staging must hold no Fyers keys"; exit 1; fi
+      echo "staging: reads the market folder read only, holds no keys"
+    ) || echo "STOPPED: fix the line above before going on"
+
+Then open a market page on staging: before the folder below exists it shows its no-data state
+and no error (TICKET-1077, line 4).
+
+**2. The three Fyers settings.** This block adds each name with a placeholder, never a value:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      for k in FYERS_APP_ID FYERS_SECRET_KEY FYERS_REDIRECT_URI; do
+        grep -qE "^$k=" /etc/scope/scope.env || printf '%s=<%s>\n' "$k" "$k" >> /etc/scope/scope.env
+      done
+      chown root:root /etc/scope/scope.env && chmod 600 /etc/scope/scope.env
+      grep -cE '^FYERS_' /etc/scope/scope.env
+    ) || echo "STOPPED: fix the line above before going on"
+
+Now open `/etc/scope/scope.env` in an editor (`nano /etc/scope/scope.env`) and replace each
+`<...>` with the value from the Fyers dashboard. Type the values into the editor, never into the
+shell, so none lands in its history. Then check, without printing a value:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      for k in FYERS_APP_ID FYERS_SECRET_KEY FYERS_REDIRECT_URI; do
+        line=$(grep -E "^$k=" /etc/scope/scope.env) || { echo "STOP: $k missing"; exit 1; }
+        case "${line#*=}" in ''|'<'*) echo "STOP: $k still a placeholder"; exit 1;; esac
+        echo "$k set"
+      done
+      [ "$(stat -c '%U %a' /etc/scope/scope.env)" = "root 600" ] || { echo "STOP: scope.env must be root, 600"; exit 1; }
+    ) || echo "STOPPED: fix the line above before going on"
+
+**3. The bucket's lifecycle rule, scoped to `scope/`.** The market bars get one copy off the
+droplet, in the same Spaces bucket the nightly backups use, under the `market/` prefix beside
+`scope/` (ruling of 24 Nov). Fyers serves bars by contract, and an expired contract is an invalid
+symbol to it (`services/shared/market/fyers_history.py`), so once a day is lost on the droplet,
+Scope cannot fetch it again. The 30-day rule set in section 5 covers the whole bucket; it must
+cover only `scope/`, where every trader copy lives, or it would delete the market copies too:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      SPACES=$(grep -E '^SCOPE_SPACES=' /etc/scope/spaces.env | cut -d= -f2-)
+      BUCKET=${SPACES%/scope}
+      [ -n "$SPACES" ] && [ "$BUCKET" != "$SPACES" ] || { echo "STOP: SCOPE_SPACES must end in /scope"; exit 1; }
+      s3cmd -c /etc/scope/s3cfg expire "$BUCKET" --expiry-days=30 --expiry-prefix=scope/
+      s3cmd -c /etc/scope/s3cfg getlifecycle "$BUCKET"
+    ) || echo "STOPPED: fix the line above before going on"
+
+Expected: `getlifecycle` shows `<Prefix>scope/</Prefix>` and `<Days>30</Days>`. Without the
+`<Prefix>` line the rule still covers the whole bucket: stop the train, because the first
+market copy would expire at 30 days. The trader copies keep their 30 days either way.
+
+**4. The market folder**, owned by the app's user. Seed it afterwards as `docs/runbooks/price-series.md` says:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      install -d -o scope -g scope -m 0750 /srv/scope/data/market
+      stat -c '%U:%G %a %n' /srv/scope/data/market
+    ) || echo "STOPPED: fix the line above before going on"
+
+**5. The two units, from the tag**, enabled but not started: the live code before the restart
+may not know the sync. Fill `TAG=` with step c's tag:
+
+    cd /srv/scope || exit 1
+    TAG=
+    ( set -eu
+      [ -n "$TAG" ] || { echo "STOP: fill TAG= with the tag from step c"; exit 1; }
+      for u in scope-market.service scope-market.timer; do
+        git show "$TAG:deploy/$u" > "/etc/systemd/system/$u"
+      done
+      systemctl daemon-reload
+      systemctl enable scope-market.timer
+      systemctl is-enabled scope-market.timer
+    ) || echo "STOPPED: fix the line above before going on"
+
+Then step d as usual (its `cmp` lines find the units already in place). **6. After step d's
+restart**, start the timer and see its next run:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      systemctl start scope-market.timer
+      systemctl is-active scope-market.timer
+      systemctl list-timers scope-market.timer --no-pager
+    ) || echo "STOPPED: fix the line above before going on"
+
+Expected: `active`, and a next run within ten minutes. The next night's backup prints
+`market bars copied to s3://<bucket>/market/`; step e's checks still apply.
 
 ## 6. Before the first partner uploads
 

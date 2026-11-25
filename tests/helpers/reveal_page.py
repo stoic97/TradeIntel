@@ -14,7 +14,8 @@ def reveal(trips=TRIPS, guessed="[guess option 3, TR-009]") -> str:
         template_env()
         .get_template("reveal.html")
         .render(
-            title="Your five worst days",
+            title=SF.reveal_days(ctx)["title"],
+            reveal_days=SF.reveal_days(ctx),
             screen_class="screen--navy on-navy",
             body_class="reveal",
             guessed=guessed,

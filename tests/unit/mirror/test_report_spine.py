@@ -1,6 +1,6 @@
 """TICKET-903: the report's spine. One order, one header, one way in and out of every page.
 
-Rikk's ruling, 13 Nov 2026 (round 2 section N; mockups/nav_v2.html):
+Ruled 13 Nov 2026 (round 2 section N; mockups/nav_v2.html):
 - The rail on every report page: the full path, "N of 10", the pages grouped by chapter,
   the ones read filled, each a link. All pages: every page, ticked if read, with its short
   answer, and Home, Journal and Account. Previous and Next in the same place on every page,
