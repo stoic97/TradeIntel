@@ -38,7 +38,7 @@ against 4-6 and 85-87 for non-centred, because under tau_day ~ HalfNormal(0.5) a
 sigma ~ HalfNormal(2) most prior mass sits where day effects are drowned in noise.
 Centred wins only where tau_day is large relative to sigma. theta calibrates under
 the non-centred form on every run. The centred option stays for that corner, and a
-per-day hybrid is parked as TD-022.
+per-day hybrid was TD-022, dropped by the founder.
 
 **Two numbers here are not the framework's as written.** ``TAU_DAY_PROVENANCE``
 covers the one the framework omits; ``NU_FLOOR_PROVENANCE`` covers the one it got
