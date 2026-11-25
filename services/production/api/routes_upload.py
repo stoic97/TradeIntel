@@ -351,10 +351,12 @@ def import_review(request: Request, import_id: int):
 
 
 def _headline_figures(trips: list[mx.Trip]) -> dict[str, Decimal]:
-    """Each book by its own name, then the five worst days. No options total beside the books:
-    with one option book it repeated that book's figure under a second label."""
+    """Each book by its own name, then the worst days, counted as the report counts them. No
+    options total beside the books: with one option book it repeated that book's figure under a
+    second label."""
     out: dict[str, Decimal] = {book.label: book.net for book in mx.verdict(trips).books}
-    out["Your five worst days"] = mx.five_worst_days(trips).sum
+    worst = mx.five_worst_days(trips)
+    out[f"Your {formatting.worst_days(len(worst.days))}"] = worst.sum
     return out
 
 

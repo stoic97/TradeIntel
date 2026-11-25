@@ -5,7 +5,7 @@
     trader remembers days, and what the record says they share (TICKET-816). "Show me those
     days" opens the worst-days fact with the lens; the other button goes on to the one number. -#}
 {% extends "layout.html" %}
-{% from "_components.html" import money, button, share_sentence, uncounted_line %}
+{% from "_components.html" import money, button, share_sentence, uncounted_line, worst_count %}
 {% block content %}
   {%- if guessed %}
   <p class="body-small body-small--soft">You guessed: {{ guessed }}.</p>
@@ -33,7 +33,7 @@
   </div>
   {{ uncounted_line(imp.trips_refused) }}
   {%- if reveal_days.all_of_them %}
-  <p class="mirror mirror--card">{% if reveal_days.count == 1 %}That day{% else %}Those {{ reveal_days.word }} days{% endif %} came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
+  <p class="mirror mirror--card">{% if reveal_days.count == 1 %}That day{% else %}Those {{ worst_count(reveal_days.count) }} days{% endif %} came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
   {%- elif share.shown_as_percentage %}
   <p class="mirror mirror--card">{{ share_sentence(share) }}</p>
   <p class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
@@ -54,7 +54,7 @@
   <p class="mirror mirror--card">On <span class="num">{{ Figure(five_days.first_lost_days, "days")|count }}</span> of these days your first trade lost and you kept going: {{ Figure(five_days.lost_after_first, "rupees")|rupees(signed=false) }} more was lost after it.</p>
   {%- endif %}
   {%- if reveal_days.count > 1 and (five_days.shared_book or five_days.past_nine) %}
-  <p class="mirror mirror--card">{% if five_days.shared_book %}{% if reveal_days.count == 2 %}Both include{% else %}Every one of the {{ reveal_days.word }} includes{% endif %} {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the {{ reveal_days.word }} ran past 9 pm.{% endif %}</p>
+  <p class="mirror mirror--card">{% if five_days.shared_book %}{% if reveal_days.count == 2 %}Both include{% else %}Every one of the {{ worst_count(reveal_days.count) }}{% if reveal_days.count != 5 %} days{% endif %} includes{% endif %} {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the {{ worst_count(reveal_days.count) }}{% if reveal_days.count != 5 %} days{% endif %} ran past 9 pm.{% endif %}</p>
   {%- endif %}
   {%- endif %}
   <div class="screen__actions">

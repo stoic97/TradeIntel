@@ -94,6 +94,19 @@ def count(value) -> str:
     return indian_grouping(_whole(value))
 
 
+def worst_count(n: int) -> str:
+    """The worst days counted, as the report says it: "five" at five, the counted figure below.
+
+    One place decides these words. The macro of the same name in _components.html says it with
+    a Figure beside it; the Journal flag, the upload row and the reveal say it from here."""
+    return "five" if n == 5 else count(n)
+
+
+def worst_days(n: int) -> str:
+    """"5 worst days" as the report's pages say it: the count, then day or days."""
+    return f"{worst_count(n)} worst {'day' if n == 1 else 'days'}"
+
+
 def minutes(seconds) -> str:
     """Whole minutes from seconds, cut as the templates' (seconds / 60)|int cut them."""
     return count(_whole(Decimal(str(seconds)) / 60))

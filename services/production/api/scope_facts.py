@@ -1529,14 +1529,9 @@ def reveal_days(ctx: dict) -> dict:
     """How many days the reveal is about, from his file: his five worst, or every day he has
     when he has fewer than five. The page never says "five" about days he does not have."""
     n = len(ctx["worst_days"].days)
-    word = _number(n)
-    if n >= 5:
-        title = "Your five worst days"
-    elif n == 1:
-        title = "Your one trading day"
-    else:
-        title = f"Your {word} trading days"
-    return {"count": n, "word": word, "all_of_them": n < 5, "title": title}
+    word = formatting.worst_count(n)
+    return {"count": n, "word": word, "all_of_them": n < 5,
+            "title": f"Your {formatting.worst_days(n)}"}
 
 
 def reveal_view(ctx: dict) -> dict:
