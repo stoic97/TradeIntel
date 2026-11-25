@@ -211,13 +211,18 @@ def test_the_walk_of_the_routes_really_reaches_them(app):
     assert "POST" in methods["/signup"], "a walk that misses this would pass whatever /admin did"
 
 
-def test_only_get_routes_exist_under_admin(app):
+FYERS_POSTS = {"/admin/fyers/connect", "/admin/fyers/paste"}
+"""TICKET-998 amends the read-only page by exactly the Market data card: two POST forms, each with
+the page's CSRF token, and the broker's GET back to the callback. Nothing else may write."""
+
+
+def test_only_get_routes_exist_under_admin_but_the_market_cards_two_forms(app):
     found = [r for r in every_route(app.routes)
              if isinstance(r, APIRoute) and r.path.startswith("/admin")]
     assert {r.path for r in found} == {"/admin", "/admin/", "/admin/traders/{trader_id}",
-                                       "/admin/traders/{trader_id}/"}
+                                       "/admin/traders/{trader_id}/", "/admin/fyers/callback", *FYERS_POSTS}
     for route in found:
-        assert route.methods <= {"GET"}, route.path
+        assert route.methods <= ({"POST"} if route.path in FYERS_POSTS else {"GET"}), route.path
 
 
 def test_no_other_template_links_to_the_page():
@@ -1441,7 +1446,9 @@ def test_guess_and_leaving_card_are_empty_while_off(production_app):
     assert the_view["features_off"] == ["guess", "leaving card"]
 
 
-def test_guess_and_leaving_card_say_no_while_on(app, engine):
+def test_guess_and_leaving_card_say_no_while_on(app, engine, monkeypatch):
+    from services.production.mirror import guess as GU
+    monkeypatch.setattr(GU, "PLACEHOLDER", False)  # "on": the guess with its labels written (TR-009)
     add_trader(engine, "someone")
     the_view = view(app, engine)
     row = row_of(the_view, "someone")

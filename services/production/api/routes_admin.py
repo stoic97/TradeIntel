@@ -11,31 +11,41 @@ writes it, because an admin action outlives a deletion and a login id is his.
 
 One trader's page (TICKET-875) keeps the same rule. Its id is taken as text and checked after
 the admin check, because a framework's 422 for a bad id would say something is here.
+
+**The one amendment (TICKET-998): connecting Fyers for market data.** 848 made this page read
+only. The Market data card adds exactly two forms, each a POST with the page's CSRF token, and the
+broker's GET back to ``/admin/fyers/callback``, which can't carry that token, so it carries a
+``state`` signed for the admin who started the login instead (``market.token.sign_state``). The same
+404 holds for everyone else, before any other check. The day's token goes straight to
+``market.token.save``, encrypted; no page, log, error or admin action ever holds it or the code.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 
 from services.production.api import admin_health, admin_view
-from services.production.api.routes_identity import current_trader, page
+from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.api.trader_trail import build as trader_trail
 from services.production.db import models as m
 from services.production.db.session import make_session
+from services.production.market import fyers
+from services.production.market import token as market_token
 
 router = APIRouter()
 
 PATH = "/admin"
 TRADERS = f"{PATH}/traders/"
+FYERS = f"{PATH}/fyers/"
 LONGEST_ID = 18  # past this no id fits the database's integer, so it can't be anyone's
 
 
 def is_admin_path(path: str) -> bool:
-    return path.rstrip("/") == PATH or path.startswith(TRADERS)
+    return path.rstrip("/") == PATH or path.startswith((TRADERS, FYERS))
 
 
 @router.get(PATH, response_class=HTMLResponse)
@@ -57,6 +67,7 @@ def admin(request: Request):
                                 sort=request.query_params.get("sort"),
                                 all_columns=request.query_params.get("columns") == "all",
                                 admin_ids=config.admin_login_ids)
+    view["market"]["said"] = admin_view.MARKET_SAID.get(request.query_params.get("fyers", ""))
     return page(request, "admin.html", demo=None, title="Admin", screen_class="screen--admin",
                 body_class="admin", health=admin_health.build(request.app), **view)
 
@@ -94,3 +105,84 @@ def admin_trader(request: Request, trader_id: str):
 def admin_trader_slash(trader_id: str):
     """The same as admin_slash: a redirect would say something is here."""
     raise HTTPException(status_code=404)
+
+
+# ---------- Connect Fyers (TICKET-998) ----------
+
+
+def _admin_actor(request: Request, sess) -> str:
+    """``trader:<id>`` for an admin, else the same 404 as an unknown address."""
+    trader = current_trader(request, sess)
+    if trader is None or trader.login_id not in request.app.state.settings.admin_login_ids:
+        raise HTTPException(status_code=404)
+    return f"trader:{trader.id}"
+
+
+def _back(said: str) -> RedirectResponse:
+    return RedirectResponse(f"{PATH}?fyers={said}#market", status_code=303)
+
+
+def _connect_with(request: Request, sess, actor: str, app: fyers.FyersApp, code: str) -> RedirectResponse:
+    now = datetime.now(UTC)
+    try:
+        login = fyers.exchange(app, code)
+        market_token.save(sess, request.app.state.settings.file_key, login, actor=actor, now=now)
+    except (fyers.ExchangeFailed, ValueError):
+        sess.add(m.AdminAction(actor=actor, action="fyers_connect_refused", target=None, at=now))
+        sess.commit()
+        return _back("expired")
+    sess.add(m.AdminAction(actor=actor, action="fyers_connected", target=None, at=now))
+    sess.commit()
+    return _back("connected")
+
+
+@router.post(f"{FYERS}connect", include_in_schema=False)
+def fyers_connect(request: Request, csrf_token: str = Form(None)):
+    """Send the admin to the broker's login, with a state signed for him."""
+    with make_session(request.app.state.engine) as sess:
+        actor = _admin_actor(request, sess)
+        app = fyers.from_env()
+        if app is None:
+            raise HTTPException(status_code=404)
+        if not require_csrf(request, csrf_token):
+            return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+        now = datetime.now(UTC)
+        state = market_token.sign_state(request.app.state.settings.secret_key, actor, now)
+        sess.add(m.AdminAction(actor=actor, action="fyers_login_started", target=None, at=now))
+        sess.commit()
+    return RedirectResponse(fyers.login_url(app, state), status_code=303)
+
+
+@router.get(f"{FYERS}callback", include_in_schema=False)
+def fyers_callback(request: Request):
+    """Where the broker's login comes back, when the app is registered with this address."""
+    with make_session(request.app.state.engine) as sess:
+        actor = _admin_actor(request, sess)
+        app = fyers.from_env()
+        if app is None:
+            raise HTTPException(status_code=404)
+        code, state = request.query_params.get("auth_code"), request.query_params.get("state")
+        if not market_token.state_ok(request.app.state.settings.secret_key, actor, state, datetime.now(UTC)):
+            sess.add(m.AdminAction(actor=actor, action="fyers_connect_refused", target=None,
+                                   at=datetime.now(UTC)))
+            sess.commit()
+            return _back("refused")
+        if not code:
+            return _back("no-code")
+        return _connect_with(request, sess, actor, app, code)
+
+
+@router.post(f"{FYERS}paste", include_in_schema=False)
+def fyers_paste(request: Request, address: str = Form(""), csrf_token: str = Form(None)):
+    """The whole address bar the broker's login ended on, pasted. Always there."""
+    with make_session(request.app.state.engine) as sess:
+        actor = _admin_actor(request, sess)
+        app = fyers.from_env()
+        if app is None:
+            raise HTTPException(status_code=404)
+        if not require_csrf(request, csrf_token):
+            return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+        code, _state = market_token.auth_code_from(address)
+        if not code:
+            return _back("no-code")
+        return _connect_with(request, sess, actor, app, code)

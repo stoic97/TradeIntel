@@ -281,18 +281,13 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 
 ## 14. Open tickets that are not this build
 
-- **TD-023:** the B2 recall test doesn't reproduce from the repository (the one known red).
-- **TD-029 / TD-024:** Dhan's `Quantity/Lot` meaning for size figures.
-- **TD-031:** plain names for the 19 library checks on the eligibility page (it shows identifiers today).
-- **TD-030:** B12's `20/40_days` reading.
-- MCX crude tick size and NIFTY lot size for further instrument profiles.
-- Testing register TR-001 to TR-007 (costs, two-readout test, NSE crude, sold options, commodity futures, never-use words, correctness published).
+They are in Jira (Plusev_Engineering), not here: [open deferrals and testing items](https://plusev-team.atlassian.net/issues/?jql=labels%20in%20(from-deferrals%2C%20from-testing-register)%20AND%20statusCategory%20!%3D%20Done%20ORDER%20BY%20key). `docs/deferrals.md` is the index of TD ids, each with its Jira key.
 
 ## 15. Documents
 
 **Read these, in this repo:**
 - This document.
-- `docs/product/scope_testing_register_v1.md`: every open bug, feature and change; new items go here.
+- `docs/archive/scope_testing_register_v1.md`: the testing items as they stood on 27 Oct, archived; open work is in Jira (§14).
 - `docs/trade_dna_product_thesis_v1.5.md` and `docs/trade_dna_research_spec_v1_0.md`: background only; nothing in this build depends on them.
 - `docs/runbooks/` (deploy, data-flow map, deletion), `docs/adr/` (ADR-007 is the runtime), `docs/deferrals.md` (TD tickets), `docs/design/` (the kit and the screens, after §3).
 

@@ -84,7 +84,14 @@
     T3). view is scope_geometry.build_dial's shape with plain hrefs; api/dial.py escapes
     them and draws the kit's SVG. size: phone (260 px) or desktop (440 px). -#}
 {% macro dial(view, size="phone") -%}
-<div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}</div>
+<div class="scope{% if size == "desktop" %} scope--desktop{% endif %}">{{ scope_dial(view, size) }}{% if size != "desktop" and view.phone_list %}{{ dial_list(view.phone_list) }}{% endif %}</div>
+{%- endmacro %}
+
+{#- The facts a chapter's phone dial has no wedge for (Fact.on_phone_dial), directly under it, in the
+    desktop wedge's own words: what the figure is, what it is of, and a link to the fact. It sits in
+    the phone dial's own box, so it shows and hides with it. Server-drawn; no script. -#}
+{% macro dial_list(rows) -%}
+<ul class="scope__list">{% for r in rows %}<li class="scope__list-row" data-fact="{{ r.key }}" data-known="{{ r.finding|known }}" data-rung="{{ r.finding|rung }}"><a href="{{ r.href }}"><span class="scope__list-title">{{ r.title }}</span> <span class="scope__list-said">{% if r.state == "not-enough" %}Not enough trades yet.{% elif r.state %}Not in your file.{% else %}<span class="num">{{ r.said }}</span>{% if r.of %} {{ r.of }}{% endif %}{% endif %}</span></a></li>{% endfor %}</ul>
 {%- endmacro %}
 
 {#- A page's dial at both of the kit's sizes, and CSS shows the one that fits: its words differ
@@ -103,7 +110,7 @@
     block - its axis and legend, which differ from fact to fact. -#}
 {% macro figure(number, caption, c) -%}
 <figure class="figure">
-    <figcaption class="figure__caption">Figure {{ Figure(number, "figure") }} · {{ caption }}</figcaption>
+    <figcaption class="figure__caption">{{ caption }}</figcaption>
     {{ chart(c) }}
     {%- if caller %}
     {{ caller() }}{% endif %}
@@ -119,6 +126,11 @@
   {% if caller %}{{ caller() }}{% endif %}
   <span class="story-card__foot"><span>{{ foot }}</span><span aria-hidden="true">›</span></span>
 </a>
+{%- endmacro %}
+
+{#- The worst days counted: "five", or how many there are when his record has fewer days. -#}
+{% macro worst_count(n) -%}
+{%- if n == 5 %}five{% else %}<span class="num">{{ Figure(n, "days")|count }}</span>{% endif -%}
 {%- endmacro %}
 
 {% macro trades_behind(n) -%}
@@ -150,12 +162,14 @@
     gap: the words for how long since the last trade closed, on a run's rows only. after:
     the trade after a run, which is not one of the trades behind the fact. rank: its place on
     a ranked list. -#}
-{% macro trade(t, after=false, rank=none) -%}
+{% macro trade(t, after=false, rank=none, dense=false) -%}
 <article class="trade{% if after %} trade--after{% endif %}">
       <div class="trade__label">{% if rank %}<span class="trade__rank">{{ Figure(rank, "rank") }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ Figure(t.qty, "units")|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ Figure(t.held_seconds, "seconds")|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ Figure(t.net, "rupees")|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
+      {%- if dense %}<details class="trade__more"><summary>Prices</summary>{% endif %}
       <div class="trade__prices">{{ Figure(t.entry_price, "rupees")|price }} → {{ Figure(t.exit_price, "rupees")|price }}{% if t.get("paid") %} · Paid {{ Figure(t.paid, "rupees")|rupees(signed=false) }} · {{ Figure(t.result_percent, "percent")|signed_percent }} of premium{% endif %}</div>
+      {%- if dense %}</details>{% endif %}
       {%- endif %}
       {%- if t.get("gap") %}
       <div class="trade__gap">{{ t.gap }}</div>
@@ -185,8 +199,8 @@
 
 {#- Every trade behind a fact, grouped by day - never a sample. group: title, trade_count,
     net, trades. -#}
-{% macro trades(groups) -%}
-<div class="trades">
+{% macro trades(groups, dense=false) -%}
+<div class="trades{% if dense %} trades--dense{% endif %}">
   {%- for group in groups %}
   <section class="trades__group">
     <div class="trades__head">
@@ -194,7 +208,7 @@
       <div class="trades__cols" aria-hidden="true"><span>Day</span><span>In</span><span>Out</span><span>Held</span><span class="table__num">Result</span></div>
     </div>
     {%- for t in group.trades %}
-    {{ trade(t) }}
+    {{ trade(t, dense=dense) }}
     {%- endfor %}
   </section>
   {%- endfor %}

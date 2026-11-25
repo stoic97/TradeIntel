@@ -32,6 +32,7 @@ FIT = FitConfig(draws=500, warmup=500, chains=4, seed=2)
 
 # --- draws have to reach the caller at all ------------------------------------
 
+@pytest.mark.research_fit
 def test_a_fit_can_return_its_draws_and_the_digest_ignores_them():
     """A rank, an 80% interval and P(theta < 0) all need the sample, not the summary.
     But two fits of the same data are the same fit whether or not the draws were
@@ -102,6 +103,7 @@ def test_the_uniformity_test_refuses_a_rank_outside_its_range():
 
 # --- SBC on M1, end to end at a small replication count ----------------------
 
+@pytest.mark.research_fit
 def test_sbc_accounts_for_every_replication_per_parameter():
     """The harness must lose nothing, and must not let one parameter's failure
     disqualify another's rank.
