@@ -270,6 +270,19 @@ main)`, and that sha is what step c tags. The ref must be a commit `origin/main`
 holds; anything else is refused before the service stops. The second tag gets its own
 refresh, at its own sha, once the first train is live.
 
+The ref is a tag or a sha (7 to 40 lower-case hex characters). `main`, `HEAD` and
+`origin/main~3` are refused before the service stops, because a branch name moves.
+
+A ref older than the script has no script in its tree, and step 4 rewrites the checkout
+the script lives in. So before the first such refresh, copy the script outside the
+checkout and run that copy, and run it again for the refresh back to `main`:
+
+    install -m 755 /srv/scope-staging/deploy/refresh-staging.sh /usr/local/sbin/refresh-staging
+    /usr/local/sbin/refresh-staging 09919b5
+
+After the train is tagged, `/usr/local/sbin/refresh-staging` with no argument takes
+`origin/main` again. Install the copy afresh whenever `deploy/refresh-staging.sh` changes.
+
 ### b. UAT on staging
 
 The tester works through every ticket on the train against its gate, then the fixed pass
