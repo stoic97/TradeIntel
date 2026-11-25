@@ -312,4 +312,4 @@ They are in Jira (Plusev_Engineering), not here: [open deferrals and testing ite
 | 27 Oct | Fact page: single measure, figure as hero, pinned day headers, tighter trade records |
 | 27 Oct | Dial names upright and horizontal at arc midpoints; slice numbers on their own line; stacked figures on purpose |
 | 27 Oct | Motion: scope-in rotates the dial like a focus ring; shrink-to-lens collapses the navy upward; no colour crossfades |
-| 5 Nov | Slice numbers off the dial: a digit above a figure read as part of it (founder, FB-0124). Order is position and the rim name; story-card numbers stay. Chapter-dial counts carry their noun; not-told shows its name only (TICKET-843, Rikk's rulings) |
+| 5 Nov | Slice numbers off the dial: a digit above a figure read as part of it (founder, FB-0124). Order is position and the rim name; story-card numbers stay. Chapter-dial counts carry their noun; not-told shows its name only (TICKET-843's rulings) |
