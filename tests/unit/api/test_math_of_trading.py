@@ -301,14 +301,17 @@ def test_the_fact_has_its_new_name(text):
 
 def test_a_book_row_shows_the_win_rate_and_both_ways_to_break_even(page):
     row = cells(row_of(page, "WIDGET options"))
-    for figure in ("60", "45 of 100", "₹94", "+₹1"):  # 45% and 45.3%, as N of 100 (TICKET-1028)
+    # 45% and 45.3% are the same 45 of 100 said whole, so a tie shows one decimal on both (TICKET-1041)
+    for figure in ("60", "45.0 of 100", "45.3 of 100", "₹94", "+₹1"):
         assert figure in row, row
-    assert row.count("45 of 100") == 2, row
+    assert "45 of 100" not in row, row
 
 
 def test_both_ways_are_said_in_words(text):
     assert "Break even at 54 of 100" not in text  # the year's figure is in the year's row, not here
-    assert "Break even at 45 of 100, about 1 more winner in 60." in text
+    assert "Break even at 45.3 of 100, about 1 more winner in 60." in text
+    assert "45.0 of 100 trades made money" in text
+    assert "you break even at 45.3 of 100." in text
     assert "an average winner of ₹94, +₹1 on your ₹93." in text
 
 
