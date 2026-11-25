@@ -69,6 +69,17 @@ ALLOWED: dict[int, str] = {
 # most needed a decision recorded against it.
 NUMBER = re.compile(r"(?<![\w.])(\d[\d,_]*\d)(?![\w.])")
 THRESHOLD = 1000
+# The number in a ticket key ("TICKET-1053") is a reference, not a figure. Only that
+# token is exempt, and only inside a comment: any other number on the line still counts.
+TICKET_KEY = re.compile(r"\bTICKET-\d+\b")
+
+
+def without_ticket_keys(line: str) -> str:
+    """The line with each ticket key inside its comment blanked out."""
+    start = line.find("#")
+    if start < 0:
+        return line
+    return line[:start] + TICKET_KEY.sub("TICKET", line[start:])
 
 
 def files() -> list[Path]:
@@ -93,7 +104,7 @@ def test_no_unexplained_large_number_is_in_the_code():
         for line_no, line in enumerate(path.read_text().splitlines(), start=1):
             if "noqa: figure" in line:
                 continue
-            for raw in NUMBER.findall(line):
+            for raw in NUMBER.findall(without_ticket_keys(line)):
                 value = int(raw.replace("_", "").replace(",", ""))
                 if value < THRESHOLD or value in ALLOWED:
                     continue
