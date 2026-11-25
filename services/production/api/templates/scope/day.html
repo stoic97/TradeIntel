@@ -15,6 +15,7 @@
   {%- if journal_href %}
   <p class="body"><a class="link" href="{{ journal_href }}">Your journal for this day</a></p>
   {%- endif %}
+  {%- if chart %}{% include "scope/_market_chart.html" %}{% endif %}
   {%- if path %}
   <figure class="daychart-figure">
     {{ path.svg }}
