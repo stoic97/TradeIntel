@@ -214,6 +214,25 @@ def read_with_newer_code(sess: Session, imp: m.Import) -> bool:
             != (imp.reconstruction_version, imp.adapter_version))
 
 
+def _write_charges(sess: Session, imp: m.Import, plan: ImportPlan, rows: list[m.Trip]) -> None:
+    """Each trip's charges source, and its components where they were calculated (TICKET-995).
+
+    What the import worked out and used to throw away. A plan from before charges were worked
+    out carries no sources, and writes nothing: its import reads as it always did."""
+    if len(plan.trip_fees_source) != len(rows):
+        return
+    sess.flush()
+    parts = plan.trip_fees_components or ((),) * len(rows)
+    for row, source, components in zip(rows, plan.trip_fees_source, parts, strict=True):
+        if components:
+            for component, amount in components:
+                sess.add(m.TripCharge(import_id=imp.id, trip_row_id=row.id, source=source,
+                                      component=component, amount=amount))
+        else:
+            sess.add(m.TripCharge(import_id=imp.id, trip_row_id=row.id, source=source,
+                                  component=None, amount=None))
+
+
 def write_reading(
     sess: Session, *, trader: m.Trader, plan: ImportPlan, raw: m.RawFile, source_account: str,
     reads: tuple[m.RawFile, ...] | list[m.RawFile] = (),
@@ -283,13 +302,13 @@ def write_reading(
 
     position_of = {id(leg): pos for pos in plan.positions for leg in pos.legs}
     seen_trip_ids: dict[str, int] = {}
+    written: list[m.Trip] = []
     for trip in plan.trips:
         occurrence = seen_trip_ids.get(trip.trip_id, 0) + 1
         seen_trip_ids[trip.trip_id] = occurrence
         position = position_of.get(id(trip))
         multi_leg = position is not None and len(position.legs) > 1
-        sess.add(
-            m.Trip(
+        row = m.Trip(
                 import_id=imp.id,
                 trip_id=trip.trip_id,
                 occurrence=occurrence,
@@ -324,7 +343,9 @@ def write_reading(
                     strict=True,
                 )),
             )
-        )
+        sess.add(row)
+        written.append(row)
+    _write_charges(sess, imp, plan, written)
 
     for reason in plan.skipped:
         sess.add(m.SkippedTrip(import_id=imp.id, reason=reason))

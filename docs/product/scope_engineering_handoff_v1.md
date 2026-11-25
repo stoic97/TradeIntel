@@ -14,7 +14,7 @@ _v1 · 27 October 2026 · For the engineer building and running the Scope UI. **
 
 ## 1. What you are building
 
-PlusEV Scope reads a trader's broker tradebook, rebuilds his trades and shows him what they actually did, with every number opening to the trades behind it. v1 shows **the Mirror only**: the nine counted facts TradeIntel already computed on 27 October (the app has 15 fact pages now, §4). This build gives it a new interface:
+PlusEV Scope reads a trader's broker tradebook, rebuilds his trades and shows him what they actually did, with every number opening to the trades behind it. v1 shows **the Mirror only**: the nine counted facts TradeIntel already computed on 27 October (the app has 16 fact pages now, §4). This build gives it a new interface:
 
 - **The Scope:** a circular instrument that tells the Mirror's story in four chapters. Tap a chapter and the dial re-divides into that chapter's facts; tap a fact and the dial shrinks to a lens while the fact page tells it in full, down to every trade.
 - **The aha:** right after upload, the trader guesses, then sees that his five worst days were most of his whole result.
@@ -64,12 +64,12 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 
 | # | Chapter | Facts, in slice order | Fact key |
 |---|---|---|---|
-| 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Where the money came from | `hidden` · `worst-days` · `money` |
+| 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Where the money came from · Where the money went | `hidden` · `worst-days` · `money` · `charges` |
 | 2 | Your patterns | Your wins and losses · Longest losing run · The clock · After you clicked | `math` · `run` · `clock` · `after` |
 | 3 | Your behaviour | After two straight losses · How fast you went back in · Same way again · The day after a big day · Your busiest day · After you closed | `down` · `back-in` · `same-way` · `next-day` · `busiest` · `after-close` |
 | 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
 
-Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Five facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): After you clicked (TICKET-1001), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
+Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Six facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), After you clicked (TICKET-1001), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
 
 ### States and edge cases
 
@@ -110,7 +110,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 13 | One number | `/budget` | Restyle; moved | Now straight after the reveal (TR-008) |
 | 14 | Scope home | `/mirror` | New | Replaces the long Mirror page |
 | 15 | Chapter 1–4 | `/mirror/chapter/{n}` | New | |
-| 16 | Fact (16) | `/mirror/fact/{key}` | New | Keys in §4 |
+| 16 | Fact (17) | `/mirror/fact/{key}` | New | Keys in §4 |
 | 17 | Accurate / Not sure / Wrong | `POST /mirror/chapter/{n}/feedback` | New | B4 |
 | 18, 18b, 18c | Journals, one Journal, earlier Journals | `/journals`, `/journals/{id}`, `/journals/catch-up` | Restyle | WTP question stays inside the Journal |
 | 19 | Leaving card | top of `/journals`, once, after the first Journal | New | B7; D2 |
@@ -224,7 +224,7 @@ Dwell events stay as they are, keyed by fact page (`surface: mirror_line`).
 | Phase | What | Done when |
 |---|---|---|
 | 0 · Foundations | §3 done; T1, T2, T8; component macros (buttons, cards, table, gross line, result states, bottom nav, lens and path, trade record) | One restyled existing page matches the design system; ₹ renders in Plex |
-| 1 · The Scope | T3–T5, T7 without motion; Scope home, four chapters, 12 fact pages (history: 15 now, after TICKET-817, TICKET-819, TICKET-910, TICKET-1006 and TICKET-1009; §4), edge states; B1–B3; the geometry port | Every fact two taps from Home; every figure from `metrics`; wording tests pass |
+| 1 · The Scope | T3–T5, T7 without motion; Scope home, four chapters, 12 fact pages (history: 16 now, after TICKET-817, TICKET-819, TICKET-910, TICKET-995, TICKET-1006 and TICKET-1009; §4), edge states; B1–B3; the geometry port | Every fact two taps from Home; every figure from `metrics`; wording tests pass |
 | 2 · The journey | Calculating, guess, reveal (both states), one-number move, signed-in home, front door; B4, B6 | The flow plays end to end on the synthetic 40-trade history |
 | 3 · Motion | T6 for every transition in §7; reduced motion | Plays on Chrome and Safari; instant elsewhere |
 | 4 · Restyle the rest | Every remaining existing page, the leaving card (B7) | The brand checks in §11 pass on every page |

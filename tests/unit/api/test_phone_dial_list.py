@@ -54,10 +54,10 @@ def dials(html: str) -> list[str]:
 # re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
 # views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["51ffae6f525acc246f544e7138e166132ebc5da2065dcf10e5f4b0830e056438",
-                "dc43965c99e54af2e71865fa7dec525fe65704149d05658b0936a2d17ddc4737"],
-    "/mirror/chapter/1": ["cfd02b664bdbc277ad8cb7358c1438158ece81c3b75b58a5a1eceab9dc59f52b",  # phone: 1027 shortens a five-digit best trade
-                          "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc"],
+    "/mirror": ["fd7e936fead855999faf82101ed987cc0e5a47334569f268a56b29aae2c54103",
+                "eb76f2b75e639a6f06fe7f4e5295662e5ef975e52cde953bcaab91311f28510e"],
+    "/mirror/chapter/1": ["25228d3bc65b48e35618b2be5a3d39f4aaf19978abc096513223ad6b59e5ea4f",  # phone: 1027 shortens a five-digit best trade
+                          "e46f24ba3412133fc56f901c6bc7b0c91769f59e58b516ebc4c7d9dd2fa95408"],
     "/mirror/chapter/2": ["89631ace302a6e1aedd82ad44d127e66117ff4f9c525646eb18bae5926e4ac74",
                           "9e13b9bcc5ea14c455b9699f5b7d94769cba58ba60fd97c2120e1ddf1b52fc49"],  # desktop: 1001 adds a wedge
     "/mirror/chapter/3": ["dd9a9d3a7d73c1abb04479e3695dd2c735fbc00d9a49370e20e9f8fc5e5cb518",
@@ -69,7 +69,7 @@ ON_MAIN = {
 }
 CHAPTERS_ON_MAIN = {
     (1, "phone"): "6a3de0a598f2d9704254ac1496900547c2606c3f08cff24f7c77fb87681c401f",
-    (1, "desktop"): "3289d8dc852a321471ff35ea76ac36c9076fa72d60ccd31720002f8fde8b2d1b",
+    (1, "desktop"): "8bc0e2a40901ff932580ae6f52cd294b004020d7b289bb34f368379b0d69f941",
     (2, "phone"): "6907a01fd0d283f9381f7e8a9eeab1f9116e013651f2f46a083e771f89bbc948",
     (2, "desktop"): "d23dc8b3348d3a548a2b9da14ef17bf0c4115ca5f19e27140815f5f66f8498cb",  # 1001's wedge
     (3, "phone"): "0b5658b2d2a33fdaad899ab0388ca458ea5efd4f712b840a15668d470df409f7",
@@ -82,7 +82,8 @@ CHAPTERS_ON_MAIN = {
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
-OFF_THE_PHONE_DIAL = {"back-in", "same-way", "next-day",  # What you do next (1006)
+OFF_THE_PHONE_DIAL = {"charges",  # Where the money went (995)
+                      "back-in", "same-way", "next-day",  # What you do next (1006)
                       "after-close",  # After you closed: added after the phone dial was sized
                       "after"}  # After you clicked (1001), in chapter 2's list
 

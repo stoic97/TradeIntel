@@ -32,6 +32,7 @@ from services.production.api import trade_list as TL
 from services.production.api.routes_consent import has_diagnosis_consent, trader_today
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.charges import record as charge_record
+from services.production.charges import waterfall
 from services.production.ctr.intake import persist
 from services.production.ctr.profiles import registry as profiles
 from services.production.db import models as m
@@ -84,8 +85,9 @@ def load_record(request: Request):
                         reason=str(exc)), None
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
+        entries = waterfall.load(sess, trader, imp)  # each trade's charges, as stored (TICKET-995)
         if is_sample(request):
-            return None, (trips, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(trips))))
+            return None, (trips, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(trips, waterfall.build(entries, trips)))))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
         request.state.report_chosen = chosen
@@ -95,7 +97,7 @@ def load_record(request: Request):
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
-        return None, (shown, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(shown))))
+        return None, (shown, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(shown, waterfall.build(entries, shown)))))
 
 
 def _with_bars(sess, imp, context: dict) -> dict:

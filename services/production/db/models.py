@@ -237,6 +237,24 @@ class Trip(Base, _InsertOnly):
     __table_args__ = (UniqueConstraint("import_id", "trip_id", "occurrence"),)
 
 
+class TripCharge(Base, _InsertOnly):
+    """What one trip was charged and where that came from (TICKET-995).
+
+    Kept as the import computed it, so "where the money went" reads it back rather than
+    working it out again. One row per component when the charges were calculated
+    (BROKERAGE, STT, CTT, EXCHANGE, SEBI, STAMP, GST, IPFT); one row with no component for
+    any other source (``tradebook``, ``statement``, ``not_priced``, ``none``).
+    """
+
+    __tablename__ = "trip_charge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_row_id: Mapped[int] = mapped_column(ForeignKey("trip.id"))
+    source: Mapped[str] = mapped_column(String(16))
+    component: Mapped[str | None] = mapped_column(String(16))
+    amount: Mapped[Decimal | None] = mapped_column(DecimalText)
+
+
 class OpenPosition(Base, _InsertOnly):
     __tablename__ = "open_position"
     id: Mapped[int] = mapped_column(primary_key=True)

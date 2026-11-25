@@ -24,8 +24,8 @@ from tests.unit.api import figure_pages as P
 
 PAGES = ("/mirror", "/mirror/chapter/1", "/mirror/chapter/2", "/mirror/chapter/3", "/mirror/chapter/4")
 DESKTOP_ON_MAIN = {  # each page's desktop dial on main before this change (test_phone_dial_list's)
-    "/mirror": "dc43965c99e54af2e71865fa7dec525fe65704149d05658b0936a2d17ddc4737",
-    "/mirror/chapter/1": "541f9f884c7bdf62cc051695acbcc68339c144906dcd4d9e100b13ba022b86cc",
+    "/mirror": "eb76f2b75e639a6f06fe7f4e5295662e5ef975e52cde953bcaab91311f28510e",
+    "/mirror/chapter/1": "e46f24ba3412133fc56f901c6bc7b0c91769f59e58b516ebc4c7d9dd2fa95408",
     "/mirror/chapter/2": "9e13b9bcc5ea14c455b9699f5b7d94769cba58ba60fd97c2120e1ddf1b52fc49",
     "/mirror/chapter/3": "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf",
     "/mirror/chapter/4": "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572",
