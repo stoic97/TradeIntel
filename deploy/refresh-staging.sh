@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# Refresh staging: yesterday's production data on today's main (TICKET-948).
+# Refresh staging: yesterday's production data on main, or on any commit main already
+# holds (TICKET-948; the ref argument is TICKET-1003).
 #
-# Run as root on the droplet, no arguments, by whoever is about to run UAT:
+# Run as root on the droplet by whoever is about to run UAT. With no argument it takes
+# origin/main, exactly as it always has:
 #     /srv/scope-staging/deploy/refresh-staging.sh
+# With one argument it takes that tag or sha instead, so a train can be checked on the
+# very commit it will be tagged at:
+#     /srv/scope-staging/deploy/refresh-staging.sh 09919b5
+# The ref must be a commit origin/main already holds; anything else is refused before
+# the service stops, and staging keeps running what it was running. To judge a ref and
+# change nothing: REFRESH_STAGING_CHECK_ONLY=1 before the command.
 # It prints each step and ends with the version staging now runs. On any failure it
 # stops, names the step, and exits non-zero. No cron and no auto-deploy: a refresh in
 # the middle of someone's test is worse than a stale staging.
@@ -55,6 +63,7 @@ SERVICE=scope-staging
 HOST=staging.scope.plusev.in
 PORT=8001
 STARTUP_SECONDS=90
+REF="${1:-origin/main}"   # a tag or sha origin/main holds, or origin/main (TICKET-1003)
 
 STEP="checking it runs as root"
 trap 'echo "FAILED at step: $STEP" >&2; exit 1' ERR
@@ -63,6 +72,25 @@ fail() { echo "$1" >&2; false; }
 
 [ "$(id -u)" -eq 0 ] || fail "Run as root."
 [ -d "$STAGING/.git" ] || fail "$STAGING is not a checkout; see FIRST INSTALL at the top of this file."
+
+# TICKET-1003: judge the ref before anything stops, so a typo costs nothing. No step
+# number: this runs before 1/9, and a failure here is named by the ERR trap above.
+STEP="checking the ref"
+git -c safe.directory="$STAGING" -C "$STAGING" fetch --quiet --tags --prune origin
+# A branch name moves, so only a tag or a sha is taken as an argument (no argument means
+# origin/main, as ever). Judged here, after the tags are fetched and before anything stops.
+if [ -n "${1:-}" ] && ! git -c safe.directory="$STAGING" -C "$STAGING" show-ref --verify --quiet "refs/tags/$REF"         && ! [[ "$REF" =~ ^[0-9a-f]{7,40}$ ]]; then
+    fail "$REF is neither a tag nor a sha (7 to 40 lower-case hex characters); a branch name or HEAD would move. Nothing was stopped."
+fi
+REF_SHA="$(git -c safe.directory="$STAGING" -C "$STAGING" rev-parse --verify --quiet "$REF^{commit}" || true)"
+[ -n "$REF_SHA" ] || fail "$REF does not resolve to a commit in $STAGING. Nothing was stopped."
+git -c safe.directory="$STAGING" -C "$STAGING" merge-base --is-ancestor "$REF_SHA" origin/main \
+    || fail "$REF ($REF_SHA) is not on origin/main, so staging will not run it. Nothing was stopped."
+echo "$REF is ${REF_SHA:0:7}, and origin/main holds it"
+if [ -n "${REFRESH_STAGING_CHECK_ONLY:-}" ]; then
+    echo "REFRESH_STAGING_CHECK_ONLY was set: the ref is good and nothing was changed."
+    exit 0
+fi
 
 step "1/9 stop $SERVICE"
 systemctl stop "$SERVICE"
@@ -87,9 +115,9 @@ tar -xzf "$tarball" -C "$DATA"   # the archive holds files/, as backup.sh writes
 [ -d "$DATA/files" ] || fail "$tarball held no files/ directory."
 echo "restored $tarball ($(find "$DATA/files" -type f | wc -l) files)"
 
-step "4/9 check out origin/main"
+step "4/9 check out $REF"
 git -c safe.directory="$STAGING" -C "$STAGING" fetch --quiet --tags origin
-git -c safe.directory="$STAGING" -C "$STAGING" checkout --quiet --force --detach origin/main
+git -c safe.directory="$STAGING" -C "$STAGING" checkout --quiet --force --detach "$REF_SHA"
 echo "at $(git -c safe.directory="$STAGING" -C "$STAGING" log -1 --format='%h %s')"
 
 step "5/9 install dependencies"
@@ -132,5 +160,9 @@ version="$(printf '%s' "$body" | grep -o '"code_version": *"[^"]*"' | sed 's/.*"
 [ -n "$version" ] || fail "/health carried no code_version."
 
 echo
-echo "Staging is refreshed and running $version."
+if [ "$REF" = "origin/main" ]; then
+    echo "Staging is refreshed and running $version (origin/main)."
+else
+    echo "Staging is refreshed and running $version (ref $REF, not main)."
+fi
 echo "Write that version at the top of the train page."

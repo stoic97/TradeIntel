@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
+from services.production.api import after_clicked as AC
 from services.production.api import after_closed as ACL
 from services.production.api import day_chart, formatting
 from services.production.api import market_chart as MC
@@ -83,7 +84,7 @@ def load_record(request: Request):
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
         if is_sample(request):
-            return None, (trips, imp, _with_close_bars(sess, imp, SF.record_context(trips)))
+            return None, (trips, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(trips))))
         asked = RF.decode(request.cookies.get(RF.COOKIE))
         chosen = RF.valid(asked, trips, new_days)
         request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
@@ -92,7 +93,14 @@ def load_record(request: Request):
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
-        return None, (shown, imp, _with_close_bars(sess, imp, SF.record_context(shown)))
+        return None, (shown, imp, _with_close_bars(sess, imp, _with_bars(sess, imp, SF.record_context(shown))))
+
+
+def _with_bars(sess, imp, context: dict) -> dict:
+    """The import's stored bar figures beside the record's: read, never worked out
+    here, and never a bar."""
+    context["bars"] = AC.load(sess, imp)
+    return context
 
 
 def _with_close_bars(sess, imp, context: dict) -> dict:
@@ -311,6 +319,8 @@ def scope_fact(request: Request, key: str):
     chapter, index = SM.chapter_of(key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
+    if key == "after" and request.query_params.get("u"):  # the chip he picked
+        figs["after"].update(SF.after_page(context, request.query_params["u"]))
     if key == "after-close" and request.query_params.get("u"):  # the chip he picked
         figs["after-close"].update(SF.after_close_page(context, request.query_params["u"]))
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
@@ -505,6 +515,10 @@ def scope_fact_trades(request: Request, key: str):
     _trips, imp, context = record
     with make_session(request.app.state.engine) as sess:
         expiries = loader.expiries_for(sess, imp)
+        if key == "risk" and request.query_params.get("line"):
+            from services.production.api import process_bars
+            context = {**context, "stored_bars": process_bars.stored(sess, imp.id),
+                       "stored_ranges": process_bars.ranges(sess, imp.id)}
     chapter, index = SM.chapter_of(key)
     return page(request, "scope/trades.html", title=f"{SM.FACTS[key].title}: see all trades",
                 body_class="screen__body--fact", chapter=chapter, index=index,

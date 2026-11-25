@@ -167,7 +167,7 @@
       <div class="trade__label">{% if rank %}<span class="trade__rank">{{ Figure(rank, "rank") }}</span> · {% endif %}{{ t.instrument }}{% if t.get("side") %} · {{ t.side }}{% endif %}{% if t.get("qty") %} · Qty {{ Figure(t.qty, "units")|count }}{% endif %}{% if t.get("uncapped") %} · Uncapped{% endif %}</div>
       <div class="trade__row"><span>{{ t.day }}</span><span>{{ t.time_in }}</span><span>{{ t.time_out }}</span><span>{{ Figure(t.held_seconds, "seconds")|hold }}</span><span class="trade__net num--{{ t.net|tone }}">{{ Figure(t.net, "rupees")|rupees_on_a_trade }}</span></div>
       {%- if t.get("entry_price") and t.get("exit_price") %}
-      {%- if dense %}<details class="trade__more"><summary>Prices</summary>{% endif %}
+      {%- if dense %}<details class="trade__more"><summary>Entry and exit prices</summary>{% endif %}
       <div class="trade__prices">{{ Figure(t.entry_price, "rupees")|price }} → {{ Figure(t.exit_price, "rupees")|price }}{% if t.get("paid") %} · Paid {{ Figure(t.paid, "rupees")|rupees(signed=false) }} · {{ Figure(t.result_percent, "percent")|signed_percent }} of premium{% endif %}</div>
       {%- if dense %}</details>{% endif %}
       {%- endif %}
