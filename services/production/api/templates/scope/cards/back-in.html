@@ -3,7 +3,7 @@
   {%- if not f.state %}
   <span class="mirror mirror--card">{{ f.line }}</span>
   {%- if f.chart %}
-  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>After a loss</span><span><span class="legend__swatch legend__swatch--faint"></span>After a win or a level trade</span><span>| the median</span></span></span>
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="legend"><span><span class="legend__swatch legend__swatch--ink"></span>After a loss</span><span><span class="legend__swatch legend__swatch--faint"></span>After a win or a flat trade</span><span>| the median</span></span></span>
   {%- endif %}
   {%- endif %}
 {% endcall %}

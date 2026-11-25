@@ -1,5 +1,4 @@
-"""The reveal never says "five" about days he does not have; the count comes from his file,
-worded as the rest of the report words it (worst_count).
+"""The reveal never says "five" about days he does not have; the count comes from his file.
 
 Three made-up records, worked by hand:
   TWO     2 traded days: 2026-01-05 -600 and 2026-01-06 -200. Both are his "worst"; 2 days.
@@ -42,13 +41,13 @@ def page(trips):
 def test_two_days_never_say_five():
     text = page(TWO)
     assert "five" not in text.lower()
-    assert "Your 2 worst days" in text
-    assert "Those 2 days came to" in text
+    assert "Your two trading days" in text
+    assert "Those two days came to" in text
 
 
 def test_the_title_comes_from_his_file():
     assert hasattr(SF, "reveal_days"), "the count is decided in one place, from his file"
-    assert SF.reveal_days(SF.record_context(TWO))["title"] == "Your 2 worst days"
+    assert SF.reveal_days(SF.record_context(TWO))["title"] == "Your two trading days"
     assert SF.reveal_days(SF.record_context(FIVE))["title"] == "Your five worst days"
     assert SF.reveal_days(SF.record_context(SEVEN))["title"] == "Your five worst days"
 
@@ -56,7 +55,7 @@ def test_the_title_comes_from_his_file():
 def test_one_day_says_that_day():
     text = page([t("2026-01-05", -600)])
     assert "five" not in text.lower()
-    assert "Your 1 worst day" in text
+    assert "Your only trading day" in text
     assert "That day came to" in text
 
 
