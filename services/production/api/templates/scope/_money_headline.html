@@ -3,7 +3,7 @@
 Your best trades weren't trades.
 {%- elif f.found.same_day_count == 1 -%}
 Your only same-day trade came to <span class="nowrap">{{ Figure(f.found.best_net, "rupees")|rupees }}</span>.
-{%- elif f.found.same_day_count < 5 -%}
+{%- elif f.found.same_day_count and f.found.same_day_count < 5 -%}
 {#- Under five, the best five and the worst five are the same trades: said once, never "five". -#}
 Your {{ Figure(f.found.same_day_count, "trades")|count }} same-day trades came to <span class="nowrap">{{ Figure(f.found.best_net, "rupees")|rupees }}</span>.
 {%- elif f.found.same_day_count -%}
