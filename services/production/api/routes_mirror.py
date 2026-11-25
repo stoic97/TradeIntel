@@ -20,7 +20,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import distinct, func, select
 
 from services.production.accounts import risk_budget as rb
-from services.production.api import formatting
+from services.production.api import after_closed as ACL
+from services.production.api import day_chart, formatting
 from services.production.api import report_filter as RF
 from services.production.api import scope_facts as SF
 from services.production.api import scope_map as SM
@@ -34,6 +35,7 @@ from services.production.db import models as m
 from services.production.db.session import make_session
 from services.production.mirror import feedback as FB
 from services.production.mirror import loader
+from services.production.mirror import metrics as mx
 from services.shared.schemas import scope_v1 as s_enums
 
 router = APIRouter()
@@ -71,6 +73,7 @@ def load_record(request: Request):
         try:
             trips, imp = loader.load_for(sess, trader)
             new_days = None if is_sample(request) or imp is None else _new_days(sess, imp)
+            earlier = not (is_sample(request) or imp is None) and _earlier_upload(sess, imp)
         except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit) as exc:
             # Our gap, not his error, and the import review already recorded it. A
             # page that names the instrument beats a 500 that names nothing.
@@ -79,15 +82,29 @@ def load_record(request: Request):
         if not trips:
             return page(request, "mirror_empty.html", title="Your record"), None
         if is_sample(request):
-            return None, (trips, imp, SF.record_context(trips))
-        chosen = RF.valid(RF.decode(request.cookies.get(RF.COOKIE)), trips, new_days)
-        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path)
+            return None, (trips, imp, _with_close_bars(sess, imp, SF.record_context(trips)))
+        asked = RF.decode(request.cookies.get(RF.COOKIE))
+        chosen = RF.valid(asked, trips, new_days)
+        request.state.report_filter = RF.bar(chosen, trips, new_days, request.url.path, asked, earlier)
         request.state.history = trips
         shown = RF.apply(trips, chosen, new_days)
         if not shown:
             return page(request, "scope/filtered_empty.html", title="Your record", imp=imp,
                         report_filter=request.state.report_filter), None
-        return None, (shown, imp, SF.record_context(shown))
+        return None, (shown, imp, _with_close_bars(sess, imp, SF.record_context(shown)))
+
+
+def _with_close_bars(sess, imp, context: dict) -> dict:
+    """The import's stored after-exit paths beside the record: read, never worked
+    out here, and never a bar."""
+    context["bars_after_close"] = ACL.load(sess, imp)
+    return context
+
+
+def _earlier_upload(sess, imp) -> bool:
+    """Whether an upload came before this one. With none, "since your last upload" has nothing to
+    be since, and the page must not say his last upload added no new days."""
+    return persist.earlier_reading(sess, imp) is not None
 
 
 def _new_days(sess, imp) -> set[str] | None:
@@ -178,7 +195,6 @@ def scope_chapter(request: Request, n: int):
                 enter_class=enter_class(request), chapter=chapter,
                 view=SF.chapter_view(n, figs), facts=figs, imp=imp,
                 next_step=SM.chapter_step(n),
-                trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **_feedback_context(request, n),
                 **context)
 
@@ -294,6 +310,8 @@ def scope_fact(request: Request, key: str):
     chapter, index = SM.chapter_of(key)
     unread = _unread(request, imp) if key == "unread" else {}
     figs = SF.facts(context, imp)
+    if key == "after-close" and request.query_params.get("u"):  # the chip he picked
+        figs["after-close"].update(SF.after_close_page(context, request.query_params["u"]))
     ending = {"ending": _ending(request, imp, figs[key])} if key == "not-told" else {}
     flagged = {"flagged_days": _flagged_days(request, imp)} if key == "worst-days" else {}
     journals = _journal_links(request, key, figs[key], context)
@@ -304,7 +322,6 @@ def scope_fact(request: Request, key: str):
                 spine=SM.spine(key, _read_pages(request)), answers=SF.short_answers(figs),
                 f=figs[key], facts=figs,
                 groups=[] if figs[key]["see_all"] else SM.groups(key, context), imp=imp,
-                trading_day_count=len(context["days"].counts),
                 sources=s_enums.RiskUnitSourceV1, **unread, **ending, **flagged, **journals,
                 **context)
 
@@ -361,14 +378,16 @@ def _ending(request: Request, imp, fact: dict) -> dict:
         trader = reader(request, sess)
         worst = fact["flagged"]["worst"]
         opens = {} if worst is None else _journal_ids(sess, trader, {worst["iso"]})
+        sample = is_sample(request)  # a visitor has no Journal: no link to one
         earlier = sess.scalars(
             select(m.Import).join(m.Trip, m.Trip.import_id == m.Import.id)
             .where(m.Import.trader_id == trader.id, m.Import.id < imp.id)
             .order_by(m.Import.id.desc()).limit(1)
         ).first()
         return {
-            "journal_href": f"/journals/{opens[worst['iso']]}?from=not-told"
-            if worst and worst["iso"] in opens else "/journals",
+            "journal_href": None if sample else (
+                f"/journals/{opens[worst['iso']]}?from=not-told"
+                if worst and worst["iso"] in opens else "/journals"),
             "changed": earlier and {
                 "trades": (imp.trips_reconstructed, earlier.trips_reconstructed),
                 "days": (_trading_days(sess, imp.id), _trading_days(sess, earlier.id)),
@@ -447,11 +466,16 @@ def trading_day(request: Request, iso: str):
     if not that_day:
         raise HTTPException(status_code=404)
     with make_session(request.app.state.engine) as sess:
-        opens = _journal_ids(sess, reader(request, sess), {iso})
+        # The sample's Journals are no visitor's to open, so its day page has no link to one.
+        opens = {} if is_sample(request) else _journal_ids(sess, reader(request, sess), {iso})
+    before, after = mx.day_neighbours(trips, iso)
     return page(request, "scope/day.html", title=formatting.day(iso), imp=imp,
                 when=formatting.day(iso), count=len(that_day),
                 groups=SM.groups("busiest", context, only=that_day),
-                journal_href=f"/journals/{opens[iso]}" if iso in opens else None)
+                journal_href=f"/journals/{opens[iso]}" if iso in opens else None,
+                path=day_chart.view(mx.day_path(that_day)),
+                before=(before, formatting.day(before)) if before else None,
+                after=(after, formatting.day(after)) if after else None)
 
 
 @router.get("/mirror/fact/{key}/trades", response_class=HTMLResponse)

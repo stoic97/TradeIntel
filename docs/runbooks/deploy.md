@@ -129,6 +129,13 @@ product does not import it, and leaving it out keeps the box small.
     systemctl daemon-reload && systemctl enable --now scope
     systemctl status scope
 
+The market sync's timer (TICKET-998; see "Market data" below). Until Fyers is connected on the
+admin page each run records "needs login" and does nothing else:
+
+    cp deploy/scope-market.service deploy/scope-market.timer /etc/systemd/system/
+    systemctl daemon-reload && systemctl enable --now scope-market.timer
+    systemctl list-timers scope-market.timer
+
 Startup takes about five seconds on the smallest droplet — the migration check
 and the framework read on one shared vCPU. A `curl` fired straight after a
 restart returns 502 with nothing whatever wrong; wait for "Application startup
@@ -170,7 +177,7 @@ private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
     s3cmd --configure -c /etc/scope/s3cfg
     chmod 600 /etc/scope/s3cfg
     printf 'SCOPE_SPACES=s3://%s/scope\n' "$BUCKET" > /etc/scope/spaces.env && chmod 600 /etc/scope/spaces.env
-    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30
+    s3cmd -c /etc/scope/s3cfg expire "s3://$BUCKET" --expiry-days=30 --expiry-prefix=scope/
     s3cmd -c /etc/scope/s3cfg getlifecycle "s3://$BUCKET"
     cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup
     /etc/cron.daily/scope-backup
@@ -178,7 +185,8 @@ private) and a Spaces access key for it, then fill the `BUCKET=` line and paste:
 
 `s3cmd --configure` asks for the access key and secret; give `blr1.digitaloceanspaces.com`
 as the endpoint and `%(bucket)s.blr1.digitaloceanspaces.com` as the bucket template, no
-encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Days>30</Days>`; the
+encryption password, HTTPS yes. Expected: `getlifecycle` shows `<Prefix>scope/</Prefix>` and `<Days>30</Days>` (the rule covers the
+trader copies only; the market bars under `market/` are kept); the
 backup prints "backed up to" and then "copied off the droplet"; `ls` lists
 `scope-<stamp>.db.enc` and `files-<stamp>.tar.gz`. `cron.daily` runs the installed copy,
 not the checkout, so every deploy re-installs a changed `backup.sh` (the release train,
@@ -251,6 +259,16 @@ in `docs/runbooks/uat-smoke.md` on a phone and a laptop. Results go in the loop 
 check), on the train page (`trains/<date>.md`), and as a `uat-pass` / `uat-fail` label on
 each Jira ticket. The tester's page there, `onboarding/tester.md`, is the whole station.
 
+**A train's results, in one query.** The deployer reads them in Jira, not ticket by ticket:
+
+    project = TICKET AND labels in (uat-pass, uat-fail) AND key in (<the train's tickets>)
+
+A ticket the query doesn't return has no result yet, and the train is not tagged.
+`labels = needs-yes` lists the drafted gates held for the founder's yes. Jira makes a label
+the first time it is used, so there is nothing to set up: the first tester's Pass is what
+creates `uat-pass` (ruled 21 Nov 2026, TICKET-1014). Never add `uat-pass` to test the
+label: a Pass is recorded only by a tester who saw the gate true on staging.
+
 Nothing is tagged until every ticket on the train has a result and the smoke pass is a
 Pass on both devices. A Fail does not stop the train if the founder takes that ticket off
 it: its fix rides the next train.
@@ -302,6 +320,7 @@ with `git switch main`.
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
     cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl restart scope
@@ -319,6 +338,7 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
     git checkout --quiet "$TAG"
     UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research
     cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; }
+    for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; }; done
     cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; }
     chown -R scope:scope /srv/scope
     systemctl start scope
@@ -326,9 +346,10 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
 Expected (Path B): `integrity_check` prints `ok`. If it does not, `systemctl start scope`
 on the old code (`git checkout "$LIVE"` first if you already moved) and stop the train.
 
-Either path: a changed `scope.service` or `backup.sh` is not applied by checking out
-code (`cron.daily` runs its own copy). The two `cmp` lines install each only when it
-differs, and say `unit updated` or `backup script updated` when they did.
+Either path: a changed `scope.service`, market unit or `backup.sh` is not applied by checking
+out code (`cron.daily` runs its own copy). The `cmp` lines install each only when it differs,
+and say `unit updated`, `scope-market.timer updated` or `backup script updated` when they did.
+The timer picks up a changed service on its next run; nothing needs restarting for it.
 
 ### e. Check production
 
@@ -403,6 +424,193 @@ merges to `main`; staging is refreshed (step a); the author **and one other pers
 it there the same day; the founder tags that sha with the day's next number
 (`v2026.11.14.2`) and it deploys by step d like any train, logged by step f. No path
 deploys `main` directly.
+
+### When `deploy/Caddyfile` changes
+
+Caddy serves production as well as staging, so its config is installed by a person, on its
+own, never by `update.sh` or `refresh-staging.sh`. Do it before the deploy window of the
+train that carries the change, while production still runs the previous train: a bad file is
+then found with nothing else moving. Before a train is tagged, check whether it touches the
+file (`git log --oneline <last tag>..$SHA -- deploy/Caddyfile`); if it does, this comes first.
+
+The staging block reads its user and bcrypt hash from `/etc/caddy/staging-auth.env`, which
+systemd hands Caddy through `caddy.service.d/staging-auth.conf`. A plain `caddy validate` in
+a root shell has neither, so it checks a different config from the one the reload loads. Load
+the file first, as below. bash's `.` expands `$` and a bcrypt hash is full of them
+(`$2a$14$…`), so the hash must sit in single quotes in that file (`SCOPE_STAGING_HASH='…'`);
+systemd strips the quotes and reads the same value, and the block refuses an unquoted one. If
+the file or the drop-in is missing, do staging's first install (the header of
+`deploy/refresh-staging.sh`) before this.
+
+Fill `SHA=` in every block. Each block stops at once if it is empty, if git cannot show the
+file at that sha, or if what it wrote is empty.
+
+    cd /srv/scope || exit 1
+    SHA=
+    test -n "$SHA" || exit 1
+    curl -s -o /dev/null -w "production before: %{http_code}\n" https://scope.plusev.in/health
+    git fetch --quiet origin && git show "$SHA:deploy/Caddyfile" > /tmp/Caddyfile.next || exit 1
+    test -s /tmp/Caddyfile.next || exit 1
+    cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.before-$SHA"
+    test -f /etc/caddy/staging-auth.env && test -f /etc/systemd/system/caddy.service.d/staging-auth.conf && echo "staging auth: present"
+    grep -q "^SCOPE_STAGING_HASH='" /etc/caddy/staging-auth.env || exit 1
+    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /tmp/Caddyfile.next --adapter caddyfile ) && echo "VALID"
+
+Go on only after `staging auth: present` and `VALID`:
+
+    cd /srv/scope || exit 1
+    SHA=
+    test -n "$SHA" || exit 1
+    install -m 644 /tmp/Caddyfile.next /etc/caddy/Caddyfile
+    diff <(git show "$SHA:deploy/Caddyfile") /etc/caddy/Caddyfile && echo "matches $SHA"
+    ( set -a; . /etc/caddy/staging-auth.env; set +a; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile ) && systemctl reload caddy && sleep 2
+    curl -s -o /dev/null -w "production after: %{http_code}\n" https://scope.plusev.in/health
+    curl -s -o /dev/null -w "staging without the password: %{http_code}\n" https://staging.scope.plusev.in/health
+
+Expected: `matches <sha>`, `production after:` the same as `production before:` (200), and
+staging without the password `401`, so the staging block and its `basic_auth` survived. If
+production answers anything else, put the old file back at once:
+
+    cd /srv/scope || exit 1
+    SHA=
+    test -n "$SHA" || exit 1
+    cp "/etc/caddy/Caddyfile.before-$SHA" /etc/caddy/Caddyfile && systemctl reload caddy
+
+Log it at the top of `docs/runbooks/deploys.md`: the time, who did it, the sha, and the
+before and after codes.
+
+## Market data (TICKET-998)
+
+Bars for the bar-based figures live in `/srv/scope/data/market`, one gzip file per trading day
+(the layout and the day writer are in `docs/runbooks/price-series.md`). The sync keeps them
+current; nobody's laptop does.
+
+**The founder's steps, once:**
+
+1. Add the Fyers app's keys to `/etc/scope/scope.env` (root-owned, 0600; never in the
+   repository): `FYERS_APP_ID`, `FYERS_SECRET_KEY`, and `FYERS_REDIRECT_URI`, the address the app
+   is registered with in the Fyers dashboard. Then `systemctl restart scope`.
+2. For one click, register an app whose redirect is `https://scope.plusev.in/admin/fyers/callback`
+   (a second app in the Fyers dashboard, or the existing one's redirect changed) and use its keys
+   above. With the existing app, whose redirect lands on google.com, it still works: the card
+   says to paste the address bar.
+3. Seed the series from the laptop that holds them, as `docs/runbooks/price-series.md` says
+   (split with `scripts/split_series_by_day.py`, then `scp -r` the folder up).
+4. Each morning after 06:00, open `/admin`, **Market data**, and Connect Fyers. The day's login
+   ends at 06:00 the next day.
+
+**What runs:** `scope-market.timer` starts `scope-market.service` every ten minutes and at 00:15
+IST. Each run adds every finished session after the last day held (never today's), fetches the
+stock days traders asked for, records the run, and exits, at nice 10, half a CPU and 200 MB at
+most. `journalctl -u scope-market` shows counts, dates and reasons only. The card on `/admin` shows
+the last day held per series, days behind, the last run, the stock days waiting, and the login.
+
+**Staging** gets no Fyers keys: its card says "not set up on this server", it never syncs, and it
+reads production's folder read only (`SCOPE_MARKET_DIR` in `deploy/staging.env.example`). Don't
+install the market units for staging.
+
+### Train 3, once: market data before the restart
+
+Train 3 is the first deploy that needs more than a checkout and a restart. Paste these blocks
+as root, one at a time and in this order, after step c has a tag and before step d's Path A or
+Path B restarts production. Each block runs in a subshell that stops at the first failing line
+and prints `STOPPED`; when it does, fix that and paste the same block again before going on.
+No block holds a key's value, and none reads an env file with `.` or `source`: a `$` inside a
+value would be expanded (the lesson of the caddy install).
+
+**1. Staging first.** Staging holds no Fyers keys and reads production's market folder read
+only. Check that before production changes:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      grep -qx 'SCOPE_MARKET_DIR=/srv/scope/data/market' /etc/scope/staging.env || { echo "STOP: staging.env has no SCOPE_MARKET_DIR (deploy/staging.env.example)"; exit 1; }
+      if grep -qE '^FYERS_' /etc/scope/staging.env; then echo "STOP: staging must hold no Fyers keys"; exit 1; fi
+      echo "staging: reads the market folder read only, holds no keys"
+    ) || echo "STOPPED: fix the line above before going on"
+
+Then open a market page on staging: before the folder below exists it shows its no-data state
+and no error (TICKET-1077, line 4).
+
+**2. The three Fyers settings.** This block adds each name with a placeholder, never a value:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      for k in FYERS_APP_ID FYERS_SECRET_KEY FYERS_REDIRECT_URI; do
+        grep -qE "^$k=" /etc/scope/scope.env || printf '%s=<%s>\n' "$k" "$k" >> /etc/scope/scope.env
+      done
+      chown root:root /etc/scope/scope.env && chmod 600 /etc/scope/scope.env
+      grep -cE '^FYERS_' /etc/scope/scope.env
+    ) || echo "STOPPED: fix the line above before going on"
+
+Now open `/etc/scope/scope.env` in an editor (`nano /etc/scope/scope.env`) and replace each
+`<...>` with the value from the Fyers dashboard. Type the values into the editor, never into the
+shell, so none lands in its history. Then check, without printing a value:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      for k in FYERS_APP_ID FYERS_SECRET_KEY FYERS_REDIRECT_URI; do
+        line=$(grep -E "^$k=" /etc/scope/scope.env) || { echo "STOP: $k missing"; exit 1; }
+        case "${line#*=}" in ''|'<'*) echo "STOP: $k still a placeholder"; exit 1;; esac
+        echo "$k set"
+      done
+      [ "$(stat -c '%U %a' /etc/scope/scope.env)" = "root 600" ] || { echo "STOP: scope.env must be root, 600"; exit 1; }
+    ) || echo "STOPPED: fix the line above before going on"
+
+**3. The bucket's lifecycle rule, scoped to `scope/`.** The market bars get one copy off the
+droplet, in the same Spaces bucket the nightly backups use, under the `market/` prefix beside
+`scope/` (ruling of 24 Nov). Fyers serves bars by contract, and an expired contract is an invalid
+symbol to it (`services/shared/market/fyers_history.py`), so once a day is lost on the droplet,
+Scope cannot fetch it again. The 30-day rule set in section 5 covers the whole bucket; it must
+cover only `scope/`, where every trader copy lives, or it would delete the market copies too:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      SPACES=$(grep -E '^SCOPE_SPACES=' /etc/scope/spaces.env | cut -d= -f2-)
+      BUCKET=${SPACES%/scope}
+      [ -n "$SPACES" ] && [ "$BUCKET" != "$SPACES" ] || { echo "STOP: SCOPE_SPACES must end in /scope"; exit 1; }
+      s3cmd -c /etc/scope/s3cfg expire "$BUCKET" --expiry-days=30 --expiry-prefix=scope/
+      s3cmd -c /etc/scope/s3cfg getlifecycle "$BUCKET"
+    ) || echo "STOPPED: fix the line above before going on"
+
+Expected: `getlifecycle` shows `<Prefix>scope/</Prefix>` and `<Days>30</Days>`. Without the
+`<Prefix>` line the rule still covers the whole bucket: stop the train, because the first
+market copy would expire at 30 days. The trader copies keep their 30 days either way.
+
+**4. The market folder**, owned by the app's user. Seed it afterwards as `docs/runbooks/price-series.md` says:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      install -d -o scope -g scope -m 0750 /srv/scope/data/market
+      stat -c '%U:%G %a %n' /srv/scope/data/market
+    ) || echo "STOPPED: fix the line above before going on"
+
+**5. The two units, from the tag**, enabled but not started: the live code before the restart
+may not know the sync. Fill `TAG=` with step c's tag:
+
+    cd /srv/scope || exit 1
+    TAG=
+    ( set -eu
+      [ -n "$TAG" ] || { echo "STOP: fill TAG= with the tag from step c"; exit 1; }
+      for u in scope-market.service scope-market.timer; do
+        git show "$TAG:deploy/$u" > "/etc/systemd/system/$u"
+      done
+      systemctl daemon-reload
+      systemctl enable scope-market.timer
+      systemctl is-enabled scope-market.timer
+    ) || echo "STOPPED: fix the line above before going on"
+
+Then step d as usual (its `cmp` lines find the units already in place). **6. After step d's
+restart**, start the timer and see its next run:
+
+    cd /srv/scope || exit 1
+    ( set -eu
+      systemctl start scope-market.timer
+      systemctl is-active scope-market.timer
+      systemctl list-timers scope-market.timer --no-pager
+    ) || echo "STOPPED: fix the line above before going on"
+
+Expected: `active`, and a next run within ten minutes. The next night's backup prints
+`market bars copied to s3://<bucket>/market/`; step e's checks still apply.
 
 ## 6. Before the first partner uploads
 

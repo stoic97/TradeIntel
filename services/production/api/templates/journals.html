@@ -26,6 +26,7 @@
   <h2 class="card-title">{% if started == 1 %}Start with this day{% else %}Start with these {{ Figure(started, "days")|count }} days{% endif %}</h2>
   {%- endif %}
   {% include "_journal_index.html" with context %}
+  {% include "_said_after.html" %}
   {%- if catch_up_count %}
   <p class="body journal__earlier">You have <span class="num">{{ Figure(catch_up_count, "journals")|count }}</span> earlier Journals. <a class="link" href="/journals/catch-up">Read them one at a time</a>, or <a class="link" href="/mirror">go to your record</a>.</p>
   {%- endif %}

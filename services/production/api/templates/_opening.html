@@ -1,0 +1,6 @@
+{#- The shape of your days: trades opened within 30 minutes of their own session's open. -#}
+<section class="shape" id="opening">
+  <h2 class="card-title numbers__heading">Your first 30 minutes</h2>
+  <p class="body-small numbers__thin">Trades you opened within 30 minutes of the session's open ({% for o in first_half_hour.opens %}{{ o.time }} on {{ o.exchanges|join(" and ") }}{% if not loop.last %}, {% endif %}{% endfor %}), against the rest.{% if first_half_hour.left_out %} <span class="num">{{ Figure(first_half_hour.left_out, "trades")|count }}</span> {{ "trade has" if first_half_hour.left_out == 1 else "trades have" }} no session open Scope knows and {{ "is" if first_half_hour.left_out == 1 else "are" }} left out.{% endif %}</p>
+  {{ table(first_half_hour.rows) }}
+</section>

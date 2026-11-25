@@ -5,6 +5,7 @@
 {%- set cal = calendar %}
 <section class="cal" id="calendar">
   <h2 class="card-title numbers__heading">Your calendar</h2>
+  <div class="cal__months">
   {%- for m in cal.months %}
   <div class="cal__month">
     <h3 class="cal__label">{{ m.label }} <span class="cal__total"><span class="num num--{{ m.net|tone }}">{{ Figure(m.net, "rupees")|rupees }}</span> · <span class="num">{{ Figure(m.trades, "trades")|count }}</span> {{ "trade" if m.trades == 1 else "trades" }}</span></h3>
@@ -13,10 +14,12 @@
       {%- for week in m.weeks %}{% set r = loop.index0 %}{% for c in week %}{% if c %}{% set x = 44 * loop.index0 + 1 %}{% set y = 18 + 40 * r + 1 %}
       {%- if c.href %}<a href="{{ c.href }}" class="cal__day"><title>{{ c.iso|day }}: {{ Figure(c.trades, "trades")|count }} {{ "trade" if c.trades == 1 else "trades" }}, {{ Figure(c.net, "rupees")|rupees }}</title>{% endif -%}
       <rect x="{{ x }}" y="{{ y }}" width="42" height="38" rx="4" class="{{ c.tone }}{% if c.closed %} cal__closed{% endif %}"/><text x="{{ x + 6 }}" y="{{ y + 14 }}" class="cal__date">{{ Figure(c.day, "day of the month") }}</text>
+      {%- if c.short is not none %}<text x="{{ x + 38 }}" y="{{ y + 32 }}" class="cal__result" aria-hidden="true">{{ c.short }}</text>{% endif %}
       {%- if c.href %}</a>{% endif %}{% endif %}{% endfor %}{% endfor %}
     </svg>
   </div>
   {%- endfor %}
+  </div>
   <p class="cal__legend body-small"><span>Lost</span>{% for n in [4, 3, 2, 1] %}<span class="cal__swatch cal__swatch--loss-{{ n }}"></span>{% endfor %}{% for n in [1, 2, 3, 4] %}<span class="cal__swatch cal__swatch--gain-{{ n }}"></span>{% endfor %}<span>Made</span></p>
   {%- if cal.cut %}
   <p class="body-small"><a class="link" href="{{ cal.all_href }}">Show all {{ Figure(cal.cut[1], "months")|count }} months</a></p>
