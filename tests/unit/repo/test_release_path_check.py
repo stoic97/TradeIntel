@@ -214,3 +214,278 @@ def test_a_check_that_cannot_run_is_not_path_a():
         check=False,
     )
     assert done.returncode == DID_NOT_RUN
+# ---------- review round, 24 Nov 2026 (PR #219) ----------
+
+RUNBOOK = REPO_ROOT / "docs" / "runbooks" / "deploy.md"
+
+DROP_INDEX = """
+from alembic import op
+
+def upgrade():
+    op.drop_index("ix_trips_day", table_name="trips")
+
+def downgrade():
+    pass
+"""
+
+DROP_CONSTRAINT = """
+from alembic import op
+
+def upgrade():
+    op.drop_constraint("uq_trips_day", "trips", type_="unique")
+
+def downgrade():
+    pass
+"""
+
+BATCH_DROP_INDEX = """
+from alembic import op
+
+def upgrade():
+    with op.batch_alter_table("trips") as b:
+        b.drop_index("ix_trips_day")
+
+def downgrade():
+    pass
+"""
+
+BULK_INSERT = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    op.bulk_insert(sa.table("trips"), [{"id": 1}])
+
+def downgrade():
+    pass
+"""
+
+GET_BIND_REWRITE = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    conn = op.get_bind()
+    conn.execute(sa.text("DELETE FROM trips WHERE side = 'SELL'"))
+
+def downgrade():
+    pass
+"""
+
+GET_BIND_CHAINED = """
+from alembic import op
+
+def upgrade():
+    op.get_bind().execute("DROP TABLE trips")
+
+def downgrade():
+    pass
+"""
+
+DOTTED_OP = """
+import alembic
+
+def upgrade():
+    alembic.op.drop_table("trips")
+
+def downgrade():
+    pass
+"""
+
+GETATTR_OP = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    op.create_table("t", sa.Column("id", sa.Integer(), nullable=False))
+    getattr(op, "drop_table")("trips")
+
+def downgrade():
+    pass
+"""
+
+ALIASED_OP = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    op.create_table("t", sa.Column("id", sa.Integer(), nullable=False))
+    d = op.drop_table
+    d("trips")
+
+def downgrade():
+    pass
+"""
+
+UNBOUND_BATCH = """
+from alembic import op
+
+def upgrade():
+    b = op.batch_alter_table("trips")
+    b.drop_column("invite_code")
+
+def downgrade():
+    pass
+"""
+
+ADD_COLUMN_KWARGS = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    kw = {"nullable": False}
+    op.add_column("trips", sa.Column("book", sa.String(), **kw))
+
+def downgrade():
+    pass
+"""
+
+TYPES_MODULE_IS_ADDITIVE = """
+import sqlalchemy as sa
+from alembic import op
+from services.production.db import types as dbtypes
+
+def upgrade():
+    op.create_table(
+        "t",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("at", dbtypes.AwareDateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_t_id"), "t", ["id"])
+
+def downgrade():
+    op.drop_table("t")
+"""
+
+
+@pytest.mark.parametrize(
+    "name,source,expected",
+    [
+        ("drop_index in upgrade is Path B", DROP_INDEX, PATH_B),
+        ("drop_constraint in upgrade is Path B", DROP_CONSTRAINT, PATH_B),
+        ("batch drop_index in upgrade is Path B", BATCH_DROP_INDEX, PATH_B),
+        ("bulk_insert is read by hand", BULK_INSERT, BY_HAND),
+        ("a rewrite through get_bind is read by hand", GET_BIND_REWRITE, BY_HAND),
+        ("a chained get_bind().execute is read by hand", GET_BIND_CHAINED, BY_HAND),
+        ("alembic.op.drop_table is read by hand", DOTTED_OP, BY_HAND),
+        ("getattr(op, ...) is read by hand", GETATTR_OP, BY_HAND),
+        ("an aliased op function is read by hand", ALIASED_OP, BY_HAND),
+        ("an unbound batch context is read by hand", UNBOUND_BATCH, BY_HAND),
+        ("add_column with nullable in **kw is read by hand", ADD_COLUMN_KWARGS, BY_HAND),
+        ("sa and a types module stay additive", TYPES_MODULE_IS_ADDITIVE, PATH_A),
+    ],
+)
+def test_classify_source_review_round(mod, name, source, expected):
+    verdict, reasons = mod.classify_source(source, name)
+    assert verdict == expected, f"{name}: got {verdict}, reasons={reasons}"
+
+
+# ---------- a scratch history: changed, renamed and deleted migrations ----------
+
+CREATE_ONLY = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    op.create_table("t", sa.Column("id", sa.Integer(), nullable=False))
+
+def downgrade():
+    op.drop_table("t")
+"""
+
+CREATE_AND_DROP = """
+import sqlalchemy as sa
+from alembic import op
+
+def upgrade():
+    op.create_table("t", sa.Column("id", sa.Integer(), nullable=False))
+    op.drop_column("other", "gone")
+
+def downgrade():
+    op.drop_table("t")
+"""
+
+
+def _git_in(root, *args):
+    done = subprocess.run(
+        ["git", "-c", "user.email=t@example.invalid", "-c", "user.name=T", *args],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, f"git {' '.join(args)}: {done.stderr}"
+    return done.stdout.strip()
+
+
+def _commit(root, message):
+    _git_in(root, "add", "-A")
+    _git_in(root, "commit", "-q", "-m", message)
+    return _git_in(root, "rev-parse", "HEAD")
+
+
+def _answer(root, live, tag):
+    done = subprocess.run(
+        [sys.executable, str(SCRIPT), live, tag],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return done.returncode, done.stdout + done.stderr
+
+
+@pytest.fixture
+def scratch(tmp_path):
+    root = tmp_path / "repo"
+    (root / "migrations" / "versions").mkdir(parents=True)
+    _git_in(root, "init", "-q")
+    return root
+
+
+def test_a_migration_changed_in_place_is_read(scratch):
+    base = scratch / "migrations" / "versions"
+    (base / "0001_first.py").write_text(CREATE_ONLY, encoding="utf-8")
+    live = _commit(scratch, "first")
+    (base / "0001_first.py").write_text(CREATE_AND_DROP, encoding="utf-8")
+    tag = _commit(scratch, "edited in place")
+    code, output = _answer(scratch, live, tag)
+    assert code == PATH_B, output
+
+
+def test_a_renamed_and_edited_migration_is_read(scratch):
+    base = scratch / "migrations" / "versions"
+    (base / "0001_first.py").write_text(CREATE_ONLY, encoding="utf-8")
+    live = _commit(scratch, "first")
+    (base / "0001_first.py").unlink()
+    (base / "0002_renamed.py").write_text(CREATE_AND_DROP, encoding="utf-8")
+    tag = _commit(scratch, "renamed and edited")
+    status = _git_in(scratch, "diff", "--name-status", live, tag, "--", "migrations/versions")
+    assert status.startswith("R"), f"git did not pair these as a rename: {status!r}"
+    code, output = _answer(scratch, live, tag)
+    assert code == PATH_B, output
+
+
+def test_a_deleted_migration_is_read_by_hand(scratch):
+    base = scratch / "migrations" / "versions"
+    (base / "0001_first.py").write_text(CREATE_ONLY, encoding="utf-8")
+    (base / "0002_second.py").write_text(CREATE_ONLY.replace('"t"', '"u"'), encoding="utf-8")
+    live = _commit(scratch, "two migrations")
+    (base / "0002_second.py").unlink()
+    tag = _commit(scratch, "second removed")
+    code, output = _answer(scratch, live, tag)
+    assert code == BY_HAND, output
+
+
+# ---------- the runbook ----------
+
+
+def test_the_runbook_no_longer_greps_the_diff():
+    text = RUNBOOK.read_text(encoding="utf-8")
+    assert r"op\.(drop_" not in text, "the old grep is back in step d"
+    assert "no destructive migration" not in text
+    for answer in ("PATH A", "PATH B", "READ BY HAND", "CHECK DID NOT RUN"):
+        assert answer in text, answer
+    assert "Path B applies unless a person has read these migrations" in text
+    assert "do not assume Path A" in text
