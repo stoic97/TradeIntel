@@ -15,17 +15,18 @@ shared B2 condition, which the research library calls too (PRD 6.3).
 
 from __future__ import annotations
 
+from bisect import bisect_left
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from functools import lru_cache
-from itertools import pairwise
+from itertools import accumulate, pairwise
 from math import ceil
 from statistics import median
 from typing import Any
 
-from services.shared.conditions import b2_shuffle, halves_shuffle
+from services.shared.conditions import b2_shuffle, halves_shuffle, leave_out, previous_result
 from services.shared.conditions.b2_condition import Obs, population_and_condition
 from services.shared.schemas import scope_v1 as s
 
@@ -95,6 +96,7 @@ class Trip:
     uncapped: bool = False  # can lose without limit, whatever it is measured against
     premium: Decimal | None = None  # price x quantity on one bought option, never a denominator
     point_value: Decimal | None = None  # rupees a one-point move makes on one lot, today's (TICKET-907)
+    gross: Decimal | None = None  # result before charges; None in fixtures that don't give it
 
     @property
     def is_win(self) -> bool:
@@ -145,6 +147,7 @@ def load_trips(rows: list[dict[str, Any]]) -> list[Trip]:
             lots=int(row["lots"]),
             risk_unit_source=s.RiskUnitSourceV1(row["risk_unit_source"]),
             is_option=row.get("segment", "OPT") == "OPT",
+            gross=Decimal(str(row["gross"])) if row.get("gross") is not None else None,
         )
         for row in rows
     ]
@@ -949,15 +952,21 @@ def _gaps(trades: list[Trip]) -> dict[str, int]:
     }
 
 
-def _flips(trades: list[Trip]) -> int:
-    """Calls to puts and back, between neighbouring trades on one underlying."""
-    return sum(
-        1
+def _switches(trades: list[Trip]) -> list[Trip]:
+    """The trades that switched from a call to a put or back, against the trade before them on
+    one underlying, in the order given."""
+    return [
+        cur
         for prev, cur in pairwise(trades)
         if call_or_put(prev) and call_or_put(cur)
         and call_or_put(prev) != call_or_put(cur)
         and book_of(prev.symbol) == book_of(cur.symbol)
-    )
+    ]
+
+
+def _flips(trades: list[Trip]) -> int:
+    """Calls to puts and back, between neighbouring trades on one underlying."""
+    return len(_switches(trades))
 
 
 def _size_rise(trades: list[Trip]) -> SizeRise | None:
@@ -1030,6 +1039,101 @@ def run_story(trips: list[Trip], trip_ids: list[str]) -> RunStory | None:
         running=running,
         lowest=min(value for _, value in running),
         last=running[-1][1],
+    )
+
+
+@dataclass(frozen=True)
+class DayPoint:
+    """One trade on a day's path: where the running result stood once it closed."""
+
+    trip: Trip
+    exit_ts: datetime  # when it closed, in the trade's own zone (the loader's)
+    running: Decimal
+    lots: int
+    side: str | None  # "CE", "PE" or None
+    switched: bool  # an option on the other side from the option before it, in one book
+
+
+@dataclass(frozen=True)
+class DayPath:
+    """A day's running result, trade by trade as each closed. Counts only, no cause."""
+
+    points: tuple[DayPoint, ...]
+    started: datetime  # the first trade's entry: where the path starts, at zero
+    peak: DayPoint | None  # the highest it stood, if it was ever above zero
+    trough: DayPoint | None  # the lowest it stood, if it was ever below zero
+    close: Decimal
+
+
+def day_path(day_trips: list[Trip]) -> DayPath:
+    """One day's trades as its running result, in exit order (ties by trip id).
+
+    The one path every page draws a day with: the day page and each of the five worst days.
+    A switch is counted between neighbouring options in one book in the order they were opened,
+    as ``day_story`` and the run page count it, and ringed on the trade that switched.
+    """
+    ordered = sorted(day_trips, key=lambda t: (t.exit_ts, t.trip_id))
+    switched_ids = {t.trip_id for t in _switches(sorted(day_trips, key=lambda t: (t.entry_ts, t.trip_id)))}
+    points: list[DayPoint] = []
+    total = Decimal(0)
+    for t in ordered:
+        total += t.net
+        points.append(DayPoint(t, t.exit_ts, _round(total), t.lots, call_or_put(t), t.trip_id in switched_ids))
+    highest = max(points, key=lambda p: p.running, default=None)
+    lowest = min(points, key=lambda p: p.running, default=None)
+    return DayPath(
+        points=tuple(points),
+        started=min((t.entry_ts for t in day_trips), default=None),
+        peak=highest if highest is not None and highest.running > 0 else None,
+        trough=lowest if lowest is not None and lowest.running < 0 else None,
+        close=points[-1].running if points else Decimal(0),
+    )
+
+
+def day_neighbours(trips: list[Trip], iso: str) -> tuple[str | None, str | None]:
+    """The trading days before and after this one in the record; None at either end."""
+    days = sorted({t.trading_day for t in trips})
+    if iso not in days:
+        return None, None
+    i = days.index(iso)
+    return (days[i - 1] if i > 0 else None), (days[i + 1] if i + 1 < len(days) else None)
+
+
+@dataclass(frozen=True)
+class DayStory:
+    """A day told as the run page tells a run: switches, a size step after losses, re-entries."""
+
+    flips: int
+    size: SizeRise | None
+    back_in: BackIn | None
+
+
+def _size_rise_after_losses(trades: list[Trip]) -> SizeRise | None:
+    """The first rise in size, said only when losses came straight before it.
+
+    Within a run every earlier trade lost; within a day they need not have, so the count of
+    losses is the run of losses just before the rise, and none means nothing is said.
+    """
+    rise = _size_rise(trades)
+    if rise is None:
+        return None
+    losses = 0
+    for t in reversed(trades[:rise.losses_before]):
+        if not t.is_loss:
+            break
+        losses += 1
+    return SizeRise(losses_before=losses, steps=rise.steps) if losses else None
+
+
+def day_story(day_trips: list[Trip]) -> DayStory:
+    """The run page's facts for one day, in the order the trades were opened."""
+    ordered = sorted(day_trips, key=lambda t: (t.entry_ts, t.trip_id))
+    days = sorted({t.trading_day for t in ordered})
+    books = sorted({trade_book(t) for t in ordered})
+    return DayStory(
+        flips=_flips(ordered),
+        size=_size_rise_after_losses(ordered),
+        back_in=_back_in(_gaps(ordered), days, books),
     )
 
 
@@ -1667,26 +1771,45 @@ def _candles(points: list[tuple[date, Decimal]], timeframe: str) -> tuple[Candle
     return tuple(out)
 
 
-def running_result(trips: list[Trip], book: str = "All") -> RunningResult:
-    """The running result of these trips, in exit order (ties by trip id)."""
+def _running_points(trips: list[Trip]) -> list[tuple[date, Decimal]]:
+    """His result after each closed trade, in exit order (ties by trip id)."""
     points: list[tuple[date, Decimal]] = []
     running = Decimal(0)
     for trip in sorted(trips, key=lambda t: (t.exit_ts, t.trip_id)):
         running += trip.net
         points.append((trip.exit_ts.date(), running))
+    return points
 
+
+def biggest_drop(trips: list[Trip]) -> Drop:
+    """The largest fall of his running result from a high to any later point, trade by trade
+    in exit order. The one definition of "biggest drop": Home's card and What you risk's
+    "deepest fall" both read it, so the two pages never print two amounts for one drop."""
     top, top_day = Decimal(0), None
-    high = Mark(Decimal(0), None)
     drop = Drop(Decimal(0), None, None)
+    for day, value in _running_points(trips):
+        if value > top:
+            top, top_day = value, day.isoformat()
+        if top - value > drop.value:
+            drop = Drop(top - value, top_day, day.isoformat())
+    return drop
+
+
+def running_result(trips: list[Trip], book: str = "All") -> RunningResult:
+    """The running result of these trips, in exit order (ties by trip id)."""
+    points = _running_points(trips)
+    running = points[-1][1] if points else Decimal(0)
+
+    top = Decimal(0)
+    high = Mark(Decimal(0), None)
     lowest = Mark(Decimal(0), None)
     for day, value in points:
         if value > top:
-            top, top_day = value, day.isoformat()
-            high = Mark(value, top_day)
-        if top - value > drop.value:
-            drop = Drop(top - value, top_day, day.isoformat())
+            top = value
+            high = Mark(value, day.isoformat())
         if lowest.day is None or value < lowest.value:
             lowest = Mark(value, day.isoformat())
+    drop = biggest_drop(trips)
 
     return RunningResult(
         book=book, trades=len(points), total=running,
@@ -1927,17 +2050,13 @@ class Fall:
 
 
 def deepest_fall(trips: list[Trip]) -> Fall | None:
-    """Day by day through daily_series, the one place a day's net is decided (TICKET-907)."""
-    peak, peak_day, level = Decimal(0), None, Decimal(0)
-    deepest: Fall | None = None
-    for day in daily_series(trips):
-        level += day.net
-        if level > peak:
-            peak, peak_day = level, day.trading_day
-        drop = peak - level
-        if drop > 0 and (deepest is None or drop > deepest.amount):
-            deepest = Fall(amount=drop, from_day=peak_day, to_day=day.trading_day)
-    return deepest
+    """The biggest drop as What you risk words it: ``biggest_drop``, so it is the amount and the
+    days Home's card shows. Day by day it read lower than the card whenever a day rose and fell
+    within itself; one definition now decides both (see biggest_drop)."""
+    drop = biggest_drop(trips)
+    if not drop.value or drop.to_day is None:
+        return None
+    return Fall(amount=drop.value, from_day=drop.from_day, to_day=drop.to_day)
 
 
 @dataclass(frozen=True)
@@ -2158,3 +2277,238 @@ def book_halves(trips: list[Trip], minimum: int = BOOK_ROW_MINIMUM) -> list[Book
                                s.ResultState.COUNTED_FACT, one, two,
                                _half_counts(book, book_trips), change, control))
     return rows
+
+
+# ---------- Both figures on the hiding page: previous result (TICKET-919) ----------
+
+THEN_MINIMUM = BOOK_ROW_MINIMUM
+"""How many earlier trades in a state, in the book and exited before the entry, there must be
+before the figure from only what was known then may count a trade. The value is the framework's
+minimum (framework_v1.yaml, minimums.condition: 30, marked arbitrary there), reused rather than
+invented; using it as this warm-up is new to TICKET-919 and is arbitrary (founder, 16 Nov 2026)."""
+
+PREVIOUS_STATES = ("win", "loss")
+"""The two states a previous result puts a trade in. A level previous result is neither."""
+
+
+@dataclass(frozen=True)
+class PreviousResult:
+    """One book's same-day trades after a win, or after a loss, set out two ways (TICKET-919).
+
+    On the record: every trade in the state. With only what was known then: the trades in it
+    opened while the state's earlier trades in the book, exited before the entry, numbered
+    ``minimum`` or more and were down overall. Each figure is set against random sets of the same
+    size from the book's trades that have a previous result (leave_out). Plain counts and their
+    control: never a finding, a saving or a cost. ``reached`` is False while no trade had
+    ``minimum`` earlier ones, and then there is no second figure and no band for it."""
+
+    book: str
+    state: str
+    record_ids: tuple[str, ...]
+    record_net: Decimal
+    record_band: leave_out.ChanceBand
+    reached: bool
+    then_ids: tuple[str, ...] = ()
+    then_net: Decimal = Decimal(0)
+    then_band: leave_out.ChanceBand | None = None
+    minimum: int = THEN_MINIMUM
+
+
+def _result_of(result: Decimal) -> str:
+    return "win" if result > 0 else "loss" if result < 0 else "level"
+
+
+def previous_states(trips: list[Trip], across_books: bool = True) -> dict[str, str]:
+    """Each same-day trade's previous result that day, "win", "loss" or "level"; a trade with
+    none is left out. The result is read before charges (founder, 24 Nov 2026); net stands in
+    only for a fixture that gives no gross: the loader always does. The prior is read across all
+    books by the founder's ruling of 24 Nov 2026 (TICKET-918; across_books)."""
+    groups = [same_day_trips(trips)] if across_books else list(_same_day_by_book(trips).values())
+    out: dict[str, str] = {}
+    for group in groups:
+        priors = previous_result.previous_of(b2_observations(group))
+        for trip, prior in zip(group, priors, strict=True):
+            if prior is not None:
+                before = group[prior]
+                out[trip.trip_id] = _result_of(
+                    before.net if before.gross is None else before.gross)
+    return out
+
+
+def previous_result_figures(trips: list[Trip], minimum: int = THEN_MINIMUM,
+                            across_books: bool = True) -> list[PreviousResult]:
+    """Each book's trades after a win and after a loss, on the record and with only what was
+    known then, each with its band. A state no trade in the book was in has no row."""
+    states = previous_states(trips, across_books)
+    rows: list[PreviousResult] = []
+    for book, book_trips in sorted(_same_day_by_book(trips).items()):
+        pool = [t for t in sorted(book_trips, key=lambda t: (t.entry_ts, t.trip_id))
+                if t.trip_id in states]
+        nets = [float(t.net) for t in pool]
+        for state in PREVIOUS_STATES:
+            in_state = [t for t in pool if states[t.trip_id] == state]
+            if not in_state:
+                continue
+            by_exit = sorted(in_state, key=lambda t: (t.exit_ts, t.trip_id))
+            exits = [t.exit_ts for t in by_exit]
+            earlier_net = list(accumulate((t.net for t in by_exit), initial=Decimal(0)))
+            picked, reached = [], False
+            for trip in in_state:
+                earlier = bisect_left(exits, trip.entry_ts)  # exited before this entry
+                if earlier >= minimum:
+                    reached = True
+                    if earlier_net[earlier] < 0:
+                        picked.append(trip)
+            record_net = sum((t.net for t in in_state), Decimal(0))
+            then_net = sum((t.net for t in picked), Decimal(0))
+            rows.append(PreviousResult(
+                book, state, tuple(t.trip_id for t in in_state), record_net,
+                leave_out.band_of(nets, float(record_net), len(in_state)), reached,
+                tuple(t.trip_id for t in picked), then_net,
+                leave_out.band_of(nets, float(then_net), len(picked)) if reached else None,
+                minimum))
+    return rows
+
+
+# ---------- What you do next: chapter 3's three order facts ----------
+# Counts and his own medians. A trade's previous is the same-day trade that closed most recently
+# before it opened (b2's "resolved": exited before this entry, so an overlapping trade is never
+# previous). Same way again: a trade after one that finished level is in neither group, and
+# counted. How fast you went back in is the registered B1 row (post_loss_latency, the founder's
+# ruling of 24 Nov 2026): after a loss against after a win or a level trade, 30 in each group.
+
+B1_MINIMUM = 30
+"""Trades in each of B1's groups before the two are set side by side (B1's n_min, 30/30)."""
+
+
+@dataclass(frozen=True)
+class NextTrades:
+    after_loss: tuple[Trip, ...]   # the trades that came next, after a losing trade
+    after_win: tuple[Trip, ...]
+    scratch: int                   # trades that came next after one that finished level
+    minutes: dict[str, Decimal]    # each next trade: minutes from the previous one's exit
+    group_of: dict[str, str]       # each next trade: "loss" or "win"
+    loss_median: Decimal | None
+    win_median: Decimal | None
+    same_after_loss: int
+    other_after_loss: int
+    same_after_win: int
+    other_after_win: int
+    no_direction: int              # pairs with a trade of no single direction, left out
+    way_ids: frozenset[str]        # next trades whose pair has both directions
+    after_level: tuple[Trip, ...] = ()       # the trades that came next, after a level trade
+    back_in_group_of: dict[str, str] = field(default_factory=dict)  # B1: "loss" or "win-or-level"
+
+    @property
+    def comparison(self) -> tuple[Trip, ...]:
+        """B1's comparison group: the trades after a win or a level trade."""
+        return self.after_win + self.after_level
+
+    @property
+    def comparison_median(self) -> Decimal | None:
+        group = self.comparison
+        return median([self.minutes[t.trip_id] for t in group]) if group else None
+
+    @property
+    def back_in_enough(self) -> bool:
+        """Both of B1's groups hold its minimum, so the two may be set side by side."""
+        return len(self.after_loss) >= B1_MINIMUM and len(self.comparison) >= B1_MINIMUM
+
+    @property
+    def state(self) -> s.ResultState:
+        return s.ResultState.COUNTED_FACT if self.after_loss else s.ResultState.INSUFFICIENT_SAMPLE
+
+    @property
+    def way_state(self) -> s.ResultState:
+        return (s.ResultState.COUNTED_FACT if self.same_after_loss + self.other_after_loss
+                else s.ResultState.INSUFFICIENT_SAMPLE)
+
+
+def _direction(trip: Trip) -> int | None:
+    from services.production.replay.blind import direction_of  # the shared rule, read once
+    return direction_of(trip) if trip.lines else None
+
+
+def next_trades(same_day: list[Trip]) -> NextTrades:
+    """Each same-day trade and its previous one: how many minutes later, and which way."""
+    by_day: dict[str, list[Trip]] = {}
+    for t in same_day:
+        by_day.setdefault(t.trading_day, []).append(t)
+    loss, win, level, minutes, group, back_in = [], [], [], {}, {}, {}
+    no_dir = 0
+    way = {("loss", True): 0, ("loss", False): 0, ("win", True): 0, ("win", False): 0}
+    way_ids = set()
+    for members in by_day.values():
+        for t in sorted(members, key=lambda t: (t.entry_ts, t.trip_id)):
+            closed = [p for p in members if p is not t and p.exit_ts < t.entry_ts]
+            if not closed:
+                continue
+            prev = max(closed, key=lambda p: (p.exit_ts, p.trip_id))
+            minutes[t.trip_id] = Decimal((t.entry_ts - prev.exit_ts).total_seconds()) / 60
+            back_in[t.trip_id] = "loss" if prev.is_loss else "win-or-level"
+            if prev.is_scratch:
+                level.append(t)
+                continue
+            g = "loss" if prev.is_loss else "win"
+            (loss if g == "loss" else win).append(t)
+            group[t.trip_id] = g
+            a, b = _direction(prev), _direction(t)
+            if a is None or b is None:
+                no_dir += 1
+            else:
+                way[(g, a == b)] += 1
+                way_ids.add(t.trip_id)
+
+    def mid(group_trips):
+        return median([minutes[t.trip_id] for t in group_trips]) if group_trips else None
+
+    return NextTrades(tuple(loss), tuple(win), len(level), minutes, group, mid(loss), mid(win),
+                      way[("loss", True)], way[("loss", False)], way[("win", True)], way[("win", False)],
+                      no_dir, frozenset(way_ids), tuple(level), back_in)
+
+
+BIG_DAYS_AT_LEAST = 3
+"""His best tenth and worst tenth of traded days, at least this many each."""
+
+
+@dataclass(frozen=True)
+class DayAfter:
+    best: tuple[str, ...]          # his best days, by the day he closed, best first
+    worst: tuple[str, ...]
+    groups: dict[str, tuple[Trip, ...]]   # "best", "worst", "other": trades on the day after
+    days_in: dict[str, int]
+    group_of: dict[str, str]
+    state: s.ResultState
+
+
+def day_after(trips: list[Trip]) -> DayAfter:
+    """The next day he traded after each of his best and worst days, and all his other next days.
+
+    Days are the day he closed, as the calendar counts them. A day's group is its previous traded
+    day's: after a best day, after a worst day, or other. Fewer than twice the minimum of traded
+    days, so best and worst can't each have it apart, draws nothing."""
+    nets: dict[str, Decimal] = {}
+    on: dict[str, list[Trip]] = {}
+    for t in trips:
+        day = t.exit_ts.date().isoformat()
+        nets[day] = nets.get(day, Decimal(0)) + t.net
+        on.setdefault(day, []).append(t)
+    days = sorted(nets)
+    empty = {"best": (), "worst": (), "other": ()}
+    if len(days) < 2 * BIG_DAYS_AT_LEAST:
+        return DayAfter((), (), empty, {"best": 0, "worst": 0, "other": 0}, {},
+                        s.ResultState.INSUFFICIENT_SAMPLE)
+    n = max(BIG_DAYS_AT_LEAST, ceil(len(days) / 10))
+    best = tuple(sorted(days, key=lambda d: (-nets[d], d))[:n])
+    worst = tuple(sorted((d for d in days if d not in best), key=lambda d: (nets[d], d))[:n])
+    groups: dict[str, list[Trip]] = {"best": [], "worst": [], "other": []}
+    days_in = {"best": 0, "worst": 0, "other": 0}
+    group_of: dict[str, str] = {}
+    for before, day in pairwise(days):
+        g = "best" if before in best else "worst" if before in worst else "other"
+        groups[g] += on[day]
+        days_in[g] += 1
+        for t in on[day]:
+            group_of[t.trip_id] = g
+    return DayAfter(best, worst, {g: tuple(v) for g, v in groups.items()}, days_in, group_of,
+                    s.ResultState.COUNTED_FACT if groups["best"] else s.ResultState.INSUFFICIENT_SAMPLE)

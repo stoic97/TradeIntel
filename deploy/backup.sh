@@ -92,3 +92,23 @@ s3cmd -c "$S3CFG" ls "$SPACES/" | awk '{print $NF}' | while read -r url; do
 done
 
 echo "copied off the droplet to $SPACES at $STAMP; Spaces copies older than $KEEP_DAYS days removed"
+
+# The market bars: exchange data, no trader's data, so neither encrypted nor rolled off with
+# the copies above. Fyers serves bars by contract and an expired contract is an invalid symbol
+# to it, so a day lost here cannot be fetched again: one copy has to leave the droplet. It goes
+# to the same bucket under market/, beside scope/; the bucket's 30-day lifecycle rule is scoped
+# to scope/ (deploy.md, train 3, block 3), so it does not reach these. sync uploads only the days
+# the bucket lacks and never deletes there. Last in the script, so a failure here never stops
+# the trader copies above; it still exits non-zero, so it is not silent.
+MARKET=${SCOPE_MARKET_DIR:-$DATA/market}
+if [ -d "$MARKET" ]; then
+  BUCKET=${SPACES%/scope}
+  if [ "$BUCKET" = "$SPACES" ]; then
+    echo "MARKET COPY NOT MADE: SCOPE_SPACES does not end in /scope, so market/ has no place beside it" >&2
+    exit 1
+  fi
+  s3cmd -c "$S3CFG" --quiet sync --no-delete-removed "$MARKET/" "$BUCKET/market/"
+  echo "market bars copied to $BUCKET/market/"
+else
+  echo "no market folder at $MARKET; no market copy to make"
+fi

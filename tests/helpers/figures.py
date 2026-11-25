@@ -3,5 +3,5 @@
 
 from __future__ import annotations
 
-# TICKET-1035 added .scope__marked, the kit's and the app's copy alike (test_design_kit).
-KIT_SHA = "978d8557b61c5c8a22ceb4f241622226777c64ce03bab8067fc48d3dccdf7d6d"
+# The dial classes, added once for the four dial tickets (kit update, ruled 24 Nov 2026).
+KIT_SHA = "b753634d8d8551016a36dd29a8be183ab07064da07a6caabb9dee9e49dab6646"

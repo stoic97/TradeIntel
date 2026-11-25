@@ -298,8 +298,9 @@ def test_row_one_agrees_with_chapter_one():
 
 def test_row_two_agrees_with_chapter_two():
     page = readable(chapter_page(2))
-    assert f"{CTX['strike'].rate_percent}%" in page
-    assert f"{CTX['break_even'].percent}%" in page
+    from services.production.api import formatting  # a rate reads N of 100 (TICKET-1028)
+    assert formatting.out_of_a_hundred(CTX['strike'].rate_percent) in page
+    assert formatting.out_of_a_hundred(CTX['break_even'].percent) in page
 
 
 def test_row_three_agrees_with_chapter_three():

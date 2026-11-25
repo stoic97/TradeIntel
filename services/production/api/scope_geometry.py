@@ -820,6 +820,33 @@ def chart_worst(daily_net: list, w: float, h: float) -> dict:
     return _chart(w, h, m)
 
 
+def chart_worst_sorted(nets: list, cumulative: list, w: float, h: float) -> dict:
+    """Every trading day added up from worst to best, as one running total. The five worst
+    days' stretch is drawn in ink, the rest light, so their share of the whole is the shape
+    itself, and where the line ends is the whole result.
+
+    Not the kit's and not in CHARTS, which are held to the JavaScript byte for byte: the Scope's
+    own, written the same way, as paths by role. The dial's mini still draws ``chart_worst``.
+    """
+    n = len(cumulative)
+    if not n:
+        return _chart(w, h, {})
+    top, bottom = max([0, *cumulative]), min([0, *cumulative])
+    spread = (top - bottom) or 1
+
+    def y(v: float) -> str:
+        return fmt(4 + (top - v) / spread * (h - 8))
+
+    def x(i: int) -> str:
+        return fmt(i / n * w)
+
+    points = [(x(0), y(0))] + [(x(i + 1), y(c)) for i, c in enumerate(cumulative)]
+    cut = min(5, n)
+    worst = "M" + "L".join(f"{px} {py}" for px, py in points[:cut + 1])
+    rest = "M" + "L".join(f"{px} {py}" for px, py in points[cut:]) if n > cut else ""
+    return _chart(w, h, {"axis": f"M0 {y(0)}H{js_str(w)}", "rest": rest, "stroke": worst})
+
+
 def chart_share(share: float, w: float, h: float, mini: bool = False) -> dict:
     """The five worst days as a share of the whole result, with a bracket for the whole."""
     bh, y0 = (h * 0.7, h * 0.15) if mini else (h * 0.42, h * 0.08)
@@ -1069,6 +1096,62 @@ def chart_call_put(trades: list, w: float, h: float) -> dict:
     return _chart(w, h, m)
 
 
+def _dot(x: float, y: float, r: float) -> str:
+    return f"M{fmt(x - r)} {fmt(y)}a{fmt(r)} {fmt(r)} 0 1 0 {fmt(2 * r)} 0a{fmt(r)} {fmt(r)} 0 1 0 {fmt(-2 * r)} 0Z"
+
+
+def chart_backin(after_loss: list, after_win: list, loss_median: float | None,
+                 win_median: float | None, w: float, h: float, mini: bool = False) -> dict:
+    """Minutes to the next trade: a dot each, after a loss (top, ink) and after a win (bottom),
+    each row's median a mark across it. Not the kit's: added for chapter 3's back-in."""
+    top = max([*after_loss, *after_win, 1])
+    r = 1.5 if mini else 2.5
+    pad = r + 0.5
+    m = {"ink": "", "faint": "", "stroke": "", "axis": f"M0 {fmt(h - 0.5)}H{js_str(w)}"}
+
+    def x(v):
+        return pad + (w - 2 * pad) * v / top
+
+    for role, values, med, y in (("ink", after_loss, loss_median, h * 0.3),
+                                 ("faint", after_win, win_median, h * 0.7)):
+        for v in values:
+            m[role] += _dot(x(v), y, r)
+        if med is not None:
+            m["stroke"] += f"M{fmt(x(med))} {fmt(y - h * 0.18)}V{fmt(y + h * 0.18)}"
+    return _chart(w, h, m)
+
+
+def chart_sameway(loss_same: int, loss_other: int, win_same: int, win_other: int,
+                  w: float, h: float, mini: bool = False) -> dict:
+    """The next trade the same way (ink) or the other way (light), after a loss (top) and after
+    a win (bottom), each row the whole width. Not the kit's: added for chapter 3's same-way."""
+    bh = h * 0.3
+    m = {"ink": "", "light": "", "axis": f"M0.5 0V{js_str(h)}"}
+    for same, other, y in ((loss_same, loss_other, h * 0.12), (win_same, win_other, h * 0.58)):
+        total = same + other
+        if not total:
+            continue
+        sw = w * same / total
+        if same:
+            m["ink"] += _r2(0, y, sw, bh)
+        if other:
+            m["light"] += _r2(sw, y, w - sw, bh)
+    return _chart(w, h, m)
+
+
+def chart_nextday(after_best: float, after_worst: float, other: float, w: float, h: float,
+                  mini: bool = False) -> dict:
+    """Trades a day on the day after his best days (ink), his worst days (red) and his other
+    next days (light). Not the kit's: added for chapter 3's next-day."""
+    top = max(after_best, after_worst, other, 1)
+    bh = h * 0.22
+    m = {"ink": _r2(0, h * 0.06, w * after_best / top, bh),
+         "red": _r2(0, h * 0.39, w * after_worst / top, bh),
+         "light": _r2(0, h * 0.72, w * other / top, bh),
+         "axis": f"M0.5 0V{js_str(h)}"}
+    return _chart(w, h, m)
+
+
 CHARTS = {
     "worst": chart_worst,
     "share": chart_share,
@@ -1082,6 +1165,10 @@ CHARTS = {
     "read": chart_read,
     "risk": chart_risk,
     "notold": chart_notold,
+    # Not the kit's: chapter 3's What you do next.
+    "backin": chart_backin,
+    "sameway": chart_sameway,
+    "nextday": chart_nextday,
 }
 
 
@@ -1116,25 +1203,3 @@ def trade_strip(fill_times: list, width: float, height: float | None = None) -> 
         "fillDelays": [i * 40 for i in range(len(xs))],
         "barDelay": len(xs) * 40 + 160,
     }
-
-
-DAY_LINE_W, DAY_LINE_H = 120, 32
-
-
-def day_line(running) -> str:
-    """A day's running result as a small line, first trade to last, with zero marked."""
-    values = [float(v) for v in running]
-    low, high = min(0.0, *values), max(0.0, *values)
-    spread = (high - low) or 1.0
-    steps = max(len(values) - 1, 1)
-
-    def y(v: float) -> str:
-        return fmt((high - v) / spread * (DAY_LINE_H - 4) + 2)
-
-    points = " ".join(f"{fmt(i / steps * DAY_LINE_W)},{y(v)}" for i, v in enumerate(values))
-    return (
-        f'<svg class="day-block__line" viewBox="0 0 {DAY_LINE_W} {DAY_LINE_H}" '
-        f'width="{DAY_LINE_W}" height="{DAY_LINE_H}" aria-hidden="true">'
-        f'<line class="day-block__zero" x1="0" x2="{DAY_LINE_W}" y1="{y(0.0)}" y2="{y(0.0)}"/>'
-        f'<polyline class="day-block__run" fill="none" points="{points}"/></svg>'
-    )
