@@ -339,9 +339,7 @@ and what the tag changes:
       git merge-base --is-ancestor "$TAG^{commit}" origin/main || stop "$TAG is not on origin/main; do not deploy it"
       LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"; echo "live: $LIVE"
       git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/ || stop "git diff failed"
-      { git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py 2>/dev/null && echo "classifier: from $TAG"; } ||
-        { git show origin/main:deploy/classify_release.py > /tmp/classify_release.py && echo "classifier: from origin/main ($TAG predates it)"; } ||
-        stop "CHECK DID NOT RUN - no classifier in $TAG or on origin/main; classify by hand, do not assume Path A"
+      { git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py 2>/dev/null && echo "classifier: from $TAG"; } || { git show origin/main:deploy/classify_release.py > /tmp/classify_release.py && echo "classifier: from origin/main ($TAG predates it)"; } || stop "CHECK DID NOT RUN - classify by hand"
       python3 /tmp/classify_release.py "$LIVE" "$TAG"
       case $? in
         0) echo "PATH A - additive or no migration" ;;
