@@ -197,7 +197,7 @@ def test_the_page_is_the_first_of_the_report(client):
     assert (first.key, first.title) == ("hidden", TITLE)
     assert S.page_number("hidden") == 1  # TICKET-903's one order: every surface reads it
     html = _page(client)
-    assert "CHAPTER 1 \u00b7 FACT 1 OF 3" in html
+    assert f"CHAPTER 1 \u00b7 FACT 1 OF {len(S.CHAPTERS[0].facts)}" in html
     assert re.search(rf'class="rail__count[^"]*">1 of {len(S.PAGES)}<', html)  # page_text writes it [N] of [N]
     assert 'data-dwell-line="hidden"' in html
     chapter = client.get(S.chapter_href(1)).text

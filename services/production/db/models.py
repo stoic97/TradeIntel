@@ -237,6 +237,24 @@ class Trip(Base, _InsertOnly):
     __table_args__ = (UniqueConstraint("import_id", "trip_id", "occurrence"),)
 
 
+class TripCharge(Base, _InsertOnly):
+    """What one trip was charged and where that came from (TICKET-995).
+
+    Kept as the import computed it, so "where the money went" reads it back rather than
+    working it out again. One row per component when the charges were calculated
+    (BROKERAGE, STT, CTT, EXCHANGE, SEBI, STAMP, GST, IPFT); one row with no component for
+    any other source (``tradebook``, ``statement``, ``not_priced``, ``none``).
+    """
+
+    __tablename__ = "trip_charge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_row_id: Mapped[int] = mapped_column(ForeignKey("trip.id"))
+    source: Mapped[str] = mapped_column(String(16))
+    component: Mapped[str | None] = mapped_column(String(16))
+    amount: Mapped[Decimal | None] = mapped_column(DecimalText)
+
+
 class OpenPosition(Base, _InsertOnly):
     __tablename__ = "open_position"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -418,6 +436,24 @@ class JournalRememberAnswer(Base, _InsertOnly):
     answer: Mapped[str] = mapped_column(String(3))
     day_age_days: Mapped[int] = mapped_column(Integer)
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
+class FactRead(Base, _InsertOnly):
+    """That he opened a report page, once per upload: what the dial's ring reads.
+
+    Written on the server when the page is served, so "read" never waits on a script. Keyed to
+    the upload, so a new upload starts unread; the period and book he was looking through are
+    kept beside it. Deletion takes it with everything else of his."""
+
+    __tablename__ = "fact_read"
+    __table_args__ = (UniqueConstraint("trader_id", "import_id", "fact_key", "period", "book"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    fact_key: Mapped[str] = mapped_column(String(32))
+    period: Mapped[str] = mapped_column(String(16))
+    book: Mapped[str] = mapped_column(String(64))
+    opened_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
 class DwellEvent(Base, _InsertOnly):

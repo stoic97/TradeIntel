@@ -353,8 +353,57 @@ and what the tag changes:
 Expected: `git status --short` prints **nothing**. Any line there means someone changed
 the box by hand: the block stops, so find out who before going on. It also refuses a tag that
 is not on `origin/main`. `live:` is the previous tag (a
-sha only on the first train, or after a deploy that skipped the train). The last line
-before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
+sha only on the first train, or after a deploy that skipped the train).
+
+Before either path, check that no new migration sits behind the live tag's head. Like every
+block here it is one `( ... )` with its own `TAG`: set it to the same tag as the block above.
+It stops if `TAG` or `LIVE` comes out empty rather than checking nothing.
+
+    ( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }
+      set -u
+      TAG=v2026.11.14
+      stop() { echo "STOP: $1"; exit 1; }
+      [ -n "$TAG" ] || { echo "STOP: TAG is not set (set it to the tag in the block above)"; exit 1; }
+      LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"
+      [ -n "$LIVE" ] || { echo "STOP: LIVE is not set (cannot tell what is live)"; exit 1; }
+      rev_of() { git show "$1" | grep -E "^revision = " | sed "s/.*['\"]\([^'\"]*\)['\"].*/\1/"; }
+      down_of() { git show "$1" | grep -E "^down_revision = " | grep -v "= None" | sed "s/.*['\"]\([^'\"]*\)['\"].*/\1/"; }
+      revs=" "; downs=" "
+      for f in $(git ls-tree --name-only "$LIVE" migrations/versions/ | grep -E '/[0-9]{4}_[^/]*\.py$'); do
+        revs="$revs$(rev_of "$LIVE:$f") "; downs="$downs$(down_of "$LIVE:$f") "
+      done
+      heads=""
+      for r in $revs; do case "$downs" in *" $r "*) ;; *) heads="$heads $r" ;; esac; done
+      set -- $heads
+      [ $# -eq 1 ] || stop "the live tag has $# migration heads ($heads ); expected one"
+      head=$1
+      echo "live head: $head (the revision no other migration revises)"
+      new=$(git diff --name-only --diff-filter=A "$LIVE" "$TAG" -- migrations/versions) || stop "git diff failed; nothing was checked"
+      while [ -n "$new" ]; do
+        next=""
+        for f in $new; do [ "$(down_of "$TAG:$f")" = "$head" ] && { [ -z "$next" ] || stop "$next and $f both revise $head: two heads"; next=$f; }; done
+        [ -n "$next" ] || stop "no new migration revises $head; these do not continue the live head:$(printf ' %s' $new)"
+        rev=$(rev_of "$TAG:$next")
+        case "$revs" in *" $rev "*) stop "$next reuses revision $rev, which the live chain already has" ;; esac
+        echo "ok: $next ($rev) revises $head"
+        revs="$revs$rev "; head=$rev
+        new=$(printf '%s\n' $new | grep -vxF "$next" || true)
+      done
+      echo "DONE migration heads"
+    )
+
+Expected: the first new migration's `down_revision` is the live head, each later one's is the
+one before it: `live head:` names one revision, an `ok:` line follows for each new migration, then
+`DONE migration heads`. The live head is read from the chain (the revision no other migration
+revises), never from the highest number: main's chain runs 0019 → 0022 → 0020 → 0021, so its head
+is 0021. Each new migration must revise the head before it, and no new `revision` may already be
+in the live chain. Any `STOP:` line: stop, and do not deploy the tag. Why: a migration whose revision id the live database already
+counts as applied is skipped with no error, so its table never exists and the page that reads
+it fails; a `down_revision` behind the live head leaves two heads, and the app refuses to start
+(`alembic upgrade head` needs one). Fix it on `main` with a new tag; never edit a migration a
+tag has shipped.
+
+The first block's last line before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
 person reads those migrations and rules, and **Path B** applies until they do;
 `CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
 migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a

@@ -75,6 +75,7 @@ def readout_when(card: str) -> str:
 # Months Jan-Apr with 6, 6, 6, 1 trades: his median month (the lower middle of 1 6 6 6) is 6.
 # April's 1 is under a quarter of 6 (1 x 4 = 4 < 6), so the card lands on March and says why.
 
+@pytest.mark.skip(reason="Superseded by the 24 Nov 22:23 ruling on TICKET-1080: the card names the period it passes over and no longer calls the one it describes his usual; test_landing_period.py holds the rule")
 def test_a_latest_month_of_almost_nothing_is_passed_over_and_the_card_says_so(home):
     card = home(months([6, 6, 6, 1]))
     assert readout_when(card) == "Mar 2026 · the latest month with your usual number of trades"
