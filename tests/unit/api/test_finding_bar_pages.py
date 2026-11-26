@@ -53,6 +53,8 @@ def test_the_facts_carry_the_level_from_the_one_test():
 def test_scope_home_says_how_many_checks_the_bar_corrects_for(client):
     from tests.helpers.read_again import send, words
     send(client)
-    said = words(client.get("/mirror").text)
+    # Moved from the hub to "What we have not told you" by 1030.
+    assert "Every finding here clears" not in words(client.get("/mirror").text)
+    said = words(client.get("/mirror/fact/not-told").text)
     assert ("Every finding here clears a bar corrected for every check we run on your trades: "
             "today 1 of the 18 on our fixed list.") in said

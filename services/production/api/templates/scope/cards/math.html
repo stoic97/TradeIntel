@@ -1,7 +1,9 @@
 {% from "_components.html" import story_card, trades_behind, chart %}
 {% from "scope/_math.html" import math_table %}
+{% from "scope/_opening.html" import math_gap %}
 {% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
   {%- if not f.state %}
+  {%- if f.gap %}<span class="mirror mirror--card">{{ math_gap(f.gap) }}</span>{% endif %}
   <span class="mirror mirror--card"><span class="num">{{ Figure(strike.rate_percent, "percent")|out_of_a_hundred_beside(break_even.percent) }}</span> trades made money: <span class="num">{{ Figure(strike.wins, "trades")|count }}</span> winners against <span class="num">{{ Figure(strike.losses, "trades")|count }}</span> losers.{% if strike.scratches %} <span class="num">{{ Figure(strike.scratches, "trades")|count }}</span> trades finished level and are in neither count.{% endif %}</span>
   {% if break_even.percent is not none %}<span class="mirror mirror--card">Your average winner was {{ Figure(break_even.average_winner, "rupees")|rupees(signed=false) }} and your average loser {{ Figure(break_even.average_loser, "rupees")|rupees(signed=false) }}. At those sizes, you break even at <span class="num">{{ Figure(break_even.percent, "percent")|out_of_a_hundred_beside(strike.rate_percent) }}</span>.</span>{% endif %}
   <span class="mirror mirror--card">Your winners were open a median of <span class="num">{{ Figure(holding.winners_median_seconds, "seconds")|minutes }}</span> minutes, your losers <span class="num">{{ Figure(holding.losers_median_seconds, "seconds")|minutes }}</span> minutes.</span>

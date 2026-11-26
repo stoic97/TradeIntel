@@ -95,7 +95,8 @@ def test_a_minus_and_a_clock_time_stay_on_one_line():
     and a time split from its am or pm."""
     page = fact_page("busiest", DAY)
     assert page.count('<span class="opening-figure">') == 4  # two times, two results
-    assert fact_page("down", DOWN).count('<span class="opening-figure">') == 2
+    # Four since 1030: the averages line now leads, then the two in the counted line.
+    assert fact_page("down", DOWN).count('<span class="opening-figure">') == 4
 
 
 def test_the_story_is_three_short_paragraphs_on_a_phone():
@@ -367,10 +368,12 @@ def test_the_busiest_card_keeps_the_frozen_line_true():
 def test_the_down_page_says_only_the_opening_sentence_of_its_card():
     page = readable(fact_page("down", DOWN))
     said = card_sentences(chapter_page(3, DOWN), 1)
-    assert said[0] == CLOSED
-    assert CLOSED in page
-    assert len(said) == 2
-    for sentence in said[1:]:
+    # Since 1030 the card and the page lead with the averages, then the honest line.
+    assert said[0] == "After two straight losses you averaged +₹137.5 a trade; on your other trades after two had closed, −₹100.5."
+    assert said[1] == CLOSED
+    assert said[0] in page and CLOSED in page
+    assert len(said) == 3
+    for sentence in said[2:]:
         assert sentence not in page, sentence
     for table_line in ("Table 1", "Table 2", "Your other trades after two had closed", "Every other trade",
                        "A scratch trade ends the run."):
@@ -539,4 +542,6 @@ def test_a_fact_in_a_state_still_goes_on():
 
 
 def test_the_opening_card_sentence_is_untouched():
-    assert card_of(chapter_page(3, DOWN), 1)[1] == CLOSED
+    page = chapter_page(3, DOWN)
+    assert card_of(page, 1)[1] == "After two straight losses you averaged +₹137.5 a trade; on your other trades after two had closed, −₹100.5."  # the averages lead since 1030, then the honest line
+    assert CLOSED in readable(page)

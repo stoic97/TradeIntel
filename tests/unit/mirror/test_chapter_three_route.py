@@ -13,7 +13,7 @@ import pytest
 
 from services.production.api import formatting
 from services.production.mirror import metrics as mx
-from tests.helpers.chapter_three_describes import CLOSED, TITLE, card_of, head_of
+from tests.helpers.chapter_three_describes import TITLE, card_of, head_of
 from tests.helpers.scope_chapters import readable
 
 TRIPS = mx.load_trips(json.loads(Path("tests/fixtures/mirror_contract/main.json").read_text()))
@@ -25,8 +25,15 @@ OPEN = (
 )
 
 
+# Gate closed: since 1030 the averages lead, then the honest line (CLOSED) follows.
+AVERAGES = (
+    f"After two straight losses you averaged {formatting.rupees(TL.condition_mean, exact=True)} a trade; "
+    f"on your other trades after two had closed, {formatting.rupees(TL.comparison_mean, exact=True)}."
+)
+
+
 @pytest.mark.parametrize(
-    ("opened", "want"), [(False, CLOSED), (True, OPEN)], ids=["gate closed", "gate open"]
+    ("opened", "want"), [(False, AVERAGES), (True, OPEN)], ids=["gate closed", "gate open"]
 )
 def test_the_served_pages_open_with_the_title_and_the_sentence(client, monkeypatch, opened, want):
     if opened:

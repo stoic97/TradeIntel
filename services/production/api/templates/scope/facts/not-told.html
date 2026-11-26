@@ -7,6 +7,9 @@
 {% block fact_title %}This report counts. It doesn't judge.{% endblock %}
 {% block head %}
     <p class="lead">Here is what your file showed, what this report doesn't do, and where to look next.</p>
+    {%- if f.checks_listed %}
+    <p class="body-small home__bar">Every finding here clears a bar corrected for every check we run on your trades: today <span class="num">{{ Figure(f.checks_run, "checks")|count }}</span> of the <span class="num">{{ Figure(f.checks_listed, "checks")|count }}</span> on our fixed list.</p>
+    {%- endif %}
 {% endblock %}
 {% block gross %}{% endblock %}
 {% block body %}
