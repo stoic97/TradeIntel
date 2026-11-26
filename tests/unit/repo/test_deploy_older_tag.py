@@ -98,7 +98,7 @@ class Droplet:
         block = PATHS.sub(lambda m: "$BOX" + m.group(0), block)
         paste = 'export BOX="$PWD"; export PATH="$BOX/bin:$PATH"\n' + block + "\n"
         done = subprocess.run([BASH, "--noprofile", "--norc"], input=paste, cwd=self.root,
-                              capture_output=True, text=True, timeout=120, env=dict(os.environ))
+                              capture_output=True, text=True, timeout=120, env=dict(os.environ), check=False)
         return done.stdout.splitlines()
 
     @property
