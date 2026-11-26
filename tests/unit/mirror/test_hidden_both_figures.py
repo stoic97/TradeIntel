@@ -444,8 +444,8 @@ def test_the_page_draws_no_verdict_on_a_whole_pool(client, monkeypatch):
 PICKED = "The 30 is a starting point we picked, not one learned from your trades."
 REACHED = [
     t for d in range(40) for t in (
-        trip(2 * d + 500, (datetime(2026, 1, 1) + timedelta(days=d)).date().isoformat(), 100),
-        trip(2 * d + 501, (datetime(2026, 1, 1) + timedelta(days=d)).date().isoformat(), -50,
+        trip(2 * d + 500, (datetime.fromisoformat("2026-01-01") + timedelta(days=d)).date().isoformat(), 100),
+        trip(2 * d + 501, (datetime.fromisoformat("2026-01-01") + timedelta(days=d)).date().isoformat(), -50,
              minute=10))
 ]
 
