@@ -467,3 +467,31 @@ def test_the_30_label_is_absent_while_the_block_does_not_show_the_30(client):
     html = client.get(S.fact_href("hidden")).text
     assert f"{THEN} not enough trades yet." in _text(html)  # the 40-trip page: 30 not shown
     assert PICKED not in _text(html)
+
+
+# Review (Megha): the note follows the warm-up being reached, not a trade being picked.
+#   31 days, each 10:00 +100 then 10:10 +40: 31 trades after a win, every earlier set up overall.
+#   The 31st has 30 earlier ones, so the warm-up is reached, and none is down: nothing is picked.
+def DAY(d: int) -> str:
+    return (datetime.fromisoformat("2026-01-01") + timedelta(days=d)).date().isoformat()
+
+
+REACHED_NOTHING_PICKED = [
+    t for d in range(31) for t in (
+        trip(2 * d + 700, DAY(d), 100),
+        trip(2 * d + 701, DAY(d), 40,
+             minute=10))
+]
+
+
+def test_the_30_label_shows_when_the_warm_up_is_reached_and_nothing_is_picked(client, monkeypatch):
+    real = loader.load_for
+    monkeypatch.setattr(loader, "load_for",
+                        lambda *a, **kw: (REACHED_NOTHING_PICKED, real(*a, **kw)[1]))
+    html = client.get(S.fact_href("hidden")).text
+    then = re.search(r'<p\b[^>]*data-figure="then"[^>]*>.*?</p>', html, re.DOTALL)
+    assert then and "30 or more" in _text(then.group(0))  # the 30 is shown, with no trade picked
+    assert "no trade after a win was opened" in _text(then.group(0))
+    own = re.findall(r"<p\b[^>]*>\s*" + re.escape(PICKED) + r"\s*</p>", html)
+    assert len(own) == 1 and html.count(PICKED) == 1
+    assert re.match(r"\s*" + re.escape(own[0]), html[then.end():])  # directly under the block
