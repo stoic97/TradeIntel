@@ -5,6 +5,7 @@ PREREG := services/research/prereg/framework_v1.yaml
 UV := uv run
 # pytest takes -q from pyproject's addopts. Do not add another: -qq drops the final count
 # line, and a run that does not say how many passed cannot be checked.
+# The suite runs across cores by default (addopts -n auto, TICKET-1057). One core: -n 0.
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -18,8 +19,8 @@ hash-lock: ## Write the hash of the pre-commitment file (kickoff only; CEO sign-
 test: ## Run everything the required CI check runs, to the end (the deploy check)
 	$(UV) pytest tests -m "not research_fit"
 
-test-research: ## Run only the research fits (outside the required CI check)
-	$(UV) pytest tests -m research_fit
+test-research: ## Run only the research fits, on one core (outside the required CI check)
+	$(UV) pytest -n 0 tests -m research_fit
 
 test-fast: ## Run the suite, stopping at the first failure (local use)
 	$(UV) pytest tests -x

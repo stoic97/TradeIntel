@@ -100,3 +100,14 @@ live use cannot sit only in an archived document, where nobody looks for live pr
 **Whoever runs the isolation read does not rule on it; whoever writes a test does not
 validate it.** The archived plan is `docs/archive/trade_dna_phase0_plan.md`; its README row
 points here.
+
+### SR-015 — one suite command: parallel by default, `-n 0` for one core
+
+*25 Nov 2026.* The suite is about 6,300 tests and took 723 s serial against 331 s on
+pytest-xdist, with the same 6289 passed and 21 skipped. Two ways to run it would drift, so
+there is one: `uv run python -m pytest` (on Windows; `uv run pytest` elsewhere), parallel
+because `pyproject.toml` addopts holds `-n auto`. **`-n auto` is the default; the only
+other settings are `-n 2` (a small-RAM PC, where one worker per core swaps), `-n 0` (one core,
+which the research fits use), and, where Application Control blocks xdist and even `-n 0`
+fails at start-up, `-o addopts= -q` (no xdist, one core).** A run that
+changes the pass or skip count against serial is a failing run, not a faster one.

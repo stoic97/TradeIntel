@@ -64,7 +64,7 @@ jobs:
         run: uv run ruff check .
 
       # Everything but the research fits, no -x: a red run lists every failure, not the
-      # first. No -q either: the addopts in pyproject has it, and -qq would drop the line
+      # first. Parallel by default (addopts -n auto, TICKET-1057); no -n here. No -q either: the addopts in pyproject has it, and -qq would drop the line
       # that counts the results. The fits run in research-fits below (TICKET-954).
       - name: Tests
         run: uv run pytest tests -m "not research_fit"
@@ -102,5 +102,7 @@ jobs:
       - name: Install (uv sync --frozen)
         run: uv sync --frozen
 
+      # One core: the MCMC fits are the platform-sensitive reading (TICKET-897); do not
+      # change what they run on in the same change that speeds the rest (TICKET-1057).
       - name: Research fits
-        run: uv run pytest tests -m research_fit
+        run: uv run pytest -n 0 tests -m research_fit
