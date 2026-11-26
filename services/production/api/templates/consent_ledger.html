@@ -22,10 +22,10 @@
   {%- endfor %}
   <h2 class="card-title consent__ledger-title">Your ledger</h2>
   <table class="table">
-    <thead><tr><th>When</th><th>Purpose</th><th>Decision</th><th class="table__num">Version</th></tr></thead>
+    <thead><tr><th>When</th><th>Purpose</th><th>Decision</th><th>Wording</th></tr></thead>
     <tbody>
     {%- for event in events %}
-      <tr><td>{{ event.at|local_day }}</td><td class="table__text">{{ event.purpose.value.replace('_', ' ') }}</td><td>{{ "granted" if event.granted else "withdrawn" }}</td><td class="table__num">version {{ Figure(event.terms_version, "version") }}</td></tr>
+      <tr><td>{{ event.at|local_day }}</td><td class="table__text">{{ event.purpose.value.replace('_', ' ') }}</td><td>{{ "granted" if event.granted else "withdrawn" }}</td><td class="table__text">{{ "current wording" if event.terms_version == text.version else "earlier wording" }}</td></tr>
     {%- endfor %}
     </tbody>
   </table>

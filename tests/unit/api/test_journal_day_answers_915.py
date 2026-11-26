@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,7 +41,7 @@ def _day(engine, day: str = DAY) -> int:
             select(m.Journal).where(m.Journal.period_start == day, m.Journal.period_end == day)
             .order_by(m.Journal.version_no.desc())).first()
         trader = sess.get(m.Trader, journal.trader_id)
-        remember.record(sess, trader=trader, journal=journal, answer=remember.YES, on=date.today())
+        remember.record(sess, trader=trader, journal=journal, answer=remember.YES, on=datetime.now(ZoneInfo("Asia/Kolkata")).date())
         sess.commit()
         return journal.id
 

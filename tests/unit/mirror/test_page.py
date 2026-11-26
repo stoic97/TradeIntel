@@ -83,7 +83,7 @@ def test_the_headline_figures_are_the_fixture_figures(client):
     pages = every_page(client)
     assert ">96</span>%" in pages["/mirror/chapter/1"], "share of total, in Chapter 1"
     assert "24,000" in pages["/mirror/fact/worst-days"], "five worst days"
-    assert "15.8%" in pages["/mirror/fact/math"], "strike rate"
+    assert "16 of 100" in pages["/mirror/fact/math"], "strike rate"  # 15.8%, as N of 100 (TICKET-1028)
     assert ">10<" in pages["/mirror/fact/run"], "longest losing run"
 
 

@@ -115,7 +115,7 @@ def scenes(app, engine) -> dict[str, dict[str, tuple[int, str]]]:
     client.post("/upload/demo", data={"csrf_token": _token(client, "/upload")},
                 follow_redirects=False)
     pages["demo"] = crawl(client, ("/", "/mirror", "/mirror/reveal", "/account", "/budget",
-                                   "/journals", "/eligibility"))
+                                   "/journals", "/eligibility", "/numbers", "/process"))
 
     client.post("/budget", data={"csrf_token": _token(client, "/budget"), "value": "2000",
                                  "unit": "INR", "effective_from": "2024-01-01"},
@@ -126,7 +126,7 @@ def scenes(app, engine) -> dict[str, dict[str, tuple[int, str]]]:
     _consent(client)
     _upload(client, CLEAN)
     pages["small file"] = crawl(client, ("/", "/mirror", "/mirror/reveal", "/account", "/budget",
-                                         "/journals", "/eligibility"))
+                                         "/journals", "/eligibility", "/numbers", "/process"))
     return pages
 
 

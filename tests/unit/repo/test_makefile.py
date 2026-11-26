@@ -41,7 +41,10 @@ def help_regex() -> re.Pattern[str]:
 
 
 def test_make_test_runs_the_whole_suite_and_test_fast_is_the_one_that_stops():
-    assert re.search(r"\bpytest tests$", targets()["test"].strip())
+    # TICKET-954 widened this from pytest tests$: make test now carries the required
+    # job selector, -m "not research_fit". What it must still never carry is -x, which
+    # is what this assertion below exists to forbid.
+    assert re.search(r"\bpytest tests\b", targets()["test"])
     assert "-x" not in targets()["test"], "make test is a deploy check: it runs to the end"
     assert "-x" in targets()["test-fast"]
 

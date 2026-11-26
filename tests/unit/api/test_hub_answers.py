@@ -190,8 +190,11 @@ def test_the_wedges_carry_the_short_form_of_the_four_answers():
     share, strike = CTX["share"], CTX["strike"]
     words = [(i["figure"], i["label"].replace("\n", " ")) for i in items]
     assert words[0] == ("5 days", f"lost {share.share_percent}% of all you lost")
-    assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent), "trades made money")
-    assert words[2] == (f"{CTX['days'].busiest_trips} trades", "on your busiest day")
+    # TICKET-1035: each says what it is read against
+    assert words[1] == (formatting.out_of_a_hundred(strike.rate_percent),
+                        f"made money; break-even {SF.wins_needed(CTX)}")
+    assert words[2] == (f"{CTX['days'].busiest_trips} trades",
+                        f"on your busiest day; usually {CTX['days'].normal_day}")
     assert words[3] == ("no number", "is set yet")
 
 
@@ -209,14 +212,14 @@ def test_a_wedge_with_a_number_says_how_many_went_past_it():
     assert item["figure"] == f"{mx.trades_past_number(trips).count} trades"
 
 
-FIT_ON_A_PHONE = -14  # "100 of 100", the widest: seen in a browser, it reaches the ring and stays legible
+FIT_ON_A_PHONE = 0  # the phone dial keeps its spacing whole, "100 of 100" included
 
 
 def fit(figure, label):
     """How far a wedge's words clear the ring, the rim and the dividers, at their best radius."""
-    z = G.SIZES["phone"]
-    rr, sec = G.radii(z["R"]), G.sectors(4, True)
-    block = G.slice_block({"figure": figure, "label": label}, min(D.HUB_FIG_SIZES_PHONE), False)
+    rr, sec = G.dial_radii("phone", True), G.sectors(4, True)
+    block = G.slice_block({"figure": D.phone_rupees(figure), "label": D.phone_rupees(label)},
+                          min(D.HUB_FIG_SIZES_PHONE), False, rr["stateW"], rr["serialRow"])
     best, rc = -1e9, rr["ring"]
     while rc <= rr["inner"]:
         best = max(best, G.block_clearance(sec["slices"][0], sec["span"], rc, block, rr))
@@ -295,8 +298,9 @@ def test_row_one_agrees_with_chapter_one():
 
 def test_row_two_agrees_with_chapter_two():
     page = readable(chapter_page(2))
-    assert f"{CTX['strike'].rate_percent}%" in page
-    assert f"{CTX['break_even'].percent}%" in page
+    from services.production.api import formatting  # a rate reads N of 100 (TICKET-1028)
+    assert formatting.out_of_a_hundred(CTX['strike'].rate_percent) in page
+    assert formatting.out_of_a_hundred(CTX['break_even'].percent) in page
 
 
 def test_row_three_agrees_with_chapter_three():

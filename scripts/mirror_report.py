@@ -1,3 +1,6 @@
+# Who runs it: no one. Retired by founder ruling, 19 Nov 2026; the Mirror is the app's.
+# When: never; its removal, and its test's move to mirror/metrics.py, is TICKET-989.
+# Writes: a self-contained HTML file under out/ (gitignored).
 """The Mirror: what this trader's own history says, with nothing inferred.
 
 Research Spec's first screen and the only part of Scope that needs no model, no

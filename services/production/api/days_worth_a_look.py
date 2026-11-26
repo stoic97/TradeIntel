@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from services.production.api import formatting
 from services.production.api import scope_map as S
 from services.production.journal import constants as k
 from services.production.mirror import metrics as mx
@@ -48,9 +49,12 @@ def flags_by_day(trips: list[mx.Trip]) -> dict[str, list[Flag]]:
     if days.busiest_trips > days.normal_day:
         name(days.busiest_day, f"Your busiest day: {days.busiest_trips} trades", "busiest")
 
-    for worst in mx.five_worst_days(trips).days:
-        if worst.net < 0:  # with five days or fewer, a winning day is in the five
-            name(worst.trading_day, "This was one of your five worst days", "worst-days")
+    counted = mx.five_worst_days(trips).days
+    worst_label = (f"This was your {formatting.worst_days(1)}" if len(counted) == 1
+                   else f"This was one of your {formatting.worst_days(len(counted))}")
+    for worst in counted:
+        if worst.net < 0:  # with five days or fewer, a winning day is in the worst days
+            name(worst.trading_day, worst_label, "worst-days")
 
     if named_run:
         for day in run.days[1:]:

@@ -175,7 +175,7 @@ def test_a_day_that_made_money_is_never_one_of_the_worst():
     trips = [_trip("2025-02-03", "10:00", 9), _trip("2025-02-04", "10:00", -9)]
     flags = worth.flags_by_day(trips)
     assert "2025-02-03" not in flags
-    assert [f.label for f in flags["2025-02-04"]] == ["This was one of your five worst days"]
+    assert [f.label for f in flags["2025-02-04"]] == ["This was one of your 2 worst days"]
 
 
 def test_a_run_of_one_and_a_tie_for_busiest_name_nothing():
@@ -185,7 +185,7 @@ def test_a_run_of_one_and_a_tie_for_busiest_name_nothing():
     trips = [_trip("2025-02-03", "10:00", 9), _trip("2025-02-04", "10:00", -9),
              _trip("2025-02-05", "10:00", 9)]
     labels = [f.label for day in worth.flags_by_day(trips).values() for f in day]
-    assert labels == ["This was one of your five worst days"]
+    assert labels == ["This was one of your 3 worst days"]
 
 
 # ---------- What a day says ----------

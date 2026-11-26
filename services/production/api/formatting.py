@@ -27,6 +27,12 @@ MINUS = "\u2212"
 RUPEE = "\u20b9"
 
 
+def whole(value) -> int:
+    """Whole rupees as the rupee filters write them (cut toward zero), for a figure built from
+    written figures: a column that must add up to the total it sits beside."""
+    return _whole(value)
+
+
 def _whole(value) -> int:
     """Whole units, cut toward zero. Floats go through str so 0.1 stays 0.1."""
     if isinstance(value, float):
@@ -88,6 +94,19 @@ def count(value) -> str:
     return indian_grouping(_whole(value))
 
 
+def worst_count(n: int) -> str:
+    """The worst days counted, as the report says it: "five" at five, the counted figure below.
+
+    One place decides these words. The macro of the same name in _components.html says it with
+    a Figure beside it; the Journal flag, the upload row and the reveal say it from here."""
+    return "five" if n == 5 else count(n)
+
+
+def worst_days(n: int) -> str:
+    """"5 worst days" as the report's pages say it: the count, then day or days."""
+    return f"{worst_count(n)} worst {'day' if n == 1 else 'days'}"
+
+
 def minutes(seconds) -> str:
     """Whole minutes from seconds, cut as the templates' (seconds / 60)|int cut them."""
     return count(_whole(Decimal(str(seconds)) / 60))
@@ -139,6 +158,19 @@ def price(value) -> str:
 def out_of_a_hundred(rate) -> str:
     """A rate as a count: 45.8 is "46 of 100". Rounded as a person says it, half up."""
     return f"{Decimal(str(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP)} of 100"
+
+
+def out_of_a_hundred_beside(rate, other) -> str:
+    """A rate with the rate it is read against: a win rate and its break-even. Two that print
+    the same whole number although they differ would read as equal, so that tie, decided by
+    what is printed, shows one decimal on both ("45.0 of 100", "45.3 of 100"). An exact tie
+    hides nothing and stays whole, as does everything else: written as out_of_a_hundred
+    writes it."""
+    other = getattr(other, "value", other)
+    if (other is not None and out_of_a_hundred(rate) == out_of_a_hundred(other)
+            and Decimal(str(rate)) != Decimal(str(other))):
+        return f"{Decimal(str(rate)).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)} of 100"
+    return out_of_a_hundred(rate)
 
 
 def signed_percent(value) -> str:
@@ -198,7 +230,7 @@ def book_in_a_sentence(book: str) -> str:
 _FIGURE_FILTERS = {
     write.__name__: through_figure(write)
     for write in (rupees_on_a_trade, rupees, count, minutes, hold, lots, price, signed_percent,
-                  out_of_a_hundred)
+                  out_of_a_hundred, out_of_a_hundred_beside)
 }
 """One of each, so every environment holds the same filter."""
 
@@ -229,3 +261,4 @@ def register(env) -> None:
     env.filters.update(tone=tone, day=day, local_day=local_day, book_in_a_sentence=book_in_a_sentence,
                        day_link=day_link, opens=opens, identifier=identifier, **_FIGURE_FILTERS)
     env.globals["Figure"] = Figure
+    env.globals["worst_count_text"] = worst_count

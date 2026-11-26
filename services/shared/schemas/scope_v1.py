@@ -157,3 +157,4 @@ class ConsentPurpose(_Vocabulary):
     PUBLISHED_RESEARCH = "published_research"
     THIRD_PARTY_SUMMARY = "third_party_summary"
     MARKETING = "marketing"
+    BROKER_PULL = "broker_pull"  # TICKET-896: a standing, read-only fetch of his trades

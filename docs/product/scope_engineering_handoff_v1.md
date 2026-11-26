@@ -2,7 +2,7 @@
 
 _v1 · 27 October 2026 · For the engineer building and running the Scope UI. **It is the Scope UI's build spec.** It replaced the navigation spec, user story, flow map, backend-gaps note, UI engineering plan, design-prompt kit, app–site connection note and launch runbook (all removed from the project on 27 Oct; their content is folded in here)._
 
-**Checked against `main` at `b50ca2d` on 16 November 2026** (TICKET-935): every path in backticks below resolves in this repo at that commit. The lines about plusev-web were last checked against its main at 9bde8af on 27 October.
+**Checked against `main` at `db2010f` on 25 November 2026** (TICKET-1064; before that TICKET-935, at b50ca2d on 16 November): every path in backticks below resolves in this repo at that commit. The lines about plusev-web were last checked against its main at 9bde8af on 27 October.
 
 **Paths:** a path in backticks is relative to the root of this repo. One that starts with `/` is a route of the app, a page of the website or a path on the server, and the sentence says which. Files kept elsewhere (plusev-web, the claude.ai Project) are named in plain text, without backticks.
 
@@ -14,7 +14,7 @@ _v1 · 27 October 2026 · For the engineer building and running the Scope UI. **
 
 ## 1. What you are building
 
-PlusEV Scope reads a trader's broker tradebook, rebuilds his trades and shows him what they actually did, with every number opening to the trades behind it. v1 shows **the Mirror only**: the nine counted facts TradeIntel already computes. This build gives it a new interface:
+PlusEV Scope reads a trader's broker tradebook, rebuilds his trades and shows him what they actually did, with every number opening to the trades behind it. v1 shows **the Mirror only**: the nine counted facts TradeIntel already computed on 27 October (the app has 16 fact pages now, §4). This build gives it a new interface:
 
 - **The Scope:** a circular instrument that tells the Mirror's story in four chapters. Tap a chapter and the dial re-divides into that chapter's facts; tap a fact and the dial shrinks to a lens while the fact page tells it in full, down to every trade.
 - **The aha:** right after upload, the trader guesses, then sees that his five worst days were most of his whole result.
@@ -55,7 +55,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | Level | Screen | What's on it | Tap goes to |
 |---|---|---|---|
 | 1 | **Scope home** | The dial in four equal chapters on a navy stage; the headline figure in the white centre disc; below on white, the Mirror's opening line and the gross line | A chapter |
-| 2 | **Chapter** | The dial re-divided into that chapter's facts (2–4); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
+| 2 | **Chapter** | The dial re-divided into that chapter's facts (3 to 6 facts per chapter; chapter 3 has six on desktop; see the open question on line 90); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
 | 3 | **Fact** | White page. The 56 px lens pinned top-left with the path beside it on one line (`Scope › Where your… › Your worst trading days`); the Mirror's sentences, figures, tables; then "The trades behind this": every trade, never a sample | Nothing except the lens and the path |
 
 **Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, dropdowns or text fields anywhere in the Scope. Every report page has the rail, Previous and Next, and All pages, all in scope_map's one order, and on a phone the report bar (TICKET-903, ruled 13 Nov 2026, round 2 section N).
@@ -64,12 +64,12 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 
 | # | Chapter | Facts, in slice order | Fact key |
 |---|---|---|---|
-| 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Share of your result · Where the money came from | `hidden` · `worst-days` · `share` · `money` |
-| 2 | Your patterns | How long you hold · Strike rate · Longest losing run · The clock | `hold` · `strike` · `run` · `clock` |
-| 3 | Your behaviour | After two straight losses · Your busiest day | `down` · `busiest` |
+| 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Where the money came from · Where the money went | `hidden` · `worst-days` · `money` · `charges` |
+| 2 | Your patterns | Your wins and losses · Longest losing run · The clock · After you clicked | `math` · `run` · `clock` · `after` |
+| 3 | Your behaviour | After two straight losses · How fast you went back in · Same way again · The day after a big day · Your busiest day · After you closed | `down` · `back-in` · `same-way` · `next-day` · `busiest` · `after-close` |
 | 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
 
-Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question.
+Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Six facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), After you clicked (TICKET-1001), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
 
 ### States and edge cases
 
@@ -110,7 +110,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 13 | One number | `/budget` | Restyle; moved | Now straight after the reveal (TR-008) |
 | 14 | Scope home | `/mirror` | New | Replaces the long Mirror page |
 | 15 | Chapter 1–4 | `/mirror/chapter/{n}` | New | |
-| 16 | Fact (12) | `/mirror/fact/{key}` | New | Keys in §4 |
+| 16 | Fact (17) | `/mirror/fact/{key}` | New | Keys in §4 |
 | 17 | Accurate / Not sure / Wrong | `POST /mirror/chapter/{n}/feedback` | New | B4 |
 | 18, 18b, 18c | Journals, one Journal, earlier Journals | `/journals`, `/journals/{id}`, `/journals/catch-up` | Restyle | WTP question stays inside the Journal |
 | 19 | Leaving card | top of `/journals`, once, after the first Journal | New | B7; D2 |
@@ -174,7 +174,7 @@ The design system canvas is the reference; `docs/design/scope-kit/static/css/tok
 
 **The reveal (12, and 2b in the demo):** navy screen; "You guessed: [label]." small at top; the dial with the five worst days as one white slice from twelve o'clock to their share, the [N]% in the white centre; then the Mirror's two sentences; "Show me those days" (white button → worst-days fact with lens and path) and "Continue" (→ one number). **Second state** when `ShareOfTotal.shown_as_percentage` is false: no slice, no figure in the centre, and the Mirror's other sentence ("Your result for the whole period was −₹[X]. The other [N] days were net ±₹[X].").
 
-**Fact page:** hero figure 56 (32 on How long you hold, shown as "[N] min · [N] min" over "winners · losers"); 32 px around it; the gross line straight under the sentences; figures 96 px tall with a mono "Figure N · …" caption, tables labelled "Table N"; then 72 px and a 3 px ink rule before "The trades behind this". Each day's header (and the column heads) is pinned under the lens bar while its trades scroll. Each trade: its label line, one row (Trade · In · Out · Held · Net (gross)), its trade strip drawn to time, its fills (Time · Side · Qty · Price · Row in your file).
+**Fact page:** hero figure 56 (history: How long you hold showed "[N] min · [N] min" over "winners · losers" at 32, until TICKET-819 folded it into Your wins and losses, which leads with one figure at 56); 32 px around it; the gross line straight under the sentences; figures 96 px tall with a mono "Figure N · …" caption, tables labelled "Table N"; then 72 px and a 3 px ink rule before "The trades behind this". Each day's header (and the column heads) is pinned under the lens bar while its trades scroll. Each trade: its label line, one row (Trade · In · Out · Held · Net (gross)), its trade strip drawn to time, its fills (Time · Side · Qty · Price · Row in your file).
 
 **Calculating (8), per D1 (a):** white; the trade strip as hero. While `POST /upload` runs, the strip animates as an illustration (fills landing as dots, a pause, then the bar) under "Reading your file", **with no counts**: the import is synchronous, so none exist yet. When the response arrives, show the real final "Rows read [N] of [N]" and "Trades rebuilt [N]" in mono 22, ink, the latest rebuilt trade drawn in the strip, "Every row is accounted for on the next screen." and "Continue". Don't use the prototype's "Still counting. These figures come from the server as it reads." line or the amber counts: under (a) they would describe something that doesn't happen. **Never show a figure the server hasn't reported.** **No polling:** the kit's README describes polling every 2 s with a 204 while reading; that needs a background job (D1 option b) and is **not** used. Under (a), post the upload with HTMX (`hx-post`, the reading state as the `hx-indicator`), and answer with the done state, whose Continue goes to `/imports/{id}`; without JavaScript the form posts normally and lands on `/imports/{id}` as today. The done-state heading "Your file is read." is new copy (D9).
 
@@ -211,7 +211,7 @@ Stack stays: FastAPI + Jinja + HTMX, plain CSS in `services/production/api/stati
 |---|---|---|---|
 | B1 | Instrument symbol on each trade | XS | `trip.symbol` into `services/production/mirror/loader.py` and `mx.Trip` |
 | B2 | Chart series: net and trade count per trading day; minutes held per trade | S | From `Trip.trading_day`, `net`, `holding_seconds`; `_by_day` exists |
-| B3 | Trade lists for strike rate, longest losing run, busiest day | S | New trade lists in `FACTS` (`services/production/api/scope_map.py`, which took over the old Mirror drawers); data exists (`LosingRun.trip_ids`, day counts, win/loss); captions from the kit's new-copy list |
+| B3 | Trade lists for strike rate (history: part of Your wins and losses, `math`, since TICKET-819), longest losing run, busiest day | S | New trade lists in `FACTS` (`services/production/api/scope_map.py`, which took over the old Mirror drawers); data exists (`LosingRun.trip_ids`, day counts, win/loss); captions from the kit's new-copy list |
 | B4 | Accurate / Not sure / Wrong: table, migration, endpoint; one answer per chapter (1–3) per trader; three optional reasons | S | Wrong facts · Right facts, wrong reading · I've already changed this |
 | B5 | **Fills under each trade**, with "Row in your file" | L | `RoundTrip.fill_ids` exists at reconstruction but the `trip` table doesn't keep it; needs a migration (trip → fill link, parsed fill fields) and a route. **May follow v1** (D4): the trade list is then the end of a fact page |
 | B6 | The guess: table + route; one answer (a label or "I don't know") before the reveal | S | Labels from TR-009 |
@@ -224,7 +224,7 @@ Dwell events stay as they are, keyed by fact page (`surface: mirror_line`).
 | Phase | What | Done when |
 |---|---|---|
 | 0 · Foundations | §3 done; T1, T2, T8; component macros (buttons, cards, table, gross line, result states, bottom nav, lens and path, trade record) | One restyled existing page matches the design system; ₹ renders in Plex |
-| 1 · The Scope | T3–T5, T7 without motion; Scope home, four chapters, 12 fact pages, edge states; B1–B3; the geometry port | Every fact two taps from Home; every figure from `metrics`; wording tests pass |
+| 1 · The Scope | T3–T5, T7 without motion; Scope home, four chapters, 12 fact pages (history: 16 now, after TICKET-817, TICKET-819, TICKET-910, TICKET-995, TICKET-1006 and TICKET-1009; §4), edge states; B1–B3; the geometry port | Every fact two taps from Home; every figure from `metrics`; wording tests pass |
 | 2 · The journey | Calculating, guess, reveal (both states), one-number move, signed-in home, front door; B4, B6 | The flow plays end to end on the synthetic 40-trade history |
 | 3 · Motion | T6 for every transition in §7; reduced motion | Plays on Chrome and Safari; instant elsewhere |
 | 4 · Restyle the rest | Every remaining existing page, the leaving card (B7) | The brand checks in §11 pass on every page |
@@ -281,18 +281,13 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 
 ## 14. Open tickets that are not this build
 
-- **TD-023:** the B2 recall test doesn't reproduce from the repository (the one known red).
-- **TD-029 / TD-024:** Dhan's `Quantity/Lot` meaning for size figures.
-- **TD-031:** plain names for the 19 library checks on the eligibility page (it shows identifiers today).
-- **TD-030:** B12's `20/40_days` reading.
-- MCX crude tick size and NIFTY lot size for further instrument profiles.
-- Testing register TR-001 to TR-007 (costs, two-readout test, NSE crude, sold options, commodity futures, never-use words, correctness published).
+They are in Jira (Plusev_Engineering), not here: [open deferrals and testing items](https://plusev-team.atlassian.net/issues/?jql=labels%20in%20(from-deferrals%2C%20from-testing-register)%20AND%20statusCategory%20!%3D%20Done%20ORDER%20BY%20key). `docs/deferrals.md` is the index of TD ids, each with its Jira key.
 
 ## 15. Documents
 
 **Read these, in this repo:**
 - This document.
-- `docs/product/scope_testing_register_v1.md`: every open bug, feature and change; new items go here.
+- `docs/archive/scope_testing_register_v1.md`: the testing items as they stood on 27 Oct, archived; open work is in Jira (§14).
 - `docs/trade_dna_product_thesis_v1.5.md` and `docs/trade_dna_research_spec_v1_0.md`: background only; nothing in this build depends on them.
 - `docs/runbooks/` (deploy, data-flow map, deletion), `docs/adr/` (ADR-007 is the runtime), `docs/deferrals.md` (TD tickets), `docs/design/` (the kit and the screens, after §3).
 
@@ -317,4 +312,4 @@ systemctl restart scope && journalctl -u scope -n 20 --no-pager   # wait for "Ap
 | 27 Oct | Fact page: single measure, figure as hero, pinned day headers, tighter trade records |
 | 27 Oct | Dial names upright and horizontal at arc midpoints; slice numbers on their own line; stacked figures on purpose |
 | 27 Oct | Motion: scope-in rotates the dial like a focus ring; shrink-to-lens collapses the navy upward; no colour crossfades |
-| 5 Nov | Slice numbers off the dial: a digit above a figure read as part of it (founder, FB-0124). Order is position and the rim name; story-card numbers stay. Chapter-dial counts carry their noun; not-told shows its name only (TICKET-843, Rikk's rulings) |
+| 5 Nov | Slice numbers off the dial: a digit above a figure read as part of it (founder, FB-0124). Order is position and the rim name; story-card numbers stay. Chapter-dial counts carry their noun; not-told shows its name only (TICKET-843's rulings) |

@@ -30,6 +30,9 @@ jobs:
       UV_FROZEN: "1" # never re-lock in CI: install exactly what uv.lock says
     steps:
       - uses: actions/checkout@v4
+        with:
+          # TICKET-990: the release-path test pins shas in this repo's history
+          fetch-depth: 0
 
       # Methodology Rule 5: production (and shared) code must not import research.
       # TD-008's import-boundary job, unblocked now that more than one engineer merges.
@@ -60,7 +63,44 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
-      # The whole suite, no -x: a red run lists every failure, not the first. No -q either:
-      # pyproject's addopts has it, and -qq would drop the line that counts the results.
+      # Everything but the research fits, no -x: a red run lists every failure, not the
+      # first. No -q either: the addopts in pyproject has it, and -qq would drop the line
+      # that counts the results. The fits run in research-fits below (TICKET-954).
       - name: Tests
-        run: uv run pytest tests
+        run: uv run pytest tests -m "not research_fit"
+
+  # Not required, and it must never fail the workflow: these are the marginal M1 fits of
+  # TICKET-897. Their result is a reading, not a gate, until 897 and the reference
+  # environment (TICKET-975) are settled. Then this job becomes required again.
+  research-fits:
+    name: research-fits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    continue-on-error: true
+    env:
+      UV_FROZEN: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # TICKET-990: the release-path test pins shas in this repo's history
+          fetch-depth: 0
+
+      # The RCA could not prove what differed between runs and settled on the runner CPU
+      # as most likely, unproven until the logs print it. This prints it.
+      - name: Runner CPU
+        run: lscpu
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python (from .python-version)
+        run: uv python install
+
+      - name: Install (uv sync --frozen)
+        run: uv sync --frozen
+
+      - name: Research fits
+        run: uv run pytest tests -m research_fit

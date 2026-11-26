@@ -242,13 +242,13 @@ def test_a_block_is_collapsed_and_opens_on_its_trades():
     "First trade −₹300, then 1 more trade; 1 lost.",
 ])
 def test_a_block_says_the_day_at_a_glance(words):
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
+    summary = re.search(r"<details class=\"day-block\".*?<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
                         flags=re.DOTALL).group(0)
     assert words in readable(summary)
 
 
 def test_a_block_draws_its_running_result():
-    summary = re.search(r"<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
+    summary = re.search(r"<details class=\"day-block\".*?<summary.*?</summary>", fact_page("worst-days", FOUR_CRUDE_EVENINGS),
                         flags=re.DOTALL).group(0)
     assert '<svg class="day-block__line"' in summary and "<polyline" in summary
 
@@ -289,7 +289,7 @@ def test_every_trade_stays_within_reach():
 
 
 def test_chapter_one_has_the_plain_counts_then_its_two_facts():
-    assert [f.key for f in S.chapter(1).facts] == ["hidden", "worst-days", "money"]  # TICKET-910
+    assert [f.key for f in S.chapter(1).facts][:3] == ["hidden", "worst-days", "money"]  # TICKET-910
 
 
 def test_the_dial_says_findings_not_counts():
@@ -297,7 +297,8 @@ def test_the_dial_says_findings_not_counts():
     items = [i for i in SF.chapter_view(1, SF.facts(ctx, _imp()))["items"]
              if i["name"] != S.FACTS["hidden"].title]  # TICKET-910: its wedge is a plain count
     assert [(i["figure"], i["label"].replace("\n", " ")) for i in items] == [
-        ("5 days", "came to −₹2,064"), ("+₹20", "your best trade")]
+        ("5 days", "came to −₹2,064; the other 8 days +₹80"),  # TICKET-1035: its reference
+        ("+₹20", "your best trade; worst −₹300")]
 
 
 def _imp():

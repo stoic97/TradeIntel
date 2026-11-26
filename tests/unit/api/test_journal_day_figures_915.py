@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import inspect, select, text
@@ -39,7 +40,7 @@ def _day(engine) -> int:
             select(m.Journal).where(m.Journal.period_start == DAY, m.Journal.period_end == DAY)
             .order_by(m.Journal.version_no.desc())).first()
         trader = sess.get(m.Trader, journal.trader_id)
-        remember.record(sess, trader=trader, journal=journal, answer=remember.YES, on=date.today())
+        remember.record(sess, trader=trader, journal=journal, answer=remember.YES, on=datetime.now(ZoneInfo("Asia/Kolkata")).date())
         sess.commit()
         return journal.id
 
@@ -54,7 +55,7 @@ def _rows(engine) -> list:
 def _read(client, jid: int, query: str = ""):
     """The page raw, and as read - without the price question, whose rupee figure is its own."""
     raw = client.get(f"/journals/{jid}{query}").text
-    return raw, html.unescape(re.sub(r'<form[^>]*id="one-question".*?</form>', "", raw, flags=re.S))
+    return raw, html.unescape(re.sub(r'<form[^>]*id="one-question".*?</form>', "", raw, flags=re.DOTALL))
 
 
 def _answer(client, raw: str, jid: int, key: str, answer: str):

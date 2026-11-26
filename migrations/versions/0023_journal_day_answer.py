@@ -1,20 +1,19 @@
 """journal_day_answer: his answers to the day's questions (TICKET-915)
 
 Yes, no or wrong, a new row for each answer, with the question as he saw it and the day it
-is about. No typed word: a fixed answer. NOTE: written as 0014 on top of 0013 while
-TICKET-896's 0014_broker_connection (#147) is unmerged; the one that merges second renumbers
-(Pawan, 17 Nov 2026) - this one becomes 0015, revising 0014.
+is about. No typed word: a fixed answer. Numbered 0023 on main's head 0021 (Pawan, 26 Nov 2026);
+first written as 0014 on 0013, before main's chain moved on.
 
-Revision ID: 0014
-Revises: 0013
+Revision ID: 0023
+Revises: 0021
 """
 import sqlalchemy as sa
 from alembic import op
 
 import services.production.db.types as dbtypes
 
-revision = '0014'
-down_revision = '0013'
+revision = '0023'
+down_revision = '0021'
 branch_labels = None
 depends_on = None
 

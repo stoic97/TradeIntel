@@ -20,12 +20,19 @@ here raises into a request, and no trade is silently skipped.
   stamped at the end of each minute would open a minute late, and its "minute before" would be
   the entry minute, which agrees with the trade by construction.
 
-**Where the bars live, and what that costs.** Files on disk: one CSV and its manifest per
-underlying, written by the monthly refresh (TICKET-893's format). They are not kept in the
-product database. Opening a series streams the file once, to check it and to note where each day
-starts. After that a lookup reads only the day it needs, and recent days stay cached. A trader
-with five years of history touches only the days he traded. Nothing is fetched from a feed while
-a request is being served: a series holds every date it covers, for every trader.
+**Where the bars live, and what that costs (TICKET-997).** Files on disk, one folder per
+underlying: one gzip file per trading day and a manifest (``services/shared/market/day_store.py``),
+not the product database. Nothing is read when the layer starts. The first lookup for an
+underlying reads its manifest, once; after that a lookup reads only the day it needs (about 7 KB,
+under 10 ms on the crude series), checks it against the manifest's hash, and recent days stay
+cached. Nothing ever reads the whole series. Each day was checked when it was written, so reading
+checks only the hash. A trader
+with five years of history touches only the days he traded. Nothing is fetched from a feed while a
+request is being served.
+
+The single-file layout TICKET-893 wrote (``Series``) is no longer named by the mapping. It is
+kept so ``scripts/split_series_by_day.py`` opens an old series with its own checks before it
+splits it, and so a test can show both layouts answer every lookup the same.
 
 Prices are ``Decimal``, read from the file's text. Nothing here imports from research.
 """
@@ -45,6 +52,7 @@ from pathlib import Path
 import yaml
 
 from services.production.ctr.profiles import registry
+from services.shared.market import day_store as ds
 from services.shared.market import series as shared_series
 
 HERE = Path(__file__).parent
@@ -110,10 +118,89 @@ def _stamp(text: str, where: str) -> datetime:
         raise Unusable(f"{where}: {text!r} is not a timestamp") from exc
 
 
+def _parse_day(text: bytes, where: str) -> dict[datetime, Bar]:
+    bars: dict[datetime, Bar] = {}
+    for line in text.decode("utf-8").splitlines()[1:]:
+        if not line.strip():
+            continue
+        stamp, o, h, low, c, *_ = line.split(",")
+        at = f"{where}, {stamp}"
+        bars[_stamp(stamp, at)] = Bar(_price(o, at), _price(h, at), _price(low, at), _price(c, at))
+    return bars
+
+
+@dataclass
+class DaySeries:
+    """One underlying's bars, one gzip file a day (TICKET-997). Implements the bars interface
+    TICKET-891's count reads (``covers``, ``bar``). Reads its manifest once, on first use, then
+    one day file per day asked about. A day whose file fails its hash is not covered, and
+    ``problem`` says why; nothing here raises into a request."""
+
+    underlying: str
+    folder: Path
+    manifest: ds.DayManifest
+    manifest_sha256: str
+    _cache: OrderedDict = field(default_factory=OrderedDict)
+    _broken: dict[date, str] = field(default_factory=dict)
+
+    @classmethod
+    def open(cls, underlying: str, folder: Path) -> DaySeries:
+        if not (folder / ds.MANIFEST).exists():
+            raise Unusable(f"{folder.name}/{ds.MANIFEST} is missing")
+        try:
+            raw = ds.manifest_bytes(folder)
+            manifest = ds.parse_manifest(raw)
+        except (ValueError, TypeError, KeyError, UnicodeDecodeError) as exc:
+            raise Unusable(f"{folder.name}/{ds.MANIFEST} is not a manifest ({exc.__class__.__name__})") from None
+        if manifest.clock != shared_series.CLOCK:
+            raise Unusable(f"{folder.name}: the manifest doesn't say the bars are start-of-minute")
+        return cls(underlying=underlying, folder=folder, manifest=manifest,
+                   manifest_sha256=hashlib.sha256(raw).hexdigest())
+
+    def _day(self, day: date) -> dict[datetime, Bar]:
+        if day in self._cache:
+            self._cache.move_to_end(day)
+            return self._cache[day]
+        bars: dict[datetime, Bar] = {}
+        entry = self.manifest.days.get(day.isoformat())
+        if entry is not None and day not in self._broken:
+            try:
+                bars = _parse_day(ds.read_day(self.folder, day, entry), f"{self.folder.name} {day}")
+            except (ds.Refused, Unusable, ValueError) as exc:
+                self._broken[day] = str(exc)
+                bars = {}
+        self._cache[day] = bars
+        if len(self._cache) > DAY_CACHE:
+            self._cache.popitem(last=False)
+        return bars
+
+    def problem(self, day: date) -> str:
+        """Why this day's file can't be used, or "" when it can (or isn't held)."""
+        if self.manifest.covers(day) and day.isoformat() in self.manifest.days:
+            self._day(day)
+        return self._broken.get(day, "")
+
+    def covers(self, day: date) -> bool:
+        return self.manifest.covers(day) and not self.problem(day)
+
+    def held(self, day: date) -> bool:
+        """Whether the store has this day's file at all (a stock's day may not be fetched yet)."""
+        return day.isoformat() in self.manifest.days
+
+    def minutes(self, day: date) -> list[datetime]:
+        """Every minute with a bar on this day, in order (TICKET-999 draws random moments from these)."""
+        return sorted(self._day(day))
+
+    def bar(self, minute: datetime) -> Bar | None:
+        naive = minute.replace(tzinfo=None) if minute.tzinfo else minute
+        return self._day(naive.date()).get(naive)
+
+
 @dataclass
 class Series:
-    """One underlying's bars, from a file on disk, checked at load. Implements the bars
-    interface TICKET-891's count reads (``covers``, ``bar``)."""
+    """One underlying's bars from a single file, TICKET-893's layout, checked at load. The
+    mapping no longer names one (TICKET-997): the split script opens an old series with this, so
+    its own checks pass before it is split, and a test holds the day layout to its answers."""
 
     underlying: str
     path: Path
@@ -242,6 +329,10 @@ class SyntheticSeries:
         naive = minute.replace(tzinfo=None) if minute.tzinfo else minute
         return self._bars.get(naive)
 
+    def minutes(self, day: date) -> list[datetime]:
+        """Every minute with a bar on this day, in order, as ``DaySeries.minutes`` gives them."""
+        return sorted(t for t in self._bars if t.date() == day)
+
 
 @dataclass(frozen=True)
 class Mapping:
@@ -259,8 +350,11 @@ def load_mapping(path: Path = MAPPING) -> Mapping:
     by_profile: dict[str, str] = {}
     entries = doc.get("underlyings") or {}
     for name, entry in entries.items():
-        if bool(entry.get("series")) == bool(entry.get("synthetic")):
-            raise InvalidMapping(f"{name}: give a series file or a synthetic series, one of them")
+        if entry.get("series"):
+            raise InvalidMapping(f"{name}: a single-file series is no longer read; split it into day "
+                                 "files with scripts/split_series_by_day.py and name its folder")
+        if bool(entry.get("folder")) == bool(entry.get("synthetic")):
+            raise InvalidMapping(f"{name}: give a folder of day files or a synthetic series, one of them")
         for profile in entry.get("profiles") or []:
             if profile in by_profile:
                 raise InvalidMapping(f"{profile} is mapped twice ({by_profile[profile]} and {name})")
@@ -280,7 +374,16 @@ class Prices:
         self.data_dir = data_dir if data_dir is not None else market_dir()
         self.mapping = load_mapping(mapping_path)
         self.profiles = registry.load_all(profiles_dir)
-        self._series: dict[str, Series | SyntheticSeries | Unusable] = {}
+        self._series: dict[str, DaySeries | SyntheticSeries | Unusable] = {}
+
+    def fresh(self) -> Prices:
+        """The same mapping and profiles with no series opened yet (TICKET-1000): a page takes one
+        per request, so it reads today's manifest and never a stale one, without loading the
+        profiles again."""
+        copy = Prices.__new__(Prices)
+        copy.data_dir, copy.mapping, copy.profiles = self.data_dir, self.mapping, self.profiles
+        copy._series = {}
+        return copy
 
     def underlying_of(self, exchange: str, symbol: str) -> str | None:
         """The underlying that measures this instrument, or None when nothing is mapped."""
@@ -292,6 +395,16 @@ class Prices:
             return symbol
         return None
 
+    def session(self, underlying: str) -> tuple[time, time]:
+        """The underlying's session open and close, from its instrument profile."""
+        return self._session(underlying)
+
+    def exchange(self, underlying: str) -> str:
+        """The exchange of the underlying's first profile: which session check its days take."""
+        entry = self.mapping.entries.get(underlying)
+        keys = entry["profiles"] if entry else (self.mapping.stocks or {}).get("profiles", [])
+        return keys[0].split(":")[0]
+
     def _session(self, underlying: str) -> tuple[time, time]:
         entry = self.mapping.entries.get(underlying)
         keys = entry["profiles"] if entry else (self.mapping.stocks or {}).get("profiles", [])
@@ -299,7 +412,7 @@ class Prices:
         profile = self.profiles[(exchange, symbol)]
         return profile.session_start, profile.session_end
 
-    def series(self, underlying: str) -> Series | SyntheticSeries | None:
+    def series(self, underlying: str) -> DaySeries | SyntheticSeries | None:
         """The checked series, or None (and the reason in ``why``) when there is none to use."""
         if underlying not in self._series:
             self._series[underlying] = self._open(underlying)
@@ -310,7 +423,7 @@ class Prices:
         got = self._series.get(underlying)
         return str(got) if isinstance(got, Unusable) else ""
 
-    def _open(self, underlying: str) -> Series | SyntheticSeries | Unusable:
+    def _open(self, underlying: str) -> DaySeries | SyntheticSeries | Unusable:
         entry = self.mapping.entries.get(underlying)
         try:
             session = self._session(underlying)
@@ -318,8 +431,8 @@ class Prices:
                 syn = entry["synthetic"]
                 return SyntheticSeries(underlying, date.fromisoformat(syn["from"]), date.fromisoformat(syn["to"]),
                                        int(syn["seed"]), Decimal(syn["start"]), session)
-            name = entry["series"] if entry else self.mapping.stocks["series"].format(symbol=underlying.lower())
-            return Series.open(underlying, self.data_dir / name, session[0])
+            name = entry["folder"] if entry else self.mapping.stocks["folder"].format(symbol=underlying)
+            return DaySeries.open(underlying, self.data_dir / name)
         except Unusable as exc:
             return exc
         except (OSError, ValueError, KeyError) as exc:
@@ -333,12 +446,14 @@ class Prices:
         if s is None:
             return Answer(Kind.NO_SERIES, why=self.why(underlying) or f"no series for {underlying}")
         day = (minute.replace(tzinfo=None) if minute.tzinfo else minute).date()
+        if isinstance(s, DaySeries) and (problem := s.problem(day)):
+            return Answer(Kind.NO_SERIES, why=problem)
         if not s.covers(day):
             return Answer(Kind.NOT_COVERED, why=f"{underlying}'s series doesn't cover {day.isoformat()}")
         bar = s.bar(minute)
         return Answer(Kind.BAR, bar=bar) if bar else Answer(Kind.NO_BAR, why=f"no {underlying} bar at {minute:%H:%M}")
 
-    def for_count(self, underlyings: list[str]) -> dict[str, Series | SyntheticSeries]:
+    def for_count(self, underlyings: list[str]) -> dict[str, DaySeries | SyntheticSeries]:
         """The usable series by underlying, in the shape TICKET-891's count takes. An underlying
         missing here is counted there as "no series for the underlying"."""
         return {u: s for u in underlyings if (s := self.series(u)) is not None}
@@ -349,8 +464,8 @@ class Prices:
         out: dict = {"underlying_map": self.mapping.version, "series": {}}
         for u in sorted(set(underlyings)):
             s = self.series(u)
-            if isinstance(s, Series):
-                out["series"][u] = {"sha256": s.manifest.sha256, "as_of": s.manifest.as_of.isoformat()}
+            if isinstance(s, DaySeries):
+                out["series"][u] = {"sha256": s.manifest_sha256, "as_of": s.manifest.as_of.isoformat()}
             elif isinstance(s, SyntheticSeries):
                 out["series"][u] = {"synthetic": s.manifest_digest}
             else:

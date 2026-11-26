@@ -13,6 +13,7 @@ import pytest
 
 DEPLOY = Path("deploy")
 SCRIPT = DEPLOY / "refresh-staging.sh"
+RUNBOOK = Path("docs/runbooks/deploy.md")
 
 
 def _directives(path):
@@ -64,7 +65,7 @@ def test_the_refresh_script_does_the_steps_in_order():
         ".restore",
         '"$BACKUPS"/files-*.tar.gz',
         "fetch --quiet --tags origin",
-        "--detach origin/main",
+        '--detach "$REF_SHA"',
         "uv sync --frozen --no-group research",
         'chown -R scope:scope "$STAGING"',
         'systemctl start "$SERVICE"',
@@ -76,6 +77,123 @@ def test_the_refresh_script_does_the_steps_in_order():
     assert body.count('step "') == 9
     assert "FAILED at step" in body  # a failure names its step and exits non-zero
 
+
+def test_the_runbook_says_staging_can_run_the_sha_a_train_will_tag():
+    """TICKET-1003 gate 6: the Staging section and step a both say it."""
+    text = RUNBOOK.read_text(encoding="utf-8")
+    staging = text[text.index("## Staging"):text.index("## The release train")]
+    step_a = text[text.index("### a. "):text.index("### b. ")]
+    assert "refresh-staging.sh 09919b5" in staging
+    assert "REFRESH_STAGING_CHECK_ONLY" in staging
+    assert "refused before" in staging
+    assert "refresh-staging.sh 09919b5" in step_a
+    assert "split into two tags" in step_a
+    assert "(origin/main)" in step_a
+    assert "(ref 09919b5, not" in step_a
+    assert "git pull" not in text
+
+def test_the_refresh_script_takes_one_optional_ref_defaulting_to_main():
+    """TICKET-1003: no argument keeps today's behaviour; one argument is a tag or sha."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'REF="${1:-origin/main}"' in text
+    assert "--detach origin/main" not in text
+    assert '--detach "$REF_SHA"' in text
+
+
+def test_the_ref_is_judged_before_anything_stops():
+    """TICKET-1003: a typo must leave staging running what it was running."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    stop = body.index('systemctl stop "$SERVICE"')
+    assert "fetch --quiet --tags --prune origin" in body
+    assert body.index("fetch --quiet --tags --prune origin") < stop
+    assert "rev-parse --verify --quiet" in body
+    assert body.index("rev-parse --verify --quiet") < stop
+    assert "merge-base --is-ancestor" in body
+    assert body.index("merge-base --is-ancestor") < stop
+
+
+def _ref_rule(text):
+    """The sha pattern the script tests an argument against, as written in the script."""
+    m = re.search(r'\[\[ "\$REF" =~ (\S+) \]\]', text)
+    assert m, "the script does not test the ref against a sha pattern"
+    return re.compile(m.group(1))
+
+
+def test_only_a_tag_or_a_sha_is_accepted_as_the_ref():
+    """TICKET-1003 review: a branch name moves, so main, HEAD and origin/main~3 are refused."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert 'show-ref --verify --quiet "refs/tags/$REF"' in body
+    rule = _ref_rule(body)
+    for refused in ("main", "HEAD", "origin/main~3", "origin/main", "feat/x"):
+        assert not rule.match(refused), refused
+    for accepted in ("09919b5", "09919b5" + "a" * 33):
+        assert rule.match(accepted), accepted
+    assert not rule.match("09919b")  # six characters is not a sha
+    assert not rule.match("09919B5")  # git prints lower case
+
+
+def test_the_tag_or_sha_rule_runs_after_the_fetch_and_before_the_ancestor_test_and_the_stop():
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert 'show-ref --verify --quiet "refs/tags/$REF"' in body
+    rule = body.index('show-ref --verify --quiet "refs/tags/$REF"')
+    assert body.index("fetch --quiet --tags --prune origin") < rule
+    assert rule < body.index("merge-base --is-ancestor")
+    assert rule < body.index('systemctl stop "$SERVICE"')
+    assert "neither a tag nor a sha" in body
+    assert "Nothing was stopped." in body[body.index("neither a tag nor a sha"):][:300]
+
+
+def test_no_argument_still_means_origin_main():
+    """The default is not a sha or a tag, so the rule must only judge an argument."""
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert '"${1:-}"' in body
+
+
+def test_a_ref_that_does_not_resolve_is_refused():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert "does not resolve to a commit" in body
+    assert "Nothing was stopped." in body
+
+
+def test_a_ref_that_is_not_on_main_is_refused():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'merge-base --is-ancestor "$REF_SHA" origin/main' in body
+    assert "is not on origin/main" in body
+
+
+def test_both_refusals_name_the_step():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'STEP="checking the ref"' in body
+    assert "FAILED at step" in body
+
+
+def test_step_4_names_and_prints_the_commit_it_checked_out():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'step "4/9 check out $REF"' in body
+    assert "log -1 --format='%h %s'" in body
+
+
+def test_the_last_line_says_which_ref_staging_runs():
+    body = SCRIPT.read_text(encoding="utf-8")
+    assert 'echo "Staging is refreshed and running $version (origin/main)."' in body
+    assert 'echo "Staging is refreshed and running $version (ref $REF, not main)."' in body
+
+
+def test_a_ref_can_be_checked_without_changing_anything():
+    """The droplet rehearsal: judge the ref, stop before step 1/9."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    body = text[text.index("set -Eeuo pipefail"):]
+    assert "REFRESH_STAGING_CHECK_ONLY" in body
+    assert body.index("REFRESH_STAGING_CHECK_ONLY") < body.index('systemctl stop "$SERVICE"')
+
+
+def test_the_script_still_sets_up_no_automatic_refresh():
+    low = SCRIPT.read_text(encoding="utf-8").lower()
+    for banned in ("oncalendar", "crontab", "systemd-run", ".timer"):
+        assert banned not in low, banned
 
 def test_the_refresh_script_parses():
     bash = shutil.which("bash")
@@ -121,7 +239,9 @@ def test_the_env_example_names_every_setting_with_a_comment_and_no_real_value():
             settings[key] = value
             assert lines[n - 1].startswith("#"), f"{key} has no comment above it"
     assert set(settings) == {"SCOPE_SECRET_KEY", "SCOPE_FILE_KEY", "SCOPE_DB", "SCOPE_FILES",
-                             "SCOPE_PRODUCTION", "ADMIN_LOGIN_IDS"}
+                             "SCOPE_PRODUCTION", "ADMIN_LOGIN_IDS", "SCOPE_MARKET_DIR"}
+    # TICKET-997: staging reads production's day files; its unit can write only its own data.
+    assert settings["SCOPE_MARKET_DIR"] == "/srv/scope/data/market"
     assert settings["SCOPE_PRODUCTION"] == "1"
     assert settings["SCOPE_DB"] == "sqlite:////srv/scope-staging/data/scope.db"
     assert settings["SCOPE_FILES"] == "/srv/scope-staging/data/files"

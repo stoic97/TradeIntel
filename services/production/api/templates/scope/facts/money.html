@@ -12,7 +12,7 @@
 {% block evidence %}
   <section class="evidence" aria-labelledby="evidence-title">
     <h2 class="heading" id="evidence-title">The trades behind this</h2>
-    <p class="evidence__caption">Your best five and worst five, by result. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.</p>
+    <p class="evidence__caption">{% if f.held and f.held.count %}Your best five and worst five same-day trades, by result, and the <span class="num">{{ Figure(f.held.count, "positions")|count }}</span> {{ "position" if f.held.count == 1 else "positions" }} you held past the day. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }} in all.{% else %}Your best five and worst five, by result. <span class="num">{{ Figure(f.trade_count, "trades")|count }}</span> {{ "trade" if f.trade_count == 1 else "trades" }}.{% endif %}</p>
     {% if f.found.same_day_count %}
     <div class="ranked-lists">
     {{ ranked_trades("Best five", f.best_rows) }}
@@ -26,11 +26,11 @@
       <p class="mirror mirror--card">Worst five: {% for book, n in f.found.worst_books %}{{ Figure(n, "trades") }} in {{ book }}{{ ", " if not loop.last }}{% endfor %}.</p>
       {% endif %}
       {% if f.found.evening_told %}<p class="mirror mirror--card">{{ Figure(f.found.best_evening, "trades") }} of the 5 best were opened from 5 pm on, and {% if f.found.worst_mostly_late %}{{ Figure(f.found.worst_late, "trades") }} of the 5 worst from 8 pm on{% else %}{{ Figure(f.found.worst_evening, "trades") }} of the 5 worst from 5 pm on{% endif %}.</p>{% endif %}
-      {% if f.found.durations_told %}<p class="mirror mirror--card">Your best five trades ran a median of {{ Figure(f.found.best_median_seconds, "seconds")|hold }}. Your worst five trades lost a median of {{ Figure(f.found.worst_median_loss, "rupees")|rupees(signed=false) }} each, in a median of {{ Figure(f.found.worst_median_seconds, "seconds")|hold }}.</p>
+      {% if f.found.durations_told and f.found.same_day_count >= 5 %}<p class="mirror mirror--card">Your best five trades ran a median of {{ Figure(f.found.best_median_seconds, "seconds")|hold }}. Your worst five trades lost a median of {{ Figure(f.found.worst_median_loss, "rupees")|rupees(signed=false) }} each, in a median of {{ Figure(f.found.worst_median_seconds, "seconds")|hold }}.</p>
       {% endif %}
     </div>
     {% endif %}
-    {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ Figure(f.held.count, "positions") }} position{{ "" if f.held.count == 1 else "s" }}, net {{ Figure(f.held.net, "rupees")|rupees }}.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ Figure(f.found.top_holding.net, "rupees")|rupees }} of it, the longest held {{ Figure(f.found.top_holding.longest_seconds, "seconds")|hold }}.{% endif %}</p>{% endif %}
+    {% if f.held.count %}<p class="mirror mirror--card table-note">{% if f.found.same_day_count %}The five above are trades you closed the day you opened them. {% endif %}Held past the day: {{ Figure(f.held.count, "positions") }} position{{ "" if f.held.count == 1 else "s" }}, net <span class="nowrap">{{ Figure(f.held.net, "rupees")|rupees }}</span>.{% if f.found.top_holding %} {{ f.found.top_holding.instrument }} made {{ Figure(f.found.top_holding.net, "rupees")|rupees }} of it, the longest held {{ Figure(f.found.top_holding.longest_seconds, "seconds")|hold }}.{% endif %}</p>{% endif %}
     {% if f.see_all %}<p class="evidence__see-all">{{ button("See all trades", f.see_all, "secondary") }}</p>{% else %}{{ trades(f.held_groups) }}{% endif %}
   </section>
 {% endblock %}

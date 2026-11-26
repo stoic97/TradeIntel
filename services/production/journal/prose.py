@@ -40,9 +40,9 @@ def _count(n: int, *, capital: bool = True) -> str:
 
 
 def _lots(value: Decimal) -> str:
-    """Lots to one decimal place at most. Three is precision we do not have."""
-    rounded = value.quantize(Decimal("0.1"))
-    return f"{rounded:g}"
+    """Lots to one decimal place at most, rounded as every page rounds a size
+    (``formatting.lots``, half up): a usual of 1.25 is 1.3 here and in the size line alike."""
+    return formatting.lots(value)
 
 
 def _plural(n: Decimal | int, word: str) -> str:
@@ -155,8 +155,8 @@ def _the_behaviour(facts: dict[str, Any]) -> str:
     return (
         f"{_count(count)} {were} opened when the two trades before {them} had both "
         f"closed at a loss. Across everything you have uploaded that has happened "
-        f"on {_count(days, capital=False)} of {_count(total, capital=False)} "
-        f"trading {_plural(total, 'day')}."
+        f"on {_count(days, capital=False)} of the {_count(total, capital=False)} "
+        f"{_plural(total, 'day')} you closed a same-day trade."
     )
 
 

@@ -39,9 +39,15 @@ class NotAGuess(Exception):
     """One of the labels, or "unknown"."""
 
 
+PLACEHOLDER = QUESTION.startswith("[")
+"""Whether the labels are still the placeholder set. Then the guess is never asked, in any
+environment: a trader, a visitor to a demo or a developer's screen never reads "[guess …]"."""
+
+
 def ready(production: bool) -> bool:
-    """Whether the guess may be asked: always in development, only once frozen live."""
-    return FROZEN or not production
+    """Whether the guess may be asked: never on placeholder labels; in development once they are
+    written, live once they are frozen (TR-009)."""
+    return not PLACEHOLDER and (FROZEN or not production)
 
 
 def label_of(answer: str) -> str:
