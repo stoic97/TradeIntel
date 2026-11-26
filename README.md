@@ -42,7 +42,7 @@ You need git and [uv](https://docs.astral.sh/uv/); uv installs Python 3.11 itsel
 
        make test            # the whole suite, to the end: the deploy check, and what CI runs
 
-   The suite runs across all cores by default (pytest-xdist, `-n auto` in `pyproject.toml`). For one core, add `-n 0`: `uv run python -m pytest -n 0 tests`. On Windows run it as `uv run python -m pytest`. The pass and skip counts are the same either way.
+   The suite runs in parallel by default (pytest-xdist, `-n auto` in `pyproject.toml`, one worker per physical core). On a small-RAM PC use `-n 2`. For one core, add `-n 0`: `uv run python -m pytest -n 0 tests`. On Windows run it as `uv run python -m pytest`. The pass and skip counts are the same either way.
 
    The count line shows a few xfailed: research results known to depend on the platform (TD-023 on macOS, TD-034 on Linux; see `docs/deferrals.md`). `make help` lists every command; `make test-fast` stops at the first failure, for local use only.
 
