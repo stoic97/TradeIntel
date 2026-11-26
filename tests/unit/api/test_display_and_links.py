@@ -118,19 +118,6 @@ def trip(tid: str, day: str, net: str = "100") -> mx.Trip:
                    lines=(mx.TradeLine("NIFTY", "OPT", "Buy", 1, None, None, Decimal(net)),))
 
 
-@pytest.mark.skip(reason="Superseded by the 24 Nov 22:23 ruling on TICKET-1080: the card names the period it passes over and no longer calls the one it describes his usual; test_landing_period.py holds the rule")
-def test_the_card_describes_the_latest_period_with_his_usual_trading():
-    """Months with 10, 10 and 1 trades: his median month is 10, so the latest month with at least
-    10 trades (February) is the one the card describes, and it says so."""
-    from services.production.api import how_you_got_here as HY
-    trips = ([trip(f"j{i}", f"2026-01-{5 + i:02d}") for i in range(10)]
-             + [trip(f"f{i}", f"2026-02-{2 + i:02d}") for i in range(10)] + [trip("m0", "2026-03-02")])
-    view = HY.build(trips, None, None, "m")
-    assert view["last_label"] == "Feb 2026"
-    assert view["last_words"] == "the latest month with your usual number of trades"
-    assert view["last"].trades == 10
-
-
 def test_a_full_latest_period_keeps_its_own_words():
     from services.production.api import how_you_got_here as HY
     trips = [trip(f"j{i}", f"2026-01-{5 + i:02d}") for i in range(5)] + [trip(f"f{i}", f"2026-02-{2 + i:02d}") for i in range(5)]
