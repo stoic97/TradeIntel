@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from tests.helpers.read_again import HEADER, send, words
 
+
 @pytest.fixture()
 def client(client):
     """The signed-in client, but a server error comes back as a 500, as a trader would get it."""
