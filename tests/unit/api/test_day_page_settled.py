@@ -74,7 +74,7 @@ ONE_OTHER += [trip("g6", "2026-05-06T09:20", "2026-05-06T09:40", 50, "CE")]
 
 
 def _other_days(text: str) -> bool:
-    return bool(re.search(r"[Oo]ther \d+ days?", text))
+    return bool(re.search(r"[Oo]ther (\d+ days?|day\b)", text))  # one other day reads "your other day"
 
 
 def test_no_other_days_line_when_every_day_is_a_worst_day(page_of):

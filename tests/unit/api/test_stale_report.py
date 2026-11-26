@@ -2,7 +2,7 @@
 what moved in rupees.
 
 The file and its figures are test_read_again's, synthetic and worked by hand there: older
-code refuses the sold option, so the option trades come to -600 and the five worst days
+code refuses the sold option, so the option trades come to -600 and the 3 worst days
 (all three days of the file) to -600; read again, both come to -100.
 """
 
@@ -91,7 +91,7 @@ def test_after_the_reread_it_says_what_moved_in_rupees(client, engine, monkeypat
     assert "What moved" in page
     assert f"Other options {was} {now}" in page  # the book by its own name, no options total beside it
     assert "Option trades" not in page
-    assert f"Your five worst days {was} {now}" in page
+    assert f"Your 3 worst days {was} {now}" in page
 
 
 def test_after_the_reread_the_offer_is_gone(client, engine, monkeypatch):

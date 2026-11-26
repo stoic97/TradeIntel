@@ -59,6 +59,10 @@ unchanged and the skip reason naming the ruling.
   head sha it ran on into the PR. Green on today's `main` is the bar, not green on your branch;
   a line for an older commit does not count. A wording-only commit may run the affected wording
   tests instead and name the last full-suite sha.
+- A PR that adds a migration: its revision id is one no file on `main` uses, and its
+  `down_revision` is `main`'s head today. Check again after every merge of `main`; when
+  another migration lands first, re-point yours before review. Never renumber or edit a
+  migration already on `main`.
 - A gate line the diff does not meet as written is ruled in a comment on the Jira ticket, not
   only in the PR body.
 - Two tickets that change the same file are stacked or sequenced, and the PR says which.

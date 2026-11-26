@@ -40,12 +40,17 @@ def test_sectors(n, is_home, want):
     assert G.sectors(n, is_home) == want
 
 
+@pytest.mark.parametrize(("size", "is_home", "want"), CASES["dial_radii"])
+def test_dial_radii(size, is_home, want):
+    assert G.dial_radii(size, is_home) == pytest.approx(want)
+
+
 @pytest.mark.parametrize(("size", "n", "is_home", "rotation", "want"), CASES["ticks"])
 def test_ticks(size, n, is_home, rotation, want):
     s = G.SIZES[size]
     sec = G.sectors(n, is_home)
     assert (
-        G.ticks(s["stageW"] / 2, s["stageH"] / 2, G.radii(s["R"]), sec["dividers"], rotation)
+        G.ticks(s["stageW"] / 2, s["stageH"] / 2, G.dial_radii(size, is_home), sec["dividers"], rotation)
         == want
     )
 
@@ -99,7 +104,7 @@ CHART_IDS = [f"{c['kind']}-{c['w']}x{c['h']}-{j}" for j, c in enumerate(CASES["c
 
 @pytest.mark.parametrize("case", CASES["charts"], ids=CHART_IDS)
 def test_chart(case):
-    args = [*case["args"], case["w"], case["h"]]
+    args = [*case["args"], case["w"], case["h"], *case.get("tail", [])]
     if case["kind"] in {"share", "hold", "strike", "run", "down", "read", "risk", "notold"}:
         args.append(case["mini"])
     got = G.CHARTS[case["kind"]](*args)
@@ -115,5 +120,5 @@ def test_trade_strip(times, width, height, want):
 
 def test_every_recorded_dial_view_is_checked():
     # A view added to record.js without a test above would pass silently; this one would not.
-    assert len(CASES["dials"]) == 13
-    assert len(CASES["charts"]) == 52
+    assert len(CASES["dials"]) == 17  # stacked: the reading cases (1037) and the reference cases (1035) on 13
+    assert len(CASES["charts"]) == 52 + 36  # TICKET-1036: six dial forms, three inputs, two sizes

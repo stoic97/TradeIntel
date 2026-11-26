@@ -118,6 +118,7 @@ def trip(tid: str, day: str, net: str = "100") -> mx.Trip:
                    lines=(mx.TradeLine("NIFTY", "OPT", "Buy", 1, None, None, Decimal(net)),))
 
 
+@pytest.mark.skip(reason="Superseded by the 24 Nov 22:23 ruling on TICKET-1080: the card names the period it passes over and no longer calls the one it describes his usual; test_landing_period.py holds the rule")
 def test_the_card_describes_the_latest_period_with_his_usual_trading():
     """Months with 10, 10 and 1 trades: his median month is 10, so the latest month with at least
     10 trades (February) is the one the card describes, and it says so."""
@@ -164,6 +165,10 @@ def test_every_chapter_dial_clears_on_the_demo_figures(app, demo, size):
         items = (view.get("desktop_items") or view["items"]) if size == "desktop" else [
             {**i, "figure": i.get("phone_figure", i["figure"]), "label": i.get("phone_label", i.get("label", ""))}
             for i in view["items"]]
+        from services.production.api import (
+            dial as D,  # a mini as wide as its wedge clears, either size
+        )
+        items = D.fitted(items, z["figSizesChapter"], size)
         sec = G.sectors(len(items), False)
         lay = G.layout_contents(items, sec, rr, z["figSizesChapter"])
         for i, block in enumerate(lay["blocks"]):
@@ -285,7 +290,7 @@ def test_what_moved_labels_each_row_by_its_own_book_and_never_a_total_beside_it(
     rows = headline([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")])
     assert "Option trades" not in rows
     books = mx.verdict([trip("a", "2026-01-05", "300"), trip("b", "2026-01-06", "-500")]).books
-    assert [label for label in rows if label != "Your five worst days"] == [b.label for b in books]
+    assert [key for key in rows if key != routes_upload.WORST_DAYS_ROW] == [b.label for b in books]
 
 
 def test_a_stored_placeholder_guess_is_never_printed_on_the_reveal(app, demo):

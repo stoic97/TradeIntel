@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from services.production.api import report_filter as RF
+from services.production.api import scope_map as S
 from services.production.api.app import create_app
 from services.production.db.session import make_engine, run_migrations
 from services.production.mirror import metrics as mx
@@ -54,7 +55,7 @@ def test_the_ladders_words_appear_once_on_a_page(client, path):
 def test_each_finding_keeps_its_own_five_marks_with_their_names_for_a_screen_reader(client):
     page = client.get("/mirror/chapter/1").text
     found = LADDER.findall(page)
-    assert len(found) == 3
+    assert len(found) == len(S.chapter(1).facts)  # one ladder per finding the chapter holds
     for _key, inner in found:
         marks = re.findall(r'<li class="ladder__mark[^"]*"[^>]*data-reached="(yes|no)"', inner)
         assert len(marks) == 5
