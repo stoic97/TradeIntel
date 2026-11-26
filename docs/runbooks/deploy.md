@@ -339,7 +339,7 @@ and what the tag changes:
       git merge-base --is-ancestor "$TAG^{commit}" origin/main || stop "$TAG is not on origin/main; do not deploy it"
       LIVE=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) || stop "cannot tell what is live"; echo "live: $LIVE"
       git diff --stat "$LIVE" "$TAG" -- migrations/versions deploy/ || stop "git diff failed"
-      git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py || stop "CHECK DID NOT RUN - no classifier in $TAG; classify by hand, do not assume Path A"
+      { git show "$TAG":deploy/classify_release.py > /tmp/classify_release.py 2>/dev/null && echo "classifier: from $TAG"; } || { git show origin/main:deploy/classify_release.py > /tmp/classify_release.py && echo "classifier: from origin/main ($TAG predates it)"; } || stop "CHECK DID NOT RUN - classify by hand"
       python3 /tmp/classify_release.py "$LIVE" "$TAG"
       case $? in
         0) echo "PATH A - additive or no migration" ;;
@@ -405,7 +405,7 @@ tag has shipped.
 
 The first block's last line before `DONE where` decides the path: `PATH A` -> **Path A**; `PATH B` -> **Path B**; `READ BY HAND` -> a
 person reads those migrations and rules, and **Path B** applies until they do;
-`CHECK DID NOT RUN` is never Path A. The check reads only the `upgrade()` body of every
+`CHECK DID NOT RUN` is never Path A. A tag older than `deploy/classify_release.py` (train 1's) is classified with the copy on `origin/main`, and the block says so (`classifier: from origin/main`): the classifier only reads the migrations between `$LIVE` and `$TAG`, so a newer copy judges an older range the same way. A tag older than the market units skips them (`<unit>: not in <tag>, skipped`) instead of stopping after the checkout. The check reads only the `upgrade()` body of every
 migration added or changed between `$LIVE` and `$TAG`: a drop that runs only on a
 rollback (in `downgrade()`) does not make a release destructive, and `batch.drop_column`
 counts the same as `op.drop_column`.
@@ -424,7 +424,7 @@ with `git switch main`.
       git checkout --quiet "$TAG" || stop "git checkout $TAG failed; the service was not restarted"
       UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
       cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
-      for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
+      for u in scope-market.service scope-market.timer; do [ -f deploy/$u ] || { echo "$u: not in $TAG, skipped"; continue; }; cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
       cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
       chown -R scope:scope /srv/scope || stop "chown failed"
       systemctl restart scope || stop "systemctl restart scope failed"
@@ -446,7 +446,7 @@ exact restore point; rollback for this release is that snapshot, not a checkout:
       git checkout --quiet "$TAG" || stop "git checkout $TAG failed"
       UV_PYTHON_INSTALL_DIR=/opt/uv/python uv sync --frozen --no-group research || stop "uv sync failed"
       cmp -s deploy/scope.service /etc/systemd/system/scope.service || { cp deploy/scope.service /etc/systemd/system/ && systemctl daemon-reload && echo "unit updated"; } || stop "scope.service was not installed"
-      for u in scope-market.service scope-market.timer; do cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
+      for u in scope-market.service scope-market.timer; do [ -f deploy/$u ] || { echo "$u: not in $TAG, skipped"; continue; }; cmp -s deploy/$u /etc/systemd/system/$u || { cp deploy/$u /etc/systemd/system/ && systemctl daemon-reload && echo "$u updated"; } || stop "$u was not installed"; done
       cmp -s deploy/backup.sh /etc/cron.daily/scope-backup || { cp deploy/backup.sh /etc/cron.daily/scope-backup && chmod 755 /etc/cron.daily/scope-backup && echo "backup script updated"; } || stop "the backup script was not installed"
       chown -R scope:scope /srv/scope || stop "chown failed"
       systemctl start scope || stop "systemctl start scope failed"
