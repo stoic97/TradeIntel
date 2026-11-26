@@ -11,12 +11,15 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from decimal import Decimal
+from html import unescape
 from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
 
 from services.production.api import numbers as N
+from services.production.api import routes_mirror as RM
+from services.production.api import routes_numbers as RN
 from services.production.api import scope_facts as SF
 from services.production.api import trade_list as TL
 from services.production.api.app import create_app
@@ -54,6 +57,14 @@ RECORD = [
     trip("d", "2026-03-11T11:00", "2026-03-11T11:20", "-50"),
 ]
 CLOSED = "/mirror/fact/risk/trades?closed_day="
+# TICKET-1026, the ruling of 24 Nov 2026 on PR #208: the day tiles count same-day trades only (the
+# 23 Nov held ruling), and each tile's link adds the same-day filter, so the list a tile opens is
+# still exactly the trades its figure counts. The calendar's cells are unchanged: they count every
+# trade closed that day and open the closed-day list alone. Re-worked by hand from RECORD:
+#   same-day trades by the day he closed: 9 Mar e +50; 10 Mar b +100 (a was held from 9 Mar);
+#   11 Mar d -50 (c was held from 10 Mar). Best day 10 Mar +100, worst day 11 Mar -50, each over
+#   1 trade; "Most in a day" is 1 on each day, and a tie goes to the earlier day, 9 Mar.
+SAME_DAY = "&same_day=yes"
 
 
 def closed_on(iso: str) -> list[mx.Trip]:
@@ -72,39 +83,15 @@ def tiles():
 
 
 def test_best_and_worst_day_open_the_trades_closed_that_day(tiles):
-    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(600))
-    assert tiles["best_day"]["href"] == CLOSED + "2026-03-10"
-    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-350))
-    assert tiles["worst_day"]["href"] == CLOSED + "2026-03-11"
+    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(100))
+    assert tiles["best_day"]["href"] == CLOSED + "2026-03-10" + SAME_DAY
+    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-50))
+    assert tiles["worst_day"]["href"] == CLOSED + "2026-03-11" + SAME_DAY
 
 
 def test_most_in_a_day_opens_the_trades_closed_that_day(tiles):
-    assert (tiles["per_day"]["most"], tiles["per_day"]["day"]) == (2, "2026-03-10")
-    assert tiles["per_day"]["href"] == CLOSED + "2026-03-10"
-
-
-@pytest.mark.parametrize("key, iso, trades, net", [
-    ("best_day", "2026-03-10", 2, D(600)),
-    ("worst_day", "2026-03-11", 2, D(-350)),
-])
-def test_the_list_a_day_tile_opens_is_the_trades_its_figure_counts(tiles, key, iso, trades, net):
-    assert tiles[key]["value"] == net
-    assert listed(iso) == trades
-    assert sum(t.net for t in closed_on(iso)) == net
-    assert sorted(t.trip_id for t in closed_on(iso)) == (["a", "b"] if iso == "2026-03-10" else ["c", "d"])
-
-
-def test_every_traded_calendar_cell_opens_the_trades_closed_that_day():
-    view = N.calendar(RECORD)
-    traded = {c["iso"]: c for m in view["months"] for week in m["weeks"] for c in week
-              if c and c["trades"]}
-    # 9 Mar +50 over 1; 10 Mar +600 over 2, though b and c opened then; 11 Mar -350 over 2.
-    assert {iso: (c["trades"], c["net"]) for iso, c in traded.items()} == {
-        "2026-03-09": (1, D(50)), "2026-03-10": (2, D(600)), "2026-03-11": (2, D(-350))}
-    for iso, c in traded.items():
-        assert c["href"] == CLOSED + iso
-        assert listed(iso) == c["trades"]
-        assert sum(t.net for t in closed_on(iso)) == c["net"]
+    assert (tiles["per_day"]["most"], tiles["per_day"]["day"]) == (1, "2026-03-09")
+    assert tiles["per_day"]["href"] == CLOSED + "2026-03-09" + SAME_DAY
 
 
 # ---------- on the rendered page ----------
@@ -123,10 +110,7 @@ def test_no_day_figure_on_the_page_opens_the_day_page(demo):
 
 def test_the_day_tiles_and_every_cell_open_closed_day_lists_that_answer(demo):
     html = demo.get("/numbers").text
-    grid = re.search(r'class="numbers__grid".*?</section>', html, re.DOTALL)
-    assert grid, "no tiles on the page"
-    tile_days = re.findall(r'href="(/mirror/fact/risk/trades\?closed_day=[0-9-]+)"', grid.group(0))
-    assert len(tile_days) >= 3  # Best day, Worst day, Most in a day
+    tile_days = [tile_link(html, label) for label in WANT]  # one link, from each tile's own markup
     cal = re.search(r'<section class="cal" id="calendar">.*?</section>', html, re.DOTALL)
     assert cal, "no calendar on the page"
     cell_days = re.findall(r'<a href="([^"]+)" class="cal__day">', cal.group(0))
@@ -134,3 +118,118 @@ def test_the_day_tiles_and_every_cell_open_closed_day_lists_that_answer(demo):
     for href in tile_days + cell_days:
         assert href.startswith(CLOSED), href
         assert demo.get(href.replace("&amp;", "&")).status_code == 200, href
+
+
+# ---------- TICKET-1040: each tile's link, read on the rendered page from its own tile ----------
+
+# One more made-up record, so "Most in a day" is not also the best day. By the day he closed:
+#    9 Mar (Mon)  e +50, f +10, g -20                -> +40, 3 trades    most in a day
+#   10 Mar (Tue)  a +500 (opened 9 Mar), b +100      -> +600, 2 trades   best day
+#   11 Mar (Wed)  c -300 (opened 10 Mar), d -50      -> -350, 2 trades   worst day
+# Same-day trades only (1026's ruling): 9 Mar e, f, g +40 over 3; 10 Mar b +100 over 1 (best);
+# 11 Mar d -50 over 1 (worst). Most in a day is still 9 Mar, 3.
+BUSY = RECORD + [
+    trip("f", "2026-03-09T11:00", "2026-03-09T11:20", "10"),
+    trip("g", "2026-03-09T12:00", "2026-03-09T12:20", "-20"),
+]
+# The words on the tile -> (the tile's date, the trades its figure counts, their net).
+WANT = {
+    "Best day": ("2026-03-10", 1, 100),
+    "Worst day": ("2026-03-11", 1, -50),
+    "Most in a day": ("2026-03-09", 3, 40),
+}
+KEYS = {"Best day": "best_day", "Worst day": "worst_day", "Most in a day": "per_day"}
+TILE = re.compile(r'<div class="numbers__tile">(.*?)</div>', re.DOTALL)
+HREF = re.compile(r'href="([^"]*)"')
+SHOWN = re.compile(r'class="evidence__caption"><span class="num">(\d+)</span> of ')
+NET = re.compile(r'class="trade__net[^"]*">([^<]+)<')
+CELLS = re.compile(r'<a href="([^"]+)" class="cal__day">')
+
+
+def tile(html: str, label: str) -> str:
+    """One tile's own markup, found by the words on it."""
+    found = [t for t in TILE.findall(html) if label in t]
+    assert len(found) == 1, f"{label!r}: {len(found)} tiles carry it"
+    return found[0]
+
+
+def tile_link(html: str, label: str) -> str:
+    """The one link inside that tile. No link, or a second one, fails here."""
+    hrefs = HREF.findall(tile(html, label))
+    assert len(hrefs) == 1, f"{label!r} tile holds {len(hrefs)} links, not one: {hrefs}"
+    return unescape(hrefs[0])
+
+
+def on_the_list(html: str) -> tuple[int, list[int]]:
+    """What the trade list itself says: how many trades it shows, and each row's result."""
+    shown = SHOWN.search(html)
+    assert shown, "the list does not say how many trades it shows"
+    nets = [int(n.replace("\u2212", "-").replace("\u20b9", "").replace("+", "").replace(",", "").strip())
+            for n in NET.findall(html)]
+    return int(shown.group(1)), nets
+
+
+@pytest.fixture()
+def made(demo, monkeypatch):
+    """The signed-in pages, drawn from BUSY: the routes read this record in place of the demo's."""
+    real = RM.load_record
+
+    def load_made(request):
+        early, record = real(request)
+        if early is not None:
+            return early, record
+        _trips, imp, _context = record
+        return None, (BUSY, imp, SF.record_context(BUSY))
+
+    monkeypatch.setattr(RM, "load_record", load_made)
+    monkeypatch.setattr(RN, "load_record", load_made)
+    return demo
+
+
+def test_most_in_a_day_is_read_on_a_day_that_is_not_the_best_day():
+    tiles = N.build(BUSY, {}, gross=True)["tiles"]
+    assert (tiles["best_day"]["day"], tiles["best_day"]["value"]) == ("2026-03-10", D(100))
+    assert (tiles["worst_day"]["day"], tiles["worst_day"]["value"]) == ("2026-03-11", D(-50))
+    assert (tiles["per_day"]["day"], tiles["per_day"]["most"]) == ("2026-03-09", 3)
+    assert tiles["per_day"]["day"] != tiles["best_day"]["day"]
+
+
+@pytest.mark.parametrize("label", list(WANT))
+def test_each_day_tile_on_the_page_opens_its_own_days_closed_trades(made, label):
+    html = made.get("/numbers").text
+    assert tile_link(html, label) == CLOSED + WANT[label][0] + SAME_DAY
+
+
+@pytest.mark.parametrize("label", list(WANT))
+def test_the_list_a_tiles_link_opens_holds_the_trades_its_figure_counts(made, label):
+    _iso, trades, net = WANT[label]
+    page = made.get(tile_link(made.get("/numbers").text, label))
+    assert page.status_code == 200
+    shown, nets = on_the_list(page.text)
+    assert shown == trades
+    assert len(nets) == trades
+    assert sum(nets) == net
+
+
+@pytest.mark.parametrize("fault", ["day_page", "missing"])
+@pytest.mark.parametrize("label", list(WANT))
+def test_one_wrong_tile_link_is_caught_though_every_cell_is_right(made, monkeypatch, label, fault):
+    real = N.build
+
+    def broken(*args, **kwargs):
+        view = real(*args, **kwargs)
+        one = view["tiles"][KEYS[label]]
+        one["href"] = "/mirror/day/" + one["day"] if fault == "day_page" else None
+        return view
+
+    monkeypatch.setattr(N, "build", broken)
+    html = made.get("/numbers").text
+    cal = re.search(r'<section class="cal" id="calendar">.*?</section>', html, re.DOTALL)
+    assert cal, "no calendar on the page"
+    cells = CELLS.findall(cal.group(0))
+    assert cells and all(c.startswith(CLOSED) for c in cells)
+    with pytest.raises(AssertionError):
+        assert tile_link(html, label) == CLOSED + WANT[label][0] + SAME_DAY
+    for other in WANT:
+        if other != label:
+            assert tile_link(html, other) == CLOSED + WANT[other][0] + SAME_DAY

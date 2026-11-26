@@ -1,0 +1,26 @@
+{#- Your win rate against break-even (wins_gap.view): a bar per book, then each book's years on one
+    scale. Counts only; every rate is "N of 100". Drawn on the server, no script. -#}
+<section class="wins-gap" aria-labelledby="wins-gap">
+  <h2 class="heading" id="wins-gap">Your win rate against break-even</h2>
+  <p class="body-small">Same-day trades, each book with 30 or more. The solid mark is the rate you won at, the dashed mark the rate your average winner and loser need.</p>
+  {%- for b in wg.bars %}
+  <div class="wg-book">
+    <p class="body"><span class="wg-book__name">{{ b.book }}</span> {{ b.line }}</p>
+    <p class="body-small wg-count">{{ b.counts }}</p>
+    {{ b.svg }}
+  </div>
+  {%- endfor %}
+  {%- if wg.years %}
+  <h3 class="card-title wg-years__title">Year by year</h3>
+  <p class="body-small">Solid line: you win. Dashed line: break even at. Both of 100, every book on the same scale; a year with too few trades breaks the line.</p>
+  {%- for y in wg.years %}
+  <div class="wg-book">
+    <p class="body wg-book__name">{{ y.book }}</p>
+    <p class="body-small wg-count">{{ y.counts }}</p>
+    {{ y.svg }}
+    {%- if y.thin %}<p class="body-small">{{ y.thin }}</p>{% endif %}
+  </div>
+  {%- endfor %}
+  {%- endif %}
+  <details class="wg-figures"><summary class="body-small">The figures</summary>{{ wg.table }}</details>
+</section>

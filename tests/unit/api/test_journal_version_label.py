@@ -46,7 +46,7 @@ def test_the_same_trades_do_not_claim_a_change(engine, client):
 
 def test_the_list_does_not_call_it_a_new_version(engine, client):
     _add_version(engine)
-    assert "version 2" not in client.get("/journals").text
+    assert 'num--label">updated<' not in client.get("/journals").text
 
 
 def test_different_trades_say_so_on_the_page(engine, client):
@@ -55,7 +55,7 @@ def test_different_trades_say_so_on_the_page(engine, client):
 
 def test_different_trades_say_so_in_the_list(engine, client):
     _add_version(engine, ["t99"])
-    assert "version 2" in client.get("/journals").text
+    assert 'num--label">updated<' in client.get("/journals").text  # the list says it changed, never a version number
 
 
 def test_a_first_version_says_nothing(engine, client):

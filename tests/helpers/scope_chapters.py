@@ -75,7 +75,6 @@ def chapter_page(n: int, trips=TRIPS, imp=IMP, feedback=None) -> str:
             view=SF.chapter_view(n, figs),
             facts=figs,
             imp=imp,
-            trading_day_count=len(ctx["days"].counts),
             sources=s.RiskUnitSourceV1,
             **(asked if n in FB.CHAPTERS else {}),
             **ctx,

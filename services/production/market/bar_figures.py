@@ -124,6 +124,9 @@ class Measured:
     took: Decimal | None = None
     path: tuple[Decimal, ...] = ()
     short: bool = False
+    after_exit: tuple[Decimal, ...] = ()
+    """The close at +1 ... +30 minutes after the exit minute, less the exit's close, in his
+    direction; index 0 is the exit itself. Cut at the session end, like ``path``."""
     waiting: tuple[date, ...] = ()
     days_read: tuple[tuple[str, str], ...] = ()
 
@@ -265,9 +268,43 @@ def measure(position: Position, prices: layer.Prices, *, closed: frozenset[date]
                 hi, lo, last = max(hi, bar.high), min(lo, bar.low), bar.close
     up, down = hi - ref, ref - lo
     way, against = (up, down) if sign > 0 else (down, up)
-    path, short = _path(series, entry, ref, sign, prices.session(underlying)[1])
+    ends_at = prices.session(underlying)[1]
+    path, short = _path(series, entry, ref, sign, ends_at)
+    after_exit, _cut = _path(series, exit_, last, sign, ends_at)
     return Measured(**base, way=max(way, Decimal(0)), against=max(against, Decimal(0)),
-                    took=(last - ref) * sign, path=path, short=short, days_read=tuple(read))
+                    took=(last - ref) * sign, path=path, short=short, after_exit=after_exit,
+                    days_read=tuple(read))
+
+
+def day_range(prices: layer.Prices, underlying: str, day: date) -> tuple[Decimal, str] | None:
+    """How far the market moved on ``day``: the session's highest high less its lowest low, in
+    points, read from that one day file, with its sha256; None without a clean day file."""
+    series = prices.series(underlying)
+    if not isinstance(series, layer.DaySeries) or not series.held(day) or series.problem(day):
+        return None
+    bars = [b for b in (series.bar(t) for t in series.minutes(day)) if b is not None]
+    if not bars:
+        return None
+    return max(b.high for b in bars) - min(b.low for b in bars), series.manifest.days[day.isoformat()].sha256
+
+
+def day_ranges(positions: list[Position], prices: layer.Prices) -> dict[tuple[str, str], tuple[Decimal, str]]:
+    """Each (underlying, day) a position was opened on and its range. A trade left out of the
+    figures (a crude contract month, no single direction) still gives its day a range: the range is
+    the series' day, not the trade's."""
+    out: dict[tuple[str, str], tuple[Decimal, str]] = {}
+    for p in positions:
+        first = p.legs[0]
+        underlying = prices.underlying_of(first.exchange, first.symbol)
+        if underlying is None:
+            continue
+        day = minute(p.entry_ts).date()
+        key = (underlying, day.isoformat())
+        if key not in out:
+            got = day_range(prices, underlying, day)
+            if got is not None:
+                out[key] = got
+    return out
 
 
 # ---------- the comparison ----------
@@ -389,7 +426,8 @@ def work(sess: Session, job: m.BarFigureJob, prices: layer.Prices, *, now: datet
          closed: frozenset[date], code_version: str) -> str:
     """Work out one import's figures and store them. Returns the job's new state."""
     imp = sess.get(m.Import, job.import_id)
-    measured = [measure(p, prices, closed=closed) for p in positions_of(sess, imp)]
+    positions = positions_of(sess, imp)
+    measured = [measure(p, prices, closed=closed) for p in positions]
     asked = _ask_for_days(sess, measured, now)
     settled = []
     for x in measured:
@@ -399,13 +437,17 @@ def work(sess: Session, job: m.BarFigureJob, prices: layer.Prices, *, now: datet
         settled.append(x)
     randoms = random_paths(settled, prices, key=f"bars:{imp.trader_id}:{imp.id}")
 
-    for model in (m.BarTradeFigure, m.BarPathSummary):
+    for model in (m.BarTradeFigure, m.BarPathSummary, m.BarDayRange):
         sess.execute(delete(model).where(model.import_id == imp.id))
+    for (underlying, day), (points, sha) in sorted(day_ranges(positions, prices).items()):
+        sess.add(m.BarDayRange(import_id=imp.id, underlying=underlying, day=day,
+                               range_points=_text(points), sha256=sha))
     for x in settled:
         sess.add(m.BarTradeFigure(
             import_id=imp.id, trip_id=x.trip_id, underlying=x.underlying, reason=x.reason,
             way=_text(x.way), against=_text(x.against), took=_text(x.took),
-            path=_series_json(x.path) if x.path else None, short=x.short))
+            path=_series_json(x.path) if x.path else None, short=x.short,
+            after_exit=_series_json(x.after_exit) if x.after_exit else None))
     for underlying in sorted({x.underlying for x in settled if x.reason is None}):
         s = summarise(underlying, settled, randoms)
         sess.add(m.BarPathSummary(

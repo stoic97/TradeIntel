@@ -23,6 +23,7 @@ ones its figure adds up: the day page lists the trades opened that day, which ca
 from __future__ import annotations
 
 import calendar as _calendar
+import math
 from collections import Counter
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -42,6 +43,13 @@ TENTH = Decimal("0.1")
 
 def _trades(**filters) -> str:
     return SM.see_all_href(EVERY_TRADE, **filters)
+
+
+def same_day_or_every(trips: list[mx.Trip]) -> list[mx.Trip]:
+    """The trades every figure on this page reads: the same-day trades when some trades were
+    held past the day, otherwise every trade (nothing to set apart). Same order, same objects."""
+    same = [t for t in trips if t.closed_same_day]
+    return same if same and len(same) < len(trips) else trips
 
 
 def closed_day_href(iso: str) -> str:
@@ -70,29 +78,39 @@ def _rows(groups: list[tuple[str, list[mx.Trip], str | None]]) -> list[dict]:
 def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
     """Everything the page draws; the template computes nothing."""
     ordered = sorted(trips, key=lambda t: (t.exit_ts, t.trip_id))
+    # The tiles are trading figures: same-day trades only. A position held past the day is said
+    # on its own line (``held``) and mixed into none of them (the ruling of 23 Nov 2026).
+    same = same_day_or_every(ordered)
+    only = {"same_day": "yes"} if same is not ordered else {}
+
+    def tile_href(iso: str) -> str:
+        """The trades a tile counts: closed that day and, when the tiles read same-day trades,
+        closed the day they opened too, so a tile opens exactly the trades it counts."""
+        return _trades(closed_day=iso, **only)
     by_day: dict[str, Decimal] = {}
     per_day: Counter[str] = Counter()
-    for t in ordered:  # in date order, so a tie goes to the earlier day
+    for t in same:  # in date order, so a tie goes to the earlier day
         day = t.exit_ts.date().isoformat()
         by_day[day] = by_day.get(day, Decimal(0)) + t.net
         per_day[day] += 1
     best = max(by_day.items(), key=lambda kv: kv[1])
     worst = min(by_day.items(), key=lambda kv: kv[1])
     busiest = max(per_day.items(), key=lambda kv: kv[1])
-    strike, even = mx.strike_rate(trips), mx.break_even(trips)
-    months = mx.running_result(trips).candles["month"]
+    strike, even = mx.strike_rate(same), mx.break_even(same)
+    months = mx.running_result(same).candles["month"]
+    held = mx.held_past_day(trips)
 
     tiles = {
         "winner": {"value": even.average_winner, "count": strike.wins,
-                   "href": _trades(result="winners")},
+                   "href": _trades(result="winners", **only)},
         "loser": {"value": None if even.average_loser is None else -even.average_loser,
-                  "count": strike.losses, "href": _trades(result="losers")},
-        "best_day": {"value": best[1], "day": best[0], "href": closed_day_href(best[0])},
-        "worst_day": {"value": worst[1], "day": worst[0], "href": closed_day_href(worst[0])},
+                  "count": strike.losses, "href": _trades(result="losers", **only)},
+        "best_day": {"value": best[1], "day": best[0], "href": tile_href(best[0])},
+        "worst_day": {"value": worst[1], "day": worst[0], "href": tile_href(worst[0])},
         "months": {"made": sum(1 for c in months if c.net > 0), "of": len(months),
-                   "href": _trades()},
-        "per_day": {"value": (Decimal(len(trips)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
-                    "most": busiest[1], "day": busiest[0], "href": closed_day_href(busiest[0])},
+                   "href": _trades(**only)},
+        "per_day": {"value": (Decimal(len(same)) / len(by_day)).quantize(TENTH, ROUND_HALF_UP),
+                    "most": busiest[1], "day": busiest[0], "href": tile_href(busiest[0])},
     }
 
     left: dict[str, list[mx.Trip]] = {value: [] for value, _, _, _ in TL.LEFT_BUCKETS}
@@ -112,6 +130,10 @@ def build(trips: list[mx.Trip], expiries: dict, *, gross: bool) -> dict:
         "trades": len(trips), "first": ordered[0].exit_ts.date().isoformat(),
         "last": ordered[-1].exit_ts.date().isoformat(), "gross": gross, "minimum": MINIMUM,
         "tiles": tiles, "expiry": _rows(expiry_rows),
+        "held": {"count": held.count, "net": held.net},
+        # The sentence above the figures names same-day trades only when that is what sets them
+        # apart: some trades were held past the day and some closed the day they opened.
+        "same_day_basis": same is not ordered,
         "no_expiry": no_expiry, "books": _rows(book_rows),
     }
 
@@ -144,13 +166,26 @@ def _shut() -> frozenset[date]:
     return known.closed if known else frozenset()
 
 
+def _cell_short(net: Decimal) -> Figure:
+    """A day's result short enough for a calendar cell on desktop: +1.8k, −620, 0. The chart
+    toolkit's short form without the rupee sign (the cell is small; the table says rupees)."""
+    text = charts.short(net).replace("₹", "")
+    if text.lstrip("−-") == "0":  # paise either side of nothing read as the title's ₹0
+        return Figure("0", "rupees", of="that day's result")
+    if net > 0:
+        text = "+" + text
+    return Figure(text, "rupees", of="that day's result")
+
+
 def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool = False) -> dict:
     """His calendar: a block a month, newest first, a cell a day he closed trades on.
 
     Each day's result and each month's are the running result's own candles (986), so a cell
     and a candle can't disagree; nothing is added up a second way. A day is the day he closed.
     """
-    run = mx.running_result(trips)
+    same = same_day_or_every(sorted(trips, key=lambda t: (t.exit_ts, t.trip_id)))
+    only = {"same_day": "yes"} if len(same) < len(trips) else {}
+    run = mx.running_result(same)  # the same trades as the tiles, so a cell and its tile agree
     days = {c.period: c for c in run.candles["day"]}
     months = list(reversed(run.candles["month"]))
     cut = None
@@ -177,7 +212,7 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
                 traded = c is not None and c.trades > 0
                 href = None
                 if traded:
-                    href = closed_day_href(iso)
+                    href = _trades(closed_day=iso, **only)
                 row.append({
                     "day": d.day, "iso": iso,
                     "net": c.net if traded else None,
@@ -185,6 +220,7 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
                     "tone": charts.cell_tone(c.net if traded else None, scale),
                     "href": href,
                     "closed": not traded and d.weekday() < 5 and d in shut,
+                    "short": _cell_short(c.net) if traded else None,
                 })
             weeks.append(row)
         blocks.append({"period": m.period, "label": date(year, month, 1).strftime("%b %Y"),
@@ -196,7 +232,8 @@ def calendar(trips: list[mx.Trip], *, show_all: bool = False, year_chosen: bool 
         "months": blocks, "cut": cut, "all_href": "?months=all#calendar", "scale": scale,
         "letters": WEEKDAY_LETTERS,
         "table": charts.text_table(rows, ["Day", "Trades", "Result"],
-                                   caption="Every day you closed a trade, as numbers"),
+                                   caption=("Every day you closed a trade in the months shown, as numbers"
+                                            if cut else "Every day you closed a trade, as numbers")),
     }
 
 
@@ -277,3 +314,107 @@ def when(trips: list[mx.Trip], expiries: dict, *, days: str = "all") -> dict:
         "table": charts.text_table(table, ["Day", "Hour", "Trades", "Result", "Made money"],
                                    caption="Every hour you opened trades in, as numbers"),
     }
+
+
+# ---------- The shape of your days: four sections, each its own function and include ----------
+
+WORST_SHARE = Decimal("0.1")
+WORST_AT_LEAST = 5
+"""His worst tenth of traded days, and never fewer than five (or all he has, if fewer)."""
+
+
+def _closed_days(trips: list[mx.Trip]) -> dict[str, list[mx.Trip]]:
+    """His trades by the day he closed them, as the calendar counts a day."""
+    days: dict[str, list[mx.Trip]] = {}
+    for t in sorted(trips, key=lambda t: (t.exit_ts, t.trip_id)):
+        days.setdefault(t.exit_ts.date().isoformat(), []).append(t)
+    return days
+
+
+def _state(net: Decimal) -> str:
+    return "made" if net > 0 else "lost" if net < 0 else "level"
+
+
+def worst_books(trips: list[mx.Trip]) -> dict:
+    """Your books on your worst days: each worst day, which of his books lost, made money or
+    didn't trade. The books are the verdict's split (``book_groups``); shown from two books."""
+    books = mx.book_groups(trips)
+    if len(books) < 2:
+        return {"shown": False}
+    book_of = {t.trip_id: name for name, ts in books for t in ts}
+    days = _closed_days(trips)
+    nets = {d: sum((t.net for t in ts), Decimal(0)) for d, ts in days.items()}
+    losing = [d for d in days if nets[d] < 0]  # a day he made money or finished level is never worst
+    n = min(len(losing), max(WORST_AT_LEAST, math.ceil(len(days) * WORST_SHARE)))
+    if not n:
+        return {"shown": False}
+    worst = sorted(losing, key=lambda d: (nets[d], d))[:n]
+    rows, all_lost = [], 0
+    for d in worst:
+        cells = []
+        for name, _ in books:
+            ts = [t for t in days[d] if book_of[t.trip_id] == name]
+            if not ts:
+                cells.append({"book": name, "state": "none", "net": None, "trades": 0,
+                              "tone": charts.cell_tone(None, Decimal(1)), "href": None})
+                continue
+            net = sum((t.net for t in ts), Decimal(0))
+            cells.append({"book": name, "state": _state(net), "net": net, "trades": len(ts),
+                          "tone": charts.cell_tone(net, abs(net) or Decimal(1)),
+                          "href": _trades(closed_day=d, book_group=name)})
+        traded = [c for c in cells if c["state"] != "none"]
+        all_lost += all(c["state"] == "lost" for c in traded)
+        rows.append({"day": d, "net": nets[d], "href": _trades(closed_day=d), "cells": cells})
+    return {"shown": True, "books": [name for name, _ in books], "days": rows, "count": n,
+            "all_lost": all_lost}
+
+
+def day_trades(trips: list[mx.Trip]) -> dict:
+    """Your days by how many trades you took: his days in thirds at his own cut points, and for
+    each third its days, trades, result and how many of a hundred days made money."""
+    thirds, choice = TL.day_thirds(trips)
+    days = _closed_days(trips)
+    out = []
+    for place, (value, label, _lo, _hi) in enumerate(thirds):
+        mine = {d: ts for d, ts in days.items() if choice[ts[0].trip_id][0] == place}
+        nets = [sum((t.net for t in ts), Decimal(0)) for ts in mine.values()]
+        made = sum(1 for n in nets if n > 0)
+        out.append({"label": label, "value": value, "days": len(mine),
+                    "trades": sum(len(ts) for ts in mine.values()), "net": sum(nets, Decimal(0)),
+                    "rate": (Decimal(made * 100) / len(mine)).quantize(TENTH, ROUND_HALF_UP)
+                    if len(mine) >= MINIMUM else None,
+                    "href": _trades(day_trades=value)})
+    return {"thirds": out, "minimum": MINIMUM}
+
+
+def _split(trips: list[mx.Trip], read, choices) -> tuple[list[tuple[str, list[mx.Trip], str]], int]:
+    groups: dict[str, list[mx.Trip]] = {value: [] for _, value, _ in choices}
+    left_out = 0
+    for t in sorted(trips, key=lambda t: (t.entry_ts, t.trip_id)):
+        chosen = read(t, {})
+        if chosen is None:
+            left_out += 1
+        else:
+            groups[chosen[1]].append(t)
+    return [(label, groups[value], None) for _, value, label in choices], left_out
+
+
+def first_half_hour(trips: list[mx.Trip]) -> dict:
+    """Your first 30 minutes: trades opened within 30 minutes of their own session's open
+    (NSE 09:15, MCX 09:00), against the rest. A trade no profile gives an open for is apart."""
+    groups, left_out = _split(trips, TL.opening, TL.OPENINGS)
+    groups = [(n, ts, _trades(opening=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OPENINGS, strict=True)]
+    return {"rows": _rows(groups), "left_out": left_out, "opens": TL.session_opens(trips)}
+
+
+def overnight(trips: list[mx.Trip]) -> dict:
+    """Held overnight: options and futures closed on a later day than they were opened, against
+    same-day ones; shares are counted apart. The longest hold in calendar days."""
+    groups, shares = _split(trips, TL.overnight, TL.OVERNIGHTS)
+    held = groups[0][1]
+    longest = max(held, key=lambda t: ((t.exit_ts.date() - t.entry_ts.date()).days, t.trip_id), default=None)
+    groups = [(n, ts, _trades(overnight=v)) for (n, ts, _), (_, v, _) in zip(groups, TL.OVERNIGHTS, strict=True)]
+    return {"rows": _rows(groups), "shares": shares,
+            "longest": (longest.exit_ts.date() - longest.entry_ts.date()).days if longest else None,
+            "longest_href": _trades(held_days=(longest.exit_ts.date() - longest.entry_ts.date()).days)
+            if longest else None}

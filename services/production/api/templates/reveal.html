@@ -10,9 +10,9 @@
   {%- if guessed %}
   <p class="body-small body-small--soft">You guessed: {{ guessed }}.</p>
   {%- endif %}
-  <h1 class="title reveal__title">Your five worst days</h1>
+  <h1 class="title reveal__title">{{ reveal_days.title }}</h1>
   <div class="reveal__dial">
-    <svg class="reveal__svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="Your five worst days as one slice of your whole result">
+    <svg class="reveal__svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="{% if view.short %}{{ reveal_days.title }} came to {{ Figure(worst_days.sum, 'rupees')|rupees }}{% else %}{{ reveal_days.title }} as one slice of your whole result{% endif %}">
       <path class="scope__outer" d="{{ view.outer }}"/>
       <path class="scope__tick scope__tick--minor" d="{{ view.ticks.minor }}"/><path class="scope__tick scope__tick--mid" d="{{ view.ticks.mid }}"/>
       <path class="scope__tick scope__tick--major" d="{{ view.ticks.major }}"/>
@@ -21,7 +21,10 @@
       <circle class="reveal__slice" cx="150" cy="150" r="99" stroke-dasharray="{{ view.slice_length }} {{ view.circumference }}" transform="rotate(-90 150 150)"/>
       <path class="scope__tick scope__tick--major" d="{{ view.edge_tick }}"/>
       <circle class="reveal__disc" cx="150" cy="150" r="56"/>
-      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ share.share_percent }}%</text>
+      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ Figure(share.share_percent, "percent") }}%</text>
+      {%- elif view.short %}
+      <circle class="reveal__disc" cx="150" cy="150" r="56"/>
+      <text class="reveal__figure" x="150" y="160" text-anchor="middle">{{ Figure(worst_days.sum, "rupees")|rupees }}</text>
       {%- else %}
       <circle class="reveal__disc reveal__disc--empty" cx="150" cy="150" r="56"/>
       {%- endif %}
@@ -29,7 +32,9 @@
     </svg>
   </div>
   {{ uncounted_line(imp.trips_refused) }}
-  {%- if share.shown_as_percentage %}
+  {%- if reveal_days.all_of_them %}
+  <p class="mirror mirror--card">{% if reveal_days.count == 1 %}That day{% else %}Those {{ reveal_days.word }} days{% endif %} came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
+  {%- elif share.shown_as_percentage %}
   <p class="mirror mirror--card">{{ share_sentence(share) }}</p>
   <p class="mirror mirror--card">Those five days came to {{ money(worst_days.sum) }}. Your result for the whole period was {{ money(share.total) }}.</p>
   {%- else %}
@@ -48,8 +53,8 @@
   {%- if five_days.first_lost_days %}
   <p class="mirror mirror--card">On <span class="num">{{ Figure(five_days.first_lost_days, "days")|count }}</span> of these days your first trade lost and you kept going: {{ Figure(five_days.lost_after_first, "rupees")|rupees(signed=false) }} more was lost after it.</p>
   {%- endif %}
-  {%- if five_days.shared_book or five_days.past_nine %}
-  <p class="mirror mirror--card">{% if five_days.shared_book %}Every one of the five includes {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the five ran past 9 pm.{% endif %}</p>
+  {%- if reveal_days.count > 1 and (five_days.shared_book or five_days.past_nine) %}
+  <p class="mirror mirror--card">{% if five_days.shared_book %}{% if reveal_days.count == 2 %}Both include{% else %}Every one of the {{ reveal_days.word }} includes{% endif %} {{ five_days.shared_book|book_in_a_sentence }}{% if five_days.past_nine %}, and <span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of them ran past 9 pm{% endif %}.{% else %}<span class="num">{{ Figure(five_days.past_nine, "days")|count }}</span> of the {{ reveal_days.word }} ran past 9 pm.{% endif %}</p>
   {%- endif %}
   {%- endif %}
   <div class="screen__actions">

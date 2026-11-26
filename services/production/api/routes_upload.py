@@ -350,6 +350,21 @@ def import_review(request: Request, import_id: int):
                                      and imp.trips_reconstructed > 0))
 
 
+WORST_DAYS_ROW = "worst days"
+"""The worst-days row's own key. Its label says the count, so the key must not: a record that
+goes from four counted days to five is one row that moved."""
+
+
+def _headline_figures(trips: list[mx.Trip]) -> dict[str, tuple[str, Decimal]]:
+    """Each row's key, then its label and figure: each book by its own name, then the worst
+    days, labelled with the count the report gives them. No options total beside the books:
+    with one option book it repeated that book's figure under a second label."""
+    out = {book.label: (book.label, book.net) for book in mx.verdict(trips).books}
+    worst = mx.five_worst_days(trips)
+    out[WORST_DAYS_ROW] = (f"Your {formatting.worst_days(len(worst.days))}", worst.sum)
+    return out
+
+
 def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list[dict]:
     """The rupee figures a re-read changed, before and now (TICKET-908).
 
@@ -357,23 +372,19 @@ def _what_moved(sess, trader: m.Trader, before: m.Import, now: m.Import) -> list
     by book (``metrics.verdict``) and the five worst days. Only rows that moved are listed;
     a figure that stayed the same is not news.
     """
-    def figures(imp: m.Import) -> dict[str, Decimal]:
+    def figures(imp: m.Import) -> dict[str, tuple[str, Decimal]]:
         trips, _ = loader.load_for(sess, trader, imp)
-        verdict = mx.verdict(trips)
-        out: dict[str, Decimal] = {}
-        if verdict.options_trades:
-            out["Option trades"] = verdict.options_net
-        for book in verdict.books:
-            out[book.label] = book.net
-        if verdict.others_trades:
-            out["Other trades"] = verdict.others_net
-        out["Your five worst days"] = mx.five_worst_days(trips).sum
-        return out
+        return _headline_figures(trips)
 
     was, now_ = figures(before), figures(now)
-    labels = list(now_) + [label for label in was if label not in now_]
-    return [{"label": label, "was": was.get(label), "now": now_.get(label)}
-            for label in labels if was.get(label) != now_.get(label)]
+    keys = list(now_) + [key for key in was if key not in now_]
+    rows = []
+    for key in keys:
+        label, after = now_.get(key, (None, None))
+        label_before, before_figure = was.get(key, (None, None))
+        if before_figure != after:
+            rows.append({"label": label or label_before, "was": before_figure, "now": after})
+    return rows
 
 
 @router.post("/imports/{import_id}/confirm-duplicates")

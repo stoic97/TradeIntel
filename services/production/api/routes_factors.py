@@ -15,6 +15,7 @@ from services.production.api import factor_map as FM
 from services.production.api import scope_facts as SF
 from services.production.api import trade_list as TL
 from services.production.api.routes_identity import current_trader, page
+from services.production.charges import waterfall
 from services.production.ctr.profiles import registry as profiles
 from services.production.db.session import make_session
 from services.production.eligibility import assess as el
@@ -37,13 +38,17 @@ def _his_file(request: Request) -> dict[str, str] | None:
         if not trips:
             return None
         expiries = loader.expiries_for(sess, imp)
+        entries = waterfall.load(sess, trader, imp)  # his trades' charges, as the report reads them
     eligibility = el.assess(trips)
     enough = frozenset(v.test.id for v in eligibility.enough)
     short = frozenset(v.test.id for v in eligibility.short)
-    figs = SF.facts(SF.record_context(trips), imp)
+    ctx = SF.record_context(trips, waterfall.build(entries, trips))
+    figs = SF.facts(ctx, imp)
     states = {key: fig.get("state") for key, fig in figs.items()}
-    seen = frozenset(f.name for f in TL.FILTERS
-                     if any(f.read(t, expiries) is not None for t in trips))
+    # A filter is seen when some trade sits under one of its choices: a reader that answers with
+    # a list (a trade's charge steps) and finds none has seen nothing.
+    lookup = {**expiries, TL.CHARGED_ON: TL._charged_on(ctx)}
+    seen = frozenset(f.name for f in TL.FILTERS if any(f.choices(t, lookup) for t in trips))
     return {f.name: FM.in_file(f, enough=enough, short=short, fact_states=states,
                                filters_seen=seen, has_charges=bool(imp.fees_available)).value
             for f in FM.FACTORS}

@@ -71,6 +71,21 @@ def label(period: str, frame: str) -> str:
     return date(int(year), int(month), 1).strftime("%b %Y")
 
 
+ALMOST_NOTHING = 4  # a period with under a quarter of his median period's trades (ruled 24 Nov)
+
+
+def latest_usual(candles) -> tuple[mx.Candle, bool]:
+    """The candle the card describes: the latest one that is not itself almost nothing (fewer
+    than a quarter of his own median candle's trades). True when that is the latest. One
+    threshold, used both to pass a period over and to choose where to land: a month a little
+    under his usual is still described, and a month with one trade at the end of a long record
+    is named, not described. His median always qualifies, so a candle is always found."""
+    trades = sorted(c.trades for c in candles)
+    median = trades[(len(trades) - 1) // 2]  # the lower middle: a count some candle really holds
+    found = next(c for c in reversed(candles) if c.trades * ALMOST_NOTHING >= median)
+    return found, found is candles[-1]
+
+
 def period_end(period: str, frame: str) -> date:
     if frame == "day":
         return date.fromisoformat(period)
@@ -122,13 +137,14 @@ def chart(run: mx.RunningResult, frame: str, opens: dict[str, str]) -> Markup:
     high = run.high.value
     behind, in_front = charts.axis(
         lo, hi, tick, y, left=LEFT, right=RIGHT, width=W, p="hy", ref_cls="hy-high",
-        ref=(high, f"Your high {formatting.rupees(high)}") if high > 0 else None, last=cs[-1].close)
+        ref=(high, f"Your high {formatting.rupees(high)}") if high > 0 else None, last=cs[-1].close,
+        hide_under_last=True)
     out.append(behind)
     low_at = None if cut else min(range(len(cs)), key=lambda i: cs[i].low)
     xs = [LEFT + step * (i + 0.5) for i in range(len(cs))]
     months = {lab.index: lab.svg for lab in charts.time_labels(
         [(x, c.period) for x, c in zip(xs, cs, strict=True)],
-        kind="year" if frame == "month" else "month", y=H - 6, left=LEFT, p="hy")}
+        kind="month", y=H - 6, left=LEFT, p="hy")}  # month names, each January as its year
     for i, c in enumerate(cs):
         cx = xs[i]
         kind = "up" if c.close >= c.open else "down"
@@ -154,7 +170,8 @@ def chart(run: mx.RunningResult, frame: str, opens: dict[str, str]) -> Markup:
         if i in months:
             out.append(months[i])
     out.append(f'<line x1="{LEFT}" x2="{W - RIGHT}" y1="{VOL_BOTTOM}" y2="{VOL_BOTTOM}" class="hy-grid"/>'
-               f'<text x="{W - RIGHT + 6}" y="{VOL_TOP + 8}" class="hy-axis">{formatting.count(most)} trades</text>'
+               f'<text x="{W - 1}" y="{VOL_TOP + 8}" class="hy-axis" text-anchor="end">'
+               f'{formatting.count(most)} {"trade" if most == 1 else "trades"}</text>'
                f'<text x="{W - RIGHT + 6}" y="{VOL_BOTTOM}" class="hy-axis">0</text>')
     out.append(in_front + Markup("</svg>"))
     return Markup("".join(out))
@@ -184,28 +201,49 @@ def build(trips: list[mx.Trip], imp, book: str | None = None, tf: str | None = N
         return view
 
     mine = by_name[run.book]
+    # Made money and needed are trading figures: same-day trades only. The result is every closed
+    # trade, and the card says what of it was held past the day (the ruling of 23 Nov 2026).
+    same = mx.same_day_trips(mine) or mine
+    held = mx.held_past_day(mine)
+    # "same-day trades" is said only when it sets something apart: some trades were held and
+    # some closed the day they opened.
+    same_day_basis = bool(held.count) and same is not mine and len(same) < len(mine)
     every = run.candles[frame]
     shown_candles = every[-WINDOW:]
     opens = _day_of(mine, frame)
-    last = shown_candles[-1]
+    last, usual = latest_usual(shown_candles)
     export = getattr(imp, "export_date", None)
-    so_far = bool(export) and frame != "day" and period_end(last.period, frame) > date.fromisoformat(export)
+    so_far = (usual and bool(export) and frame != "day"
+              and period_end(last.period, frame) > date.fromisoformat(export))
     view.update({
         "first_day": min(t.trading_day for t in mine),
         "last_day": max(t.exit_ts.date() for t in mine).isoformat(),
         "trades": run.trades,
         "total": run.total,
-        "strike": run.strike.rate_percent,
-        "even": run.even.percent,
+        "strike": mx.strike_rate(same).rate_percent,
+        "even": mx.break_even(same).percent,
+        "held": {"count": held.count, "net": held.net},
+        "same_day_basis": same_day_basis,
         "drop": run.drop.value,
         "high": run.high.value,
         "drop_day": _day_closed(mine, run.drop.to_day),
         "last": last,
         "last_label": label(last.period, frame),
-        "last_words": f"this {frame} so far" if so_far else f"the last {frame}",
+        "last_words": (f"this {frame} so far" if so_far else f"the last {frame}") if usual else None,
+        # The newest period, named when the card passes it over as almost nothing.
+        "passed": None if usual else {"label": label(shown_candles[-1].period, frame),
+                                      "trades": shown_candles[-1].trades},
         "cut": (len(shown_candles), len(every)) if len(every) > WINDOW else None,
         "chart": chart(run, frame, opens),
-        "rows": [{"label": label(c.period, frame), "candle": c, "opens": f"/mirror/day/{opens[c.period]}"}
+        # Each row's figure is the difference of the closes as written, so the column adds up to
+        # its own "Ended at": rounding each period on its own left a few rupees unaccounted.
+        "rows": [{"label": label(c.period, frame), "candle": c,
+                  "net_shown": Decimal(formatting.whole(c.close) - formatting.whole(c.open)),
+                  "opens": f"/mirror/day/{opens[c.period]}"}
                  for c in reversed(shown_candles)],
     })
+    # The readout says its period's result as that period's row does, so the two never stand a
+    # rupee apart: one figure, the difference of the closes as written. Its period is `last`,
+    # which is not always the newest row (latest_usual).
+    view["last_net"] = Decimal(formatting.whole(last.close) - formatting.whole(last.open))
     return view

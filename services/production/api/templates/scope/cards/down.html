@@ -19,7 +19,7 @@
     <table class="table table--card"><thead><tr><th></th><th class="table__num">Win rate</th><th class="table__num">Average lots</th></tr></thead>
       <tbody><tr><td class="table__text">After two straight losses</td><td class="table__num">{% if after_strike.rate_percent is not none %}{{ Figure(after_strike.rate_percent, "percent")|out_of_a_hundred }}{% else %}—{% endif %}</td><td class="table__num">{{ Figure(after_lots.mean, "lots")|lots if after_lots.mean is not none else "—" }}</td></tr>
       <tr><td class="table__text">Every other trade</td><td class="table__num">{% if rest_strike.rate_percent is not none %}{{ Figure(rest_strike.rate_percent, "percent")|out_of_a_hundred }}{% else %}—{% endif %}</td><td class="table__num">{{ Figure(rest_lots.mean, "lots")|lots if rest_lots.mean is not none else "—" }}</td></tr></tbody></table>
-    <span class="body-small">This happened on <span class="num">{{ Figure(days_with_the_condition, "days")|count }}</span> of your <span class="num">{{ Figure(trading_day_count, "days")|count }}</span> trading days. A trade still open when the next one started does not count as closed. A scratch trade ends the run.</span>
+    <span class="body-small">This happened on <span class="num">{{ Figure(days_with_the_condition, "days")|count }}</span> of the <span class="num">{{ Figure(same_day_days, "days")|count }}</span> days you closed a same-day trade. A trade still open when the next one started does not count as closed. A scratch trade ends the run.</span>
   </span>
   {%- endif %}
 {% endcall %}
