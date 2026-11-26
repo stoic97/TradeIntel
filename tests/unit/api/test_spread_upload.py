@@ -179,7 +179,8 @@ def _say_yes(client, jid: int) -> None:
 def test_a_journal_lists_the_spread_as_one_trade(uploaded, engine):
     jid = journal_for(engine, '2026-10-14')
     _say_yes(uploaded, jid)
-    page = text(uploaded.get(f"/journals/{jid}").text)
+    # Each trade's rupees wait until the day questions are answered or skipped (TICKET-915 gate 5).
+    page = text(uploaded.get(f"/journals/{jid}?skip=1").text)
     assert "Trade 1 — +₹1,300" in page
     assert "Trade 2 — +₹200" in page
     assert "Trade 3" not in page

@@ -59,4 +59,6 @@ def test_a_days_total_is_the_same_on_home_and_its_journal(client):
     for match in re.finditer(r'<a [^>]*href="(/journals/\d+)"[^>]*>.*?</a>', home, flags=re.DOTALL):
         figures = re.findall(r"[−+]₹[\d,]+", text(match.group(0)))
         if figures:
-            assert f"Net {figures[-1]}." in text(client.get(match.group(1)).text), match.group(1)
+            # The day's net waits until his day questions are answered or skipped (TICKET-915 gate 5),
+            # so the page is read as after a skip.
+            assert f"Net {figures[-1]}." in text(client.get(match.group(1) + "?skip=1").text), match.group(1)
