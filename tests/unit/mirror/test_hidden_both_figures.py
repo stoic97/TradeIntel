@@ -435,3 +435,35 @@ def test_the_page_draws_no_verdict_on_a_whole_pool(client, monkeypatch):
     assert said.startswith(f"{RECORD} {formatting.rupees(Decimal(-100))} net on 15 trades"
                            " opened right after a win that day.")
     assert CHANCE not in said
+
+
+# TICKET-919 (research seat, 25 Nov, comment 17381; D9 option b, carried from TICKET-1081): the
+# page that shows the 30 says it was picked, not learned, on its own line under that block.
+#   40 days, each 10:00 +100 then 10:10 -50: 40 trades after a win. The 31st has 30 earlier ones
+#   down overall, so the warm-up is reached and the 30 is shown.
+PICKED = "The 30 is a starting point we picked, not one learned from your trades."
+REACHED = [
+    t for d in range(40) for t in (
+        trip(2 * d + 500, (datetime(2026, 1, 1) + timedelta(days=d)).date().isoformat(), 100),
+        trip(2 * d + 501, (datetime(2026, 1, 1) + timedelta(days=d)).date().isoformat(), -50,
+             minute=10))
+]
+
+
+def test_the_30_is_labelled_as_picked_not_learned(client, monkeypatch):
+    real = loader.load_for
+    monkeypatch.setattr(loader, "load_for", lambda *a, **kw: (REACHED, real(*a, **kw)[1]))
+    html = client.get(S.fact_href("hidden")).text
+    then = re.search(r'<p\b[^>]*data-figure="then"[^>]*>.*?</p>', html, re.DOTALL)
+    assert then and "30 or more" in _text(then.group(0))  # the block shows the 30
+    own = re.findall(r"<p\b[^>]*>\s*" + re.escape(PICKED) + r"\s*</p>", html)
+    assert len(own) == 1 and html.count(PICKED) == 1  # once, and on a line of its own
+    assert 'data-figure' not in own[0]  # a label, never a figure
+    after = html[then.end():]
+    assert re.match(r"\s*" + re.escape(own[0]), after)  # directly under the block
+
+
+def test_the_30_label_is_absent_while_the_block_does_not_show_the_30(client):
+    html = client.get(S.fact_href("hidden")).text
+    assert f"{THEN} not enough trades yet." in _text(html)  # the 40-trip page: 30 not shown
+    assert PICKED not in _text(html)
