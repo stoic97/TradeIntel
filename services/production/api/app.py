@@ -49,8 +49,10 @@ from services.production.api import (
     wins_gap,
 )
 from services.production.api.settings import Settings
+from services.production.ctr.profiles.registry import UnknownInstrument
 from services.production.db.session import make_engine, run_migrations
 from services.production.journal import constants as k
+from services.production.mirror.loader import MisdeclaredQuantityUnit
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -120,6 +122,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from services.production.api.routes_identity import page
 
         return page(request, "404.html", status_code=404, title="Not found", demo=None)
+
+    @app.exception_handler(MisdeclaredQuantityUnit)
+    @app.exception_handler(UnknownInstrument)
+    def record_not_readable(request: Request, exc: Exception) -> HTMLResponse:
+        """A record the loader cannot size or place is a page, not a bare 500.
+
+        Our gap, not the trader's error: the same page and reason the Mirror shows, so
+        every route that reads his record says the same thing.
+        """
+        from services.production.api.routes_identity import page
+
+        return page(request, "mirror_no_profile.html", title="Your record", reason=str(exc))
 
     @app.exception_handler(405)
     async def method_not_allowed(request: Request, exc: Exception):
