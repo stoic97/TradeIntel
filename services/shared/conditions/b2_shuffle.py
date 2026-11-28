@@ -10,7 +10,7 @@ and 60 comparison trades, one-sided in B2's stated direction, on the two rupee m
 prints.
 
 **The bar corrects for every check tried (TICKET-909).** A finding needs its p adjusted for the
-family fixed in advance (``multiplicity.family``: the 18 checks on the core list in the framework,
+family fixed in advance (``multiplicity.family``: the 19 checks on the core list in the framework,
 spec section 5.5a), by Westfall-Young step-down min-p on this same shuffle, at or below 0.05. The
 divisor is never counted at run time: a check that can't run for him stays in the family at
 p = 1. Today B2 is the only check production runs, so the others sit at 1 and B2's adjusted p is
