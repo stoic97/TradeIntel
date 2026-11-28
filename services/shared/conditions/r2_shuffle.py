@@ -34,7 +34,7 @@ from services.shared.conditions.b2_shuffle import (
     ShuffleResult,
 )
 
-CHECK = "R2"
+CHECK = "R12"  # its own registered row (TICKET-1063), not R2; pending its signature (PR #263)
 MIN_GROUP = 30
 DRAWS = b2_shuffle.DRAWS
 SEED = b2_shuffle.SEED  # the same draws as B2's, so the two are corrected on one shuffle
@@ -105,7 +105,9 @@ def shuffle_family(obs: Sequence[Obs], lots: Sequence[float], sized: Sequence[bo
 
     prior = r2_condition.last_resolved(obs)
     r2_observed, n_loss, n_win = _gap(r, lots, sized, prior)
-    r2_runs = n_loss >= MIN_GROUP and n_win >= MIN_GROUP
+    # R12 runs only once it is in the registered family (TICKET-1063, PR #263); until then
+    # its groups are counted and nothing is tested.
+    r2_runs = n_loss >= MIN_GROUP and n_win >= MIN_GROUP and CHECK in checks
 
     out = {
         b2_shuffle.CHECK: ShuffleResult(n_cond, n_comp, None, None, family_size=fam),

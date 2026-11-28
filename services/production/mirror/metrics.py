@@ -691,9 +691,17 @@ def size_after_check(trips: list[Trip]) -> b2_shuffle.ShuffleResult:
     return _checks_for(trips)[r2_shuffle.CHECK]
 
 
+R12_SIGNED = False
+"""The measure's own registered row (R12, TICKET-1063) is not signed yet (PR #263). Until it is,
+no page calls the result a finding (the founder's ruling of 24 Nov 2026, option B)."""
+
+
 def size_sentence_may_show(trips: list[Trip]) -> bool:
-    """May a page say he trades bigger after a loss? Only if R2's test is a finding on his own
-    file. Closed, the page states the two averages side by side and claims nothing."""
+    """May a page say he trades bigger after a loss? Only once R12 is signed, and only if its test
+    is a finding on his own file. Closed, the page states the two averages side by side and
+    claims nothing."""
+    if not R12_SIGNED:
+        return False
     return size_after_check(trips).passes if trips else False
 
 

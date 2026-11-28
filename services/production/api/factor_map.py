@@ -104,7 +104,7 @@ FACTORS: tuple[Factor, ...] = (
       filters=("next_day",), facts=("next-day",)),
     # Size
     F("Size", "Lots", K.AT_CLICK, S.WORKED_OUT, checks=("R1",)),
-    F("Size", "Change from the last trade", K.AT_CLICK, S.WORKED_OUT, checks=("R2",),
+    F("Size", "Change from the last trade", K.AT_CLICK, S.WORKED_OUT, checks=("R12",),
       filters=("after",), facts=("size",)),
     F("Size", "Adding to a losing position", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R11",)),
     F("Size", "Risk against your number", K.BEFORE, S.WORKED_OUT, facts=("risk",)),
