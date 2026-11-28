@@ -22,7 +22,7 @@ Each entry: **Deployed** (tag) · **Previous** · **When** (IST) · **Run by** �
   regression; the founder gave the go knowing it.
 - **Pre-flight:** the deployer's where check took the classifier from `origin/main` (the tag predates
   it) and skipped the market units the tag lacks (#260); the heads check read live head 0010.
-- **Smoke:** production checks (8, 11b, 13, 861) by Megha after the deploy.
+- **Smoke** (Megha, 26 Nov): 8 ✅ synthetic sample read (19 rows, 17 read, 2 kept with reasons, 8 trades; the first try hung during the 15:06–15:10 outage, the retry worked) · 11b ✅ `/admin` 404 for a non-admin · 861 ✅ back links on `/upload` and `/imports`, fact breadcrumbs · 13 not reported.
 ### 2026-11-06 14:21 IST — configuration only, no code change
 
 - **Deployed:** `7a40e2f` (unchanged) · **Previous:** `7a40e2f`
