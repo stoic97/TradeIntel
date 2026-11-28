@@ -253,9 +253,17 @@ def signup(
         return response
 
 
+def admin_next(raw: str | None) -> str | None:
+    """Where /login may send an admin back to: a path on this site under /admin, else nothing."""
+    if not raw or not raw.isprintable() or " " in raw or "\\" in raw or "?" in raw or "#" in raw:
+        return None
+    return raw if raw == "/admin" or raw.startswith("/admin/") else None
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request) -> HTMLResponse:
-    return page(request, "login.html", title="Sign in")
+    return page(request, "login.html", title="Sign in",
+                next=admin_next(request.query_params.get("next")))
 
 
 @router.post("/login")
@@ -264,9 +272,11 @@ def login(
     login_id: str = Form(...),
     password: str = Form(...),
     csrf_token: str = Form(None),
+    next: str = Form(""),
 ):
     if not require_csrf(request, csrf_token):
         return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    back_to = admin_next(next)
 
     # Before the password is checked, so a guess past the cap learns nothing even if it is right.
     state, connection = request.app.state, limits.connection(request)
@@ -274,7 +284,7 @@ def login(
     if wait:
         return limits.with_retry_after(
             page(request, "login.html", status_code=429, title="Sign in",
-                 error=limits.logins_refused(wait)),
+                 error=limits.logins_refused(wait), next=back_to),
             wait,
         )
 
@@ -288,10 +298,13 @@ def login(
             state.login_connections.add(connection)
             # One answer for an unknown login id and a wrong password alike.
             return page(request, "login.html", status_code=400, title="Sign in",
-                        error=SIGN_IN_FAILED)
+                        error=SIGN_IN_FAILED, next=back_to)
 
         session = _session_for(request, trader)
-        response = RedirectResponse(landing_for(sess, trader), status_code=303)
+        # Only an admin is sent back to the admin page; anyone else lands where he belongs.
+        is_admin = trader.login_id in _settings(request).admin_login_ids
+        response = RedirectResponse(back_to if back_to and is_admin else landing_for(sess, trader),
+                                    status_code=303)
         _set_session_cookie(response, request, session)
         return response
 
