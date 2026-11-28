@@ -54,16 +54,16 @@ def dials(html: str) -> list[str]:
 # re-taken when the reading ring replaced the bezel's ticks on every page (TICKET-1037). The
 # views with no reading (CHAPTERS_ON_MAIN below) are unchanged.
 ON_MAIN = {
-    "/mirror": ["fd7e936fead855999faf82101ed987cc0e5a47334569f268a56b29aae2c54103",
-                "eb76f2b75e639a6f06fe7f4e5295662e5ef975e52cde953bcaab91311f28510e"],
+    "/mirror": ["7551efe8628dacfcc5fe05a221c9c9c24e816ce68b40090c384f33f93af10ffc",
+                "0ea2070357bbcfbcab4a426f65b23499f94d6729e272695aec8570ad853dd909"],
     "/mirror/chapter/1": ["25228d3bc65b48e35618b2be5a3d39f4aaf19978abc096513223ad6b59e5ea4f",  # phone: 1027 shortens a five-digit best trade
                           "e46f24ba3412133fc56f901c6bc7b0c91769f59e58b516ebc4c7d9dd2fa95408"],
     "/mirror/chapter/2": ["89631ace302a6e1aedd82ad44d127e66117ff4f9c525646eb18bae5926e4ac74",
                           "9e13b9bcc5ea14c455b9699f5b7d94769cba58ba60fd97c2120e1ddf1b52fc49"],  # desktop: 1001 adds a wedge
-    "/mirror/chapter/3": ["dd9a9d3a7d73c1abb04479e3695dd2c735fbc00d9a49370e20e9f8fc5e5cb518",
+    "/mirror/chapter/3": ["0b4d33f2c26804f70b0642e004fa0e016d9d816700ac684d1a66847f335c02f9",
                           # Desktop: three more wedges since What you do next (1006), and a sixth for After
                           # you closed; the phone dial is main's.
-                          "92c4f85a96d11c91fbbf94ba0e3d0194780eb84fac534cf1ca51b0732bfa0dcf"],
+                          "e1d2ec13988ec376de651b474768f09eec1f2bc956411bbe0af1b2a5000a6e1f"],
     "/mirror/chapter/4": ["159ca3ccb811dc84ab6e50a517d6ddc43277622f20d0ce5dca65e96e71fc65d9",
                           "bcfed94c9cbbff5e1e5bd9d928a4d26731055ae99423a8ca1348d72550cbb572"],
 }
@@ -73,18 +73,17 @@ CHAPTERS_ON_MAIN = {
     (2, "phone"): "6907a01fd0d283f9381f7e8a9eeab1f9116e013651f2f46a083e771f89bbc948",
     (2, "desktop"): "d23dc8b3348d3a548a2b9da14ef17bf0c4115ca5f19e27140815f5f66f8498cb",  # 1001's wedge
     (3, "phone"): "0b5658b2d2a33fdaad899ab0388ca458ea5efd4f712b840a15668d470df409f7",
-    (3, "desktop"): "ffd28d8a5a9972894a7bac99d3574f304a8fdc6cce2e2b05168a8652dc3773f8",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
+    (3, "desktop"): "43f6bbb9c7eb81bb952b5dde3b89ae3e8b373bfacad6e8caa3c010541c3070be",  # six wedges (After you closed); back in one per prior (B1 parity); "after a loss, too few (needs 30)" (D9)
     (4, "phone"): "4b04bb18e7f1fa665e722a00f079c8dd4f5c1a0a83b40822b2b7cd622316fae3",
     (4, "desktop"): "255024f97536e6f44aaa175af79421bc03af6c9ebede556ba6159e68704a4196",
 }
 
 # The facts allowed on a phone dial: those main has. A fact added later must decide: join this
 # list on purpose, or set on_phone_dial=False and sit in the list under the dial.
-OFF_THE_PHONE_DIAL = {"size"}
-"""Facts added after the dial, each in the list under its chapter's phone dial (996's size)."""
 ON_THE_PHONE_DIAL = {"hidden", "worst-days", "money", "math", "run", "clock", "down", "busiest",
                      "unread", "risk", "not-told"}
 OFF_THE_PHONE_DIAL = {"charges",  # Where the money went (995)
+                      "size",  # Your size after a loss (996)
                       "back-in", "same-way", "next-day",  # What you do next (1006)
                       "after-close",  # After you closed: added after the phone dial was sized
                       "after"}  # After you clicked (1001), in chapter 2's list
