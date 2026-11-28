@@ -692,7 +692,7 @@ def size_after_check(trips: list[Trip]) -> b2_shuffle.ShuffleResult:
 
 
 R12_SIGNED = False
-"""The measure's own registered row (R12, TICKET-1063) is not signed yet (PR #263). Until it is,
+"""The measure's own registered row (R12) is not signed yet. Until it is,
 no page calls the result a finding (the founder's ruling of 24 Nov 2026, option B)."""
 
 
