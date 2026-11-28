@@ -53,9 +53,63 @@
   {#- TICKET-907 (FB-0171): what recording does, beside the control, saying only what is true
       today. New words pending D9. -#}
   <p class="body-small table-note">Recording a number keeps the number and nothing else. It does not and cannot stop a trade, and nothing here reaches your broker. Each time you upload, the trades past it are counted again.</p>
-  {#- TICKET-907 (FB-0169): no day limit can be recorded yet; the declaration and its three counts
-      are their own ticket (17 Nov). Its state shows, never a zero. New words pending D9. -#}
-  <p class="body-small table-note">No day limit is set, so no day is counted against one.</p>
+  {#- TICKET-974: the day limit he declares, and three counts from trades that happened. Never a
+      replay: nothing says what he would have kept. With no limit, or no day counted yet, each
+      count shows its state and never a zero. metrics.day_limit_counts decides every figure. New
+      words pending D9. -#}
+  {%- set c = day_limit_counts %}
+  <section class="day-limit" id="day-limit">
+    <p class="table-label">Your day limit</p>
+    {%- if not day_limits %}
+    <p class="body-small table-note">No day limit is set, so no day is counted against one.</p>
+    <ul class="body-small table-note">
+      <li>Days past your day limit: not counted, no day limit is set.</li>
+      <li>What those days ended at: not counted, no day limit is set.</li>
+      <li>What the trades after the line came to: not counted, no day limit is set.</li>
+    </ul>
+    {%- else %}
+    <p class="body-small table-note">Counted from {{ day_limit_from|day }}, the day you set it.</p>
+    {%- if not c or not c.days_counted %}
+    <p class="body-small table-note">No trading day on or after {{ day_limit_from|day }} is in your file yet, so no day is counted.</p>
+    <ul class="body-small table-note">
+      <li>Days past your day limit: not counted yet.</li>
+      <li>What those days ended at: not counted yet.</li>
+      <li>What the trades after the line came to: not counted yet.</li>
+    </ul>
+    {%- elif not c.past %}
+    <p class="mirror table-note">No day went past your day limit.</p>
+    {%- else %}
+    <p class="mirror table-note"><span class="num">{{ Figure(c.past, "days")|count }}</span> {{ "day" if c.past == 1 else "days" }} went past your day limit.</p>
+    <p class="mirror table-note">Those days ended at <span class="num">{{ Figure(c.ended_at, "rupees")|rupees }}</span> between them.</p>
+    <p class="mirror table-note">The trades after the line came to {{ Figure(c.after_the_line, "rupees")|rupees }}.</p>
+    {%- endif %}
+    {%- if c and c.days_counted %}
+    <p class="gross-line">Each day is measured on what its trades netted, by the day they were opened. Realised trades only: {{ Figure(c.days_counted, "days")|count }} {{ "day" if c.days_counted == 1 else "days" }} counted. The line is the trade after which the day's running result was past your limit; the trades that closed after it are the part after the line.</p>
+    {%- endif %}
+    {%- endif %}
+    {%- if day_limit_error %}
+    <p class="field__error field__error--block" role="alert">{{ day_limit_error }}</p>
+    {%- endif %}
+    <form method="post" action="/budget/day-limit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="field"><span class="field__label">The most you will let one day lose, in rupees</span><input class="field__input field__input--mono" id="day_limit_value" name="value" inputmode="decimal" required><span class="field__hint">It counts from the day you record it, never from an earlier one.</span></label>
+      <div class="screen__actions">
+        {{ button("Record the limit", block=true) }}
+      </div>
+    </form>
+    {%- if day_limits %}
+    <p class="table-label">The day limits you have told us</p>
+    <table class="table">
+      <thead><tr><th>From</th><th class="table__num">Limit</th></tr></thead>
+      <tbody>
+      {%- for d in day_limits %}
+        <tr><td>{{ d.effective_from|day }}</td><td class="table__num">{{ Figure(d.value, "rupees")|rupees(signed=false) }}</td></tr>
+      {%- endfor %}
+      </tbody>
+    </table>
+    <p class="body-small table-note">Nothing here is overwritten. A new limit is a new line, and each day is counted against the limit in force when it was traded.</p>
+    {%- endif %}
+  </section>
   {% include "_capital_shares.html" %}
   {%- if declarations %}
   <p class="table-label">What you have told us</p>

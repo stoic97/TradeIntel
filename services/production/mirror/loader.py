@@ -17,6 +17,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from services.production.accounts import day_limit as dl
 from services.production.accounts import risk_budget as rb
 from services.production.ctr.intake import outcomes as oc
 from services.production.ctr.profiles import registry as profiles
@@ -276,6 +277,7 @@ def load_for(sess: Session, trader: m.Trader,
         quantity_unit = adapter.file_map().quantity_unit
 
     declarations = rb.for_trader(sess, trader)
+    day_limits = dl.for_trader(sess, trader)
 
     read_expiries: dict[tuple, date | None] | None = None
 
@@ -324,5 +326,7 @@ def load_for(sess: Session, trader: m.Trader,
         ))
     # Read off each trip's own day, so it holds for whatever trips were built above.
     return [
-        replace(t, number_in_force=_number_in_force(t.trading_day, declarations)) for t in trips
+        replace(t, number_in_force=_number_in_force(t.trading_day, declarations),
+                day_limit=dl.rupees(dl.in_force(day_limits, t.trading_day)))
+        for t in trips
     ], imp

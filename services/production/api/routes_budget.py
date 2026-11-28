@@ -34,6 +34,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
+from services.production.accounts import day_limit as dl
 from services.production.api.routes_consent import has_diagnosis_consent
 from services.production.api.routes_identity import current_trader, page, require_csrf
 from services.production.ctr.profiles import registry as profiles
@@ -83,6 +84,25 @@ def _past_number(sess, trader: m.Trader) -> dict:
     if not trips:
         return nothing
     return {"past_number": mx.trades_past_number(trips), "imp": imp}
+
+
+def _day_limit_view(sess, trader: m.Trader) -> dict:
+    """The day limit's declarations and the three counts they give on his trades (TICKET-974).
+
+    mx.day_limit_counts decides every figure. With no limit declared there are no counts, and a
+    file that cannot be read leaves none either: the Mirror says what is wrong with the file.
+    """
+    declared = dl.for_trader(sess, trader)
+    view = {"day_limits": list(reversed(declared)), "day_limit_counts": None,
+            "day_limit_from": declared[0].effective_from if declared else None}
+    if not declared:
+        return view
+    try:
+        trips, _ = loader.load_for(sess, trader)
+    except (profiles.UnknownInstrument, loader.MisdeclaredQuantityUnit, loader.UnknownAdapter):
+        return view
+    view["day_limit_counts"] = mx.day_limit_counts(trips)
+    return view
 
 
 def _latest_capital(declarations: list[m.RiskBudgetDeclaration]) -> Decimal | None:
@@ -194,6 +214,7 @@ def budget_form(request: Request, against: str | None = None):
                     default_from=_default_from(sess, trader),
                     capital=_latest_capital(_history(sess, trader)),
                     sizes=_loss_sizes(sess, trader),
+                    **_day_limit_view(sess, trader),
                     **_history_reads(sess, trader, against))
 
 
@@ -225,6 +246,7 @@ def budget_submit(
                         default_from=_default_from(sess, trader),
                         capital=_latest_capital(_history(sess, trader)),
                     sizes=_loss_sizes(sess, trader),
+                    **_day_limit_view(sess, trader),
                     **_history_reads(sess, trader, None))
 
         try:
@@ -268,4 +290,43 @@ def budget_submit(
         sess.commit()
     # The one number comes straight after the reveal (TR-008). Recorded, it lands back
     # here to show what it counts (TICKET-831), and the page links on to the Scope.
+    return RedirectResponse("/budget", status_code=303)
+
+
+@router.post("/budget/day-limit")
+def day_limit_submit(
+    request: Request,
+    value: str = Form(""),
+    csrf_token: str = Form(None),
+):
+    """Declare a day limit (TICKET-974).
+
+    The form carries no date, and one sent anyway is not read: a day limit counts from the day
+    it was declared, in India, never from an earlier one. A new limit is a new row.
+    """
+    if not require_csrf(request, csrf_token):
+        return HTMLResponse("Form expired. Reload the page and try again.", status_code=403)
+    with make_session(request.app.state.engine) as sess:
+        trader = current_trader(request, sess)
+        if trader is None:
+            return RedirectResponse("/login", status_code=303)
+        if not has_diagnosis_consent(sess, trader):
+            return RedirectResponse("/consent", status_code=303)
+        amount = _typed_capital(value)
+        if amount is None:
+            return page(request, "budget.html", status_code=400, title="What you risk",
+                        day_limit_error="A day limit has to be a number above zero, in rupees.",
+                        **_past_number(sess, trader),
+                        declarations=_history(sess, trader),
+                        today=_today().isoformat(),
+                        default_from=_default_from(sess, trader),
+                        capital=_latest_capital(_history(sess, trader)),
+                        sizes=_loss_sizes(sess, trader),
+                        **_day_limit_view(sess, trader),
+                        **_history_reads(sess, trader, None))
+        declared_at = datetime.now(UTC)
+        sess.add(m.DayLimitDeclaration(trader_id=trader.id, value=amount,
+                                       effective_from=dl.counted_from(declared_at),
+                                       declared_at=declared_at))
+        sess.commit()
     return RedirectResponse("/budget", status_code=303)

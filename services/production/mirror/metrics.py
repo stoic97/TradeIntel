@@ -90,6 +90,7 @@ class Trip:
     lots: int
     risk_unit_source: s.RiskUnitSourceV1
     number_in_force: Decimal | None = None  # his number that day, in rupees (TICKET-831)
+    day_limit: Decimal | None = None  # his day limit on the day it was opened, in rupees (TICKET-974)
     is_option: bool = True  # size is counted in lots on options only (TICKET-797)
     legs: tuple[Leg, ...] = ()  # empty for a single leg
     lines: tuple[TradeLine, ...] = ()  # every leg, one for a single trade; none in old fixtures
@@ -319,6 +320,68 @@ class TradesPastNumber:
     before_number: int  # same-day trades with none in force yet
     held_past_day: int  # positions left out, as every same-day figure leaves them out
     state: s.ResultState
+
+
+@dataclass(frozen=True)
+class DayLimitCounts:
+    """The three counts either side of a declared day limit, from trades that happened.
+
+    ``days_counted`` are the trading days with a limit in force; ``past`` those whose net ended
+    past it; ``ended_at`` those days' nets added; ``after_the_line`` the nets of the trades that
+    closed after the running net first fell past the limit. None of it says what would have
+    happened: it adds up what did.
+    """
+
+    days_counted: int
+    past: int
+    day_ids: list[str]
+    ended_at: Decimal
+    after_the_line: Decimal
+    state: s.ResultState
+
+
+def day_limit_counts(trips: list[Trip]) -> DayLimitCounts:
+    """The one place the day-limit counts are decided (TICKET-974).
+
+    A day is its entry date's trades (definitions section 1), measured on its net, and counted
+    only when a limit was in force that day: the loader leaves ``day_limit`` empty before the
+    day the limit was declared. "Past" is strict, as trades_past_number's "more than" is: a day
+    that ends exactly on the limit is not past it, and a day that fell past it and came back is
+    not either. For a day that is past, trades are taken in exit order; the first at which the
+    running net is past the limit is the line, and the trades that close after it are the part
+    after the line.
+    """
+    by_day: dict[str, list[Trip]] = {}
+    for t in trips:
+        if t.day_limit is not None:
+            by_day.setdefault(t.trading_day, []).append(t)
+    past_days: list[str] = []
+    ended = Decimal(0)
+    after = Decimal(0)
+    for day in sorted(by_day):
+        day_trips = sorted(by_day[day], key=lambda t: (t.exit_ts, t.trip_id))
+        limit = day_trips[0].day_limit
+        net = sum((t.net for t in day_trips), Decimal(0))
+        if _round(-net) <= limit:
+            continue
+        past_days.append(day)
+        ended += net
+        running = Decimal(0)
+        crossed = False
+        for t in day_trips:
+            if crossed:
+                after += t.net
+            running += t.net
+            if not crossed and _round(-running) > limit:
+                crossed = True
+    return DayLimitCounts(
+        days_counted=len(by_day),
+        past=len(past_days),
+        day_ids=past_days,
+        ended_at=_round(ended),
+        after_the_line=_round(after),
+        state=s.ResultState.COUNTED_FACT if by_day else s.ResultState.INSUFFICIENT_SAMPLE,
+    )
 
 
 @dataclass(frozen=True)

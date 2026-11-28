@@ -113,6 +113,22 @@ class RiskBudgetDeclaration(Base, _InsertOnly):
     retrospective: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class DayLimitDeclaration(Base, _InsertOnly):
+    """The most he will let a day lose, in rupees, as he declared it (TICKET-974).
+
+    Kept as risk_budget_declaration is: never edited, a new limit is a new row. It counts from
+    ``effective_from``, which is the day it was declared in India and never earlier, so trades
+    before it are not counted and nothing reads them as if it had been in force.
+    """
+
+    __tablename__ = "day_limit_declaration"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    value: Mapped[Decimal] = mapped_column(DecimalText)
+    effective_from: Mapped[str] = mapped_column(String(10))
+    declared_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RawFile(Base, _InsertOnly):
     __tablename__ = "raw_file"
     id: Mapped[int] = mapped_column(primary_key=True)
