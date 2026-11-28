@@ -23,13 +23,20 @@ broker's GET back to ``/admin/fyers/callback``, which can't carry that token, so
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 
+from services.production.accounts import auth
 from services.production.api import admin_health, admin_view
-from services.production.api.routes_identity import current_trader, page, require_csrf
+from services.production.api.routes_identity import (
+    current_session,
+    current_trader,
+    page,
+    require_csrf,
+)
 from services.production.api.trader_trail import build as trader_trail
 from services.production.db import models as m
 from services.production.db.session import make_session
@@ -48,6 +55,20 @@ def is_admin_path(path: str) -> bool:
     return path.rstrip("/") == PATH or path.startswith((TRADERS, FYERS))
 
 
+def sign_in_again(path: str) -> HTTPException:
+    """An admin whose sign-in is older than ADMIN_SESSION_HOURS goes to /login and comes back.
+
+    Raised only after the admin check, so it is said to an admin and to no one else.
+    """
+    return HTTPException(status_code=303, headers={"Location": f"/login?next={quote(path, safe='/')}"})
+
+
+def require_fresh_signin(request: Request, path: str) -> None:
+    session = current_session(request)
+    if session is None or not auth.admin_signin_fresh(session, auth.clock()):
+        raise sign_in_again(path)
+
+
 @router.get(PATH, response_class=HTMLResponse)
 def admin(request: Request):
     config = request.app.state.settings
@@ -55,6 +76,7 @@ def admin(request: Request):
         trader = current_trader(request, sess)
         if trader is None or trader.login_id not in config.admin_login_ids:
             raise HTTPException(status_code=404)
+        require_fresh_signin(request, PATH)
         last_looked = sess.scalar(
             select(func.max(m.AdminAction.at))
             .where(m.AdminAction.actor == f"trader:{trader.id}", m.AdminAction.action == "admin_view")
@@ -90,6 +112,7 @@ def admin_trader(request: Request, trader_id: str):
         admin = current_trader(request, sess)
         if admin is None or admin.login_id not in config.admin_login_ids:
             raise HTTPException(status_code=404)
+        require_fresh_signin(request, f"{TRADERS}{trader_id}")
         wanted = _id_of(trader_id)
         view = trader_trail(sess, wanted) if wanted is not None else None
         if view is None:
@@ -115,6 +138,7 @@ def _admin_actor(request: Request, sess) -> str:
     trader = current_trader(request, sess)
     if trader is None or trader.login_id not in request.app.state.settings.admin_login_ids:
         raise HTTPException(status_code=404)
+    require_fresh_signin(request, PATH)  # the broker's callback can't be replayed after sign-in
     return f"trader:{trader.id}"
 
 
