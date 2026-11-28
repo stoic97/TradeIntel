@@ -22,3 +22,12 @@ def test_no_finding_sentence_before_r12_is_signed(monkeypatch):
     monkeypatch.setattr(mx, "size_after_check", lambda trips: SimpleNamespace(passes=True))
     assert mx.R12_SIGNED is False
     assert mx.size_sentence_may_show([object()]) is False
+
+
+def test_its_labels_and_its_factor_under_r12():
+    from services.production.api import findings, trade_list
+    assert findings.of("size")
+    factor = next(f for f in factor_map.FACTORS if "R12" in f.checks)
+    assert "size" in factor.facts and "after" in factor.filters
+    assert "size" in trade_list.FACTS_WITH_TRADES
+    assert any(f.name == "after" for f in trade_list.FILTERS)

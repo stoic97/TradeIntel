@@ -15,6 +15,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 import numpy as np
+import pytest
 
 from services.production.mirror import metrics as mx
 from services.shared.conditions import b2_shuffle
@@ -161,6 +162,7 @@ def _planted(after_loss_lots: int, days: int = 44) -> list[mx.Trip]:
     return out
 
 
+@pytest.mark.skip(reason="superseded by the founder's ruling of 24 Nov 2026 (option B, TICKET-1063): the check is R12, not R2, and no finding is claimed until R12 is signed; see test_size_pending_r12.py")
 def test_sizing_up_after_losses_on_his_own_file_is_a_finding():
     trips = _planted(after_loss_lots=3)
     check = need(mx, "size_after_check")(trips)
@@ -191,6 +193,7 @@ def test_the_shuffle_works_the_groups_out_again_on_every_draw():
     assert len(set(after_loss_counts.tolist())) > 1
 
 
+@pytest.mark.skip(reason="superseded by the founder's ruling of 24 Nov 2026 (option B, TICKET-1063): the check is R12, not R2, and no finding is claimed until R12 is signed; see test_size_pending_r12.py")
 def test_r2_is_run_and_corrected_with_b2_on_one_shuffle():
     assert mx.CHECKS_RUN == ("B2", "R2")
     assert shuffle().CHECK == "R2"
@@ -222,6 +225,7 @@ def test_the_fact_sits_in_chapter_three_after_two_straight_losses():
     assert SM.FACTS["size"].title == "Your size after a loss"
 
 
+@pytest.mark.skip(reason="superseded by the founder's ruling of 24 Nov 2026 (option B, TICKET-1063): the check is R12, not R2, and no finding is claimed until R12 is signed; see test_size_pending_r12.py")
 def test_its_labels_and_its_factor():
     from services.production.api import factor_map, findings, trade_list
     assert findings.of("size")
