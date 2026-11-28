@@ -14,7 +14,7 @@ from services.shared.prereg import reader
 
 def test_the_family_is_the_core_list_fixed_in_the_framework():
     checks = M.family()
-    assert len(checks) == 18
+    assert len(checks) == 19
     assert "B2" in checks and M.EDGE_MAP not in checks
     assert set(checks) == {t.id for t in reader.load().tests} - {M.EDGE_MAP}
 

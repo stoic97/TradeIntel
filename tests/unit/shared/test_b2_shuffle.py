@@ -320,7 +320,7 @@ def test_the_finding_bar_is_written_in_the_framework_as_the_code_runs_it():
         bar = found[0]
     from services.shared.conditions import multiplicity
     assert bar["method"] == "westfall_young_step_down_min_p"
-    assert bar["m"] == len(multiplicity.family()) == 18
+    assert bar["m"] == len(multiplicity.family()) == 19
     assert bar["alpha"] == T.ALPHA and bar["draws"] == T.DRAWS
     assert bar["not_eligible"] == "p_1" and bar["fallback"] == "holm"
     assert gate_in_the_framework()["corrected_by"] == "finding_bar"
@@ -329,7 +329,7 @@ def test_the_finding_bar_is_written_in_the_framework_as_the_code_runs_it():
 def test_a_strong_effect_in_both_halves_is_a_finding_corrected_for_the_family():
     got = T.shuffle_test(synthetic(8, effect=-1500))
     assert got.level == T.FINDING and got.passes
-    assert got.family_size == 18
+    assert got.family_size == 19
     assert got.p_adjusted is not None and got.p_adjusted >= got.p - 2 / T.DRAWS
     assert all(gap < 0 for gap in got.halves)
 
