@@ -33,6 +33,10 @@
   {%- for p in b.previous %}
   <p class="body" data-previous="{{ p.state }}" data-figure="record" data-known="{{ p.record_finding|known }}" data-rung="{{ p.record_finding|rung }}">On your record: {{ p.record }} {{ p.record_words }}.{% if p.record_band|inside %} Can't be told apart from chance.{% endif %}</p>
   <p class="body" data-previous="{{ p.state }}" data-figure="then" data-known="{{ p.then_finding|known }}" data-rung="{{ p.then_finding|rung }}">Choosing with only what you knew then: {{ p.then }}{% if p.then_words %} {{ p.then_words }}{% endif %}.{% if p.then_band|inside %} Can't be told apart from chance.{% endif %}</p>
+  {#- TICKET-919 (D9, option b): the 30 is shown only once the warm-up is reached (a band exists). -#}
+  {%- if p.then_band is not none %}
+  <p class="body" data-note="then-minimum">The 30 is a starting point we picked, not one learned from your trades.</p>
+  {%- endif %}
   {%- endfor %}
   {%- endfor %}
   {%- set small = f.books|selectattr("n", "lt", book_row_minimum)|list %}
