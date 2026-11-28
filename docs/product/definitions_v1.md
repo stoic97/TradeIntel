@@ -53,6 +53,7 @@ The enum has exactly three values: `REJECTED`, `ACCEPTED_WITH_EXCLUSIONS`, `ACCE
 - Fields: value · unit (rupees or % of trading capital) · `effective_from` (trader-set, may be in the past) · `declared_at` (system time). A declaration whose `effective_from` precedes its `declared_at` is **retrospective** and the record says so. Full history kept. (PRD §5.5.)
 - **(closed here)** A **% declaration requires the trading capital in rupees** as of `effective_from`; the form will not save a percentage without it, because without it no trip has a rupee denominator. The rupee value is derived at use time and labelled as derived from the percentage.
 - **(closed here) The declaration in force at a trip's entry** is the one with the latest `effective_from` ≤ the trip's trading day; among equal `effective_from`, the latest `declared_at`. A trip in no declaration's range has no declared-budget denominator (`risk_unit_source = unavailable` unless a stop or premium applies).
+- **(closed here, TICKET-974)** The **day limit** takes no retrospective `effective_from`: it counts from the day it was declared, and a trading day before that day is not counted against it. Pending the research seat's sign-off.
 
 ## 6. The Appendix A fixture — specification
 
