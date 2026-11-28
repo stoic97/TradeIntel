@@ -438,6 +438,26 @@ class JournalRememberAnswer(Base, _InsertOnly):
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class JournalDayAnswer(Base, _InsertOnly):
+    """TICKET-915: his answer to one of the day's questions, with the words he saw.
+
+    A fixed answer (yes, no or wrong), never a typed word, so consent v1 is untouched. A
+    changed answer is a new row: the rows are his history to read back. Never paired with an
+    outcome, counted by result or ranked anywhere (founder, 12 Nov 2026; Pawan, 17 Nov).
+    Deletion takes it with everything else of his.
+    """
+
+    __tablename__ = "journal_day_answer"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journal.id"))
+    trading_day: Mapped[str] = mapped_column(String(10))
+    question_key: Mapped[str] = mapped_column(String(32))
+    question_text: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(String(5))
+    answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class FactRead(Base, _InsertOnly):
     """That he opened a report page, once per upload: what the dial's ring reads.
 

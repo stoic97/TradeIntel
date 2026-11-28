@@ -6,7 +6,7 @@
       {#- The form's default button, first in it, so Enter in a text box saves the text and never
           taps a chip below. -#}
       <button class="visually-hidden" type="submit" tabindex="-1" aria-hidden="true"></button>
-      <p class="journal-trade__head"><span>{{ row.label }}</span> — {{ money(row.net, "label") }}{% if row.why %} · {{ row.why }}{% endif %}</p>
+      <p class="journal-trade__head"><span>{{ row.label }}</span> {% if show_figures %}— {{ money(row.net, "label") }}{% endif %}{% if row.why %} · {{ row.why }}{% endif %}</p>
       {%- for name, question in prompts %}
       <label class="field"><span class="field__label">{{ question }}</span><input class="field__input" name="{{ name }}" value="{% if answers[row.trip_id][name] %}{{ answers[row.trip_id][name].value }}{% endif %}"></label>
       {%- endfor %}

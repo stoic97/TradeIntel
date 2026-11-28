@@ -96,7 +96,7 @@ def _held_sentence(held: dict[str, Any]) -> str:
             f"{_later(held['days'])}.")
 
 
-def _what_happened(facts: dict[str, Any]) -> str:
+def _what_happened(facts: dict[str, Any], show_result: bool = True) -> str:
     trades = facts["trades"]
     count = trades["count"]
     net = _rupees(trades["net"])
@@ -134,7 +134,10 @@ def _what_happened(facts: dict[str, Any]) -> str:
 
     word = "trade" if count == 1 else "trades"
     extra = _held_sentence(held) if held and not only_trade_held else ""
-    return f"{_count(count)} {word}{when}. Net {net}.{outcome}{extra}"
+    # TICKET-915 (gate 5): the net and the tally of how the trades closed are the day's
+    # result; they wait until he has answered or skipped.
+    result = f" Net {net}.{outcome}" if show_result else ""
+    return f"{_count(count)} {word}{when}.{result}{extra}"
 
 
 def _the_behaviour(facts: dict[str, Any]) -> str:
@@ -207,13 +210,13 @@ def _the_blank_stop(facts: dict[str, Any]) -> str:
     return f"No planned stop is recorded on {_count(missing, capital=False)} {word.replace('trade that lost has', 'trade that lost').replace('trades that lost have', 'trades that lost')}."
 
 
-def render(facts: dict[str, Any]) -> str:
+def render(facts: dict[str, Any], show_result: bool = True) -> str:
     """One Journal, as paragraphs. Empty sections produce nothing, not a placeholder."""
     # The day-shape sentence sits with the count it qualifies. Placed after the
     # behaviour paragraph, "That is against a normal day" reads as a comment on the
     # trades after losses rather than on the day -- the referent is whatever
     # preceded it, and a trader reads in order.
-    opener = _what_happened(facts)
+    opener = _what_happened(facts, show_result)
     shape = _against_normal(facts)
     if shape:
         opener = f"{opener} {shape}"

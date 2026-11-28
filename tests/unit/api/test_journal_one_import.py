@@ -190,7 +190,8 @@ def test_a_journal_keeps_its_trades_when_a_later_upload_changes_the_day(engine, 
     assert newest.id != written.id, "the changed day should have a new version"
 
     assert _trade_blocks(client.get(f"/journals/{written.id}").text) == ["Trade 1", "Trade 2"]
-    assert "−₹1,900" in _readable(client.get(f"/journals/{newest.id}").text)
+    # TICKET-915 gate 5: the day's rupees wait for an answer or a skip; ?skip=1 shows them.
+    assert "−₹1,900" in _readable(client.get(f"/journals/{newest.id}?skip=1").text)
     assert _trade_blocks(client.get(f"/journals/{newest.id}").text) == ["Trade 1", "Trade 2"]
 
 

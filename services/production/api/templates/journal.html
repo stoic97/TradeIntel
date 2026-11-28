@@ -39,6 +39,34 @@
     </div>
   </form>
   {%- else %}
+  {%- if day_questions %}
+  {#- TICKET-915: up to three questions written from this day's own trades. They describe
+      and never lead, and nothing here sits beside how the day went. Its words wait for D9.
+      A form each, so a link can't store an answer. -#}
+  <section class="journal__section">
+    <h2 class="card-title">From your file</h2>
+    {%- for q in day_questions %}
+    <form class="card" method="post" action="/journals/{{ journal.id }}/day-answer">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="key" value="{{ q.key }}">
+      <p class="body">{{ q.text }}</p>
+      <p class="body-small">Did you know this?</p>
+      <div class="remember__actions">
+        <button class="btn btn--primary" type="submit" name="answer" value="yes">Yes</button>
+        <button class="btn btn--secondary" type="submit" name="answer" value="no">No</button>
+        <button class="btn btn--text" type="submit" name="answer" value="wrong">This looks wrong</button>
+      </div>
+      {%- if q.key in day_latest %}
+      <p class="body-small">You said: {{ day_latest[q.key] }}</p>
+      {%- endif %}
+    </form>
+    {%- endfor %}
+    {%- if not show_figures %}
+    <p class="body-small"><a class="link" href="{{ skip_href }}">Skip</a></p>
+    {%- endif %}
+    <p class="body-small"><a class="link" href="/journals/answers">What you have said</a></p>
+  </section>
+  {%- endif %}
   <form class="journal__section" method="post" action="/journals/{{ journal.id }}/field">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="field" value="note">

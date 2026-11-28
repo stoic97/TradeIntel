@@ -1,0 +1,18 @@
+{#- What he has said to the day's questions (TICKET-915): his words, the day, and when. Read
+    back to him as he said them; never beside a result, never counted. Its words wait for D9. -#}
+{% extends "layout.html" %}
+{% set nav = "journal" %}
+{% block content %}
+  <p class="label label--plain">Journal</p>
+  <h1 class="title fact__title">What you have said</h1>
+  <p class="body-small"><a class="link" href="/journals">Your Journals</a></p>
+  {%- for row in rows %}
+  <section class="journal__section">
+    <p class="body-small"><a class="link" href="/journals/{{ row.journal_id }}">{{ row.trading_day|day }}</a> &middot; said on {{ row.when }}</p>
+    <p class="body">{{ row.question_text }}</p>
+    <p class="body">{{ row.answer }}</p>
+  </section>
+  {%- else %}
+  <p class="body">You have not answered a day's questions yet.</p>
+  {%- endfor %}
+{% endblock %}
