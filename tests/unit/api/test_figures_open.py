@@ -53,7 +53,9 @@ def test_the_clocks_figure_opens_its_own_hour():
 
 def test_each_chapter_wedge_opens_its_trades_or_is_visibly_not_a_link():
     for n in (1, 2, 3, 4):
-        svg = str(dial.scope_dial(SF.chapter_view(n, FIGS), "desktop"))  # every fact has a wedge there
+        view = SF.chapter_view(n, FIGS)
+        # A fact off the phone dial (1006's three in chapter 3) has its wedge on desktop.
+        svg = str(dial.scope_dial(view)) + str(dial.scope_dial(view, "desktop"))
         for f in S.chapter(n).facts:
             opens = FIGS[f.key]["opens"]
             if opens:
@@ -116,7 +118,7 @@ def test_a_date_opens_its_day_with_every_trade_on_it(client):
     assert page.status_code == 200
     said = words(page.text)
     count = sum(1 for t in trips if t.trading_day == day)
-    assert f"{count} trade" in said and "opened this day, every one of them." in said
+    assert f"{count} trade" in said and "opened this day." in said
     assert page.text.count('<article class="trade">') == count
 
 

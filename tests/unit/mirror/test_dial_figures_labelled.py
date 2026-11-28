@@ -57,7 +57,9 @@ def test_no_dial_draws_a_slice_serial(client, url):
 @pytest.mark.parametrize("url", [HUB, *CHAPTERS])
 def test_no_dial_slice_holds_a_lone_one_character_number(client, url):
     for s in _slices(_dial(client.get(url).text)):
-        lone = [w for _, w in s["texts"] if re.fullmatch(r"\d", w)]
+        # A count under its bar in a mini (chart__label, TICKET-1036) labels the bar, beside the
+        # figure that says its unit: it is the chart's, not a figure the slice states.
+        lone = [w for c, w in s["texts"] if c != "chart__label" and re.fullmatch(r"\d", w)]
         assert not lone, f"{url} / {s['name']}: {lone}"
 
 

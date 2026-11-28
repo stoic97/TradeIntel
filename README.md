@@ -94,6 +94,7 @@ Layout follows `docs/methodology.md` section 5. A folder is created when its fir
 | `tests/` | pytest; `tests/conftest.py` sets the environment and a per-test SQLite |
 | `tests/unit/` | Unit tests by area; `tests/unit/repo/` holds the repo guards (no trader data, references, Makefile, this README) |
 | `tests/integration/` | Upload to stored trips, through every layer |
+| `tests/e2e/` | A trader's journey through the app: sign in, upload a tradebook, read the Mirror |
 | `tests/reproducibility/` | Every transformation run twice; hashes must match; pinned digests |
 | `tests/fixtures/` | Test fixtures: the Mirror contract, the frozen Mirror wording, the dial geometry |
 | `tests/helpers/` | What test files share; a test file never imports another test file |
@@ -114,6 +115,7 @@ Each runs from the repo root with `uv run python scripts/<name>`, unless its row
 | `lock_charge_rates.py` | Pins new rows of `rates.yaml` in its lock file; refuses if a pinned row changed | After appending rows to `rates.yaml` | Yes |
 | `make_groww_fixture.py` | Writes the made-up Groww fixture workbook, the same bytes on every OS | When the Groww fixture changes | Yes; the Groww golden test uses it |
 | `mirror_report.py` | The concierge HTML report: a second way of rendering the Mirror, outside the app; writes under `out/` (gitignored); `tests/unit/test_sold_trades_accounted.py` imports it | No longer run: the app's Mirror (`services/production/mirror/`) replaces it | Retired - removal in TICKET-989 |
+| `pr_preflight.py` | Before a PR: merges `origin/main` into the branch in a throwaway worktree and stops on a conflict, runs `tests/unit/repo` (`--suite` for all), lists RED assertions changed after the RED commit, and counts the tests that read a rendered page; writes nothing | By hand, before every PR and after each merge of main (TICKET-1043) | Yes |
 | `real_shape_check.py` | Checks, in aggregates only, whether a trader's data has the shape M1 assumes; prints only, writes nothing, and what it prints is never committed (rule 1) | By hand, when M1's shape assumption is in question; TICKET-897 Stage A cites it | Yes, research; kept by founder ruling, 19 Nov 2026 |
 | `regenerate_golden.py` | Shows the golden diff and, with `--yes`, rewrites `data/golden/` (`--groww` for Groww's) | Only when a behaviour change is intended | Yes |
 | `run_null_rate_b2.py` | How often B2 fires on corpus A's nulls, with nothing planted (Research Spec section 6.2); writes `docs/phase0/null-rate-b2.json` (`recall-b2.json` with `--planted`), rows to `data/null_rate/` | TICKET-897 Stage A, step 5 | Yes, research |

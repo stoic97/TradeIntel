@@ -1,0 +1,7 @@
+{#- After you clicked, as a card: where his median ends 30 minutes after the
+    click, beside random moments' band. Stored figures only. -#}
+{% from "_components.html" import story_card, trades_behind, chart %}
+{% call story_card(number, f.title, f.href, Figure(f.figure, f.noun), trades_behind(f.trade_count)) %}
+  <span class="story-card__chart">{{ chart(f.chart) }}<span class="figure__axis"><span>0</span><span>Minutes after you clicked, {{ f.view.underlying }}</span><span>{{ Figure(30, "minutes")|count }}</span></span></span>
+  <span class="legend"><span><span class="legend__swatch ac-swatch--band"></span>Random moments</span><span><span class="legend__swatch ac-swatch--his"></span>Your median</span></span>
+{% endcall %}

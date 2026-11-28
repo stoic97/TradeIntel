@@ -103,11 +103,15 @@ def reveal(request: Request):
         guessed = GU.answer_of(sess, trader)
         if guessed is None and GU.ready(_production(request)):
             return RedirectResponse("/guess", status_code=303)
-        guessed_label = GU.label_of(guessed.answer) if guessed is not None else None
+        # A guess stored while the labels were placeholders is never printed (until 973 lands).
+        guessed_label = (GU.label_of(guessed.answer)
+                         if guessed is not None and not GU.PLACEHOLDER else None)
+    days = SF.reveal_days(context)
     return page(
         request,
         "reveal.html",
-        title="Your five worst days",
+        title=days["title"],
+        reveal_days=days,
         imp=imp,
         screen_class="screen--navy on-navy",
         body_class="reveal",

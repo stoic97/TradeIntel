@@ -1,6 +1,6 @@
 """TICKET-903: the report's spine. One order, one header, one way in and out of every page.
 
-Rikk's ruling, 13 Nov 2026 (round 2 section N; mockups/nav_v2.html):
+Ruled 13 Nov 2026 (round 2 section N; mockups/nav_v2.html):
 - The rail on every report page: the full path, "N of 10", the pages grouped by chapter,
   the ones read filled, each a link. All pages: every page, ticked if read, with its short
   answer, and Home, Journal and Account. Previous and Next in the same place on every page,
@@ -262,7 +262,7 @@ def test_continue_moves_to_the_first_page_not_yet_read(client, engine):
 def test_a_view_kept_under_an_old_key_counts(client, engine):
     read(engine, "fx", "hidden", "worst-days", "best-worst-trades")  # the long page's key for money
     assert continues(client.get("/mirror").text) == [
-        ("/mirror/fact/math", f"Continue: {TITLE['math']}")]
+        ("/mirror/fact/charges", f"Continue: {TITLE['charges']}")]  # chapter 1's fourth page
 
 
 def test_with_every_page_read_continue_goes_away(client, engine):

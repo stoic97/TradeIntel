@@ -81,6 +81,24 @@ class ConsentEvent(Base, _InsertOnly):
     wording_shown: Mapped[str] = mapped_column(Text)
 
 
+class BrokerConnection(Base):
+    """TICKET-896: the stored key behind a read-only broker pull. One row per trader per broker.
+
+    Not insert-only: disconnecting deletes the row, and so does /delete. The key is held
+    encrypted (the same Fernet key as uploaded files) and never logged. The consent for it
+    is a ``broker_pull`` row in the ledger, kept apart from the diagnosis consent.
+    """
+
+    __tablename__ = "broker_connection"
+    __table_args__ = (UniqueConstraint("trader_id", "broker",
+                                       name="uq_broker_connection_trader_broker"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    broker: Mapped[str] = mapped_column(String(32))
+    token_ciphertext: Mapped[str] = mapped_column(Text)
+    connected_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class RiskBudgetDeclaration(Base, _InsertOnly):
     """PRD 5.5. A percentage requires the capital, or no trip has a denominator."""
 
@@ -217,6 +235,24 @@ class Trip(Base, _InsertOnly):
     """
 
     __table_args__ = (UniqueConstraint("import_id", "trip_id", "occurrence"),)
+
+
+class TripCharge(Base, _InsertOnly):
+    """What one trip was charged and where that came from (TICKET-995).
+
+    Kept as the import computed it, so "where the money went" reads it back rather than
+    working it out again. One row per component when the charges were calculated
+    (BROKERAGE, STT, CTT, EXCHANGE, SEBI, STAMP, GST, IPFT); one row with no component for
+    any other source (``tradebook``, ``statement``, ``not_priced``, ``none``).
+    """
+
+    __tablename__ = "trip_charge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_row_id: Mapped[int] = mapped_column(ForeignKey("trip.id"))
+    source: Mapped[str] = mapped_column(String(16))
+    component: Mapped[str | None] = mapped_column(String(16))
+    amount: Mapped[Decimal | None] = mapped_column(DecimalText)
 
 
 class OpenPosition(Base, _InsertOnly):
@@ -402,6 +438,24 @@ class JournalRememberAnswer(Base, _InsertOnly):
     answered_at: Mapped[datetime] = mapped_column(AwareDateTime)
 
 
+class FactRead(Base, _InsertOnly):
+    """That he opened a report page, once per upload: what the dial's ring reads.
+
+    Written on the server when the page is served, so "read" never waits on a script. Keyed to
+    the upload, so a new upload starts unread; the period and book he was looking through are
+    kept beside it. Deletion takes it with everything else of his."""
+
+    __tablename__ = "fact_read"
+    __table_args__ = (UniqueConstraint("trader_id", "import_id", "fact_key", "period", "book"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    fact_key: Mapped[str] = mapped_column(String(32))
+    period: Mapped[str] = mapped_column(String(16))
+    book: Mapped[str] = mapped_column(String(64))
+    opened_at: Mapped[datetime] = mapped_column(AwareDateTime)
+
+
 class DwellEvent(Base, _InsertOnly):
     __tablename__ = "dwell_event"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -445,6 +499,26 @@ class RuleDeclaration(Base, _InsertOnly):
     applies_from: Mapped[str | None] = mapped_column(String(10))
     applies_to: Mapped[str | None] = mapped_column(String(10))
     screen: Mapped[str | None] = mapped_column(String(32))
+
+
+class Challenge(Base):
+    """A challenge he set himself: 10 or 20 exchange trading days and one to three
+    of the rules he set. Written once when he starts it; only how it ended (with its card) and his
+    share link change after that, so it is not insert-only. ``rule_ids`` is a JSON list of
+    ``rule_declaration`` ids; ``start_day`` an India date."""
+
+    __tablename__ = "challenge"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    rule_ids: Mapped[str] = mapped_column(Text)
+    length: Mapped[int] = mapped_column(Integer)
+    start_day: Mapped[str] = mapped_column(String(10))
+    started_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
+    ended_how: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    share_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    card_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """The card as it read when it ended; a later upload never recounts it."""
 
 
 class PreTradeNote(Base, _InsertOnly):
@@ -532,6 +606,72 @@ class MarketDayRequest(Base):
     tries: Mapped[int] = mapped_column(Integer, default=0)
     reason: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+
+
+class BarFigureJob(Base):
+    """One import's bar figures, to be worked out off the web app (TICKET-999). The upload adds it
+    as pending, a cheap insert; ``cli bar-figures`` works it out, leaves it waiting while a day it
+    needs isn't in, and marks it done. ``provenance`` names the code and every day file read."""
+
+    __tablename__ = "bar_figure_job"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"), unique=True)
+    trader_id: Mapped[int] = mapped_column(ForeignKey("trader.id"))
+    state: Mapped[str] = mapped_column(String(16))
+    waiting_days: Mapped[int] = mapped_column(Integer, default=0)
+    requested_at: Mapped[datetime] = mapped_column(AwareDateTime)
+    updated_at: Mapped[datetime | None] = mapped_column(AwareDateTime)
+    provenance: Mapped[str | None] = mapped_column(Text)
+
+
+class BarTradeFigure(Base):
+    """One trade's bar figures (TICKET-999), in underlying points in its direction, or the reason
+    it has none. Points are Decimal text; ``path`` is the 30 minutes after he clicked, as JSON."""
+
+    __tablename__ = "bar_trade_figure"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    trip_id: Mapped[str] = mapped_column(String(64))
+    underlying: Mapped[str | None] = mapped_column(String(40))
+    reason: Mapped[str | None] = mapped_column(Text)
+    way: Mapped[str | None] = mapped_column(String(32))
+    against: Mapped[str | None] = mapped_column(String(32))
+    took: Mapped[str | None] = mapped_column(String(32))
+    path: Mapped[str | None] = mapped_column(Text)
+    short: Mapped[bool] = mapped_column(Boolean, default=False)
+    after_exit: Mapped[str | None] = mapped_column(Text)
+    """The 30 minutes after the exit, as JSON, the exit's close as zero."""
+
+
+class BarDayRange(Base):
+    """How far the market moved on a day he traded, for the Market row: the session's highest high less
+    its lowest low, in points, as Decimal text, read from that one day file, with its sha256."""
+
+    __tablename__ = "bar_day_range"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    underlying: Mapped[str] = mapped_column(String(40))
+    day: Mapped[str] = mapped_column(String(10))
+    range_points: Mapped[str] = mapped_column(String(32))
+    sha256: Mapped[str] = mapped_column(String(64))
+
+class BarPathSummary(Base):
+    """An import's after-you-clicked paths for one underlying, beside random moments (TICKET-999):
+    medians, his middle half, the random middle 95%, and up to 200 of his paths, as JSON."""
+
+    __tablename__ = "bar_path_summary"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(ForeignKey("import.id"))
+    underlying: Mapped[str] = mapped_column(String(40))
+    measured: Mapped[int] = mapped_column(Integer)
+    randoms: Mapped[int] = mapped_column(Integer)
+    his_median: Mapped[str] = mapped_column(Text)
+    his_q25: Mapped[str] = mapped_column(Text)
+    his_q75: Mapped[str] = mapped_column(Text)
+    random_median: Mapped[str] = mapped_column(Text)
+    random_lo: Mapped[str] = mapped_column(Text)
+    random_hi: Mapped[str] = mapped_column(Text)
+    faint: Mapped[str] = mapped_column(Text)
 
 
 INSERT_ONLY_TABLES = frozenset(

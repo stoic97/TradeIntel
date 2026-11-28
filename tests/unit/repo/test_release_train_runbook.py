@@ -38,8 +38,15 @@ def test_every_block_that_touches_production_starts_with_the_guard():
     touching = [b for b in _blocks(TRAIN)
                 if any(w in " ".join(b) for w in ("systemctl", "git checkout", "/srv/scope/data"))]
     assert len(touching) >= 5
+    # or the same guard as the first line of one ( ... ) block, so its stop ends only the
+    # block, in a nested shell too (TICKET-1048)
+    subshell = '( cd /srv/scope || { echo "STOP: no /srv/scope here; is this the droplet?"; exit 1; }'
+    # TICKET-1093: the guard of every block, whose stops end only the block
+    stopping = '( cd /srv/scope || { echo "STOP: not on the server"; exit 1; }'
     for block in touching:
-        assert block[0] == "cd /srv/scope || exit 1", block[0]
+        assert block[0] in ("cd /srv/scope || exit 1", subshell, stopping), block[0]
+        if block[0] in (subshell, stopping):
+            assert block[-1] == ")", block[-1]
 
 
 def test_the_runbook_keeps_what_the_first_deploys_taught():
@@ -47,12 +54,13 @@ def test_the_runbook_keeps_what_the_first_deploys_taught():
         "git status --short",                                 # stop on local changes
         ".backup '$RP'",                                      # backup before the checkout
         "**Path A**", "**Path B**",                           # destructive migrations split
-        "systemctl stop scope\n    sqlite3 /srv/scope/data/scope.db \"PRAGMA wal_checkpoint",  # stop, then snapshot
+        "systemctl stop scope ||", '"PRAGMA wal_checkpoint(TRUNCATE);" ||',  # stop, then snapshot
         "cmp -s deploy/scope.service /etc/systemd/system/scope.service",
         'select version_num from alembic_version;',            # alembic via sqlite
         "git tag --sort=-creatordate | head -2",               # where the previous tag is
     ):
         assert kept in TRAIN, kept
+    assert TRAIN.index("systemctl stop scope ||") < TRAIN.index("PRAGMA wal_checkpoint")  # TICKET-1093: in that order
 
 
 def test_only_the_founder_tags_and_a_hotfix_needs_two_people():
@@ -77,3 +85,13 @@ def test_the_smoke_pass_covers_what_every_train_needs():
                   "Running deploy:", "There is nothing at this address.", "Delete everything", "Sign out"):
         assert words in smoke, words
     assert "never a trader's" in smoke
+
+
+def test_a_trains_results_read_from_one_jira_query_and_the_labels_need_no_setup():
+    """TICKET-1014: the deployer sees a train's Pass without opening every ticket. Jira makes a
+    label the first time it is used, so the first tester's Pass is what creates `uat-pass`."""
+    uat = TRAIN[TRAIN.index("### b. UAT on staging"):TRAIN.index("### c. ")]
+    assert "labels in (uat-pass, uat-fail)" in uat
+    assert "needs-yes" in uat
+    assert "first time it is used" in uat
+    assert "never add `uat-pass` to test" in uat.lower()

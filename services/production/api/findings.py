@@ -69,17 +69,39 @@ LABELS: dict[str, Finding] = {f.key: f for f in (
     Finding("worst-days", K.ONLY_AFTER, R.SEEN),   # which days were worst: known after them
     Finding("share", K.ONLY_AFTER, R.SEEN),
     Finding("money", K.ONLY_AFTER, R.SEEN),        # best and worst trades, by result
+    Finding("charges", K.ONLY_AFTER, R.SEEN),      # what charges took, counted after the trades
     Finding("math", K.ONLY_AFTER, R.SEEN),         # win rate and break-even over the record
     Finding("run", K.ONLY_AFTER, R.SEEN),          # a losing run, known once it has run
     Finding("clock", K.AT_CLICK, R.SEEN),          # the hour he opens in
+    Finding("after", K.ONLY_AFTER, R.SEEN),        # the half hour after the click, counted
     Finding("down", K.AT_CLICK, R.SEEN),           # the last two trades' results
     Finding("size", K.AT_CLICK, R.SEEN),           # the last trade's result, and his size
+    Finding("back-in", K.AT_CLICK, R.SEEN),        # the last trade's result, and the minutes since
+    Finding("same-way", K.AT_CLICK, R.SEEN),       # the last trade's result, and its direction
+    Finding("next-day", K.BEFORE, R.SEEN),         # yesterday's result, known before the session
     Finding("busiest", K.ONLY_AFTER, R.SEEN),      # the busiest day, known once it is over
+    Finding("after-close", K.ONLY_AFTER, R.SEEN),  # the half hour after he closed, counted
     Finding("unread", K.ONLY_AFTER, R.SEEN),       # what the file held, known on reading it
     Finding("risk", K.AT_CLICK, R.SEEN),           # a trade's size against his number
     Finding("not-told", K.ONLY_AFTER, R.SEEN),
 )}
 """One row per fact the report decides. A new fact without a row stops in scope_facts."""
+
+
+FIGURE_LABELS: dict[str, Finding] = {f.key: f for f in (
+    Finding("hidden.record", K.ONLY_AFTER, R.SEEN),  # a state's trades over the whole record
+    Finding("hidden.then", K.AT_CLICK, R.SEEN),      # chosen at the click from earlier trades
+)}
+"""A fact's own figures, where its page shows more than one (TICKET-919). Rung SEEN until
+TICKET-909's bar: a figure chosen from earlier trades is not yet a finding that held."""
+
+
+def of_figure(key: str) -> Finding:
+    """The labelled finding for one of a fact's figures, or ``Unlabelled`` if it has none."""
+    finding = FIGURE_LABELS.get(key)
+    if not isinstance(finding, Finding):
+        raise Unlabelled(f"the figure {key!r} has no labels: add it to findings.FIGURE_LABELS")
+    return finding
 
 
 def of(key: str) -> Finding:
@@ -148,3 +170,4 @@ def ladder(value) -> tuple[Step, ...]:
 def register(env) -> None:
     """The filters a template reads the labels and the ladder through."""
     env.filters.update(known=known, rung=rung, ladder=ladder)
+    env.globals["ladder_words"] = tuple((name, says) for _key, _label, name, says in LADDER)

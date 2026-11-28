@@ -352,7 +352,7 @@ def card_sentences(page: str, number: int) -> list[str]:
 
 def test_the_busiest_page_says_none_of_its_cards_sentences():
     page = readable(fact_page("busiest", DAY))
-    said = card_sentences(chapter_page(3, DAY), 3)  # down, size, then busiest (TICKET-996)
+    said = card_sentences(chapter_page(3, DAY), 6)  # down, size, what you do next, then busiest
     assert len(said) == 2
     for sentence in said:
         assert sentence not in page, sentence
@@ -446,7 +446,7 @@ def test_the_chapters_dial_says_the_busiest_days_trades_and_date():
     figs = SF.facts(SF.record_context(DAY), IMP)
     item = SF.chapter_view(3, figs)["items"][1]  # the phone dial's items: size sits under it
     assert (item["figure"], item["label"].replace("\xa0", " ")) == (
-        "6 trades", "on your\nbusiest day,\n02 Sep 2026")
+        "6 trades", "on your\nbusiest day,\n02 Sep 2026;\nusually 1")  # its usual day: TICKET-1035
 
 
 @pytest.mark.parametrize("opened", [False, True], ids=["gate closed", "gate open"])
@@ -470,8 +470,8 @@ def test_the_card_and_home_keep_their_own_figures():
     """Only the chapter's dial changes: home's slice says the busiest day, and a card's figure
     sits beside the sentence that explains it."""
     figs = SF.facts(SF.record_context(DOWN), IMP)
-    assert figs["down"]["figure"] == "4 trades"
-    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["label"] == "on your\nbusiest day"
+    assert figs["down"]["figure"] == "2 trades"  # DOWN: 2 right after two losses in a row (1025)
+    assert SF.home_view(SF.record_context(DOWN), IMP)["items"][2]["phone_label"] == "busiest day"
     assert ">4<" in chapter_page(3, DOWN)
 
 
@@ -489,14 +489,16 @@ def buttons(html: str) -> list[tuple[str, str]]:
 def test_the_way_into_chapter_four_uses_its_real_title():
     """TICKET-903: the spine's Next names the chapter it crosses into, from scope_map."""
     assert S.chapter(4).name == "What we read"
-    assert S.next_step("busiest")["label"] == f"Next, chapter 4: {S.FACTS['unread'].title}"
+    # Chapter 3 now ends on After you closed, so that page crosses into chapter 4.
+    assert S.next_step("busiest")["label"] == "Next: After you closed"
+    assert S.next_step("after-close")["label"] == f"Next, chapter 4: {S.FACTS['unread'].title}"
     assert "Chapter 4: What we read" not in readable(fact_page("busiest", DAY))
 
 
 def test_the_down_page_has_one_way_on():
     """TICKET-903: one next step, the spine's, and no jump to chapter 4 beside it."""
     assert S.next_step("down")["label"] == "Next: Your size after a loss"
-    assert S.next_step("size")["label"] == "Next: Your busiest day"
+    assert S.next_step("size")["label"] == f"Next: {S.FACTS['back-in'].title}"
     assert "Chapter 4: What we read" not in readable(fact_page("down", DOWN))
 
 
@@ -531,9 +533,11 @@ def test_no_page_offers_the_number_on_the_way_to_chapter_four(page):
 
 def test_a_fact_in_a_state_still_goes_on():
     """TICKET-903: the way on is scope_map's, so a page in a state has it as surely as any."""
-    assert S.next_step("busiest")["href"] == S.fact_href("unread")
+    assert S.next_step("busiest")["href"] == S.fact_href("after-close")
+    assert S.next_step("after-close")["href"] == S.fact_href("unread")
     assert S.next_step("down")["href"] == S.fact_href("size")
-    assert S.next_step("size")["href"] == S.fact_href("busiest")
+    assert S.next_step("size")["href"] == S.fact_href("back-in")
+    assert S.next_step("next-day")["href"] == S.fact_href("busiest")
 
 
 def test_the_opening_card_sentence_is_untouched():

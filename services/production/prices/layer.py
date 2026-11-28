@@ -183,6 +183,14 @@ class DaySeries:
     def covers(self, day: date) -> bool:
         return self.manifest.covers(day) and not self.problem(day)
 
+    def held(self, day: date) -> bool:
+        """Whether the store has this day's file at all (a stock's day may not be fetched yet)."""
+        return day.isoformat() in self.manifest.days
+
+    def minutes(self, day: date) -> list[datetime]:
+        """Every minute with a bar on this day, in order (TICKET-999 draws random moments from these)."""
+        return sorted(self._day(day))
+
     def bar(self, minute: datetime) -> Bar | None:
         naive = minute.replace(tzinfo=None) if minute.tzinfo else minute
         return self._day(naive.date()).get(naive)
@@ -321,6 +329,10 @@ class SyntheticSeries:
         naive = minute.replace(tzinfo=None) if minute.tzinfo else minute
         return self._bars.get(naive)
 
+    def minutes(self, day: date) -> list[datetime]:
+        """Every minute with a bar on this day, in order, as ``DaySeries.minutes`` gives them."""
+        return sorted(t for t in self._bars if t.date() == day)
+
 
 @dataclass(frozen=True)
 class Mapping:
@@ -363,6 +375,15 @@ class Prices:
         self.mapping = load_mapping(mapping_path)
         self.profiles = registry.load_all(profiles_dir)
         self._series: dict[str, DaySeries | SyntheticSeries | Unusable] = {}
+
+    def fresh(self) -> Prices:
+        """The same mapping and profiles with no series opened yet (TICKET-1000): a page takes one
+        per request, so it reads today's manifest and never a stale one, without loading the
+        profiles again."""
+        copy = Prices.__new__(Prices)
+        copy.data_dir, copy.mapping, copy.profiles = self.data_dir, self.mapping, self.profiles
+        copy._series = {}
+        return copy
 
     def underlying_of(self, exchange: str, symbol: str) -> str | None:
         """The underlying that measures this instrument, or None when nothing is mapped."""
