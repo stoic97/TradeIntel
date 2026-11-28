@@ -10,6 +10,19 @@ Each entry: **Deployed** (tag) · **Previous** · **When** (IST) · **Run by** �
 
 ---
 
+### 2026-11-26 13:54 IST — `7a40e2f` → `v2026.11.26`, train 1
+
+- **Deployed:** `v2026.11.26` (`09919b5`) · **Previous:** `7a40e2f0`
+- **When:** 13:54 IST (08:24 UTC) · **Run by:** founder, over SSH, with the deployer skill's blocks
+- **Restore point:** `scope-20261126T082433Z.db` · **Schema:** 0010 (no migration; Path A)
+- **Train:** the first release train. UAT on staging: TICKET-857, 865, 866, 867, 869, 870, 871, 872,
+  874, 875, 877 passed; TICKET-864 failed (dev list) and is TICKET-1102, run after the deploy.
+- **Found in UAT, shipped anyway:** upload and home return a 500 when a file holds a quantity that is
+  not a whole number of lots (TICKET-1103). The same code is on `7a40e2f`, so it is not a train-1
+  regression; the founder gave the go knowing it.
+- **Pre-flight:** the deployer's where check took the classifier from `origin/main` (the tag predates
+  it) and skipped the market units the tag lacks (#260); the heads check read live head 0010.
+- **Smoke** (Megha, 26 Nov): 8 ✅ synthetic sample read (19 rows, 17 read, 2 kept with reasons, 8 trades; the first try hung during the 15:06–15:10 outage, the retry worked) · 11b ✅ `/admin` 404 for a non-admin · 861 ✅ back links on `/upload` and `/imports`, fact breadcrumbs · 13 not reported.
 ### 2026-11-06 14:21 IST — configuration only, no code change
 
 - **Deployed:** `7a40e2f` (unchanged) · **Previous:** `7a40e2f`
