@@ -123,7 +123,7 @@ evidence:
     finding_bar:                            # §5.5a — added 13 Nov 2026, research seat ruling 12 Nov (TICKET-909)
       method: westfall_young_step_down_min_p   # on the one within-day shuffle every check shares
       family: core_list                     # the §9 core tests by id, C1 (the Edge Map) beside it; fixed per spec version
-      m: 18
+      m: 19
       not_eligible: p_1                     # a check that can't run stays in the family at p = 1
       alpha: 0.05                           # on the adjusted p
       draws: 10000                          # Monte-Carlo error near a 0.003 bar: about 19%, not 40% at 2,000
@@ -203,6 +203,7 @@ library:
   - {id: B12, q: day_after_bad_start,      model: M1,    null: N-S, theta_min: "0.5R/day", n_min: 20/40_days, move: DL-1}
   - {id: R1,  q: size_dispersion_tail,     model: fact_bootstrap, theta_min: "CV>=0.6; share>=0.40", n_min: 50, move: RK-1}
   - {id: R2,  q: post_loss_size_change,    model: M4,    null: N-B, theta_min: "log 1.25", n_min: 30/30, move: PL-1}
+  - {id: R12, q: post_loss_size_change_same_day, model: M4, null: N-B, theta_min: "log 1.25", n_min: 50/50, move: PL-1, condition: "the latest same-day trip that closed strictly before this one opened was a loss", comparison: "that prior trip was a win; a level trip is in neither group", measure: lots, sided: two}
   - {id: R7,  q: stop_discipline,          model: M2/M1, null: N-B, theta_min: "15pp; 0.25", n_min: 30, move: RK-1, class: conditional_on_stop_orders}
   - {id: R8,  q: vol_leverage_coupling,    model: M4/M1, null: N-S, theta_min: "log 1.25; 0.25", n_min: 30/regime, move: RK-2}
   - {id: R11, q: adding_to_losers,         model: M1,    null: N-B, theta_min: 0.25,  n_min: 30/60,  move: RK-3, class: conditional_on_fills}
