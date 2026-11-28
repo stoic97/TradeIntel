@@ -55,4 +55,4 @@ def test_scope_home_says_how_many_checks_the_bar_corrects_for(client):
     send(client)
     said = words(client.get("/mirror").text)
     assert ("Every finding here clears a bar corrected for every check we run on your trades: "
-            "today 1 of the 18 on our fixed list.") in said
+            "today 2 of the 18 on our fixed list.") in said

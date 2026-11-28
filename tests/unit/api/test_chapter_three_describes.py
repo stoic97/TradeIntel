@@ -154,7 +154,7 @@ def test_the_busiest_card_opens_with_what_its_chart_shows(opened, monkeypatch):
     """The card has the chart. The fact page opens with the day's story (test_busiest_day_story)."""
     if opened:
         monkeypatch.setattr(mx, "post_loss_sentence_may_show", lambda trips: True)
-    title, sentence = card_of(chapter_page(3, BUSY), 5)  # down, then the three of 1006, then busiest
+    title, sentence = card_of(chapter_page(3, BUSY), 6)  # down, size, the three of 1006, then busiest
     assert title == "Your busiest day"
     assert sentence == "Your busiest day had 4 trades, against 2 on your normal day."
 

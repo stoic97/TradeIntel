@@ -55,7 +55,7 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 | Level | Screen | What's on it | Tap goes to |
 |---|---|---|---|
 | 1 | **Scope home** | The dial in four equal chapters on a navy stage; the headline figure in the white centre disc; below on white, the Mirror's opening line and the gross line | A chapter |
-| 2 | **Chapter** | The dial re-divided into that chapter's facts (3 to 6 facts per chapter; chapter 3 has six on desktop; see the open question on line 90); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
+| 2 | **Chapter** | The dial re-divided into that chapter's facts (3 to 6 facts per chapter; chapter 3 has seven on desktop; see the open question on line 90); the ink arc on the rim shows where the chapter sat on Home; the centre ring holds the chapter name and "Scope". Below on white: one story card per fact, in slice order, then "Does this match your trading?" (chapters 1–3) | A fact (slice or story card); the centre goes back to Home |
 | 3 | **Fact** | White page. The 56 px lens pinned top-left with the path beside it on one line (`Scope › Where your… › Your worst trading days`); the Mirror's sentences, figures, tables; then "The trades behind this": every trade, never a sample | Nothing except the lens and the path |
 
 **Two gestures only.** Scope in: tap a slice or a story card. Scope out: tap the centre ring, the lens or a path segment. The phone's back gesture goes up one level (real URLs, §8). **Two taps from Home to any fact; never more than three.** No search, filters, dropdowns or text fields anywhere in the Scope. Every report page has the rail, Previous and Next, and All pages, all in scope_map's one order, and on a phone the report bar (TICKET-903, ruled 13 Nov 2026, round 2 section N).
@@ -66,10 +66,10 @@ The backend already computes every figure. This is mostly a **frontend rebuild i
 |---|---|---|---|
 | 1 | Where your results came from | What your tradebook has been hiding · Your worst trading days · Where the money came from · Where the money went | `hidden` · `worst-days` · `money` · `charges` |
 | 2 | Your patterns | Your wins and losses · Longest losing run · The clock · After you clicked | `math` · `run` · `clock` · `after` |
-| 3 | Your behaviour | After two straight losses · How fast you went back in · Same way again · The day after a big day · Your busiest day · After you closed | `down` · `back-in` · `same-way` · `next-day` · `busiest` · `after-close` |
+| 3 | Your behaviour | After two straight losses · Your size after a loss · How fast you went back in · Same way again · The day after a big day · Your busiest day · After you closed | `down` · `size` · `back-in` · `same-way` · `next-day` · `busiest` · `after-close` |
 | 4 | What we read | What we read · Trades with a risk figure · What we have not told you | `unread` · `risk` · `not-told` |
 
-Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Six facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), After you clicked (TICKET-1001), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
+Opening all four chapters covers the whole Mirror. Chapter 4 is the honest close and has no feedback question. Seven facts are off the phone dial and sit in a list under it (`on_phone_dial=False`): Where the money went (TICKET-995), After you clicked (TICKET-1001), Your size after a loss (TICKET-996), How fast you went back in, Same way again and The day after a big day (TICKET-1006) and After you closed (TICKET-1009). History: Share of your result is a line on Your worst trading days now (TICKET-817), and How long you hold and Strike rate are one fact, Your wins and losses (TICKET-819).
 
 ### States and edge cases
 
@@ -110,7 +110,7 @@ Screen numbers match the PNG names in `docs/design/screens/`. **Routes here over
 | 13 | One number | `/budget` | Restyle; moved | Now straight after the reveal (TR-008) |
 | 14 | Scope home | `/mirror` | New | Replaces the long Mirror page |
 | 15 | Chapter 1–4 | `/mirror/chapter/{n}` | New | |
-| 16 | Fact (17) | `/mirror/fact/{key}` | New | Keys in §4 |
+| 16 | Fact (18) | `/mirror/fact/{key}` | New | Keys in §4 |
 | 17 | Accurate / Not sure / Wrong | `POST /mirror/chapter/{n}/feedback` | New | B4 |
 | 18, 18b, 18c | Journals, one Journal, earlier Journals | `/journals`, `/journals/{id}`, `/journals/catch-up` | Restyle | WTP question stays inside the Journal |
 | 19 | Leaving card | top of `/journals`, once, after the first Journal | New | B7; D2 |

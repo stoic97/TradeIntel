@@ -105,6 +105,9 @@ FACTORS: tuple[Factor, ...] = (
     # Size
     F("Size", "Lots", K.AT_CLICK, S.WORKED_OUT, checks=("R1",)),
     F("Size", "Change from the last trade", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R2",)),
+    # The page's own measure (lots after a loss against after a win, same day) is its own row,
+    # R12, pending its signature; until then it names no check.
+    F("Size", "Lots after a loss", K.AT_CLICK, S.WORKED_OUT, filters=("after",), facts=("size",)),
     F("Size", "Adding to a losing position", K.AT_CLICK, S.IN_YOUR_FILE, checks=("R11",)),
     F("Size", "Risk against your number", K.BEFORE, S.WORKED_OUT, facts=("risk",)),
     F("Size", "Size when the market is moving", K.AT_CLICK, S.NEEDS_BARS, checks=("R8",)),

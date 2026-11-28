@@ -171,7 +171,6 @@ other readers find each contract's expiry in the same lookup."""
 
 HALVES = (("first", "First half"), ("second", "Second half"))
 
-
 def _half(t: mx.Trip, lookup: dict) -> Choice | None:
     half = lookup.get(HALF_OF, {}).get(t.trip_id)
     for place, (value, label) in enumerate(HALVES):
@@ -479,7 +478,7 @@ FILTERS = (
     Filter("charge", "Charge", _charge, only=frozenset({"charges"}), many=True),
     # Your process opens each figure's trades, whatever row drew it.
     Filter("line", "Your process", _line, only=frozenset({"risk"}), quiet=True),
-    Filter("after", "After a loss or a win", _after, only=frozenset({"back-in", "same-way", "hidden"})),
+    Filter("after", "After a loss or a win", _after, only=frozenset({"size", "back-in", "same-way", "hidden"})),
     Filter("next_day", "The day after", _next_day, only=frozenset({"next-day"})),
     Filter("then", "Opened while earlier ones were down", _then, only=frozenset({"hidden"})),
 )

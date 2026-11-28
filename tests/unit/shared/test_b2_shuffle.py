@@ -278,20 +278,20 @@ def test_the_page_says_nothing_about_a_direction_when_it_doesnt():
 
 
 def test_a_page_view_runs_the_draws_once_per_file(monkeypatch):
-    mx._post_loss_gate.cache_clear()
+    mx._checks_run.cache_clear()
     calls = []
-    real = T.shuffle_test
+    real = mx.r2_shuffle.shuffle_family  # B2 and R2 run on one shuffle since TICKET-996
 
-    def counted(obs):
+    def counted(obs, lots, sized):
         calls.append(1)
-        return real(obs, draws=50)
+        return real(obs, lots, sized, draws=50)
 
-    monkeypatch.setattr(T, "shuffle_test", counted)
+    monkeypatch.setattr(mx.r2_shuffle, "shuffle_family", counted)
     trips = trips_from(synthetic(13, days=60))
     for _ in range(3):
         mx.post_loss_sentence_may_show(trips)
     assert len(calls) == 1
-    mx._post_loss_gate.cache_clear()
+    mx._checks_run.cache_clear()
 
 
 def test_a_closed_gate_is_not_said_to_be_a_finding_about_the_trader():
